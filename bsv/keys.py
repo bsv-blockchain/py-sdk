@@ -1,6 +1,6 @@
-import tempfile
 import hashlib
 import hmac
+import os
 from base64 import b64encode, b64decode
 from typing import Optional, Union, Callable, Tuple
 
@@ -12,9 +12,10 @@ from .base58 import base58check_encode
 from .constants import Network, NETWORK_ADDRESS_PREFIX_DICT, NETWORK_WIF_PREFIX_DICT, PUBLIC_KEY_COMPRESSED_PREFIX_LIST
 from .curve import Point
 from .curve import curve, curve_multiply as curve_multiply, curve_add as curve_add
-from .hash import hash160, hash256, hmac_sha256
+from .hash import hash160, hash256, hmac_sha256, hmac_sha512
 from .utils import decode_wif, text_digest, stringify_ecdsa_recoverable, unstringify_ecdsa_recoverable
 from .utils import deserialize_ecdsa_recoverable, serialize_ecdsa_der
+from .polynomial import Polynomial, PointInFiniteField, KeyShares
 
 
 class PublicKey:
@@ -373,6 +374,158 @@ class PrivateKey:
         b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
         return PrivateKey(CcPrivateKey.from_pem(b))
 
+    def to_key_shares(self, threshold: int, total_shares: int) -> 'KeyShares':
+        """
+        Split the private key into shares using Shamir's Secret Sharing Scheme.
+
+        Args:
+            threshold: The minimum number of shares required to reconstruct the private key
+            total_shares: The total number of shares to generate
+
+        Returns:
+            A KeyShares object containing the generated shares
+
+        Raises:
+            ValueError: If threshold or total_shares are invalid
+        """
+
+        # Input validation
+        if not isinstance(threshold, int) or not isinstance(total_shares, int):
+            raise ValueError("threshold and totalShares must be numbers")
+        if threshold < 2:
+            raise ValueError("threshold must be at least 2")
+        if total_shares < 2:
+            raise ValueError("totalShares must be at least 2")
+        if threshold > total_shares:
+            raise ValueError("threshold should be less than or equal to totalShares")
+
+        # Create polynomial from private key
+        poly = Polynomial.from_private_key(self.int(), threshold)
+
+        # Generate shares
+        points = []
+        used_x_coordinates = set()
+
+        # Cryptographically secure x-coordinate generation for Shamir's Secret Sharing (toKeyShares)
+        #
+        # - Each x-coordinate is derived using a master seed (Random(64)) as the HMAC key and a per-attempt counter array as the message.
+        # - The counter array includes the share index, the attempt number (to handle rare collisions), and 32 bytes of fresh randomness for each attempt.
+        # - This ensures:
+        #   1. **Non-determinism**: Each split is unique, even for the same key and parameters, due to the per-attempt randomness.
+        #   2. **Uniqueness**: x-coordinates are checked for zero and duplication; retry logic ensures no repeats or invalid values.
+        #   3. **Cryptographic strength**: HMAC-SHA-512 is robust, and combining deterministic and random values protects against RNG compromise or bias.
+        #   4. **Defensive programming**: Attempts are capped (5 per share) to prevent infinite loops in pathological cases.
+        #
+        # This approach is robust against all practical attacks and is suitable for high-security environments where deterministic splits are not desired.
+
+        seed = os.urandom(64)
+
+        for i in range(total_shares):
+            x = None
+            attempts = 0
+
+            # TypeScript版と同様の安全なx座標生成
+            while x is None or x == 0 or x in used_x_coordinates:
+                counter = [i, attempts] + list(os.urandom(32))
+                counter_bytes = bytes(counter)
+
+                h = hmac_sha512(seed, counter_bytes)
+                x = int.from_bytes(h, 'big') % curve.p
+
+                attempts += 1
+                if attempts > 5:
+                    raise ValueError('Failed to generate unique x coordinate after 5 attempts')
+
+            used_x_coordinates.add(x)
+            y = poly.value_at(x)
+
+            # Create a point and add to points' list
+            points.append(PointInFiniteField(x, y))
+
+        # Calculate integrity hash from the public key
+        # In the JS implementation: (this.toPublicKey().toHash('hex') as string).slice(0, 8)
+        integrity = self.public_key().hash160().hex()[:8]
+
+        return KeyShares(points, threshold, integrity)
+
+    def to_backup_shares(self, threshold: int, total_shares: int) -> list:
+        """
+        Creates a backup of the private key by splitting it into shares.
+
+        Args:
+            threshold: The number of shares which will be required to reconstruct the private key
+            total_shares: The number of shares to generate for distribution
+
+        Returns:
+            List of share strings in backup format
+        """
+        key_shares = self.to_key_shares(threshold, total_shares)
+        return key_shares.to_backup_format()
+
+    @staticmethod
+    def from_backup_shares(shares: list) -> 'PrivateKey':
+        """
+        Reconstructs a private key from backup shares.
+
+        Args:
+            shares: List of share strings in backup format
+
+        Returns:
+            The reconstructed PrivateKey object
+
+        Raises:
+            ValueError: If shares are invalid or inconsistent
+        """
+        return PrivateKey.from_key_shares(KeyShares.from_backup_format(shares))
+
+    @staticmethod
+    def from_key_shares(key_shares: 'KeyShares') -> 'PrivateKey':
+        """
+        Combines shares to reconstruct the private key.
+
+        Args:
+            key_shares: A KeyShares object containing the shares
+
+        Returns:
+            The reconstructed PrivateKey object
+
+        Raises:
+            ValueError: If not enough shares are provided or shares are invalid
+        """
+
+
+        points = key_shares.points
+        threshold = key_shares.threshold
+        integrity = key_shares.integrity
+
+        # Validate inputs
+        if threshold < 2:
+            raise ValueError("threshold must be at least 2")
+        if len(points) < threshold:
+            raise ValueError(f"At least {threshold} shares are required to reconstruct the private key")
+
+        # Check for duplicate x values
+        for i in range(threshold):
+            for j in range(i + 1, threshold):
+                if points[i].x == points[j].x:
+                    raise ValueError("Duplicate share detected, each must be unique.")
+
+        # Create polynomial from points
+        poly = Polynomial(points[:threshold], threshold)
+
+        # Evaluate polynomial at x=0 to get the private key
+        secret_value = poly.value_at(0)
+
+        # Create private key from secret value
+        # Instead of from_int (which doesn't exist), use the proper constructor
+        private_key = PrivateKey(secret_value)
+
+        # Verify integrity by comparing hash of public key
+        reconstructed_integrity = private_key.public_key().hash160().hex()[:8]
+        if reconstructed_integrity != integrity:
+            raise ValueError("Integrity hash mismatch")
+
+        return private_key
 
 def verify_signed_text(
         text: str,

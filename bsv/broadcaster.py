@@ -29,6 +29,9 @@ class BroadcastFailure:
 
 
 class Broadcaster(ABC):
+    def __init__(self):
+        self.URL = None
+
     @abstractmethod
     async def broadcast(
             self, transaction: 'Transaction'

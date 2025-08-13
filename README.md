@@ -12,6 +12,7 @@ Welcome to the BSV Blockchain Libraries Project, the comprehensive Python SDK de
 2. [Getting Started](#getting-started)
 3. [Features & Deliverables](#features--deliverables)
 4. [Documentation](#documentation)
+5. [Tutorial](#Tutorial)
 5. [Contribution Guidelines](#contribution-guidelines)
 6. [Support & Contacts](#support--contacts)
 
@@ -110,6 +111,11 @@ Detailed documentation of the SDK with code examples can be found at [BSV Skills
 
 You can also refer to the [User Test Report](./docs/Py-SDK%20User%20Test%20Report.pdf) for insights and feedback provided by
 [Yenpoint](https://yenpoint.jp/).
+
+## Beginner Tutorial
+#### [Step-by-Step BSV Tutorial: Sending BSV and NFTs](./docs/beginner_tutorial.md)
+
+This beginner-friendly guide will walk you through sending BSV (Bitcoin SV) and creating NFTs using the BSV Python SDK. We'll take it step-by-step so you can learn at your own pace.
 
 ## Contribution Guidelines
 

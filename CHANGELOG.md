@@ -7,6 +7,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Table of Contents
 
 - [Unreleased](#unreleased)
+- [1.0.8 - 2025-08-13](#108---2025-08-13)
+- [1.0.7.1- 2025-07-28](#1071---2025-07-28)
+- [1.0.7- 2025-07-28](#107---2025-07-28)
+- [1.0.6.1- 2025-07-03](#1061---2025-07-03)
+- [1.0.6- 2025-06-30](#106---2025-06-30)
+- [1.0.5- 2025-05-30](#105---2025-05-30)
 - [1.0.4- 2025-04-28](#104---2025-04-28)
 - [1.0.3 - 2025-03-26](#103---2025-03-26)
 - [1.0.2 - 2025-02-28](#102---2025-02-28)
@@ -37,6 +43,80 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 - (Notify of any improvements related to security vulnerabilities or potential risks.)
+
+---
+## [1.0.8] - 2025-08-13
+
+### Security
+- Applied measures for vulnerability reported on [ts-sdk#334](https://github.com/bsv-blockchain/ts-sdk/issues/334).
+
+
+---
+## [1.0.7.1] - 2025-07-28
+
+### Changed
+- Incremented version in `__init__.py` to 1.0.7.1.
+
+### Security
+- Updated `aiohttp` and `setuptools` dependencies to use minimum version constraints.
+- Redacted private key in threshold signature example for security.
+
+---
+## [1.0.7] - 2025-07-28
+
+### Fixed
+- Implemented default broadcasters for GorillaPool mainnet and testnet.
+- - Updated examples to use new broadcaster functions.
+
+### Added
+- Introduced `default_broadcaster` with configurable options for testnet and custom ARC configurations.
+- Added function to set API key from constant.py for Taal mainnet and testnet (`taal_broadcaster`, `taal_testnet_broadcaster`).
+
+
+
+## [1.0.6.1] - 2025-07-03
+
+### Fixed
+Bug Fix default_http_client and add async ARC broadcasting example 
+
+- Replaced `default_sync_http_client` with `DefaultHttpClient` in `default_http_client`.
+- Introduced a new `test_async_arc.py` example demonstrating asynchronous ARC broadcasting and transaction status checking.
+
+## [1.0.6] - 2025-06-30
+
+### Added
+- Introduced `SyncHttpClient` for synchronous HTTP operations
+- Extended ARC broadcaster with synchronous methods: `sync_broadcast`, `check_transaction_status`, and `categorize_transaction_status`
+- Updated ARC configuration to include optional `SyncHttpClient` support
+- Added examples, tests, and utilities for synchronous transactions
+
+### Changed
+- Updated `SyncHttpClient` to inherit from `HttpClient` for consistency
+- Refactored `fetch` into higher-level HTTP methods: `get` and `post`
+- Simplified ARC broadcaster by using `get` and `post` methods for sync operations
+- Enhanced error handling and response processing in ARC transactions
+- Updated tests and examples to align with refactored `SyncHttpClient`
+
+---
+## [1.0.5] - 2025-05-30
+
+### Added
+Introducing an implementation of Shamir's Secret Sharing scheme for securely splitting and recovering private keys. 
+
+The update includes the following:
+
+- KeyShares, Polynomial, and PointInFiniteField classes to manage key splitting logic
+
+- Integrity verification for share validation
+
+- Robust error handling during reconstruction
+
+- Comprehensive unit tests
+
+- Examples demonstrating the use and behavior of the implemented methods
+
+The implementation is designed to follow the functionality and interface of the existing TypeScript SDK. Compatibility has been verified.
+
 
 ---
 ## [1.0.4] - 2025-04-28

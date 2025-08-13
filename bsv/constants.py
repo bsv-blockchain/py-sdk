@@ -47,6 +47,12 @@ class SIGHASH(int, Enum):
             cls.SINGLE_ANYONECANPAY_FORKID,
         ]
 
+#
+# ARC
+#
+#
+taal_mainnet_apikey = os.getenv('TAAL_MAINNET_APIKEY', '')
+taal_testnet_apikey = os.getenv('TAAL_TESTNET_APIKEY', '')
 
 #
 # P2PKH address
