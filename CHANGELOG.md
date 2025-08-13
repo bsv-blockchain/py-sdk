@@ -7,6 +7,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Table of Contents
 
 - [Unreleased](#unreleased)
+- [1.0.7.2 - 2025-08-13](#1072--2025-08-13)
 - [1.0.7.1- 2025-07-28](#1071---2025-07-28)
 - [1.0.7- 2025-07-28](#107---2025-07-28)
 - [1.0.6.1- 2025-07-03](#1061---2025-07-03)
@@ -42,6 +43,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 - (Notify of any improvements related to security vulnerabilities or potential risks.)
+
+---
+## [1.0.7.2] - 2025-08-13
+
+### Security
+- Applied measures for vulnerability reported on [ts-sdk#334](https://github.com/bsv-blockchain/ts-sdk/issues/334).
 
 
 ---
