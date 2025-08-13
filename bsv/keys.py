@@ -424,10 +424,12 @@ class PrivateKey:
             x = None
             attempts = 0
 
+            # TypeScript版と同様の安全なx座標生成
             while x is None or x == 0 or x in used_x_coordinates:
                 counter = [i, attempts] + list(os.urandom(32))
+                counter_bytes = bytes(counter)
 
-                h = hmac_sha512(seed, counter)
+                h = hmac_sha512(seed, counter_bytes)
                 x = int.from_bytes(h, 'big') % curve.p
 
                 attempts += 1
