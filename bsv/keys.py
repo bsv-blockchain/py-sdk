@@ -5,15 +5,19 @@ from typing import Optional, Union, Callable, Tuple
 
 from coincurve import PrivateKey as CcPrivateKey, PublicKey as CcPublicKey
 
-from .aes_cbc import aes_decrypt_with_iv
-from .aes_cbc import aes_encrypt_with_iv
+from .primitives.aescbc import aes_decrypt_with_iv
+from .primitives.aescbc import aes_encrypt_with_iv
 from .base58 import base58check_encode
 from .constants import Network, NETWORK_ADDRESS_PREFIX_DICT, NETWORK_WIF_PREFIX_DICT, PUBLIC_KEY_COMPRESSED_PREFIX_LIST
 from .curve import Point
 from .curve import curve, curve_multiply as curve_multiply, curve_add as curve_add
 from .hash import hash160, hash256, hmac_sha256
-from .utils import decode_wif, text_digest, stringify_ecdsa_recoverable, unstringify_ecdsa_recoverable
-from .utils import deserialize_ecdsa_recoverable, serialize_ecdsa_der
+# Import from main utils module to avoid circular dependency with utils package
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from . import utils as main_utils
+from .utils import decode_wif, text_digest, stringify_ecdsa_recoverable, unstringify_ecdsa_recoverable, deserialize_ecdsa_recoverable, serialize_ecdsa_der
 from .polynomial import Polynomial, PointInFiniteField, KeyShares
 
 
@@ -527,3 +531,5 @@ def recover_public_key(
       "r (32 bytes) + s (32 bytes) + recovery_id (1 byte)"
     """
     return PublicKey(CcPublicKey.from_signature_and_message(signature, message, hasher))
+
+
