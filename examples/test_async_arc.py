@@ -1,4 +1,5 @@
-from idlelib.configdialog import changes
+import pytest
+pytest.skip("Skipping examples in automated test run", allow_module_level=True)
 import asyncio
 
 from bsv import (

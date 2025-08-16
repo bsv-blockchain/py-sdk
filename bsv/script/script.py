@@ -1,6 +1,7 @@
 from typing import Union, Optional, List
 
 from bsv.constants import OpCode, OPCODE_VALUE_NAME_DICT
+# Import from utils package that should have these functions available
 from bsv.utils import encode_pushdata, unsigned_to_varint, Reader
 
 
