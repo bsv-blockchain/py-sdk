@@ -62,7 +62,7 @@ def create_nonce(wallet: Any, counterparty: Any = None, ctx: Any = None) -> str:
     print(f"[create_nonce] result={result}")
     hmac = result.get('hmac') if isinstance(result, dict) else getattr(result, 'hmac', None)
     if hmac is None:
-        raise Exception('Failed to create HMAC for nonce')
+        raise RuntimeError('Failed to create HMAC for nonce')
     nonce_bytes = first_half + hmac
     return base64.b64encode(nonce_bytes).decode('ascii')
 
@@ -114,9 +114,9 @@ def validate_certificates(verifier_wallet, message, certificates_requested=None)
     certificates = getattr(message, 'certificates', None) or (message.get('certificates', None) if isinstance(message, dict) else None)
     identity_key = getattr(message, 'identityKey', None) or (message.get('identityKey', None) if isinstance(message, dict) else None)
     if not certificates:
-        raise Exception('No certificates were provided in the AuthMessage.')
+        raise ValueError('No certificates were provided in the AuthMessage.')
     if identity_key is None:
-        raise Exception('identityKey must be provided in the AuthMessage.')
+        raise ValueError('identityKey must be provided in the AuthMessage.')
 
     # Normalize certificates_requested into (allowed_certifiers, requested_types_map)
     def _normalize_requested(req):
@@ -157,7 +157,7 @@ def validate_certificates(verifier_wallet, message, certificates_requested=None)
         keyring = incoming.get('keyring') or {}
 
         if subject != identity_key:
-            raise Exception(f'The subject of one of your certificates ("{subject}") is not the same as the request sender ("{identity_key}").')
+            raise ValueError(f'The subject of one of your certificates ("{subject}") is not the same as the request sender ("{identity_key}").')
 
         # Instantiate VerifiableCertificate with backwards-compatible signature used in tests
         try:
@@ -183,18 +183,18 @@ def validate_certificates(verifier_wallet, message, certificates_requested=None)
 
         # Signature verification
         if not vc.verify():
-            raise Exception(f'The signature for the certificate with serial number {serial_number} is invalid!')
+            raise ValueError(f'The signature for the certificate with serial number {serial_number} is invalid!')
 
         # Requested constraints
         if allowed_certifiers or requested_types:
             if allowed_certifiers and certifier not in allowed_certifiers:
-                raise Exception(f'Certificate with serial number {serial_number} has an unrequested certifier')
+                raise ValueError(f'Certificate with serial number {serial_number} has an unrequested certifier')
             if requested_types and cert_type not in requested_types:
-                raise Exception(f'Certificate with type {cert_type} was not requested')
+                raise ValueError(f'Certificate with type {cert_type} was not requested')
             required_fields = requested_types.get(cert_type, [])
             for field in required_fields:
                 if field not in (fields or {}):
-                    raise Exception(f'Certificate missing required field: {field}')
+                    raise ValueError(f'Certificate missing required field: {field}')
 
         # Try to decrypt fields for the verifier
         # Let decryption errors bubble up to the caller (as tests expect)

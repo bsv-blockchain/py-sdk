@@ -6,6 +6,7 @@ import os
 import time
 import urllib.parse
 import requests
+from requests.exceptions import RetryError, HTTPError
 
 from ..auth.peer import Peer
 from ..auth.session_manager import DefaultSessionManager
@@ -46,7 +47,7 @@ class AuthFetch:
         # Handle retry counter
         if config.retry_counter is not None:
             if config.retry_counter <= 0:
-                raise Exception("request failed after maximum number of retries")
+                raise RetryError("request failed after maximum number of retries")
             config.retry_counter -= 1
         # Extract base URL
         parsed_url = urllib.parse.urlparse(url_str)
@@ -110,7 +111,7 @@ class AuthFetch:
         self.callbacks.pop(request_nonce_b64, None)
         # 結果返却
         if response_holder['err']:
-            raise Exception(response_holder['err'])
+            raise RuntimeError(response_holder['err'])
         return response_holder['resp']
 
     def send_certificate_request(self, ctx: Any, base_url: str, certificates_to_request):
@@ -149,7 +150,7 @@ class AuthFetch:
         cert_event.wait(timeout=30)
         peer_to_use.peer.stop_listening_for_certificates_received(callback_id)
         if cert_holder['err']:
-            raise Exception(cert_holder['err'])
+            raise RuntimeError(cert_holder['err'])
         return cert_holder['certs']
 
     def consume_received_certificates(self):
@@ -244,12 +245,12 @@ class AuthFetch:
         for k in resp.headers:
             k_lower = k.lower()
             if k_lower == "x-bsv-auth-identity-key" or k_lower.startswith("x-bsv-auth"):
-                raise Exception("the server is trying to claim it has been authenticated when it has not")
+                raise PermissionError("the server is trying to claim it has been authenticated when it has not")
         # 成功時はmutual auth非対応を記録
         if resp.status_code < 400:
             peer_to_use.supports_mutual_auth = False
             return resp
-        raise Exception(f"request failed with status: {resp.status_code}")
+        raise HTTPError(f"request failed with status: {resp.status_code}")
 
     def handle_payment_and_retry(self, ctx: Any, url_str: str, config: SimplifiedFetchRequestOptions, original_response):
         """
@@ -258,19 +259,19 @@ class AuthFetch:
         # 必要なヘッダー取得
         payment_version = original_response.headers.get("x-bsv-payment-version")
         if not payment_version or payment_version != "1.0":
-            raise Exception(f"unsupported x-bsv-payment-version response header. Client version: 1.0, Server version: {payment_version}")
+            raise ValueError(f"unsupported x-bsv-payment-version response header. Client version: 1.0, Server version: {payment_version}")
         satoshis_required = original_response.headers.get("x-bsv-payment-satoshis-required")
         if not satoshis_required:
-            raise Exception("missing x-bsv-payment-satoshis-required response header")
+            raise ValueError("missing x-bsv-payment-satoshis-required response header")
         satoshis_required = int(satoshis_required)
         if satoshis_required <= 0:
-            raise Exception("invalid x-bsv-payment-satoshis-required response header value")
+            raise ValueError("invalid x-bsv-payment-satoshis-required response header value")
         server_identity_key = original_response.headers.get("x-bsv-auth-identity-key")
         if not server_identity_key:
-            raise Exception("missing x-bsv-auth-identity-key response header")
+            raise ValueError("missing x-bsv-auth-identity-key response header")
         derivation_prefix = original_response.headers.get("x-bsv-payment-derivation-prefix")
         if not derivation_prefix:
-            raise Exception("missing x-bsv-payment-derivation-prefix response header")
+            raise ValueError("missing x-bsv-payment-derivation-prefix response header")
         # ノンス生成（Goのutils.CreateNonce相当: ここではランダム文字列）
         derivation_suffix = base64.b64encode(os.urandom(8)).decode()
         # 公開鍵取得（Goのec.PublicKeyFromString相当: 省略）
