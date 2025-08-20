@@ -22,7 +22,7 @@ class WalletImpl(WalletInterface):
             allowed = self.permission_callback(action)
         else:
             # Default for CLI: Ask the user for permission
-            resp = input(f"[Wallet] {action} を許可しますか？ [y/N]: ")
+            resp = input(f"[Wallet] Allow {action}? [y/N]: ")
             allowed = resp.strip().lower() in ("y", "yes")
         if os.getenv("BSV_DEBUG", "0") == "1":
             print(f"[DEBUG WalletImpl._check_permission] action={action!r} allowed={allowed}")
@@ -68,7 +68,7 @@ class WalletImpl(WalletInterface):
             if os.getenv("BSV_DEBUG", "0") == "1":
                 print(f"[DEBUG WalletImpl.get_public_key] originator={originator} seek_permission={seek_permission} args={args}")
             if seek_permission:
-                self._check_permission("公開鍵取得 (get_public_key)")
+                self._check_permission("Get public key")
             if args.get("identityKey", False):
                 return {"publicKey": self.public_key.hex()}
             protocol_id = args.get("protocolID")
@@ -90,44 +90,13 @@ class WalletImpl(WalletInterface):
     def encrypt(self, ctx: Any, args: Dict, originator: str) -> Dict:
         try:
             encryption_args = args.get("encryption_args", {})
-            seek_permission = encryption_args.get("seekPermission") or encryption_args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
                 print(f"[DEBUG WalletImpl.encrypt] originator={originator} enc_args={encryption_args}")
-            if seek_permission:
-                self._check_permission("暗号化 (encrypt)")
+            self._maybe_seek_permission("Encrypt", encryption_args)
             plaintext = args.get("plaintext")
             if plaintext is None:
                 return {"error": "encrypt: plaintext is required"}
-            protocol_id = encryption_args.get("protocol_id")
-            key_id = encryption_args.get("key_id")
-            counterparty = encryption_args.get("counterparty")
-            for_self = encryption_args.get("forSelf", False)
-            if protocol_id and key_id:
-                if isinstance(protocol_id, dict):
-                    protocol = Protocol(protocol_id.get("securityLevel", 0), protocol_id.get("protocol", ""))
-                else:
-                    protocol = protocol_id
-                # normalize counterparty for KeyDeriver
-                if isinstance(counterparty, dict):
-                    inner = counterparty.get("counterparty")
-                    if isinstance(inner, (bytes, str)):
-                        inner = PublicKey(inner)
-                    cp = Counterparty(counterparty.get("type", CounterpartyType.OTHER), inner)
-                else:
-                    if isinstance(counterparty, (bytes, str)):
-                        cp = Counterparty(CounterpartyType.OTHER, PublicKey(counterparty))
-                    elif isinstance(counterparty, PublicKey):
-                        cp = Counterparty(CounterpartyType.OTHER, counterparty)
-                    else:
-                        cp = Counterparty(CounterpartyType.SELF)
-                pubkey = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self)
-            else:
-                if isinstance(counterparty, PublicKey):
-                    pubkey = counterparty
-                elif isinstance(counterparty, str):
-                    pubkey = PublicKey(counterparty)
-                else:
-                    pubkey = self.public_key
+            pubkey = self._resolve_encryption_public_key(encryption_args)
             ciphertext = pubkey.encrypt(plaintext)
             return {"ciphertext": ciphertext}
         except Exception as e:
@@ -136,49 +105,13 @@ class WalletImpl(WalletInterface):
     def decrypt(self, ctx: Any, args: Dict, originator: str) -> Dict:
         try:
             encryption_args = args.get("encryption_args", {})
-            seek_permission = encryption_args.get("seekPermission") or encryption_args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
                 print(f"[DEBUG WalletImpl.decrypt] originator={originator} enc_args={encryption_args}")
-            if seek_permission:
-                self._check_permission("復号 (decrypt)")
+            self._maybe_seek_permission("Decrypt", encryption_args)
             ciphertext = args.get("ciphertext")
             if ciphertext is None:
                 return {"error": "decrypt: ciphertext is required"}
-            protocol_id = encryption_args.get("protocol_id")
-            key_id = encryption_args.get("key_id")
-            counterparty = encryption_args.get("counterparty")
-            for_self = encryption_args.get("forSelf", False)
-            if protocol_id and key_id:
-                if isinstance(protocol_id, dict):
-                    protocol = Protocol(protocol_id.get("securityLevel", 0), protocol_id.get("protocol", ""))
-                else:
-                    protocol = protocol_id
-                # normalize counterparty (sender pub)
-                if isinstance(counterparty, dict):
-                    inner = counterparty.get("counterparty")
-                    if isinstance(inner, (bytes, str)):
-                        inner = PublicKey(inner)
-                    cp = Counterparty(counterparty.get("type", CounterpartyType.OTHER), inner)
-                else:
-                    if isinstance(counterparty, (bytes, str)):
-                        cp = Counterparty(CounterpartyType.OTHER, PublicKey(counterparty))
-                    elif isinstance(counterparty, PublicKey):
-                        cp = Counterparty(CounterpartyType.OTHER, counterparty)
-                    else:
-                        cp = Counterparty(CounterpartyType.SELF)
-                derived_priv = self.key_deriver.derive_private_key(protocol, key_id, cp)
-                if os.getenv("BSV_DEBUG", "0") == "1":
-                    print(f"[DEBUG WalletImpl.decrypt] derived_priv int={derived_priv.int():x} ciphertext_len={len(ciphertext)}")
-                try:
-                    plaintext = derived_priv.decrypt(ciphertext)
-                    if os.getenv("BSV_DEBUG", "0") == "1":
-                        print(f"[DEBUG WalletImpl.decrypt] decrypt success, plaintext={plaintext.hex()}")
-                except Exception as dec_err:
-                    if os.getenv("BSV_DEBUG", "0") == "1":
-                        print(f"[DEBUG WalletImpl.decrypt] decrypt failed with derived key: {dec_err}")
-                    plaintext = b""
-            else:
-                plaintext = self.private_key.decrypt(ciphertext)
+            plaintext = self._perform_decrypt_with_args(encryption_args, ciphertext)
             return {"plaintext": plaintext}
         except Exception as e:
             return {"error": f"decrypt: {e}"}
@@ -295,7 +228,11 @@ class WalletImpl(WalletInterface):
         except Exception as e:
             return {"error": f"verify_hmac: {e}"}
 
-    def abort_action(self, *a, **k): pass
+    def abort_action(self, *a, **k):
+        # NOTE: This mock wallet does not manage long-running actions, so there is
+        # nothing to abort. The method is intentionally left empty to satisfy the
+        # interface and to document that abort semantics are a no-op in tests.
+        pass
     def acquire_certificate(self, ctx: Any, args: Dict, originator: str) -> Dict:
         # store minimal certificate record for listing/discovery
         record = {
@@ -408,31 +345,39 @@ class WalletImpl(WalletInterface):
         # Return outputs for the requested basket from the most recent action, and include a BEEF
         include = (args.get("include") or "").lower()
         basket = args.get("basket", "")
-        outputs_desc = []
-        # Find the most recent action with outputs matching the basket
+        outputs_desc = self._find_outputs_for_basket(basket, args)
+        if os.getenv("REGISTRY_DEBUG") == "1":
+            print("[DEBUG list_outputs] basket", basket, "outputs_desc", outputs_desc)
+        beef_bytes = self._build_beef_for_outputs(outputs_desc)
+        res = {"outputs": self._format_outputs_result(outputs_desc, basket)}
+        if "entire" in include or "transaction" in include:
+            res["BEEF"] = beef_bytes
+        return res
+
+    # ---- Helpers to reduce cognitive complexity in list_outputs ----
+    def _find_outputs_for_basket(self, basket: str, args: Dict) -> List[Dict[str, Any]]:
+        outputs_desc: List[Dict[str, Any]] = []
         for action in reversed(self._actions):
             outs = action.get("outputs") or []
             filtered = [o for o in outs if (not basket) or (o.get("basket") == basket)]
             if filtered:
                 outputs_desc = filtered
                 break
-        if not outputs_desc:
-            # Fallback to one mock output
-            outputs_desc = [
-                {
-                    "outputIndex": 0,
-                    "satoshis": 1000,
-                    "lockingScript": b"\x51",
-                    "spendable": True,
-                    "outputDescription": "mock",
-                    "basket": basket,
-                    "tags": args.get("tags", []) or [],
-                    "customInstructions": None,
-                }
-            ]
-        # Build Transaction with these outputs for BEEF inclusion; ensure locking script is the one we stored
-        if os.getenv("REGISTRY_DEBUG") == "1":
-            print("[DEBUG list_outputs] basket", basket, "outputs_desc", outputs_desc)
+        if outputs_desc:
+            return outputs_desc
+        # Fallback to one mock output
+        return [{
+            "outputIndex": 0,
+            "satoshis": 1000,
+            "lockingScript": b"\x51",
+            "spendable": True,
+            "outputDescription": "mock",
+            "basket": basket,
+            "tags": args.get("tags", []) or [],
+            "customInstructions": None,
+        }]
+
+    def _build_beef_for_outputs(self, outputs_desc: List[Dict[str, Any]]) -> bytes:
         try:
             from bsv.transaction import Transaction
             from bsv.transaction_output import TransactionOutput
@@ -440,24 +385,20 @@ class WalletImpl(WalletInterface):
             tx = Transaction()
             for o in outputs_desc:
                 ls_hex = o.get("lockingScript")
-                if isinstance(ls_hex, str):
-                    ls_bytes = bytes.fromhex(ls_hex)
-                else:
-                    ls_bytes = ls_hex or b"\x51"
+                ls_bytes = bytes.fromhex(ls_hex) if isinstance(ls_hex, str) else (ls_hex or b"\x51")
                 to = TransactionOutput(Script(ls_bytes), int(o.get("satoshis", 0)))
                 tx.add_output(to)
-            beef_bytes = tx.to_beef()
+            return tx.to_beef()
         except Exception:
-            beef_bytes = b""
-        # Prepare result
-        result_outputs = []
+            return b""
+
+    def _format_outputs_result(self, outputs_desc: List[Dict[str, Any]], basket: str) -> List[Dict[str, Any]]:
+        result_outputs: List[Dict[str, Any]] = []
         for idx, o in enumerate(outputs_desc):
-            # ensure lockingScript hex string
             ls_hex = o.get("lockingScript")
             if not isinstance(ls_hex, str):
                 ls_hex = (ls_hex or b"\x51").hex()
-
-            ro = {
+            result_outputs.append({
                 "outputIndex": int(o.get("outputIndex", idx)),
                 "satoshis": int(o.get("satoshis", 0)),
                 "lockingScript": ls_hex,
@@ -467,12 +408,52 @@ class WalletImpl(WalletInterface):
                 "tags": o.get("tags") or [],
                 "customInstructions": o.get("customInstructions"),
                 "txid": "00" * 32,
-            }
-            result_outputs.append(ro)
-        res = {"outputs": result_outputs}
-        if "entire" in include or "transaction" in include:
-            res["BEEF"] = beef_bytes
-        return res
+            })
+        return result_outputs
+
+    # ---- Shared helpers for encrypt/decrypt ----
+    def _maybe_seek_permission(self, action_label: str, enc_args: Dict) -> None:
+        seek_permission = enc_args.get("seekPermission") or enc_args.get("seek_permission")
+        if seek_permission:
+            self._check_permission(action_label)
+
+    def _resolve_encryption_public_key(self, enc_args: Dict) -> PublicKey:
+        protocol_id = enc_args.get("protocol_id")
+        key_id = enc_args.get("key_id")
+        counterparty = enc_args.get("counterparty")
+        for_self = enc_args.get("forSelf", False)
+        if protocol_id and key_id:
+            protocol = Protocol(protocol_id.get("securityLevel", 0), protocol_id.get("protocol", "")) if isinstance(protocol_id, dict) else protocol_id
+            cp = self._normalize_counterparty(counterparty)
+            return self.key_deriver.derive_public_key(protocol, key_id, cp, for_self)
+        # Fallbacks
+        if isinstance(counterparty, PublicKey):
+            return counterparty
+        if isinstance(counterparty, str):
+            return PublicKey(counterparty)
+        return self.public_key
+
+    def _perform_decrypt_with_args(self, enc_args: Dict, ciphertext: bytes) -> bytes:
+        protocol_id = enc_args.get("protocol_id")
+        key_id = enc_args.get("key_id")
+        counterparty = enc_args.get("counterparty")
+        if protocol_id and key_id:
+            protocol = Protocol(protocol_id.get("securityLevel", 0), protocol_id.get("protocol", "")) if isinstance(protocol_id, dict) else protocol_id
+            cp = self._normalize_counterparty(counterparty)
+            derived_priv = self.key_deriver.derive_private_key(protocol, key_id, cp)
+            if os.getenv("BSV_DEBUG", "0") == "1":
+                print(f"[DEBUG WalletImpl.decrypt] derived_priv int={derived_priv.int():x} ciphertext_len={len(ciphertext)}")
+            try:
+                plaintext = derived_priv.decrypt(ciphertext)
+                if os.getenv("BSV_DEBUG", "0") == "1":
+                    print(f"[DEBUG WalletImpl.decrypt] decrypt success, plaintext={plaintext.hex()}")
+            except Exception as dec_err:
+                if os.getenv("BSV_DEBUG", "0") == "1":
+                    print(f"[DEBUG WalletImpl.decrypt] decrypt failed with derived key: {dec_err}")
+                plaintext = b""
+            return plaintext
+        # Fallback path
+        return self.private_key.decrypt(ciphertext)
     def prove_certificate(self, ctx: Any, args: Dict, originator: str) -> Dict:
         return {"keyringForVerifier": {}, "verifier": args.get("verifier", b"")}
     def relinquish_certificate(self, ctx: Any, args: Dict, originator: str) -> Dict:
@@ -504,7 +485,7 @@ class WalletImpl(WalletInterface):
 
             if seek_permission:
                 # Ask the user (or callback) for permission
-                self._check_permission("鍵リンク開示 (counterparty)")
+                self._check_permission("Reveal counterparty key linkage")
 
             # Real implementation would compute and return linkage data here. For test purposes
             # we return an empty dict which the serializer converts to an empty payload.
@@ -524,7 +505,7 @@ class WalletImpl(WalletInterface):
                 print(f"[DEBUG WalletImpl.reveal_specific_key_linkage] originator={originator} seek_permission={seek_permission} args={args}")
 
             if seek_permission:
-                self._check_permission("鍵リンク開示 (specific)")
+                self._check_permission("Reveal specific key linkage")
 
             return {}
         except Exception as e:

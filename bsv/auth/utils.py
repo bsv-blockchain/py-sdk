@@ -18,10 +18,10 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None, ctx: Any = N
     # Prepare encryption_args for wallet.verify_hmac
     encryption_args = {
         'protocol_id': {
-            'securityLevel': 1,  # Go版: SecurityLevelEveryApp = 1
+            'securityLevel': 1,  # Go version: SecurityLevelEveryApp = 1
             'protocol': 'server hmac'
         },
-        'key_id': data.decode('latin1'),  # Go版: string(randomBytes)
+        'key_id': data.decode('latin1'),  # Go version: string(randomBytes)
         'counterparty': counterparty
     }
     args = {
@@ -48,10 +48,10 @@ def create_nonce(wallet: Any, counterparty: Any = None, ctx: Any = None) -> str:
     # Create an sha256 HMAC
     encryption_args = {
         'protocol_id': {
-            'securityLevel': 1,  # Go版: SecurityLevelEveryApp = 1
+            'securityLevel': 1,  # Go version: SecurityLevelEveryApp = 1
             'protocol': 'server hmac'
         },
-        'key_id': first_half.decode('latin1'),  # Go版: string(randomBytes)
+        'key_id': first_half.decode('latin1'),  # Go version: string(randomBytes)
         'counterparty': counterparty
     }
     args = {
@@ -102,100 +102,118 @@ def get_verifiable_certificates(wallet, requested_certificates, verifier_identit
 
 def validate_certificates(verifier_wallet, message, certificates_requested=None):
     """
-    Validates and processes certificates received from a peer.
+    Validate and process certificates received from a peer.
     - Ensures each certificate's subject equals message.identityKey
     - Verifies signature
     - If certificates_requested is provided, enforces certifier/type/required fields
     - Attempts to decrypt fields using the verifier wallet
     Raises Exception on validation failure.
     """
-    from bsv.auth.verifiable_certificate import VerifiableCertificate
-
-    certificates = getattr(message, 'certificates', None) or (message.get('certificates', None) if isinstance(message, dict) else None)
-    identity_key = getattr(message, 'identityKey', None) or (message.get('identityKey', None) if isinstance(message, dict) else None)
+    certificates = _extract_message_certificates(message)
+    identity_key = _extract_message_identity_key(message)
     if not certificates:
         raise ValueError('No certificates were provided in the AuthMessage.')
     if identity_key is None:
         raise ValueError('identityKey must be provided in the AuthMessage.')
 
-    # Normalize certificates_requested into (allowed_certifiers, requested_types_map)
-    def _normalize_requested(req):
-        allowed_certifiers = []
-        requested_types = {}
-        if req is None:
-            return allowed_certifiers, requested_types
-        try:
-            # RequestedCertificateSet
-            from bsv.auth.requested_certificate_set import RequestedCertificateSet
-            if isinstance(req, RequestedCertificateSet):
-                allowed_certifiers = list(getattr(req, 'certifiers', []) or [])
-                # For utils we expect plain string type keys; convert bytes keys to base64 strings
-                mapping = getattr(getattr(req, 'certificate_types', None), 'mapping', {}) or {}
-                requested_types = {base64.b64encode(k).decode('ascii'): list(v or []) for k, v in mapping.items()}
-                return allowed_certifiers, requested_types
-        except Exception:
-            pass
-        # dict-like
-        if isinstance(req, dict):
-            allowed_certifiers = req.get('certifiers') or req.get('Certifiers') or []
-            types_dict = req.get('certificate_types') or req.get('certificateTypes') or req.get('types') or {}
-            # In utils tests, type keys are simple strings. Keep as-is.
-            for k, v in types_dict.items():
-                requested_types[str(k)] = list(v or [])
-        return allowed_certifiers, requested_types
-
-    allowed_certifiers, requested_types = _normalize_requested(certificates_requested)
+    allowed_certifiers, requested_types = _normalize_requested_for_utils(certificates_requested)
 
     for incoming in certificates:
-        # Extract fields as-is (tests expect plain strings, not decoded keys)
-        cert_type = incoming.get('type')
-        serial_number = incoming.get('serialNumber') or incoming.get('serial_number')
-        subject = incoming.get('subject')
-        certifier = incoming.get('certifier')
-        fields = incoming.get('fields') or {}
-        signature = incoming.get('signature')
-        keyring = incoming.get('keyring') or {}
+        cert_type, serial_number, subject, certifier, fields, signature, keyring = _extract_incoming_fields(incoming)
 
-        if subject != identity_key:
-            raise ValueError(f'The subject of one of your certificates ("{subject}") is not the same as the request sender ("{identity_key}").')
+        _ensure_subject_matches(subject, identity_key)
 
-        # Instantiate VerifiableCertificate with backwards-compatible signature used in tests
-        try:
-            vc = VerifiableCertificate(cert_type, serial_number, subject, certifier, incoming.get('revocationOutpoint'), fields, keyring, signature)
-        except Exception:
-            # Fallback: if real class is present, try wrapping via real constructor
-            try:
-                from bsv.auth.certificate import Certificate as _Cert, Outpoint as _Out
-                from bsv.keys import PublicKey as _PK
-                subj_pk = _PK(subject)
-                cert_pk = _PK(certifier) if certifier else None
-                rev = incoming.get('revocationOutpoint')
-                rev_out = None
-                if isinstance(rev, dict):
-                    txid = rev.get('txid') or rev.get('txID') or rev.get('txId')
-                    index = rev.get('index') or rev.get('vout')
-                    if txid is not None and index is not None:
-                        rev_out = _Out(txid, int(index))
-                base = _Cert(cert_type, serial_number, subj_pk, cert_pk, rev_out, fields, signature)
-                vc = VerifiableCertificate(base, keyring)
-            except Exception as e:
-                raise e
+        vc = _build_verifiable_certificate(incoming, cert_type, serial_number, subject, certifier, fields, signature, keyring)
 
-        # Signature verification
         if not vc.verify():
             raise ValueError(f'The signature for the certificate with serial number {serial_number} is invalid!')
 
-        # Requested constraints
-        if allowed_certifiers or requested_types:
-            if allowed_certifiers and certifier not in allowed_certifiers:
-                raise ValueError(f'Certificate with serial number {serial_number} has an unrequested certifier')
-            if requested_types and cert_type not in requested_types:
-                raise ValueError(f'Certificate with type {cert_type} was not requested')
-            required_fields = requested_types.get(cert_type, [])
-            for field in required_fields:
-                if field not in (fields or {}):
-                    raise ValueError(f'Certificate missing required field: {field}')
+        _enforce_requested_constraints(allowed_certifiers, requested_types, cert_type, certifier, fields, serial_number)
 
-        # Try to decrypt fields for the verifier
-        # Let decryption errors bubble up to the caller (as tests expect)
+        # Try to decrypt fields for the verifier (errors bubble up to caller)
         vc.decrypt_fields(None, verifier_wallet)
+
+
+# ------- Helpers below keep validate_certificates simple and testable -------
+def _extract_message_certificates(message):
+    return getattr(message, 'certificates', None) or (message.get('certificates', None) if isinstance(message, dict) else None)
+
+
+def _extract_message_identity_key(message):
+    return getattr(message, 'identityKey', None) or (message.get('identityKey', None) if isinstance(message, dict) else None)
+
+
+def _normalize_requested_for_utils(req):
+    allowed_certifiers = []
+    requested_types = {}
+    if req is None:
+        return allowed_certifiers, requested_types
+    try:
+        # RequestedCertificateSet
+        from bsv.auth.requested_certificate_set import RequestedCertificateSet
+        if isinstance(req, RequestedCertificateSet):
+            allowed_certifiers = list(getattr(req, 'certifiers', []) or [])
+            # For utils we expect plain string type keys; convert bytes keys to base64 strings
+            mapping = getattr(getattr(req, 'certificate_types', None), 'mapping', {}) or {}
+            requested_types = {base64.b64encode(k).decode('ascii'): list(v or []) for k, v in mapping.items()}
+            return allowed_certifiers, requested_types
+    except Exception:
+        pass
+    # dict-like
+    if isinstance(req, dict):
+        allowed_certifiers = req.get('certifiers') or req.get('Certifiers') or []
+        types_dict = req.get('certificate_types') or req.get('certificateTypes') or req.get('types') or {}
+        # In utils tests, type keys are simple strings. Keep as-is.
+        for k, v in types_dict.items():
+            requested_types[str(k)] = list(v or [])
+    return allowed_certifiers, requested_types
+
+
+def _extract_incoming_fields(incoming):
+    cert_type = incoming.get('type')
+    serial_number = incoming.get('serialNumber') or incoming.get('serial_number')
+    subject = incoming.get('subject')
+    certifier = incoming.get('certifier')
+    fields = incoming.get('fields') or {}
+    signature = incoming.get('signature')
+    keyring = incoming.get('keyring') or {}
+    return cert_type, serial_number, subject, certifier, fields, signature, keyring
+
+
+def _ensure_subject_matches(subject, identity_key):
+    if subject != identity_key:
+        raise ValueError(f'The subject of one of your certificates ("{subject}") is not the same as the request sender ("{identity_key}").')
+
+
+def _build_verifiable_certificate(incoming, cert_type, serial_number, subject, certifier, fields, signature, keyring):
+    from bsv.auth.verifiable_certificate import VerifiableCertificate
+    try:
+        return VerifiableCertificate(cert_type, serial_number, subject, certifier, incoming.get('revocationOutpoint'), fields, keyring, signature)
+    except Exception:
+        # Fallback: attempt to wrap a base Certificate if available
+        from bsv.auth.certificate import Certificate as _Cert, Outpoint as _Out
+        from bsv.keys import PublicKey as _PK
+        subj_pk = _PK(subject)
+        cert_pk = _PK(certifier) if certifier else None
+        rev = incoming.get('revocationOutpoint')
+        rev_out = None
+        if isinstance(rev, dict):
+            txid = rev.get('txid') or rev.get('txID') or rev.get('txId')
+            index = rev.get('index') or rev.get('vout')
+            if txid is not None and index is not None:
+                rev_out = _Out(txid, int(index))
+        base = _Cert(cert_type, serial_number, subj_pk, cert_pk, rev_out, fields, signature)
+        return VerifiableCertificate(base, keyring)
+
+
+def _enforce_requested_constraints(allowed_certifiers, requested_types, cert_type, certifier, fields, serial_number):
+    if not (allowed_certifiers or requested_types):
+        return
+    if allowed_certifiers and certifier not in allowed_certifiers:
+        raise ValueError(f'Certificate with serial number {serial_number} has an unrequested certifier')
+    if requested_types and cert_type not in requested_types:
+        raise ValueError(f'Certificate with type {cert_type} was not requested')
+    required_fields = requested_types.get(cert_type, [])
+    for field in required_fields:
+        if field not in (fields or {}):
+            raise ValueError(f'Certificate missing required field: {field}')

@@ -3,8 +3,9 @@ import logging
 import json
 import base64
 
-# from .session_manager import SessionManager
 from .transports.transport import Transport
+# Re-export PeerSession for compatibility with session_manager typing/tests
+from .peer_session import PeerSession
 
 
 class PeerOptions:
@@ -54,16 +55,27 @@ class Peer:
         if cfg.auto_persist_last_session is None or cfg.auto_persist_last_session:
             self.auto_persist_last_session = True
         if self.certificates_to_request is None:
-            # TODO: Replace with actual RequestedCertificateSet
-            self.certificates_to_request = {
-                'certifiers': [],
-                'certificate_types': {}
-            }
+            try:
+                from .requested_certificate_set import RequestedCertificateSet, RequestedCertificateTypeIDAndFieldList
+                self.certificates_to_request = RequestedCertificateSet(
+                    certifiers=[],
+                    certificate_types=RequestedCertificateTypeIDAndFieldList(),
+                )
+            except Exception:
+                # Fallback to a minimal dict structure if imports are unavailable
+                self.certificates_to_request = {
+                    'certifiers': [],
+                    'certificate_types': {}
+                }
         # Start the peer (register handlers, etc.)
         try:
             self.start()
         except Exception as e:
             self.logger.warning(f"Failed to start peer: {e}")
+        self.FAIL_TO_GET_IDENTIFY_KEY = "failed to get identity key"
+        self.AUTH_MESSAGE_SIGNATURE = "auth message signature"
+        self.SESSION_NOT_FOUND = "Session not found"
+        self.FAILED_TO_GET_AUTHENTICATED_SESSION = "failed to get authenticated session"
 
     def start(self):
         """
@@ -83,206 +95,204 @@ class Peer:
                 print("[Peer DEBUG] transport handler registration ok")
 
     # --- Canonicalization helpers for signing/verification ---
+    def _rcs_hex_certifiers(self, raw_list: Any) -> list:
+        certs: list = []
+        for pk in raw_list or []:
+            try:
+                if hasattr(pk, 'hex') and callable(getattr(pk, 'hex')):
+                    certs.append(pk.hex())
+                elif isinstance(pk, (bytes, bytearray)):
+                    certs.append(bytes(pk).hex())
+                else:
+                    certs.append(str(pk))
+            except Exception:
+                certs.append(str(pk))
+        return certs
+
+    def _rcs_key_to_b64(self, key: Any) -> Optional[str]:
+        import base64 as _b64
+        if isinstance(key, (bytes, bytearray)):
+            b = bytes(key)
+            return _b64.b64encode(b).decode('ascii') if len(b) == 32 else None
+        ks = str(key)
+        try:
+            dec = _b64.b64decode(ks)
+            if len(dec) == 32:
+                return _b64.b64encode(dec).decode('ascii')
+        except Exception:
+            pass
+        try:
+            b = bytes.fromhex(ks)
+            if len(b) == 32:
+                return _b64.b64encode(b).decode('ascii')
+        except Exception:
+            pass
+        return None
+
+    def _rcs_types_dict_from_requested(self, req: Any) -> dict:
+        if isinstance(req, dict):
+            return (
+                req.get('certificate_types')
+                or req.get('certificateTypes')
+                or req.get('types')
+                or {}
+            )
+        return {}
+
+    def _rcs_from_object(self, requested_obj: Any) -> tuple[list, dict]:
+        certifiers = self._rcs_hex_certifiers(getattr(requested_obj, 'certifiers', []) or [])
+        mapping = getattr(getattr(requested_obj, 'certificate_types', None), 'mapping', {}) or {}
+        types_b64: dict = {}
+        for k, v in mapping.items():
+            k_b64 = self._rcs_key_to_b64(k)
+            if k_b64 is None:
+                continue
+            types_b64[k_b64] = list(v or [])
+        return certifiers, types_b64
+
+    def _rcs_from_dict(self, requested_dict: dict) -> tuple[list, dict]:
+        certifiers = self._rcs_hex_certifiers(requested_dict.get('certifiers', []))
+        types_b64: dict = {}
+        for k, v in self._rcs_types_dict_from_requested(requested_dict).items():
+            k_b64 = self._rcs_key_to_b64(k)
+            if k_b64 is None:
+                continue
+            types_b64[k_b64] = list(v or [])
+        return certifiers, types_b64
+
     def _canonicalize_requested_certificates(self, requested: Any) -> dict:
         try:
             from .requested_certificate_set import RequestedCertificateSet
         except Exception:
             RequestedCertificateSet = None  # type: ignore
-        result: dict = {"certifiers": [], "certificateTypes": {}}
+
         if requested is None:
-            return result
-        try:
-            # Normalize certifiers
-            certifiers: list = []
-            if RequestedCertificateSet is not None and isinstance(requested, RequestedCertificateSet):
-                for pk in requested.certifiers:
-                    try:
-                        certifiers.append(pk.hex())
-                    except Exception:
-                        certifiers.append(str(pk))
-                mapping = getattr(requested.certificate_types, 'mapping', {}) or {}
-                for k, v in mapping.items():
-                    try:
-                        import base64 as _b64
-                        k_b64 = _b64.b64encode(k).decode('ascii') if isinstance(k, (bytes, bytearray)) else str(k)
-                    except Exception:
-                        k_b64 = str(k)
-                    result["certificateTypes"][k_b64] = sorted(list(v or []))
-            elif isinstance(requested, dict):
-                # Expect 'certifiers' as list of hex strings or objects with hex
-                for pk in requested.get('certifiers', []):
-                    try:
-                        certifiers.append(pk.hex())
-                    except Exception:
-                        certifiers.append(str(pk))
-                types_dict = (
-                    requested.get('certificate_types')
-                    or requested.get('certificateTypes')
-                    or requested.get('types')
-                    or {}
-                )
-                # Canonicalize keys to base64 for deterministic cross-language signatures
-                import base64 as _b64
-                for k, v in types_dict.items():
-                    k_b64: str
-                    if isinstance(k, (bytes, bytearray)):
-                        if len(k) != 32:
-                            continue
-                        k_b64 = _b64.b64encode(bytes(k)).decode('ascii')
-                    else:
-                        ks = str(k)
-                        try:
-                            # If already base64 of length 32 bytes when decoded, keep as-is
-                            dec = _b64.b64decode(ks)
-                            if len(dec) == 32:
-                                k_b64 = _b64.b64encode(dec).decode('ascii')
-                            else:
-                                # Try hex
-                                b = bytes.fromhex(ks)
-                                if len(b) != 32:
-                                    continue
-                                k_b64 = _b64.b64encode(b).decode('ascii')
-                        except Exception:
-                            try:
-                                b = bytes.fromhex(ks)
-                                if len(b) != 32:
-                                    continue
-                                k_b64 = _b64.b64encode(b).decode('ascii')
-                            except Exception:
-                                # Unknown format; skip
-                                continue
-                    result["certificateTypes"][k_b64] = sorted(list(v or []))
-            result["certifiers"] = sorted(certifiers)
-        except Exception:
-            # Fallback to string-dump to avoid raising
             return {"certifiers": [], "certificateTypes": {}}
-        return result
+
+        try:
+            certifiers: list
+            types_b64: dict
+
+            if RequestedCertificateSet is not None and isinstance(requested, RequestedCertificateSet):
+                certifiers, types_b64 = self._rcs_from_object(requested)
+            elif isinstance(requested, dict):
+                certifiers, types_b64 = self._rcs_from_dict(requested)
+            else:
+                certifiers, types_b64 = [], {}
+
+            # Sort outputs deterministically
+            sorted_types = {k: sorted(list(v or [])) for k, v in types_b64.items()}
+            return {"certifiers": sorted(certifiers), "certificateTypes": sorted_types}
+        except Exception:
+            return {"certifiers": [], "certificateTypes": {}}
+
+    # --- Helpers for certificate payload canonicalization ---
+    def _b64_32(self, value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, (bytes, bytearray)):
+            b = bytes(value)
+            return base64.b64encode(b).decode('ascii') if len(b) == 32 else None
+        if isinstance(value, str):
+            s = value
+            try:
+                dec = base64.b64decode(s)
+                if len(dec) == 32:
+                    return base64.b64encode(dec).decode('ascii')
+            except Exception:
+                pass
+            try:
+                b = bytes.fromhex(s)
+                if len(b) == 32:
+                    return base64.b64encode(b).decode('ascii')
+            except Exception:
+                pass
+            return None
+        return None
+
+    def _pubkey_to_hex(self, value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        if hasattr(value, 'hex') and callable(getattr(value, 'hex')):
+            try:
+                return value.hex()
+            except Exception:
+                return None
+        if isinstance(value, (bytes, bytearray)):
+            return bytes(value).hex()
+        if isinstance(value, str):
+            s = value
+            try:
+                dec = base64.b64decode(s)
+                if len(dec) in (33, 65):
+                    return dec.hex()
+            except Exception:
+                pass
+            try:
+                _ = bytes.fromhex(s)
+                return s.lower()
+            except Exception:
+                return s
+        return str(value)
+
+    def _normalize_revocation_outpoint(self, rev: Any) -> Optional[dict]:
+        if isinstance(rev, dict):
+            return {"txid": rev.get('txid'), "index": rev.get('index')}
+        if rev is not None and hasattr(rev, 'txid') and hasattr(rev, 'index'):
+            return {"txid": getattr(rev, 'txid', None), "index": getattr(rev, 'index', None)}
+        return None
+
+    def _get_base_keyring_signature(self, entry: Any):
+        if isinstance(entry, dict):
+            return entry.get('certificate', entry), (entry.get('keyring', {}) or {}), entry.get('signature')
+        return (
+            getattr(entry, 'certificate', entry),
+            getattr(entry, 'keyring', {}) or {},
+            getattr(entry, 'signature', None),
+        )
+
+    def _extract_base_fields(self, base: Any):
+        if isinstance(base, dict):
+            return (
+                base.get('type'),
+                base.get('serialNumber') or base.get('serial_number'),
+                base.get('subject'),
+                base.get('certifier'),
+                base.get('revocationOutpoint') or base.get('revocation_outpoint'),
+                base.get('fields', {}) or {},
+            )
+        return (
+            getattr(base, 'type', None),
+            getattr(base, 'serial_number', None),
+            getattr(base, 'subject', None),
+            getattr(base, 'certifier', None),
+            getattr(base, 'revocation_outpoint', None),
+            getattr(base, 'fields', {}) or {},
+        )
+
+    def _canonicalize_cert_entry(self, entry: Any) -> dict:
+        base, keyring, signature = self._get_base_keyring_signature(entry)
+        cert_type_raw, serial_raw, subject_raw, certifier_raw, rev, fields = self._extract_base_fields(base)
+        return {
+            "type": self._b64_32(cert_type_raw) or cert_type_raw,
+            "serialNumber": self._b64_32(serial_raw) or serial_raw,
+            "subject": self._pubkey_to_hex(subject_raw),
+            "certifier": self._pubkey_to_hex(certifier_raw),
+            "revocationOutpoint": self._normalize_revocation_outpoint(rev),
+            "fields": fields,
+            "keyring": keyring,
+            "signature": (base64.b64encode(signature).decode('ascii') if isinstance(signature, (bytes, bytearray)) else signature),
+        }
 
     def _canonicalize_certificates_payload(self, certs: Any) -> list:
-        import base64 as _b64
         canonical: list = []
         if not certs:
             return canonical
-
-        def _to_b64_32(value: Any) -> Optional[str]:
-            if value is None:
-                return None
-            # If already bytes, expect 32 bytes
-            if isinstance(value, (bytes, bytearray)):
-                b = bytes(value)
-                if len(b) == 32:
-                    return _b64.b64encode(b).decode('ascii')
-                return None
-            # If has .encode (string)
-            if isinstance(value, str):
-                s = value
-                # Try base64 first
-                try:
-                    dec = _b64.b64decode(s)
-                    if len(dec) == 32:
-                        return _b64.b64encode(dec).decode('ascii')
-                except Exception:
-                    pass
-                # Try hex
-                try:
-                    b = bytes.fromhex(s)
-                    if len(b) == 32:
-                        return _b64.b64encode(b).decode('ascii')
-                except Exception:
-                    pass
-                return None
-            return None
-
-        def _pubkey_to_hex(value: Any) -> Optional[str]:
-            if value is None:
-                return None
-            # PublicKey object with hex() method
-            if hasattr(value, 'hex') and callable(getattr(value, 'hex')):
-                try:
-                    return value.hex()
-                except Exception:
-                    pass
-            # bytes -> hex
-            if isinstance(value, (bytes, bytearray)):
-                return bytes(value).hex()
-            # string: try base64(33) to hex, else assume already hex
-            if isinstance(value, str):
-                s = value
-                try:
-                    dec = _b64.b64decode(s)
-                    # Compressed pubkey typically 33 bytes
-                    if len(dec) in (33, 65):
-                        return dec.hex()
-                except Exception:
-                    pass
-                # Heuristic: if looks like hex
-                try:
-                    _ = bytes.fromhex(s)
-                    return s.lower()
-                except Exception:
-                    pass
-                return s
-            return str(value)
-
         for c in certs:
             try:
-                # Support object or dict inputs, and nested {"certificate": ...}
-                base = None
-                keyring = {}
-                signature = None
-                if isinstance(c, dict):
-                    base = c.get('certificate', c)
-                    keyring = c.get('keyring', {}) or {}
-                    signature = c.get('signature')
-                else:
-                    base = getattr(c, 'certificate', c)
-                    keyring = getattr(c, 'keyring', {}) or {}
-                    signature = getattr(c, 'signature', None)
-
-                # Extract fields from base certificate
-                if isinstance(base, dict):
-                    cert_type_raw = base.get('type')
-                    serial_raw = base.get('serialNumber') or base.get('serial_number')
-                    subject_raw = base.get('subject')
-                    certifier_raw = base.get('certifier')
-                    rev = base.get('revocationOutpoint') or base.get('revocation_outpoint')
-                    fields = base.get('fields', {}) or {}
-                else:
-                    cert_type_raw = getattr(base, 'type', None)
-                    serial_raw = getattr(base, 'serial_number', None)
-                    subject_raw = getattr(base, 'subject', None)
-                    certifier_raw = getattr(base, 'certifier', None)
-                    rev = getattr(base, 'revocation_outpoint', None)
-                    fields = getattr(base, 'fields', {}) or {}
-
-                # Normalize primitives
-                cert_type_b64 = _to_b64_32(cert_type_raw) or cert_type_raw
-                serial_b64 = _to_b64_32(serial_raw) or serial_raw
-                subject_hex = _pubkey_to_hex(subject_raw)
-                certifier_hex = _pubkey_to_hex(certifier_raw)
-                rev_dict = None
-                if isinstance(rev, dict):
-                    rev_dict = {"txid": rev.get('txid'), "index": rev.get('index')}
-                elif rev is not None and hasattr(rev, 'txid') and hasattr(rev, 'index'):
-                    rev_dict = {"txid": getattr(rev, 'txid', None), "index": getattr(rev, 'index', None)}
-                sig_b64 = _b64.b64encode(signature).decode('ascii') if isinstance(signature, (bytes, bytearray)) else signature
-
-                # Deterministic field order ensured by JSON sort_keys on serialization, but field list order stable
-                canonical.append({
-                    "type": cert_type_b64,
-                    "serialNumber": serial_b64,
-                    "subject": subject_hex,
-                    "certifier": certifier_hex,
-                    "revocationOutpoint": rev_dict,
-                    "fields": fields,
-                    "keyring": keyring,
-                    "signature": sig_b64,
-                })
+                canonical.append(self._canonicalize_cert_entry(c))
             except Exception:
-                # Best effort: stringify
                 canonical.append(str(c))
-
-        # Sort deterministically by (type, serialNumber)
         try:
             canonical.sort(key=lambda x: (x.get('type', '') or '', x.get('serialNumber', '') or ''))
         except Exception:
@@ -325,10 +335,48 @@ class Peer:
         initial_nonce = getattr(message, 'initial_nonce', None)
         if not initial_nonce:
             return Exception("Invalid nonce")
-        import os, base64, time
-        our_nonce = base64.b64encode(os.urandom(32)).decode('ascii')
+
+        # 1) Generate our session nonce
+        our_nonce = self._generate_session_nonce(ctx)
         if self._debug:
             print(f"[Peer DEBUG] handle_initial_request: our_nonce={our_nonce}, peer_nonce={initial_nonce}")
+
+        # 2) Create and store session (auth status may be downgraded if we plan to request certs)
+        session = self._create_session_for_initial(sender_public_key, initial_nonce, our_nonce)
+        if self._debug:
+            print(f"[Peer DEBUG] handle_initial_request: session added, nonce={session.session_nonce}")
+
+        # 3) Get our identity key
+        identity_key_result = self.wallet.get_public_key(ctx, {'identityKey': True}, "auth-peer")
+        if identity_key_result is None or not hasattr(identity_key_result, 'public_key'):
+            return Exception(self.FAIL_TO_GET_IDENTIFY_KEY)
+
+        # 4) Acquire any requested certificates from the peer's initial request
+        certs = []
+        requested_certs = getattr(message, 'requested_certificates', None)
+        if requested_certs is not None:
+            certs = self._acquire_requested_certs_for_initial(ctx, requested_certs, identity_key_result)
+
+        # 5) Build initial response and sign it
+        response_err = self._send_initial_response(ctx, message, identity_key_result, initial_nonce, session, certs)
+        if response_err is not None:
+            return response_err
+
+        if self._debug:
+            print("[Peer DEBUG] handle_initial_request: response sent")
+        return None
+
+    def _generate_session_nonce(self, ctx: Any) -> str:
+        import base64
+        try:
+            from .utils import create_nonce
+            return create_nonce(self.wallet, {'type': 1}, ctx)
+        except Exception:
+            import os
+            return base64.b64encode(os.urandom(32)).decode('ascii')
+
+    def _create_session_for_initial(self, sender_public_key: Any, initial_nonce: str, our_nonce: str):
+        import time
         from .peer_session import PeerSession
         session = PeerSession(
             is_authenticated=True,
@@ -337,67 +385,65 @@ class Peer:
             peer_identity_key=sender_public_key,
             last_update=int(time.time() * 1000)
         )
+        # If we plan to request certificates, mark unauthenticated until received
         req_certs = getattr(self, 'certificates_to_request', None)
         if req_certs is not None and hasattr(req_certs, 'certificate_types') and len(req_certs.certificate_types) > 0:
             session.is_authenticated = False
         self.session_manager.add_session(session)
-        if self._debug:
-            print(f"[Peer DEBUG] handle_initial_request: session added, nonce={session.session_nonce}")
-        identity_key_result = self.wallet.get_public_key(ctx, {'identityKey': True}, "auth-peer")
-        if identity_key_result is None or not hasattr(identity_key_result, 'public_key'):
-            return Exception("failed to get identity key")
-        certs = []
-        requested_certs = getattr(message, 'requested_certificates', None)
-        if requested_certs is not None:
+        return session
+
+    def _acquire_requested_certs_for_initial(self, ctx: Any, requested_certs: Any, identity_key_result: Any) -> list:
+        import base64
+        certs: list = []
+        try:
             from .verifiable_certificate import VerifiableCertificate
             from .certificate import Certificate
-            from .requested_certificate_set import RequestedCertificateSet
-            try:
-                # Obtain from certificate DB or wallet
-                for cert_type, fields in requested_certs.certificate_types.items():
-                    args = {
-                        'cert_type': base64.b64encode(cert_type).decode(),
-                        'fields': fields,
-                        'subject': identity_key_result.public_key.hex(),
-                        'certifiers': [pk.hex() for pk in requested_certs.certifiers],
-                    }
-                    # Acquire certificate from wallet (use acquire_certificate or list_certificates as needed)
-                    cert_result = self.wallet.acquire_certificate(ctx, args, "auth-peer")
-                    # If the result is a list, wrap all, otherwise just one
-                    if isinstance(cert_result, list):
-                        for cert in cert_result:
-                            if isinstance(cert, Certificate):
-                                certs.append(VerifiableCertificate(cert))
-                    elif isinstance(cert_result, Certificate):
-                        certs.append(VerifiableCertificate(cert_result))
-            except Exception as e:
-                self.logger.warning(f"Failed to acquire certificates: {e}")
+            # Obtain from certificate DB or wallet
+            for cert_type, fields in getattr(requested_certs, 'certificate_types', {} ).items():
+                args = {
+                    'cert_type': base64.b64encode(cert_type).decode(),
+                    'fields': fields,
+                    'subject': identity_key_result.public_key.hex(),
+                    'certifiers': [pk.hex() for pk in getattr(requested_certs, 'certifiers', [])],
+                }
+                cert_result = self.wallet.acquire_certificate(ctx, args, "auth-peer")
+                if isinstance(cert_result, list):
+                    for cert in cert_result:
+                        if isinstance(cert, Certificate):
+                            certs.append(VerifiableCertificate(cert))
+                elif isinstance(cert_result, Certificate):
+                    certs.append(VerifiableCertificate(cert_result))
+        except Exception as e:
+            self.logger.warning(f"Failed to acquire certificates: {e}")
+        return certs
+
+    def _send_initial_response(self, ctx: Any, message: Any, identity_key_result: Any, initial_nonce: str, session: Any, certs: list) -> Optional[Exception]:
+        import base64
         from .auth_message import AuthMessage
         response = AuthMessage(
             version="0.1",
             message_type="initialResponse",
             identity_key=identity_key_result.public_key,
-            nonce=our_nonce,
+            nonce=session.session_nonce,
             your_nonce=initial_nonce,
             initial_nonce=session.session_nonce,
             certificates=certs
         )
         try:
-            initial_nonce_bytes = base64.b64decode(initial_nonce)
-            session_nonce_bytes = base64.b64decode(session.session_nonce)
+            sig_data = self._compute_initial_sig_data(initial_nonce, session.session_nonce)
         except Exception as e:
             return Exception(f"failed to decode nonce: {e}")
-        sig_data = initial_nonce_bytes + session_nonce_bytes
+
         sig_result = self.wallet.create_signature(ctx, {
             'encryption_args': {
                 'protocol_id': {
                     'securityLevel': 2,
-                    'protocol': "auth message signature"
+                    'protocol': self.AUTH_MESSAGE_SIGNATURE
                 },
                 'key_id': f"{initial_nonce} {session.session_nonce}",
                 'counterparty': {
                     'type': 3,
-                    'counterparty': message.identity_key if hasattr(message, 'identity_key') else None
+                    'counterparty': getattr(message, 'identity_key', None)
                 }
             },
             'data': sig_data
@@ -408,9 +454,142 @@ class Peer:
         err = self.transport.send(ctx, response)
         if err is not None:
             return Exception(f"failed to send initial response: {err}")
-        if self._debug:
-            print("[Peer DEBUG] handle_initial_request: response sent")
         return None
+
+    def _compute_initial_sig_data(self, initial_nonce: str, session_nonce: str) -> bytes:
+        import base64
+        initial_nonce_bytes = base64.b64decode(initial_nonce)
+        session_nonce_bytes = base64.b64decode(session_nonce)
+        return initial_nonce_bytes + session_nonce_bytes
+
+    # --- Helpers for certificate validation ---
+    def _is_rcs_like(self, obj: Any) -> bool:
+        return hasattr(obj, 'certifiers') and hasattr(obj, 'certificate_types')
+
+    def _extract_certifiers_from_req(self, req: Any) -> list:
+        if self._is_rcs_like(req):
+            return list(getattr(req, 'certifiers', []) or [])
+        if isinstance(req, dict):
+            return req.get('certifiers') or req.get('Certifiers') or []
+        return []
+
+    def _extract_types_map_from_req(self, req: Any) -> Dict[bytes, list]:
+        result: Dict[bytes, list] = {}
+        if self._is_rcs_like(req):
+            raw = getattr(getattr(req, 'certificate_types', None), 'mapping', {}) or {}
+        elif isinstance(req, dict):
+            raw = req.get('certificate_types') or req.get('certificateTypes') or req.get('types') or {}
+        else:
+            raw = {}
+        for k, v in raw.items():
+            key_b = bytes(k) if isinstance(k, (bytes, bytearray)) else self._decode_type_bytes(k)
+            if key_b is not None:
+                result[key_b] = list(v or [])
+        return result
+
+    def _normalize_requested_certificate_constraints(self, req: Any):
+        try:
+            certifiers = self._extract_certifiers_from_req(req)
+            types_map = self._extract_types_map_from_req(req)
+            return certifiers, types_map
+        except Exception:
+            return [], {}
+
+    def _decode_type_bytes(self, val: Any) -> Optional[bytes]:
+        if isinstance(val, (bytes, bytearray)):
+            return bytes(val)
+        if isinstance(val, str):
+            try:
+                import base64 as _b64
+                return _b64.b64decode(val)
+            except Exception:
+                try:
+                    return bytes.fromhex(val)
+                except Exception:
+                    return None
+        return None
+
+    # Granular validators for a single certificate
+    def _get_base_cert(self, cert: Any) -> Any:
+        return getattr(cert, 'certificate', cert)
+
+    def _has_valid_signature(self, ctx: Any, cert: Any) -> bool:
+        try:
+            if hasattr(cert, 'verify') and not cert.verify(ctx):
+                    self.logger.warning(f"Certificate signature invalid: {cert}")
+                    return False
+        except Exception as e:
+            self.logger.warning(f"Certificate signature verification error: {e}")
+            return False
+        return True
+
+    def _subject_matches_expected(self, expected_subject: Any, base_cert: Any) -> bool:
+        if expected_subject is None:
+            return True
+        try:
+            subj_hex = self._pubkey_to_hex(getattr(base_cert, 'subject', None))
+            exp_hex = self._pubkey_to_hex(expected_subject)
+            if subj_hex is None or exp_hex is None or subj_hex != exp_hex:
+                self.logger.warning("Certificate subject does not match the expected identity key")
+                return False
+            return True
+        except Exception as e:
+            self.logger.warning(f"Subject comparison failed: {e}")
+            return False
+
+    def _is_certifier_allowed(self, allowed_certifier_hexes: Set[str], base_cert: Any) -> bool:
+        if not allowed_certifier_hexes:
+            return True
+        try:
+            cert_hex = self._pubkey_to_hex(getattr(base_cert, 'certifier', None))
+            if cert_hex is None or cert_hex.lower() not in allowed_certifier_hexes:
+                self.logger.warning("Certificate has unrequested certifier")
+                return False
+            return True
+        except Exception as e:
+            self.logger.warning(f"Certifier check failed: {e}")
+            return False
+
+    def _type_and_fields_valid(self, requested_types: Dict[bytes, list], base_cert: Any) -> bool:
+        if not requested_types:
+            return True
+        try:
+            cert_type_bytes = self._decode_type_bytes(getattr(base_cert, 'type', None))
+            if not cert_type_bytes:
+                self.logger.warning("Invalid certificate type encoding")
+                return False
+            if cert_type_bytes not in requested_types:
+                self.logger.warning("Certificate type was not requested")
+                return False
+            required_fields = requested_types.get(cert_type_bytes, [])
+            cert_fields = getattr(base_cert, 'fields', {}) or {}
+            for field in required_fields:
+                if field not in cert_fields:
+                    self.logger.warning(f"Certificate missing required field: {field}")
+                    return False
+            return True
+        except Exception as e:
+            self.logger.warning(f"Type/fields validation failed: {e}")
+            return False
+
+    def _validate_single_certificate(
+        self,
+        ctx: Any,
+        cert: Any,
+        expected_subject: Any,
+        allowed_certifier_hexes: Set[str],
+        requested_types: Dict[bytes, list],
+    ) -> bool:
+        base_cert = self._get_base_cert(cert)
+        if not self._has_valid_signature(ctx, cert):
+            return False
+        if not self._subject_matches_expected(expected_subject, base_cert):
+            return False
+        if not self._is_certifier_allowed(allowed_certifier_hexes, base_cert):
+            return False
+        if not self._type_and_fields_valid(requested_types, base_cert):
+            return False
+        return True
 
     def _validate_certificates(self, ctx: Any, certs: list, requested_certs: Any = None, expected_subject: Any = None) -> bool:
         """
@@ -420,121 +599,16 @@ class Peer:
         - Ensures type is requested and required fields are present (if provided)
         - Ensures subject matches expected_subject (if provided)
         """
-        from .requested_certificate_set import RequestedCertificateSet
         valid = True
-
-        def _normalize_requested(req: Any):
-            certifiers = []
-            type_map = {}
-            try:
-                if isinstance(req, RequestedCertificateSet):
-                    certifiers = list(getattr(req, 'certifiers', []) or [])
-                    mapping = getattr(getattr(req, 'certificate_types', None), 'mapping', {}) or {}
-                    type_map = dict(mapping)
-                elif isinstance(req, dict):
-                    certifiers = req.get('certifiers') or req.get('Certifiers') or []
-                    types_dict = req.get('certificate_types') or req.get('certificateTypes') or req.get('types') or {}
-                    for k, v in types_dict.items():
-                        if isinstance(k, (bytes, bytearray)):
-                            key_b = bytes(k)
-                        else:
-                            try:
-                                key_b = base64.b64decode(k)
-                            except Exception:
-                                continue
-                        type_map[key_b] = list(v or [])
-            except Exception:
-                pass
-            return certifiers, type_map
-
-        allowed_certifiers, requested_types = _normalize_requested(requested_certs)
-        # Normalize allowed certifiers to hex strings for comparison
+        allowed_certifiers, requested_types = self._normalize_requested_certificate_constraints(requested_certs)
         allowed_certifier_hexes: Set[str] = set()
         for c in allowed_certifiers or []:
-            try:
-                if hasattr(c, 'hex'):
-                    allowed_certifier_hexes.add(c.hex())
-                elif isinstance(c, (bytes, bytearray)):
-                    allowed_certifier_hexes.add(bytes(c).hex())
-                elif isinstance(c, str):
-                    # accept hex strings
-                    int(c, 16)
-                    allowed_certifier_hexes.add(c.lower())
-            except Exception:
-                continue
+            hx = self._pubkey_to_hex(c)
+            if isinstance(hx, str):
+                allowed_certifier_hexes.add(hx.lower())
 
         for cert in certs:
-            try:
-                base_cert = getattr(cert, 'certificate', cert)
-                # Signature verification
-                if hasattr(cert, 'verify') and not cert.verify(ctx):
-                    self.logger.warning(f"Certificate signature invalid: {cert}")
-                    valid = False
-                    continue
-                # Subject verification
-                if expected_subject is not None:
-                    subj = getattr(base_cert, 'subject', None)
-                    try:
-                        subj_hex = subj.hex() if hasattr(subj, 'hex') else None
-                        exp_hex = expected_subject.hex() if hasattr(expected_subject, 'hex') else None
-                        if subj_hex is None or exp_hex is None or subj_hex != exp_hex:
-                            self.logger.warning("Certificate subject does not match the expected identity key")
-                            valid = False
-                            continue
-                    except Exception:
-                        self.logger.warning("Failed to compare certificate subject with expected identity key")
-                        valid = False
-                        continue
-                # Certifier verification
-                if allowed_certifier_hexes:
-                    certifier_val = getattr(base_cert, 'certifier', None)
-                    try:
-                        if hasattr(certifier_val, 'hex'):
-                            cert_hex = certifier_val.hex()
-                        elif isinstance(certifier_val, (bytes, bytearray)):
-                            cert_hex = bytes(certifier_val).hex()
-                        else:
-                            cert_hex = str(certifier_val)
-                    except Exception:
-                        cert_hex = None
-                    if cert_hex is None or cert_hex.lower() not in allowed_certifier_hexes:
-                        self.logger.warning("Certificate has unrequested certifier")
-                        valid = False
-                        continue
-                # Type / fields verification
-                if requested_types:
-                    cert_type_val = getattr(base_cert, 'type', None)
-                    # Accept base64/hex/bytes
-                    cert_type_bytes = None
-                    if isinstance(cert_type_val, (bytes, bytearray)):
-                        cert_type_bytes = bytes(cert_type_val)
-                    elif isinstance(cert_type_val, str):
-                        try:
-                            b = base64.b64decode(cert_type_val)
-                            cert_type_bytes = b
-                        except Exception:
-                            try:
-                                b = bytes.fromhex(cert_type_val)
-                                cert_type_bytes = b
-                            except Exception:
-                                cert_type_bytes = None
-                    if not cert_type_bytes:
-                        self.logger.warning("Invalid certificate type encoding")
-                        valid = False
-                        continue
-                    if cert_type_bytes not in requested_types:
-                        self.logger.warning("Certificate type was not requested")
-                        valid = False
-                        continue
-                    required_fields = requested_types.get(cert_type_bytes, [])
-                    cert_fields = getattr(base_cert, 'fields', {}) or {}
-                    for field in required_fields:
-                        if field not in cert_fields:
-                            self.logger.warning(f"Certificate missing required field: {field}")
-                            valid = False
-                            break
-            except Exception as e:
-                self.logger.warning(f"Certificate validation error: {e}")
+            if not self._validate_single_certificate(ctx, cert, expected_subject, allowed_certifier_hexes, requested_types):
                 valid = False
         return valid
 
@@ -544,16 +618,29 @@ class Peer:
         """
         if self._debug:
             print("[Peer DEBUG] handle_initial_response: begin")
+        session = self._retrieve_initial_response_session(sender_public_key, message)
+        if session is None:
+            return Exception(self.SESSION_NOT_FOUND)
+
+        err = self._verify_and_update_session_from_initial_response(ctx, message, session)
+        if err is not None:
+            return err
+
+        self._process_initial_response_certificates(ctx, message, sender_public_key)
+        self._notify_initial_response_waiters(session, message)
+        self._handle_requested_certificates_from_peer_message(ctx, message, sender_public_key, source_label="initialResponse")
+        return None
+
+    def _retrieve_initial_response_session(self, sender_public_key: Any, message: Any) -> Optional[Any]:
         session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
         if session is None:
-            # Fallback: try to match by our original initial nonce carried in your_nonce
             your_nonce = getattr(message, 'your_nonce', None)
             if your_nonce:
                 session = self.session_manager.get_session(your_nonce)
-        if session is None:
-            return Exception("Session not found")
+        return session
+
+    def _verify_and_update_session_from_initial_response(self, ctx: Any, message: Any, session: Any) -> Optional[Exception]:
         try:
-            # Reconstruct signature data in the same order as signer (request.initial_nonce + response.session_nonce)
             client_initial_bytes = base64.b64decode(getattr(message, 'your_nonce', ''))
             server_session_bytes = base64.b64decode(getattr(message, 'initial_nonce', ''))
         except Exception as e:
@@ -564,7 +651,7 @@ class Peer:
             'encryption_args': {
                 'protocol_id': {
                     'securityLevel': 2,
-                    'protocol': "auth message signature"
+                    'protocol': self.AUTH_MESSAGE_SIGNATURE
                 },
                 'key_id': f"{getattr(message, 'your_nonce', '')} {getattr(message, 'initial_nonce', '')}",
                 'counterparty': {
@@ -586,42 +673,103 @@ class Peer:
         session.last_update = int(time.time() * 1000)
         self.session_manager.update_session(session)
         self.last_interacted_with_peer = getattr(message, 'identity_key', None)
-        # Certificate verification logic
+        return None
+
+    def _process_initial_response_certificates(self, ctx: Any, message: Any, sender_public_key: Any) -> None:
         certs = getattr(message, 'certificates', [])
-        if certs:
-            # Strict verification: match against requested set and sender's identity_key
-            valid = self._validate_certificates(
-                ctx,
-                certs,
-                getattr(self, 'certificates_to_request', None),
-                expected_subject=getattr(message, 'identity_key', None),
-            )
-            if not valid:
-                self.logger.warning("Invalid certificates in initial response")
-            for callback in self.on_certificate_received_callbacks.values():
-                try:
-                    callback(sender_public_key, certs)
-                except Exception as e:
-                    self.logger.warning(f"Certificate received callback error: {e}")
-        # Notify any waiting initial-response callbacks registered during initiate_handshake
+        if not certs:
+            return
+        valid = self._validate_certificates(
+            ctx,
+            certs,
+            getattr(self, 'certificates_to_request', None),
+            expected_subject=getattr(message, 'identity_key', None),
+        )
+        if not valid:
+            self.logger.warning("Invalid certificates in initial response")
+        for callback in self.on_certificate_received_callbacks.values():
+            try:
+                callback(sender_public_key, certs)
+            except Exception as e:
+                self.logger.warning(f"Certificate received callback error: {e}")
+
+    def _notify_initial_response_waiters(self, session: Any, message: Any) -> None:
         try:
             to_delete = None
             for cb_id, info in self.on_initial_response_received_callbacks.items():
                 if info.get('session_nonce') == session.session_nonce:
-                    # Prefer to pass the peer's nonce to the callback
                     peer_nonce = session.peer_nonce or getattr(message, 'initial_nonce', None)
+                    to_delete = cb_id
                     try:
                         info.get('callback')(peer_nonce)
-                    finally:
-                        to_delete = cb_id
-                        break
+                    except Exception as e:
+                        self.logger.warning(f"Initial response callback execution error: {e}")
+                    break
             if to_delete is not None:
                 del self.on_initial_response_received_callbacks[to_delete]
         except Exception as e:
             self.logger.warning(f"Initial response callback error: {e}")
 
-        # TODO: Handle requested certificates from peer if present
-        return None
+    def _handle_requested_certificates_from_peer_message(self, ctx: Any, message: Any, sender_public_key: Any, source_label: str = "") -> None:
+        try:
+            req_from_peer = getattr(message, 'requested_certificates', None)
+            if not self._has_requested_certificates(req_from_peer):
+                return
+
+            if self._try_callbacks_for_requested_certs(ctx, sender_public_key, req_from_peer, source_label):
+                return
+
+            self._auto_reply_with_requested_certs(ctx, message, sender_public_key, req_from_peer)
+        except Exception as e:
+            self.logger.warning(f"Requested certificates processing error: {e}")
+
+    def _has_requested_certificates(self, req_from_peer: Any) -> bool:
+        if req_from_peer is None:
+            return False
+        if hasattr(req_from_peer, 'certifiers') and getattr(req_from_peer, 'certifiers'):
+            return True
+        if isinstance(req_from_peer, dict):
+            return bool(
+                req_from_peer.get('certifiers')
+                or req_from_peer.get('certificate_types')
+                or req_from_peer.get('certificateTypes')
+                or req_from_peer.get('types')
+            )
+        return False
+
+    def _try_callbacks_for_requested_certs(self, ctx: Any, sender_public_key: Any, req_from_peer: Any, source_label: str) -> bool:
+        if not self.on_certificate_request_received_callbacks:
+            return False
+        for cb in tuple(self.on_certificate_request_received_callbacks.values()):
+            try:
+                result = cb(sender_public_key, req_from_peer)
+                if result:
+                    err = self.send_certificate_response(ctx, sender_public_key, result)
+                    if err is None:
+                        return True
+            except Exception as e:
+                self.logger.warning(f"Certificate request callback error ({source_label} handling): {e}")
+        return False
+
+    def _auto_reply_with_requested_certs(self, ctx: Any, message: Any, sender_public_key: Any, req_from_peer: Any) -> None:
+        try:
+            canonical_req = self._canonicalize_requested_certificates(req_from_peer)
+            req_for_utils = {
+                'certifiers': canonical_req.get('certifiers', []),
+                'types': canonical_req.get('certificateTypes', {})
+            }
+            from .utils import get_verifiable_certificates
+            verifiable = get_verifiable_certificates(
+                self.wallet,
+                req_for_utils,
+                getattr(message, 'identity_key', None)
+            )
+            if verifiable is not None:
+                _err = self.send_certificate_response(ctx, sender_public_key, verifiable)
+                if _err is not None:
+                    self.logger.warning(f"Failed to send auto certificate response: {_err}")
+        except Exception as e:
+            self.logger.warning(f"Auto certificate response error: {e}")
 
     def handle_certificate_request(self, ctx: Any, message: Any, sender_public_key: Any) -> Optional[Exception]:
         """
@@ -631,17 +779,38 @@ class Peer:
             print("[Peer DEBUG] handle_certificate_request: begin")
         session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
         if session is None:
-            return Exception("Session not found")
-        # --- Signature verification logic implementation ---
+            return Exception(self.SESSION_NOT_FOUND)
+
         requested = getattr(message, 'requested_certificates', {})
         canonical_req = self._canonicalize_requested_certificates(requested)
+        err = self._verify_certificate_request_signature(ctx, message, session, sender_public_key, canonical_req)
+        if err is not None:
+            return err
+
+        self._touch_session(session)
+
+        certs_to_send = self._invoke_cert_request_callbacks(sender_public_key, requested)
+        if certs_to_send is None:
+            subject_hex = self._get_identity_subject_hex(ctx)
+            if subject_hex is None:
+                return Exception("failed to get identity key for certificate response")
+            certs_to_send = self._auto_acquire_certificates_for_request(ctx, canonical_req, subject_hex)
+
+        if self._debug:
+            print(f"[Peer DEBUG] handle_certificate_request: sending response, certs={len(certs_to_send or [])}")
+        err = self.send_certificate_response(ctx, sender_public_key, certs_to_send or [])
+        if err is not None:
+            return Exception(f"failed to send certificate response: {err}")
+        return None
+
+    def _verify_certificate_request_signature(self, ctx: Any, message: Any, session: Any, sender_public_key: Any, canonical_req: dict) -> Optional[Exception]:
         cert_request_data = self._serialize_for_signature(canonical_req)
         signature = getattr(message, 'signature', None)
         verify_result = self.wallet.verify_signature(ctx, {
             'encryption_args': {
                 'protocol_id': {
                     'securityLevel': 2,
-                    'protocol': "auth message signature"
+                    'protocol': self.AUTH_MESSAGE_SIGNATURE
                 },
                 'key_id': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
                 'counterparty': {
@@ -656,67 +825,57 @@ class Peer:
             print(f"[Peer DEBUG] handle_certificate_request: verify_result={getattr(verify_result, 'valid', None)}")
         if verify_result is None or not getattr(verify_result, 'valid', False):
             return Exception("certificate request - invalid signature")
+        return None
+
+    def _touch_session(self, session: Any) -> None:
         import time
         session.last_update = int(time.time() * 1000)
         self.session_manager.update_session(session)
-        # --- Response side implementation: callback -> acquire -> sign -> send ---
-        certs_to_send = None
-        # 1) Prioritize callbacks if any
-        if self.on_certificate_request_received_callbacks:
-            if self._debug:
-                print("[Peer DEBUG] handle_certificate_request: invoking request callbacks")
-            for cb in list(self.on_certificate_request_received_callbacks.values()):
-                try:
-                    result = cb(sender_public_key, requested)
-                    if result:
-                        certs_to_send = result
-                        break
-                except Exception as e:
-                    self.logger.warning(f"Certificate request callback error: {e}")
-        # 2) Fallback: acquire from wallet/store
-        if certs_to_send is None:
-            if self._debug:
-                print("[Peer DEBUG] handle_certificate_request: fallback to wallet.acquire_certificate")
-            certs: list = []
-            try:
-                # Our identity key
-                identity_key_result = self.wallet.get_public_key(ctx, {'identityKey': True}, "auth-peer")
-                subject_hex = getattr(getattr(identity_key_result, 'public_key', None), 'hex', lambda: None)()
-                if subject_hex is None:
-                    raise RuntimeError("failed to get identity key for certificate response")
-                # Acquire certificates (RequestedCertificateSet compatible)
-                try:
-                    from .requested_certificate_set import RequestedCertificateSet
-                except Exception:
-                    RequestedCertificateSet = None  # type: ignore
-                # Read from normalized canonical_req
-                certifiers_list = canonical_req.get('certifiers', [])
-                types_dict = canonical_req.get('certificateTypes', {})
-                for cert_type_b64, fields in types_dict.items():
-                    args = {
-                        'cert_type': cert_type_b64,
-                        'fields': list(fields or []),
-                        'subject': subject_hex,
-                        'certifiers': list(certifiers_list or []),
-                    }
-                    try:
-                        cert_result = self.wallet.acquire_certificate(ctx, args, "auth-peer")
-                    except Exception:
-                        cert_result = None
-                    if isinstance(cert_result, list):
-                        certs.extend(cert_result)
-                    elif cert_result is not None:
-                        certs.append(cert_result)
-            except Exception as e:
-                self.logger.warning(f"Failed to acquire certificates for response: {e}")
-            certs_to_send = certs
-        # 3) Send response
+
+    def _invoke_cert_request_callbacks(self, sender_public_key: Any, requested: Any):
+        if not self.on_certificate_request_received_callbacks:
+            return None
         if self._debug:
-            print(f"[Peer DEBUG] handle_certificate_request: sending response, certs={len(certs_to_send or [])}")
-        err = self.send_certificate_response(ctx, sender_public_key, certs_to_send or [])
-        if err is not None:
-            return Exception(f"failed to send certificate response: {err}")
+            print("[Peer DEBUG] handle_certificate_request: invoking request callbacks")
+        for cb in tuple(self.on_certificate_request_received_callbacks.values()):
+            try:
+                result = cb(sender_public_key, requested)
+                if result:
+                    return result
+            except Exception as e:
+                self.logger.warning(f"Certificate request callback error: {e}")
         return None
+
+    def _get_identity_subject_hex(self, ctx: Any) -> Optional[str]:
+        try:
+            identity_key_result = self.wallet.get_public_key(ctx, {'identityKey': True}, "auth-peer")
+            return getattr(getattr(identity_key_result, 'public_key', None), 'hex', lambda: None)()
+        except Exception:
+            return None
+
+    def _auto_acquire_certificates_for_request(self, ctx: Any, canonical_req: dict, subject_hex: str) -> list:
+        certs: list = []
+        try:
+            certifiers_list = canonical_req.get('certifiers', [])
+            types_dict = canonical_req.get('certificateTypes', {})
+            for cert_type_b64, fields in types_dict.items():
+                args = {
+                    'cert_type': cert_type_b64,
+                    'fields': list(fields or []),
+                    'subject': subject_hex,
+                    'certifiers': list(certifiers_list or []),
+                }
+                try:
+                    cert_result = self.wallet.acquire_certificate(ctx, args, "auth-peer")
+                except Exception:
+                    cert_result = None
+                if isinstance(cert_result, list):
+                    certs.extend(cert_result)
+                elif cert_result is not None:
+                    certs.append(cert_result)
+        except Exception as e:
+            self.logger.warning(f"Failed to acquire certificates for response: {e}")
+        return certs
 
     def handle_certificate_response(self, ctx: Any, message: Any, sender_public_key: Any) -> Optional[Exception]:
         """
@@ -726,16 +885,29 @@ class Peer:
             print("[Peer DEBUG] handle_certificate_response: begin")
         session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
         if session is None:
-            return Exception("Session not found")
+            return Exception(self.SESSION_NOT_FOUND)
+
         certs = getattr(message, 'certificates', [])
         canonical_certs = self._canonicalize_certificates_payload(certs)
         cert_data = self._serialize_for_signature(canonical_certs)
+
+        err = self._verify_certificate_response_signature(ctx, message, session, sender_public_key, cert_data)
+        if err is not None:
+            return err
+
+        self._touch_session(session)
+
+        self._process_certificate_response_certificates(ctx, message, sender_public_key)
+        self._handle_requested_certificates_from_peer_message(ctx, message, sender_public_key, source_label="certificateResponse")
+        return None
+
+    def _verify_certificate_response_signature(self, ctx: Any, message: Any, session: Any, sender_public_key: Any, cert_data: bytes) -> Optional[Exception]:
         signature = getattr(message, 'signature', None)
         verify_result = self.wallet.verify_signature(ctx, {
             'encryption_args': {
                 'protocol_id': {
                     'securityLevel': 2,
-                    'protocol': "auth message signature"
+                    'protocol': self.AUTH_MESSAGE_SIGNATURE
                 },
                 'key_id': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
                 'counterparty': {
@@ -750,26 +922,25 @@ class Peer:
             print(f"[Peer DEBUG] handle_certificate_response: verify_result={getattr(verify_result, 'valid', None)}")
         if verify_result is None or not getattr(verify_result, 'valid', False):
             return Exception("certificate response - invalid signature")
-        import time
-        session.last_update = int(time.time() * 1000)
-        self.session_manager.update_session(session)
-        # Certificate verification logic
-        certs = getattr(message, 'certificates', [])
-        if certs:
-            valid = self._validate_certificates(
-                ctx,
-                certs,
-                getattr(self, 'certificates_to_request', None),
-                expected_subject=getattr(message, 'identity_key', None),
-            )
-            if not valid:
-                self.logger.warning("Invalid certificates in certificate response")
-            for callback in self.on_certificate_received_callbacks.values():
-                try:
-                    callback(sender_public_key, certs)
-                except Exception as e:
-                    self.logger.warning(f"Certificate callback error: {e}")
         return None
+
+    def _process_certificate_response_certificates(self, ctx: Any, message: Any, sender_public_key: Any) -> None:
+        certs = getattr(message, 'certificates', [])
+        if not certs:
+            return
+        valid = self._validate_certificates(
+            ctx,
+            certs,
+            getattr(self, 'certificates_to_request', None),
+            expected_subject=getattr(message, 'identity_key', None),
+        )
+        if not valid:
+            self.logger.warning("Invalid certificates in certificate response")
+        for callback in self.on_certificate_received_callbacks.values():
+            try:
+                callback(sender_public_key, certs)
+            except Exception as e:
+                self.logger.warning(f"Certificate callback error: {e}")
 
     def handle_general_message(self, ctx: Any, message: Any, sender_public_key: Any) -> Optional[Exception]:
         """
@@ -777,7 +948,27 @@ class Peer:
         """
         if self._debug:
             print("[Peer DEBUG] handle_general_message: begin")
-        # Optional: validate nonce for replay protection (non-fatal)
+        self._optionally_verify_nonce(ctx, message, sender_public_key)
+        if self._is_loopback_echo(ctx, sender_public_key):
+            return None
+
+        session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
+        if session is None:
+            return Exception(self.SESSION_NOT_FOUND)
+
+        payload = getattr(message, 'payload', None)
+        data_to_verify = self._serialize_for_signature(payload)
+        err = self._verify_general_message_signature(ctx, message, session, sender_public_key, data_to_verify)
+        if err is not None:
+            return err
+
+        self._touch_session(session)
+        if self.auto_persist_last_session:
+            self.last_interacted_with_peer = sender_public_key
+        self._dispatch_general_message_callbacks(sender_public_key, payload)
+        return None
+
+    def _optionally_verify_nonce(self, ctx: Any, message: Any, sender_public_key: Any) -> None:
         try:
             from .utils import verify_nonce
             nonce = getattr(message, 'nonce', None)
@@ -785,27 +976,24 @@ class Peer:
                 self.logger.warning("general message - nonce verification failed")
         except Exception:
             pass
-        # If this is a loopback of our own outbound message (test transport echoes), ignore gracefully
+
+    def _is_loopback_echo(self, ctx: Any, sender_public_key: Any) -> bool:
         try:
             identity_key_result = self.wallet.get_public_key(ctx, {'identityKey': True}, "auth-peer")
             if identity_key_result is not None and hasattr(identity_key_result, 'public_key') and sender_public_key is not None:
                 if getattr(identity_key_result.public_key, 'hex', None) and getattr(sender_public_key, 'hex', None):
-                    if identity_key_result.public_key.hex() == sender_public_key.hex():
-                        return None
+                    return identity_key_result.public_key.hex() == sender_public_key.hex()
         except Exception:
             pass
-        session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
-        if session is None:
-            return Exception("Session not found")
-        # --- Signature verification logic implementation ---
+        return False
+
+    def _verify_general_message_signature(self, ctx: Any, message: Any, session: Any, sender_public_key: Any, data_to_verify: bytes) -> Optional[Exception]:
         signature = getattr(message, 'signature', None)
-        payload = getattr(message, 'payload', None)
-        data_to_verify = self._serialize_for_signature(payload)
         verify_result = self.wallet.verify_signature(ctx, {
             'encryption_args': {
                 'protocol_id': {
                     'securityLevel': 2,
-                    'protocol': "auth message signature"
+                    'protocol': self.AUTH_MESSAGE_SIGNATURE
                 },
                 'key_id': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
                 'counterparty': {
@@ -816,19 +1004,16 @@ class Peer:
             'data': data_to_verify,
             'signature': signature
         }, "auth-peer")
-        if verify_result is None or not getattr(verify_result, 'valid', False):
+        if not getattr(verify_result, 'valid', False):
             return Exception("general message - invalid signature")
-        import time
-        session.last_update = int(time.time() * 1000)
-        self.session_manager.update_session(session)
-        if self.auto_persist_last_session:
-            self.last_interacted_with_peer = sender_public_key
+        return None
+
+    def _dispatch_general_message_callbacks(self, sender_public_key: Any, payload: Any) -> None:
         for callback in self.on_general_message_received_callbacks.values():
             try:
                 callback(sender_public_key, payload)
             except Exception as e:
                 self.logger.warning(f"General message callback error: {e}")
-        return None
 
     def expire_sessions(self, max_age_sec: int = 3600):
         """
@@ -858,8 +1043,29 @@ class Peer:
                 print(f"[Peer DEBUG] expire_sessions: removed={before - after}, remaining={after}")
 
     def stop(self):
-        # TODO: Clean up any resources if needed
-        pass
+        """
+        Stop the peer. Aligns with TS/Go behavior (no strict teardown required),
+        but performs best-effort cleanup:
+        - Deregister transport handler by installing a no-op
+        - Clear registered callbacks to avoid leaks
+        """
+        if self._debug:
+            print("[Peer DEBUG] stop: begin")
+        # Best-effort: replace on_data with a no-op to stop receiving messages
+        try:
+            _ = self.transport.on_data(lambda _ctx, _msg: None)
+        except Exception:
+            pass
+        # Clear callback registries
+        try:
+            self.on_general_message_received_callbacks.clear()
+            self.on_certificate_received_callbacks.clear()
+            self.on_certificate_request_received_callbacks.clear()
+            self.on_initial_response_received_callbacks.clear()
+        except Exception:
+            pass
+        if self._debug:
+            print("[Peer DEBUG] stop: done")
 
     def listen_for_general_messages(self, callback: Callable) -> int:
         """
@@ -930,9 +1136,13 @@ class Peer:
         """
         Starts the mutual authentication handshake with a peer.
         """
-        # TODO: Replace with actual nonce creation logic
-        import os, base64, time
-        session_nonce = base64.b64encode(os.urandom(32)).decode('ascii')
+        import time
+        try:
+            from .utils import create_nonce
+            session_nonce = create_nonce(self.wallet, { 'type': 1 }, ctx)
+        except Exception:
+            import os, base64
+            session_nonce = base64.b64encode(os.urandom(32)).decode('ascii')
         # Add a preliminary session entry (not yet authenticated)
         from .peer_session import PeerSession
         session = PeerSession(
@@ -1009,12 +1219,12 @@ class Peer:
             identity_key = self.last_interacted_with_peer
         peer_session = self.get_authenticated_session(ctx, identity_key, max_wait_time)
         if peer_session is None:
-            return Exception("failed to get authenticated session")
+            return Exception(self.FAILED_TO_GET_AUTHENTICATED_SESSION)
         import os, base64, time
         request_nonce = base64.b64encode(os.urandom(32)).decode('ascii')
         identity_key_result = self.wallet.get_public_key(ctx, {'identityKey': True}, "auth-peer")
         if identity_key_result is None or not hasattr(identity_key_result, 'public_key'):
-            return Exception("failed to get identity key")
+            return Exception(self.FAIL_TO_GET_IDENTIFY_KEY)
         from .auth_message import AuthMessage
         general_message = AuthMessage(
             version="0.1",
@@ -1030,7 +1240,7 @@ class Peer:
             'encryption_args': {
                 'protocol_id': {
                     'securityLevel': 2,
-                    'protocol': "auth message signature"
+                    'protocol': self.AUTH_MESSAGE_SIGNATURE
                 },
                 'key_id': f"{request_nonce} {peer_session.peer_nonce}",
                 'counterparty': {
@@ -1060,14 +1270,14 @@ class Peer:
         # Get or create an authenticated session
         peer_session = self.get_authenticated_session(ctx, identity_key, max_wait_time)
         if peer_session is None:
-            return Exception("failed to get authenticated session")
+            return Exception(self.FAILED_TO_GET_AUTHENTICATED_SESSION)
         # Create a nonce for this request
         import os, base64, time
         request_nonce = base64.b64encode(os.urandom(32)).decode('ascii')
         # Get identity key
         identity_key_result = self.wallet.get_public_key(ctx, {'identityKey': True}, "auth-peer")
         if identity_key_result is None or not hasattr(identity_key_result, 'public_key'):
-            return Exception("failed to get identity key")
+            return Exception(self.FAIL_TO_GET_IDENTIFY_KEY)
         # Create certificate request message
         from .auth_message import AuthMessage
         cert_request = AuthMessage(
@@ -1084,7 +1294,7 @@ class Peer:
             'encryption_args': {
                 'protocol_id': {
                     'securityLevel': 2,
-                    'protocol': "auth message signature"
+                    'protocol': self.AUTH_MESSAGE_SIGNATURE
                 },
                 'key_id': f"{request_nonce} {peer_session.peer_nonce}",
                 'counterparty': {
@@ -1118,14 +1328,14 @@ class Peer:
             print(f"[Peer DEBUG] send_certificate_response: begin, certs_in={(len(certificates) if isinstance(certificates, list) else 'n/a')}")
         peer_session = self.get_authenticated_session(ctx, identity_key, 0)
         if peer_session is None:
-            return Exception("failed to get authenticated session")
+            return Exception(self.FAILED_TO_GET_AUTHENTICATED_SESSION)
         # Create a nonce for this response
         import os, base64, time
         response_nonce = base64.b64encode(os.urandom(32)).decode('ascii')
         # Get identity key
         identity_key_result = self.wallet.get_public_key(ctx, {'identityKey': True}, "auth-peer")
         if identity_key_result is None or not hasattr(identity_key_result, 'public_key'):
-            return Exception("failed to get identity key")
+            return Exception(self.FAIL_TO_GET_IDENTIFY_KEY)
         # Create certificate response message
         from .auth_message import AuthMessage
         cert_response = AuthMessage(
@@ -1144,7 +1354,7 @@ class Peer:
             'encryption_args': {
                 'protocol_id': {
                     'securityLevel': 2,
-                    'protocol': "auth message signature"
+                    'protocol': self.AUTH_MESSAGE_SIGNATURE
                 },
                 'key_id': f"{response_nonce} {peer_session.peer_nonce}",
                 'counterparty': {
@@ -1252,7 +1462,6 @@ class PeerAuthError(Exception):
 
 class CertificateError(Exception):
     """Raised for certificate validation or issuance errors."""
-    pass
 
     # --- 7. Serialization/deserialization helpers ---
     def serialize_data(self, data: Any) -> bytes:
@@ -1304,10 +1513,24 @@ class CertificateError(Exception):
     # --- 9. Transport security stub (for extension) ---
     def secure_send(self, ctx: Any, message: Any) -> Optional[Exception]:
         """
-        Send a message with additional security (encryption, MAC, etc.).
-        This is a stub for future extension.
+        Send a message with additional security.
+
+        Parity with TS/Go SDKs:
+        - The current TS and Go implementations do not provide an additional
+          secure-send layer beyond signing. For protocol parity, we delegate
+          directly to the underlying transport.
+
+        Forward-compatibility:
+        - If a transport exposes a `secure_send` method, prefer it.
+        - Otherwise, fall back to `send`.
         """
-        # TODO: Implement encryption/MAC as needed
+        try:
+            secure = getattr(self.transport, 'secure_send', None)
+            if callable(secure):
+                return secure(ctx, message)
+        except Exception:
+            # Fall back to normal send on any error
+            pass
         return self.transport.send(ctx, message)
 
     # --- 10. Integration/E2E test utility ---
