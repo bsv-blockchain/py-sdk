@@ -8,12 +8,11 @@ import urllib.parse
 import requests
 from requests.exceptions import RetryError, HTTPError
 
-from ..auth.peer import Peer
-from ..auth.session_manager import DefaultSessionManager
-from ..auth.requested_certificate_set import RequestedCertificateSet
-from ..auth.verifiable_certificate import VerifiableCertificate
-from ..auth.transports.simplified_http_transport import SimplifiedHTTPTransport
-# from ...wallet.WalletInterface import WalletInterface
+from bsv.auth.peer import Peer
+from bsv.auth.session_manager import DefaultSessionManager
+from bsv.auth.requested_certificate_set import RequestedCertificateSet
+from bsv.auth.verifiable_certificate import VerifiableCertificate
+from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
 
 class SimplifiedFetchRequestOptions:
     def __init__(self, method: str = "GET", headers: Optional[Dict[str, str]] = None, body: Optional[bytes] = None, retry_counter: Optional[int] = None):
@@ -165,38 +164,17 @@ class AuthFetch:
         - ヘッダーはx-bsv-*系やcontent-type, authorizationのみ含める
         - Goのutil.NewWriter/WriteVarInt相当はbytearray+独自関数で実装
         """
-        import struct
-        import math
-        from collections import OrderedDict
-
-        def write_varint(writer: bytearray, value: int):
-            # Bitcoin style varint (for simplicity, 8byte unsigned)
-            writer += struct.pack('<Q', value)
-
-        def write_bytes(writer: bytearray, b: bytes):
-            writer += b
-
-        def write_string(writer: bytearray, s: str):
-            b = s.encode('utf-8')
-            write_varint(writer, len(b))
-            writer += b
-
         buf = bytearray()
-        # Write request nonce
-        write_bytes(buf, request_nonce)
-        # Write method
-        write_string(buf, method)
-        # Path
-        if parsed_url.path:
-            write_string(buf, parsed_url.path)
-        else:
-            write_varint(buf, 0xFFFFFFFFFFFFFFFF)  # -1
-        # Query
-        if parsed_url.query:
-            write_string(buf, '?' + parsed_url.query)
-        else:
-            write_varint(buf, 0xFFFFFFFFFFFFFFFF)  # -1
-        # ヘッダー選別
+        self._write_bytes(buf, request_nonce)
+        self._write_string(buf, method)
+        self._write_path_and_query(buf, parsed_url)
+        included_headers = self._select_headers(headers)
+        self._write_headers(buf, included_headers)
+        body = self._determine_body(body, method, included_headers)
+        self._write_body(buf, body)
+        return bytes(buf)
+
+    def _select_headers(self, headers):
         included_headers = []
         for k, v in headers.items():
             key = k.lower()
@@ -209,29 +187,52 @@ class AuthFetch:
                 included_headers.append((key, content_type))
             else:
                 self.logger.warning(f"Unsupported header in simplified fetch: {k}")
-        # ソート
         included_headers.sort(key=lambda x: x[0])
-        # ヘッダー数
-        write_varint(buf, len(included_headers))
-        # 各ヘッダー
-        for k, v in included_headers:
-            write_string(buf, k)
-            write_string(buf, v)
-        # Body
+        return included_headers
+
+    def _determine_body(self, body, method, included_headers):
         methods_with_body = ["POST", "PUT", "PATCH", "DELETE"]
         if not body and method.upper() in methods_with_body:
             for k, v in included_headers:
                 if k == 'content-type' and 'application/json' in v:
-                    body = b'{}'
-                    break
-            if not body:
-                body = b''
-        if body:
-            write_varint(buf, len(body))
-            write_bytes(buf, body)
+                    return b'{}'
+            return b''
+        return body
+
+    def _write_path_and_query(self, buf, parsed_url):
+        if parsed_url.path:
+            self._write_string(buf, parsed_url.path)
         else:
-            write_varint(buf, 0xFFFFFFFFFFFFFFFF)  # -1
-        return bytes(buf)
+            self._write_varint(buf, 0xFFFFFFFFFFFFFFFF)  # -1
+        if parsed_url.query:
+            self._write_string(buf, '?' + parsed_url.query)
+        else:
+            self._write_varint(buf, 0xFFFFFFFFFFFFFFFF)  # -1
+
+    def _write_headers(self, buf, included_headers):
+        self._write_varint(buf, len(included_headers))
+        for k, v in included_headers:
+            self._write_string(buf, k)
+            self._write_string(buf, v)
+
+    def _write_body(self, buf, body):
+        if body:
+            self._write_varint(buf, len(body))
+            self._write_bytes(buf, body)
+        else:
+            self._write_varint(buf, 0xFFFFFFFFFFFFFFFF)  # -1
+
+    def _write_varint(self, writer: bytearray, value: int):
+        import struct
+        writer.extend(struct.pack('<Q', value))
+
+    def _write_bytes(self, writer: bytearray, b: bytes):
+        writer.extend(b)
+
+    def _write_string(self, writer: bytearray, s: str):
+        b = s.encode('utf-8')
+        self._write_varint(writer, len(b))
+        writer.extend(b)
 
     def handle_fetch_and_validate(self, url_str: str, config: SimplifiedFetchRequestOptions, peer_to_use: AuthPeer):
         """
@@ -254,43 +255,124 @@ class AuthFetch:
 
     def handle_payment_and_retry(self, ctx: Any, url_str: str, config: SimplifiedFetchRequestOptions, original_response):
         """
-        GoのhandlePaymentAndRetry相当: 402 Payment Required時に支払いトランザクションを作成し、x-bsv-paymentヘッダーを付与してリトライ。
+        On 402 Payment Required, create a payment transaction, attach x-bsv-payment header, and retry.
+        Refactored version (reduced Cognitive Complexity)
         """
-        # 必要なヘッダー取得
-        payment_version = original_response.headers.get("x-bsv-payment-version")
+        payment_info = self._validate_payment_headers(original_response)
+        derivation_suffix = self._generate_derivation_suffix()
+        derived_public_key = self._get_payment_public_key(ctx, payment_info, derivation_suffix)
+        locking_script = self._build_locking_script(derived_public_key)
+        tx_b64 = self._create_payment_transaction(ctx, url_str, payment_info, derivation_suffix, locking_script)
+        self._set_payment_header(config, payment_info, derivation_suffix, tx_b64)
+        if config.retry_counter is None:
+            config.retry_counter = 3
+        return self.fetch(ctx, url_str, config)
+
+    def _validate_payment_headers(self, response):
+        payment_version = response.headers.get("x-bsv-payment-version")
         if not payment_version or payment_version != "1.0":
             raise ValueError(f"unsupported x-bsv-payment-version response header. Client version: 1.0, Server version: {payment_version}")
-        satoshis_required = original_response.headers.get("x-bsv-payment-satoshis-required")
+        satoshis_required = response.headers.get("x-bsv-payment-satoshis-required")
         if not satoshis_required:
             raise ValueError("missing x-bsv-payment-satoshis-required response header")
         satoshis_required = int(satoshis_required)
         if satoshis_required <= 0:
             raise ValueError("invalid x-bsv-payment-satoshis-required response header value")
-        server_identity_key = original_response.headers.get("x-bsv-auth-identity-key")
+        server_identity_key = response.headers.get("x-bsv-auth-identity-key")
         if not server_identity_key:
             raise ValueError("missing x-bsv-auth-identity-key response header")
-        derivation_prefix = original_response.headers.get("x-bsv-payment-derivation-prefix")
+        derivation_prefix = response.headers.get("x-bsv-payment-derivation-prefix")
         if not derivation_prefix:
             raise ValueError("missing x-bsv-payment-derivation-prefix response header")
-        # ノンス生成（Goのutils.CreateNonce相当: ここではランダム文字列）
-        derivation_suffix = base64.b64encode(os.urandom(8)).decode()
-        # 公開鍵取得（Goのec.PublicKeyFromString相当: 省略）
-        # 支払い用公開鍵生成（Goのwallet.GetPublicKey相当: 省略/ダミー）
-        # トランザクション作成（Goのwallet.CreateAction相当: 省略/ダミー）
-        # --- ここは実際のウォレット実装に依存 ---
-        # payment_info = { ... } を作成
-        payment_info = {
-            "derivationPrefix": derivation_prefix,
-            "derivationSuffix": derivation_suffix,
-            "transaction": "dummy_tx_base64"  # TODO: 実際はbase64エンコードしたtxバイト列
+        return {
+            "satoshis_required": satoshis_required,
+            "server_identity_key": server_identity_key,
+            "derivation_prefix": derivation_prefix
         }
+
+    def _generate_derivation_suffix(self):
+        import base64, os
+        return base64.b64encode(os.urandom(8)).decode()
+
+    def _get_payment_public_key(self, ctx, payment_info, derivation_suffix):
+        if not hasattr(self.wallet, 'get_public_key'):
+            raise NotImplementedError("wallet.get_public_key is not implemented")
+        protocol_id = [2, '3241645161d8']
+        key_id = f"{payment_info['derivation_prefix']} {derivation_suffix}"
+        pubkey_result = self.wallet.get_public_key(ctx, {
+            "protocolID": protocol_id,
+            "keyID": key_id,
+            "counterparty": payment_info["server_identity_key"]
+        }, None)
+        if not pubkey_result or "publicKey" not in pubkey_result:
+            raise RuntimeError("wallet.get_public_key did not return a publicKey")
+        return pubkey_result["publicKey"]
+
+    def _build_locking_script(self, derived_public_key):
+        return p2pkh_locking_script_from_pubkey(derived_public_key)
+
+    def _create_payment_transaction(self, ctx, url_str, payment_info, derivation_suffix, locking_script):
+        import json, base64
+        if not hasattr(self.wallet, 'create_action'):
+            raise NotImplementedError("wallet.create_action is not implemented")
+        action_args = {
+            "description": f"Payment for request to {url_str}",
+            "outputs": [
+                {
+                    "satoshis": payment_info["satoshis_required"],
+                    "lockingScript": locking_script,
+                    "customInstructions": json.dumps({
+                        "derivationPrefix": payment_info["derivation_prefix"],
+                        "derivationSuffix": derivation_suffix,
+                        "payee": payment_info["server_identity_key"]
+                    }),
+                    "outputDescription": "HTTP request payment"
+                }
+            ],
+            "options": {
+                "randomizeOutputs": False
+            }
+        }
+        action_result = self.wallet.create_action(ctx, action_args, None)
+        if not action_result or "tx" not in action_result:
+            raise RuntimeError("wallet.create_action did not return a transaction")
+        tx_bytes = action_result["tx"]
+        if isinstance(tx_bytes, str):
+            return tx_bytes
+        else:
+            return base64.b64encode(tx_bytes).decode()
+
+    def _set_payment_header(self, config, payment_info, derivation_suffix, tx_b64):
         import json
-        payment_info_json = json.dumps(payment_info)
+        payment_info_dict = {
+            "derivationPrefix": payment_info["derivation_prefix"],
+            "derivationSuffix": derivation_suffix,
+            "transaction": tx_b64
+        }
+        payment_info_json = json.dumps(payment_info_dict)
         if config.headers is None:
             config.headers = {}
         config.headers["x-bsv-payment"] = payment_info_json
-        # リトライカウンタ初期化
-        if config.retry_counter is None:
-            config.retry_counter = 3
-        # 再リクエスト
-        return self.fetch(ctx, url_str, config)
+
+# --- P2PKH lockingScript生成関数 ---
+def p2pkh_locking_script_from_pubkey(pubkey_hex: str) -> str:
+    """
+    与えられた圧縮公開鍵hex文字列からP2PKH lockingScript（HexString）を生成する。
+    """
+    import hashlib
+    import binascii
+    # 1. 公開鍵hex→bytes
+    pubkey_bytes = bytes.fromhex(pubkey_hex)
+    # 2. pubkey hash160
+    sha256 = hashlib.sha256(pubkey_bytes).digest()
+    ripemd160 = hashlib.new('ripemd160', sha256).digest()
+    # 3. lockingScript: OP_DUP OP_HASH160 <20bytes> OP_EQUALVERIFY OP_CHECKSIG
+    script = (
+        b'76'  # OP_DUP
+        b'a9'  # OP_HASH160
+        + bytes([len(ripemd160)])
+        + ripemd160
+        + b'88'  # OP_EQUALVERIFY
+        + b'ac'  # OP_CHECKSIG
+    )
+    return binascii.hexlify(script).decode()
