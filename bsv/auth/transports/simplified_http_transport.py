@@ -22,8 +22,8 @@ class SimplifiedHTTPTransport(Transport):
                 return Exception("No handler registered")
         try:
             if getattr(message, 'message_type', None) == 'general':
-                # payloadをHTTPリクエストとしてデシリアライズ（簡易実装）
-                # ここではpayloadはJSONでリクエスト情報が入っていると仮定
+                # Deserialize the payload into HTTP request parameters (simplified implementation)
+                # Here we assume the payload is JSON containing the request information
                 import json
                 try:
                     req_info = json.loads(message.payload.decode('utf-8'))
@@ -35,7 +35,7 @@ class SimplifiedHTTPTransport(Transport):
                 body = req_info.get('body', None)
                 url = self.base_url + path
                 resp = self.client.request(method, url, headers=headers, data=body)
-                # レスポンスをAuthMessageでラップしてコールバック
+                # Wrap the response in an AuthMessage and trigger callbacks
                 resp_payload = {
                     'status_code': resp.status_code,
                     'headers': dict(resp.headers),
@@ -48,7 +48,7 @@ class SimplifiedHTTPTransport(Transport):
                 )
                 self._notify_handlers(ctx, response_msg)
                 return None
-            # 通常のAuthMessage送信
+            # Send a standard AuthMessage
             url = self.base_url
             if getattr(message, 'message_type', None) != 'general':
                 url = self.base_url.rstrip('/') + '/.well-known/auth'
@@ -63,7 +63,7 @@ class SimplifiedHTTPTransport(Transport):
                     response_msg = AuthMessage(**resp_data)
                     self._notify_handlers(ctx, response_msg)
                 except Exception:
-                    pass  # 応答がAuthMessageでなければ無視
+                    pass  # Ignore the response if it is not an AuthMessage
             return None
         except Exception as e:
             return Exception(f"Failed to send AuthMessage: {e}")
