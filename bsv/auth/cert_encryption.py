@@ -3,9 +3,9 @@ from typing import Tuple, Optional
 
 def get_certificate_encryption_details(field_name: str, serial_number: Optional[str]) -> Tuple[dict, str]:
     """
-    TS/Go準拠の証明書フィールド暗号化メタデータを返す。
+    Returns certificate field encryption metadata compatible with TS/Go.
     - protocol_id: {'protocol': 'certificate field encryption', 'security_level': 1}
-    - key_id: serial_numberがあれば "{serial_number} {field_name}", なければ field_name
+    - key_id: If serial_number is present, "{serial_number} {field_name}", otherwise field_name
     """
     protocol_id = {
         "protocol": "certificate field encryption",
