@@ -1,7 +1,7 @@
 from typing import Optional, Dict
 
-from ..chaintracker import ChainTracker
-from ..http_client import HttpClient, default_http_client
+from bsv.chaintracker import ChainTracker
+from bsv.http_client import HttpClient, default_http_client
 
 
 class WhatsOnChainTracker(ChainTracker):
@@ -30,7 +30,7 @@ class WhatsOnChainTracker(ChainTracker):
         elif response.status_code == 404:
             return False
         else:
-            raise Exception(
+            raise RuntimeError(
                 f"Failed to verify merkleroot for height {height} because of an error: {response.json()}"
             )
 
