@@ -46,11 +46,11 @@ class RequestedCertificateTypeIDAndFieldList:
     def is_empty(self):
         return len(self.mapping) == 0
 
-# --- 補助関数 ---
+# --- Helper functions ---
 def certifier_in_list(certifiers: List[PublicKey], certifier: Optional[PublicKey]) -> bool:
     """
     Checks if the given certifier is in the list of certifiers.
-    Noneは常にFalse。
+    None is always False.
     """
     if certifier is None:
         return False
@@ -59,7 +59,7 @@ def certifier_in_list(certifiers: List[PublicKey], certifier: Optional[PublicKey
 def is_empty_public_key(key: Optional[PublicKey]) -> bool:
     """
     Checks if a PublicKey is empty/uninitialized.
-    Noneまたは内部バイト列が全てゼロの場合True。
+    Returns True if key is None or its internal byte array is all zeros.
     """
     if key is None:
         return True
@@ -108,7 +108,7 @@ class RequestedCertificateSet:
                 raise ValueError("empty or invalid certificate type specified")
             if not fields:
                 raise ValueError(f"no fields specified for certificate type: {base64.b64encode(cert_type).decode('ascii')}")
-        # 追加: certifiersリストに未初期化公開鍵が含まれていないかチェック
+        # Addition: Check if the certifiers list contains any uninitialized public keys
         for c in self.certifiers:
             if is_empty_public_key(c):
                 raise ValueError("certifiers list contains an empty/uninitialized public key")
