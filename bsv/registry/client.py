@@ -20,7 +20,7 @@ from bsv.transaction.pushdrop import (
     SignOutputsMode,
 )
 from bsv.transaction import Transaction
-from bsv.broadcaster_core import default_broadcaster
+from bsv.broadcasters import default_broadcaster
 from bsv.overlay.lookup import LookupResolver, LookupQuestion
 from bsv.overlay.topic import TopicBroadcaster, BroadcasterConfig
 
