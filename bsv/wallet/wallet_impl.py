@@ -9,6 +9,7 @@ import time
 from bsv.script.type import P2PKH
 from bsv.utils.address import validate_address
 from bsv.fee_models.satoshis_per_kilobyte import SatoshisPerKilobyte
+from bsv.chaintrackers import WhatsOnChainTracker
 
 class WalletImpl(WalletInterface):
     _dotenv_loaded: bool = False
@@ -551,11 +552,11 @@ class WalletImpl(WalletInterface):
                 return tracker.query_tx(txid, api_key=api_key, network=network, timeout=timeout)
             except Exception as e:  # noqa: PERF203
                 return {"known": False, "error": str(e)}
-        # Fallback to WOCChainTracker
-        from bsv.network.chaintracker import WOCChainTracker
+        # Fallback to WhatsOnChainTracker
+        from bsv.chaintrackers import WhatsOnChainTracker
         try:
             key = api_key or self._resolve_woc_api_key({})
-            ct = WOCChainTracker(api_key=key, network=network)
+            ct = WhatsOnChainTracker(api_key=key, network=network)
             return ct.query_tx(txid, timeout=timeout)
         except Exception as e:  # noqa: PERF203
             return {"known": False, "error": str(e)}
