@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Union, Dict, Any, TYPE_CHECKING
+from typing import Optional
 from ..http_client import HttpClient, default_http_client
 from ..constants import Network
+from .whatsonchain import WhatsOnChainBroadcaster
 
 if TYPE_CHECKING:
     from ..transaction import Transaction
@@ -47,6 +49,19 @@ def is_broadcast_response(r: Union[BroadcastResponse, BroadcastFailure]) -> bool
 
 def is_broadcast_failure(r: Union[BroadcastResponse, BroadcastFailure]) -> bool:
     return r.status == "error"
+    
+
+class BroadcasterInterface:
+    """Abstract broadcaster interface.
+
+    Implementations should return a dict with either:
+      {"accepted": True, "txid": "..."}
+    or {"accepted": False, "code": "network|client", "error": "..."}
+    """
+
+    def broadcast(self, tx_hex: str, *, api_key: Optional[str] = None, timeout: int = 10) -> Dict[str, Any]:  # noqa: D401
+        raise NotImplementedError
+
 
 class MAPIClientBroadcaster(BroadcasterInterface):
     """mAPI (Merchant API) broadcaster for BSV miners."""
@@ -56,12 +71,15 @@ class MAPIClientBroadcaster(BroadcasterInterface):
         self.network = network
 
     def broadcast(self, tx_hex: str, *, api_key: Optional[str] = None, timeout: int = 10) -> Dict[str, Any]:
-        import requests
+        url = self.api_url
         key = api_key or self.api_key
         headers = {"Content-Type": "application/json"}
         if key:
             headers["Authorization"] = key
-        url = self.api_url
+        return self._post_with_retries(url, headers, tx_hex, timeout)
+
+    def _post_with_retries(self, url, headers, tx_hex, timeout):
+        import requests
         last_err: Optional[Exception] = None
         for attempt in range(3):
             try:
@@ -120,12 +138,13 @@ class CustomNodeBroadcaster(BroadcasterInterface):
         return {"accepted": False, "code": code, "error": f"Custom node broadcast failed: {msg}"}
 
 
+def default_broadcaster(network: Union[Network, str] = Network.MAINNET, http_client: HttpClient = None) -> Broadcaster:
+    return WhatsOnChainBroadcaster(network=network, http_client=http_client)
 
 __all__ = [
     "BroadcastResponse",
     "BroadcastFailure",
     "Broadcaster",
-    "default_broadcaster",
     "is_broadcast_response",
     "is_broadcast_failure",
 ]
