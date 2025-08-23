@@ -1,11 +1,12 @@
 from typing import Union, TYPE_CHECKING, Optional, Dict, Any
 import time
-from .broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
-from .default import Network
-from .default import HttpClient, default_http_client
+from ..http_client import HttpClient, default_http_client
+from ..constants import Network
+from .broadcaster import Broadcaster, BroadcastResponse, BroadcastFailure
 
 if TYPE_CHECKING:
     from ..transaction import Transaction
+
 
 class WhatsOnChainBroadcaster(Broadcaster):
     """
@@ -53,6 +54,7 @@ class WhatsOnChainBroadcaster(Broadcaster):
                 description=(str(error) if str(error) else "Internal Server Error"),
             )
 
+
 class WhatsOnChainBroadcasterSync:
     """
     Synchronous WhatsOnChain broadcaster using requests, with retry/backoff and error classification.
@@ -76,9 +78,8 @@ class WhatsOnChainBroadcasterSync:
                 if resp.status_code >= 500:
                     raise RuntimeError(f"woc server error {resp.status_code}")
                 resp.raise_for_status()
-                data = resp.json() or {}
-                txid = data.get("txid") or data.get("data") or ""
-                return {"accepted": True, "txid": txid}
+                data = resp.text or ""  # WOC returns plain text txid
+                return {"accepted": True, "txid": data}
             except Exception as e:  # noqa: PERF203
                 last_err = e
                 try:
@@ -88,6 +89,7 @@ class WhatsOnChainBroadcasterSync:
         msg = str(last_err or "broadcast failed")
         code = "network" if "server error" in msg or "timeout" in msg.lower() else "client"
         return {"accepted": False, "code": code, "error": f"WOC broadcast failed: {msg}"}
+
 
 __all__ = [
     "WhatsOnChainBroadcaster",
