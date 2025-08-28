@@ -14,12 +14,16 @@ from .constants import (
 )
 from .hash import hash256
 from .merkle_path import MerklePath
-from .script.spend import Spend
 from .script.type import P2PKH
 from .transaction_input import TransactionInput
 from .transaction_output import TransactionOutput
 from .transaction_preimage import tx_preimage
 from .utils import unsigned_to_varint, Reader, Writer, reverse_hex_byte_order
+
+# Lazy import to avoid circular dependency
+def Spend(params):
+    from .script.spend import Spend as SpendClass
+    return SpendClass(params)
 
 
 class InsufficientFunds(ValueError):
