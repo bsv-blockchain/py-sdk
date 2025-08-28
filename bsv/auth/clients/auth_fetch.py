@@ -1,10 +1,12 @@
 import threading
-from typing import Any, Callable, Dict, Optional, List
+from typing import Any, Callable, Dict, Optional, List, Tuple
 import logging
 import base64
 import os
 import time
 import urllib.parse
+import json
+import struct
 import requests
 from requests.exceptions import RetryError, HTTPError
 
@@ -13,6 +15,7 @@ from bsv.auth.session_manager import DefaultSessionManager
 from bsv.auth.requested_certificate_set import RequestedCertificateSet
 from bsv.auth.verifiable_certificate import VerifiableCertificate
 from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
+from bsv.auth.peer import PeerOptions
 
 class SimplifiedFetchRequestOptions:
     def __init__(self, method: str = "GET", headers: Optional[Dict[str, str]] = None, body: Optional[bytes] = None, retry_counter: Optional[int] = None):
@@ -54,17 +57,29 @@ class AuthFetch:
         # Create peer if needed
         if base_url not in self.peers:
             transport = SimplifiedHTTPTransport(base_url)
-            peer = Peer(
+            peer = Peer(PeerOptions(
                 wallet=self.wallet,
                 transport=transport,
                 certificates_to_request=self.requested_certificates,
                 session_manager=self.session_manager
-            )
+            ))
             auth_peer = AuthPeer()
             auth_peer.peer = peer
             self.peers[base_url] = auth_peer
-            # Set up certificate received/requested listeners（省略: 必要に応じて追加）
+            # Set up certificate listeners similar to TS/Go implementations
+            def _on_certs_received(sender_public_key, certs):
+                try:
+                    self.certificates_received.extend(certs or [])
+                except Exception:
+                    pass
+            self.peers[base_url].peer.listen_for_certificates_received(_on_certs_received)
         peer_to_use = self.peers[base_url]
+        # If mutual auth explicitly unsupported for this base URL, fall back to normal HTTP
+        if peer_to_use.supports_mutual_auth is not None and peer_to_use.supports_mutual_auth is False:
+            resp = self.handle_fetch_and_validate(url_str, config, peer_to_use)
+            if getattr(resp, 'status_code', None) == 402:
+                return self.handle_payment_and_retry(ctx, url_str, config, resp)
+            return resp
         # Generate request nonce
         request_nonce = os.urandom(32)
         request_nonce_b64 = base64.b64encode(request_nonce).decode()
@@ -86,21 +101,37 @@ class AuthFetch:
         }
         # Peerのgeneral messageリスナー登録
         def on_general_message(sender_public_key, payload):
-            # 先頭32バイトがresponse_nonce
-            if not payload or len(payload) < 32:
+            try:
+                resp_obj = self._parse_general_response(sender_public_key, payload, request_nonce_b64, url_str, config)
+            except Exception:
                 return
-            response_nonce = payload[:32]
-            response_nonce_b64 = base64.b64encode(response_nonce).decode()
-            if response_nonce_b64 != request_nonce_b64:
-                return  # 自分のリクエストでなければ無視
-            # 以降はHTTPレスポンスのデシリアライズ等（省略: 必要に応じて実装）
-            self.callbacks[request_nonce_b64]['resolve'](payload)
+            if resp_obj is None:
+                return
+            self.callbacks[request_nonce_b64]['resolve'](resp_obj)
         listener_id = peer_to_use.peer.listen_for_general_messages(on_general_message)
         try:
             # Peer経由で送信（ToPeer相当）
             err = peer_to_use.peer.to_peer(ctx, request_data, None, 30000)
             if err:
-                self.callbacks[request_nonce_b64]['reject'](err)
+                # Fallback handling similar to TS/Go
+                err_str = str(err)
+                if 'Session not found for nonce' in err_str:
+                    try:
+                        del self.peers[base_url]
+                    except Exception:
+                        pass
+                    if config.retry_counter is None:
+                        config.retry_counter = 3
+                    # Retry request afresh
+                    self.callbacks[request_nonce_b64]['resolve'](self.fetch(ctx, url_str, config))
+                elif 'HTTP server failed to authenticate' in err_str:
+                    try:
+                        resp = self.handle_fetch_and_validate(url_str, config, peer_to_use)
+                        self.callbacks[request_nonce_b64]['resolve'](resp)
+                    except Exception as e:
+                        self.callbacks[request_nonce_b64]['reject'](e)
+                else:
+                    self.callbacks[request_nonce_b64]['reject'](err)
         except Exception as e:
             self.callbacks[request_nonce_b64]['reject'](e)
         # レスポンス待機（またはタイムアウト）
@@ -108,10 +139,94 @@ class AuthFetch:
         # コールバック解除
         peer_to_use.peer.stop_listening_for_general_messages(listener_id)
         self.callbacks.pop(request_nonce_b64, None)
-        # 結果返却
+        # 結果返却 
         if response_holder['err']:
             raise RuntimeError(response_holder['err'])
-        return response_holder['resp']
+        resp_obj = response_holder['resp']
+        try:
+            if getattr(resp_obj, 'status_code', None) == 402:
+                return self.handle_payment_and_retry(ctx, url_str, config, resp_obj)
+        except Exception:
+            pass
+        return resp_obj
+
+    # --- Helpers to parse the general response payload and build a Response-like object ---
+    def _parse_general_response(self, sender_public_key: Optional[Any], payload: bytes, request_nonce_b64: str, url_str: str, config: SimplifiedFetchRequestOptions):
+        if not payload:
+            return None
+        # Try binary format first (Go/TS protocol)
+        resp = self._try_parse_binary_general(sender_public_key, payload, request_nonce_b64, url_str, config)
+        if resp is not None:
+            return resp
+        # Fallback to JSON structure used by the simplified Python transport
+        try:
+            txt = payload.decode('utf-8', errors='strict')
+            obj = json.loads(txt)
+            status = int(obj.get('status_code', 0))
+            headers = obj.get('headers', {}) or {}
+            body_str = obj.get('body', '')
+            body_bytes = body_str.encode('utf-8')
+            return self._build_response(url_str, config.method or 'GET', status, headers, body_bytes)
+        except Exception:
+            return None
+
+    def _try_parse_binary_general(self, sender_public_key: Optional[Any], payload: bytes, request_nonce_b64: str, url_str: str, config: SimplifiedFetchRequestOptions):
+        try:
+            if len(payload) < 33:  # require nonce + at least one byte for status code varint
+                return None
+            reader = _BinaryReader(payload)
+            response_nonce = reader.read_bytes(32)
+            response_nonce_b64 = base64.b64encode(response_nonce).decode()
+            if response_nonce_b64 != request_nonce_b64:
+                return None
+            # Save identity key and mutual auth support flag
+            if sender_public_key is not None:
+                try:
+                    self.peers[urllib.parse.urlparse(url_str).scheme + '://' + urllib.parse.urlparse(url_str).netloc].identity_key = getattr(sender_public_key, 'to_der_hex', lambda: str(sender_public_key))()
+                    self.peers[urllib.parse.urlparse(url_str).scheme + '://' + urllib.parse.urlparse(url_str).netloc].supports_mutual_auth = True
+                except Exception:
+                    try:
+                        self.peers[urllib.parse.urlparse(url_str).scheme + '://' + urllib.parse.urlparse(url_str).netloc].supports_mutual_auth = True
+                    except Exception:
+                        pass
+            status_code = reader.read_varint32()
+            n_headers = reader.read_varint32()
+            headers: Dict[str, str] = {}
+            for _ in range(n_headers):
+                key = reader.read_string()
+                val = reader.read_string()
+                headers[key] = val
+            # Add back server identity key if available
+            if sender_public_key is not None:
+                try:
+                    headers['x-bsv-auth-identity-key'] = getattr(sender_public_key, 'to_der_hex', lambda: str(sender_public_key))()
+                except Exception:
+                    headers['x-bsv-auth-identity-key'] = str(sender_public_key)
+            body_len = reader.read_varint32()
+            body_bytes = b''
+            if body_len > 0:
+                body_bytes = reader.read_bytes(body_len)
+            return self._build_response(url_str, config.method or 'GET', int(status_code), headers, body_bytes)
+        except Exception:
+            return None
+
+    def _build_response(self, url_str: str, method: str, status: int, headers: Dict[str, str], body: bytes):
+        resp_obj = requests.Response()
+        resp_obj.status_code = int(status)
+        try:
+            from requests.structures import CaseInsensitiveDict
+            resp_obj.headers = CaseInsensitiveDict(headers or {})
+        except Exception:
+            resp_obj.headers = headers or {}
+        resp_obj._content = body or b''
+        resp_obj.url = url_str
+        try:
+            req = requests.Request(method=method or 'GET', url=url_str)
+            resp_obj.request = req.prepare()
+        except Exception:
+            pass
+        resp_obj.reason = str(status)
+        return resp_obj
 
     def send_certificate_request(self, ctx: Any, base_url: str, certificates_to_request):
         """
@@ -121,12 +236,12 @@ class AuthFetch:
         base_url_str = f"{parsed_url.scheme}://{parsed_url.netloc}"
         if base_url_str not in self.peers:
             transport = SimplifiedHTTPTransport(base_url_str)
-            peer = Peer(
+            peer = Peer(PeerOptions(
                 wallet=self.wallet,
                 transport=transport,
                 certificates_to_request=self.requested_certificates,
                 session_manager=self.session_manager
-            )
+            ))
             auth_peer = AuthPeer()
             auth_peer.peer = peer
             self.peers[base_url_str] = auth_peer
@@ -223,7 +338,6 @@ class AuthFetch:
             self._write_varint(buf, 0xFFFFFFFFFFFFFFFF)  # -1
 
     def _write_varint(self, writer: bytearray, value: int):
-        import struct
         writer.extend(struct.pack('<Q', value))
 
     def _write_bytes(self, writer: bytearray, b: bytes):
@@ -353,6 +467,64 @@ class AuthFetch:
         if config.headers is None:
             config.headers = {}
         config.headers["x-bsv-payment"] = payment_info_json
+
+
+class _BinaryReader:
+    """
+    Minimal binary reader compatible with the Go util.Reader used by AuthHTTP.
+    Supports:
+    - read_bytes(n)
+    - read_varint() / read_varint32()
+    - read_string() where string is prefixed with varint length and -1 encoded as 0xFFFFFFFFFFFFFFFF
+    """
+
+    def __init__(self, data: bytes):
+        self._data = data
+        self._pos = 0
+
+    def _require(self, n: int):
+        if self._pos + n > len(self._data) or n < 0:
+            raise ValueError("read past end of data")
+
+    def read_bytes(self, n: int) -> bytes:
+        self._require(n)
+        b = self._data[self._pos:self._pos + n]
+        self._pos += n
+        return b
+
+    def read_varint(self) -> int:
+        self._require(1)
+        first = self._data[self._pos]
+        self._pos += 1
+        if first < 0xFD:
+            return first
+        if first == 0xFD:
+            self._require(2)
+            val = struct.unpack_from('<H', self._data, self._pos)[0]
+            self._pos += 2
+            return val
+        if first == 0xFE:
+            self._require(4)
+            val = struct.unpack_from('<I', self._data, self._pos)[0]
+            self._pos += 4
+            return val
+        # 0xFF
+        self._require(8)
+        val = struct.unpack_from('<Q', self._data, self._pos)[0]
+        self._pos += 8
+        return val
+
+    def read_varint32(self) -> int:
+        return int(self.read_varint() & 0xFFFFFFFF)
+
+    def read_string(self) -> str:
+        length = self.read_varint()
+        NEG_ONE = 0xFFFFFFFFFFFFFFFF
+        if length == 0 or length == NEG_ONE:
+            return ""
+        b = self.read_bytes(int(length))
+        return b.decode('utf-8', errors='strict')
+
 
 # --- P2PKH lockingScript生成関数 ---
 def p2pkh_locking_script_from_pubkey(pubkey_hex: str) -> str:

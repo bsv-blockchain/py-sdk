@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Union
 
 
 @dataclass
@@ -8,7 +8,14 @@ class ScriptChunk:
     data: Optional[bytes]
 
 
-def read_script_chunks(script: bytes) -> List[ScriptChunk]:
+def read_script_chunks(script: Union[bytes, str]) -> List[ScriptChunk]:
+    # Accept hex string input for convenience (tests may pass hex)
+    if isinstance(script, str):
+        try:
+            script = bytes.fromhex(script)
+        except Exception:
+            # If conversion fails, treat as empty
+            script = b""
     chunks: List[ScriptChunk] = []
     i = 0
     n = len(script)

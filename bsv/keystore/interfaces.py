@@ -100,6 +100,9 @@ class KVStoreConfig:
     context: str             # Developer-supplied logical namespace (basket)
     originator: str = ""     # Name/id of the app using the store (optional)
     encrypt: bool = False    # Whether to encrypt values before storage
+    # Optional TS/GO-style defaults for call arguments
+    fee_rate: int | None = None
+    default_ca: dict | None = None
 
 
 @dataclass

@@ -19,6 +19,12 @@ CURVE_ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 class Protocol:
     security_level: int  # 0,1,2
     protocol: str
+    
+    def __init__(self, security_level: int, protocol: str):
+        if not isinstance(protocol, str) or len(protocol) < 5 or len(protocol) > 400:
+            raise ValueError("protocol names must be 5-400 characters")
+        self.security_level = security_level
+        self.protocol = protocol
 
 
 class CounterpartyType:
