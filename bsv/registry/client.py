@@ -274,11 +274,10 @@ class RegistryClient:
 
         # Build a real unlocker and sign the partial transaction input
         # signableTransaction.tx is expected to be raw tx bytes (WalletWire signable), not BEEF
-        partial_tx = (
-            Transaction.from_hex(cast(bytes, signable.get("tx")))
-            if signable.get("tx")
-            else Transaction()
-        )
+        # signable["tx"] holds raw transaction bytes; use from_reader for consistency with WalletImpl
+        from bsv.utils import Reader
+        tx_bytes = cast(bytes, signable.get("tx") or b"")
+        partial_tx = Transaction.from_reader(Reader(tx_bytes)) if tx_bytes else Transaction()
         unlocker = make_pushdrop_unlocker(
             self.wallet,
             protocol_id=_map_definition_type_to_wallet_protocol(cast(DefinitionType, record.get("definitionType", "basket"))),
@@ -291,24 +290,25 @@ class RegistryClient:
             prev_satoshis=satoshis,
             prev_locking_script=bytes.fromhex(cast(str, record.get("lockingScript", ""))) if record.get("lockingScript") else None,
         )
-        unlocking_script = unlocker.sign(ctx, partial_tx, output_index)
+        unlocking_script = unlocker.sign(ctx, partial_tx, 0)
 
-        spends = {output_index: {"unlockingScript": unlocking_script}}
+        spends = {0: {"unlockingScript": unlocking_script}}
         sign_res = self.wallet.sign_action(
             ctx,
             {
                 "reference": reference,
                 "spends": spends,
+                "tx": tx_bytes,
                 "options": {"acceptDelayedBroadcast": False},
             },
             self.originator,
         ) or {}
 
         # Broadcast via default broadcaster if tx present
-        tx_bytes = cast(bytes, sign_res.get("tx") or b"")
+        tx_bytes = cast(bytes, sign_res.get("tx") or tx_bytes)
         if tx_bytes:
             try:
-                tx = Transaction.from_hex(tx_bytes)
+                tx = Transaction.from_reader(Reader(tx_bytes))
                 # Broadcast via topic mapping (tm_*) using TopicBroadcaster
                 topic_map = {
                     "basket": "tm_basketmap",
