@@ -542,7 +542,7 @@ class WalletImpl(WalletInterface):
                 # Defensive: ensure satoshis is int, ls_hex is hex string
                 assert isinstance(satoshis, int), f"satoshis must be int, got {type(satoshis)}"
                 assert isinstance(ls_hex, str), f"lockingScript must be hex string, got {type(ls_hex)}"
-                s = Script(bytes.fromhex(ls_hex))
+                s = Script(ls_hex)  # Script constructor accepts hex string directly
                 to = TransactionOutput(s, int(satoshis))
                 t.add_output(to)
             # Map to track which inputs are funding (P2PKH) to optionally pre-sign
@@ -585,11 +585,11 @@ class WalletImpl(WalletInterface):
                     else:
                         # Fallback: set generic P2PKH lock with our address
                         addr = self.public_key.address()
-                        ls_fund = P2PKH().lock(addr).serialize()
+                        ls_fund = P2PKH().lock(addr)  # Script object
                         for idx in funding_indices:
                             tin = t.inputs[idx]
                             tin.satoshis = 0
-                            tin.locking_script = Script(ls_fund)
+                            tin.locking_script = ls_fund  # Script objectを直接使用
                     # Now produce signatures for those inputs
                     for idx in funding_indices:
                         meta = inputs_meta[idx] if idx < len(inputs_meta) else {}
@@ -944,8 +944,8 @@ class WalletImpl(WalletInterface):
                     print(f"[TRACE] [_build_beef_for_outputs] out sat={o.get('satoshis')} ls_hex={ls_hex if isinstance(ls_hex, str) else (ls_hex.hex() if isinstance(ls_hex, (bytes, bytearray)) else ls_hex)}")
                 except Exception:
                     pass
-                ls_bytes = bytes.fromhex(ls_hex) if isinstance(ls_hex, str) else (ls_hex or b"\x51")
-                to = TransactionOutput(Script(ls_bytes), int(o.get("satoshis", 0)))
+                ls_script = Script(ls_hex) if isinstance(ls_hex, str) else Script(ls_hex or b"\x51")
+                to = TransactionOutput(ls_script, int(o.get("satoshis", 0)))
                 tx.add_output(to)
             beef = tx.to_beef()
             try:
@@ -1138,9 +1138,9 @@ class WalletImpl(WalletInterface):
                         return {"error": f"sign_action: unlockingScript too short at input {idx}"}
                     # Record SIGHASH flag (last byte)
                     sighash_flag = unlocking_script[-1]
-                    input.unlocking_script = Script(unlocking_script)
+                    input.unlocking_script = Script(unlocking_script)  # bytesからScriptオブジェクトを作成
                 else:
-                    input.unlocking_script = unlocking_script
+                    input.unlocking_script = unlocking_script  # 既にScriptオブジェクトの場合
             # Serialize signed transaction
             signed_tx_bytes = tx.serialize()
             txid = tx.txid() if hasattr(tx, "txid") else hashlib.sha256(signed_tx_bytes).hexdigest()
@@ -1182,8 +1182,8 @@ class WalletImpl(WalletInterface):
             for u in data:
                 # WOC unspent API does not include the locking script; derive P2PKH from address as fallback
                 try:
-                    derived_ls = P2PKH().lock(address).serialize()
-                    derived_ls_hex = derived_ls.hex() if isinstance(derived_ls, bytes) else derived_ls
+                    derived_ls = P2PKH().lock(address)  # Script object
+                    derived_ls_hex = derived_ls.hex()  # Script objectからHEX文字列を取得
                 except Exception:
                     derived_ls_hex = ""
                 utxos.append({
@@ -1301,12 +1301,12 @@ class WalletImpl(WalletInterface):
             t = _Tx()
             for o in outs:
                 ls = o.get("lockingScript", b"")
-                ls_b = bytes.fromhex(ls) if isinstance(ls, str) else ls
-                t.add_output(_TxOut(_Script(ls_b), int(o.get("satoshis", 0))))
+                ls_script = _Script(ls) if isinstance(ls, str) else _Script(ls)  # Scriptオブジェクトを直接作成
+                t.add_output(_TxOut(ls_script, int(o.get("satoshis", 0))))
             for est_len in unlocking_lens:
                 ti = _TxIn(source_txid="00" * 32, source_output_index=0)
                 fake = encode_pushdata(b"x" * max(0, est_len - 1)) if est_len > 0 else b"\x00"
-                ti.unlocking_script = _Script(fake)
+                ti.unlocking_script = _Script(fake)  # bytesからScriptオブジェクトを作成
                 t.add_input(ti)
             return int(fee_model.compute_fee(t))
         except Exception:
@@ -1399,10 +1399,10 @@ class WalletImpl(WalletInterface):
             print(f"[TRACE] [sign_check] scriptSig structure check skipped: {_dbg_e2}")
         
     def _build_change_output_dict(self, basket_addr: str, satoshis: int) -> Dict[str, Any]:
-        ls = P2PKH().lock(basket_addr).serialize()
+        ls = P2PKH().lock(basket_addr)  # Script object
         return {
             "satoshis": int(satoshis),
-            "lockingScript": ls.hex() if isinstance(ls, bytes) else ls,
+            "lockingScript": ls.hex(),  # Script objectからHEX文字列を取得
             "outputDescription": "Change",
             "basket": basket_addr,
             "tags": [],
@@ -1434,8 +1434,8 @@ class WalletImpl(WalletInterface):
                     try:
                         addr=self._self_address()
                         print(f"[TRACE] [estimate_with_optional_change] addr: {addr}")
-                        ch_ls = P2PKH().lock(addr).serialize()
-                        base_outs = base_outs + [{"satoshis": 1, "lockingScript": ch_ls}]
+                        ch_ls = P2PKH().lock(addr)  # Script object
+                        base_outs = base_outs + [{"satoshis": 1, "lockingScript": ch_ls.hex()}]  # HEX文字列に変換
                     except Exception:
                         pass
             unlocking_lens = list(existing_unlock_lens) + [107] * sel_count
