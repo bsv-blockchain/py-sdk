@@ -391,7 +391,7 @@ class LocalKVStore(KVStoreInterface):
                                 continue
                             for vout_idx, out in enumerate(tx.outputs):
                                 try:
-                                    ls_bytes = out.locking_script.serialize()
+                                    ls_bytes = out.locking_script.to_bytes()  # Scriptオブジェクトからbytesを取得
                                     if self._is_pushdrop_for_pub(ls_bytes, pub_hex):
                                         matched_outputs.append({
                                             "outputIndex": vout_idx,
@@ -445,16 +445,16 @@ class LocalKVStore(KVStoreInterface):
             if match_tx is not None:
                 vout = int(output.get("outputIndex", 0))
                 if 0 <= vout < len(match_tx.outputs):
-                    return match_tx.outputs[vout].locking_script.serialize()
+                    return match_tx.outputs[vout].locking_script.to_bytes()  # Scriptオブジェクトからbytesを取得
             match_tx = self._find_tx_by_txid_hint(beef, txid_hint)
             if match_tx is not None:
                 vout = int(output.get("outputIndex", 0))
                 if 0 <= vout < len(match_tx.outputs):
-                    return match_tx.outputs[vout].locking_script.serialize()
+                    return match_tx.outputs[vout].locking_script.to_bytes()  # Scriptオブジェクトからbytesを取得
             if last_tx is not None:
                 vout = int(output.get("outputIndex", 0))
                 if 0 <= vout < len(last_tx.outputs):
-                    return last_tx.outputs[vout].locking_script.serialize()
+                    return last_tx.outputs[vout].locking_script.to_bytes()  # Scriptオブジェクトからbytesを取得
         except Exception:
             pass
         return locking_script
@@ -489,6 +489,9 @@ class LocalKVStore(KVStoreInterface):
         create_args = self._build_create_action_args_set(key, value, locking_script, inputs_meta, input_beef, ca_args)
         # Ensure 'inputs' is included for test compatibility
         create_args["inputs"] = inputs_meta
+        # Pass use_woc from ca_args to create_action for test compatibility
+        if ca_args and "use_woc" in ca_args:
+            create_args["use_woc"] = ca_args["use_woc"]
         ca = self._wallet.create_action(ctx, create_args, self._originator) or {}
         signable = (ca.get("signableTransaction") or {}) if isinstance(ca, dict) else {}
         signable_tx_bytes = signable.get("tx") or b""
@@ -528,7 +531,7 @@ class LocalKVStore(KVStoreInterface):
         # Return outpoint format: key.vout (assuming vout 0 for KV outputs)
         return f"{key}.0"
 
-    def _build_locking_script(self, ctx: Any, key: str, value: str, ca_args: dict = None) -> bytes:
+    def _build_locking_script(self, ctx: Any, key: str, value: str, ca_args: dict = None) -> str:
         ca_args = self._merge_default_ca(ca_args)
         
         # Encrypt the value if encryption is enabled
