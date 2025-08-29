@@ -115,6 +115,28 @@ class Script:
         return s
 
     @classmethod
+    def from_bytes(cls, data: bytes) -> 'Script':
+        """
+        Create a Script object from bytes data.
+        
+        Args:
+            data: Raw script bytes
+            
+        Returns:
+            Script: A new Script object
+        """
+        return cls(data)
+
+    def to_bytes(self) -> bytes:
+        """
+        Convert the Script object to bytes.
+        
+        Returns:
+            bytes: The serialized script bytes
+        """
+        return self.serialize()
+
+    @classmethod
     def from_asm(cls, asm: str) -> 'Script':
         chunks: [ScriptChunk] = []
         tokens = asm.split(' ')
