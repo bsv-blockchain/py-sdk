@@ -6,7 +6,7 @@ from .broadcaster import Broadcaster, BroadcastResponse
 from .broadcasters import default_broadcaster
 from .chaintracker import ChainTracker
 from .chaintrackers import default_chain_tracker
-from .fee_models import SatoshisPerKilobyte
+from .fee_models import LivePolicy
 from .constants import (
     TRANSACTION_VERSION,
     TRANSACTION_LOCKTIME,
@@ -173,12 +173,15 @@ class Transaction:
         """
         Computes the fee for the transaction and adjusts the change outputs accordingly.
         
-        :param model_or_fee: Fee model or fee amount. Defaults to `SatoshisPerKilobyte` with value 10 if not provided.
+        :param model_or_fee: Fee model or fee amount. Defaults to a `LivePolicy` instance
+            that retrieves the latest mining fees from ARC if not provided.
         :param change_distribution: Method of change distribution ('equal' or 'random'). Defaults to 'equal'.
         """
         
         if model_or_fee is None:
-            model_or_fee = SatoshisPerKilobyte(int(TRANSACTION_FEE_RATE))
+            model_or_fee = LivePolicy.get_instance(
+                fallback_sat_per_kb=int(TRANSACTION_FEE_RATE)
+            )
 
         if isinstance(model_or_fee, int):
             fee = model_or_fee
