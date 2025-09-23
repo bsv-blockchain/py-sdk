@@ -7,9 +7,8 @@ import time
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-import requests
-
 from ..constants import HTTP_REQUEST_TIMEOUT
+from ..http_client import default_http_client
 from .satoshis_per_kilobyte import SatoshisPerKilobyte
 
 
@@ -89,19 +88,19 @@ class LivePolicy(SatoshisPerKilobyte):
                     )
         return cls._instance
 
-    def compute_fee(self, tx) -> int:  # type: ignore[override]
+    async def compute_fee(self, tx) -> int:  # type: ignore[override]
         """Compute a fee for ``tx`` using the latest ARC rate."""
-        rate = self.current_rate_sat_per_kb()
+        rate = await self.current_rate_sat_per_kb()
         self.value = rate
         return super().compute_fee(tx)
 
-    def current_rate_sat_per_kb(self) -> int:
+    async def current_rate_sat_per_kb(self) -> int:
         """Return the cached sat/kB rate or fetch a new value from ARC."""
         cache = self._get_cache(allow_stale=True)
         if cache and self._cache_valid(cache):
             return cache.value
 
-        rate, error = self._fetch_sat_per_kb()
+        rate, error = await self._fetch_sat_per_kb()
         if rate is not None:
             self._set_cache(rate)
             return rate
@@ -143,20 +142,24 @@ class LivePolicy(SatoshisPerKilobyte):
         with self._cache_lock:
             self._cache = _CachedRate(value=value, fetched_at_ms=time.time() * 1000)
 
-    def _fetch_sat_per_kb(self) -> Tuple[Optional[int], Optional[Exception]]:
+    async def _fetch_sat_per_kb(self) -> Tuple[Optional[int], Optional[Exception]]:
         """Fetch the latest fee policy from ARC and coerce it to sat/kB."""
         try:
             headers = {"Accept": "application/json"}
             if self.api_key:
                 headers["Authorization"] = self.api_key
 
-            response = requests.get(
+            http_client = default_http_client()
+            response = await http_client.get(
                 self.arc_policy_url,
                 headers=headers,
                 timeout=self.request_timeout,
             )
-            response.raise_for_status()
-            payload = response.json()
+            payload = response.json_data
+            if isinstance(payload, dict) and "data" in payload:
+                data_section = payload.get("data")
+                if isinstance(data_section, dict):
+                    payload = data_section
         except Exception as exc:
             return None, exc
 

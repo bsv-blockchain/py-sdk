@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import math
 from contextlib import suppress
 from typing import List, Optional, Union, Dict, Any
@@ -184,16 +186,31 @@ class Transaction:
             )
 
         if isinstance(model_or_fee, int):
-            fee = model_or_fee
-        else:
-            fee = model_or_fee.compute_fee(self)
+            return self._apply_fee_amount(model_or_fee, change_distribution)
 
+        fee_estimate = model_or_fee.compute_fee(self)
+
+        if inspect.isawaitable(fee_estimate):
+            async def _resolve_and_apply():
+                resolved_fee = await fee_estimate
+                return self._apply_fee_amount(resolved_fee, change_distribution)
+
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                return asyncio.run(_resolve_and_apply())
+            else:
+                return _resolve_and_apply()
+
+        return self._apply_fee_amount(fee_estimate, change_distribution)
+
+    def _apply_fee_amount(self, fee: int, change_distribution: str):
         change = 0
         for tx_in in self.inputs:
             if not tx_in.source_transaction:
                 raise ValueError('Source transactions are required for all inputs during fee computation')
             change += tx_in.source_transaction.outputs[tx_in.source_output_index].satoshis
-        
+
         change -= fee
         
         change_count = 0
@@ -218,6 +235,7 @@ class Transaction:
             for out in self.outputs:
                 if out.change:
                     out.satoshis = per_output
+        return None
 
     async def broadcast(
             self,
