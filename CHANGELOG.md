@@ -7,6 +7,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Table of Contents
 
 - [Unreleased](#unreleased)
+- [1.0.9 - 2025-09-30](#109---2025-09-30)
 - [1.0.8 - 2025-08-13](#108---2025-08-13)
 - [1.0.7.1- 2025-07-28](#1071---2025-07-28)
 - [1.0.7- 2025-07-28](#107---2025-07-28)
@@ -43,6 +44,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 - (Notify of any improvements related to security vulnerabilities or potential risks.)
+
+
+---
+## [1.0.9] - 2025-09-30
+
+### Added
+- Integrated `LivePolicy` for dynamic fee computations with caching and fallback mechanisms.
+ [ts-sdk#343](https://github.com/bsv-blockchain/ts-sdk/pull/343).
 
 ---
 ## [1.0.8] - 2025-08-13
