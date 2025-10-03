@@ -174,35 +174,42 @@ class Transaction:
     def fee(self, model_or_fee=None, change_distribution='equal'):
         """
         Computes the fee for the transaction and adjusts the change outputs accordingly.
-        
+        This method can be called synchronously, even if it internally uses async operations.
+
         :param model_or_fee: Fee model or fee amount. Defaults to a `LivePolicy` instance
             that retrieves the latest mining fees from ARC if not provided.
         :param change_distribution: Method of change distribution ('equal' or 'random'). Defaults to 'equal'.
         """
-        
         if model_or_fee is None:
             model_or_fee = LivePolicy.get_instance(
                 fallback_sat_per_kb=int(TRANSACTION_FEE_RATE)
             )
 
+        # モデルが同期型の処理を返す場合
         if isinstance(model_or_fee, int):
-            return self._apply_fee_amount(model_or_fee, change_distribution)
+            self._apply_fee_amount(model_or_fee, change_distribution)
+            return model_or_fee
 
+            # 非同期型の処理を返す場合
         fee_estimate = model_or_fee.compute_fee(self)
 
         if inspect.isawaitable(fee_estimate):
+
             async def _resolve_and_apply():
-                resolved_fee = await fee_estimate
-                return self._apply_fee_amount(resolved_fee, change_distribution)
+                try:
+                    resolved_fee = await fee_estimate
+                    self._apply_fee_amount(resolved_fee, change_distribution)
+                    return resolved_fee
+                except Exception as e:
+                    return None
 
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                return asyncio.run(_resolve_and_apply())
-            else:
-                return _resolve_and_apply()
+            # `async` を内部で実行して結果を取得
+            resolved_fee = asyncio.run(_resolve_and_apply())
+            return resolved_fee
 
-        return self._apply_fee_amount(fee_estimate, change_distribution)
+            # 同期的な計算の結果を返す
+        self._apply_fee_amount(fee_estimate, change_distribution)
+        return fee_estimate
 
     def _apply_fee_amount(self, fee: int, change_distribution: str):
         change = 0

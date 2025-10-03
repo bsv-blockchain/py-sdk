@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-from ..constants import HTTP_REQUEST_TIMEOUT
+from ..constants import HTTP_REQUEST_TIMEOUT, TRANSACTION_FEE_RATE
 from ..http_client import default_http_client
 from .satoshis_per_kilobyte import SatoshisPerKilobyte
 
@@ -43,7 +43,7 @@ class LivePolicy(SatoshisPerKilobyte):
         self,
         cache_ttl_ms: int = _DEFAULT_CACHE_TTL_MS,
         arc_policy_url: Optional[str] = None,
-        fallback_sat_per_kb: int = 1,
+        fallback_sat_per_kb: int = TRANSACTION_FEE_RATE,
         request_timeout: Optional[int] = None,
         api_key: Optional[str] = None,
     ) -> None:
@@ -70,7 +70,7 @@ class LivePolicy(SatoshisPerKilobyte):
         cls,
         cache_ttl_ms: int = _DEFAULT_CACHE_TTL_MS,
         arc_policy_url: Optional[str] = None,
-        fallback_sat_per_kb: int = 1,
+        fallback_sat_per_kb: int = TRANSACTION_FEE_RATE,
         request_timeout: Optional[int] = None,
         api_key: Optional[str] = None,
     ) -> "LivePolicy":

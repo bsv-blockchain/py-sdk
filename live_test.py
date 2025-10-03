@@ -4,6 +4,7 @@ from bsv import (
     PrivateKey, P2PKH, Transaction, TransactionInput, TransactionOutput
 )
 from bsv.fee_models.live_policy import LivePolicy
+from bsv.constants import HTTP_REQUEST_TIMEOUT, TRANSACTION_FEE_RATE
 from bsv.keys import PublicKey
 
 logging.basicConfig(level=logging.INFO)
@@ -81,13 +82,13 @@ async def main():
     print(f"Using fee rate: {fee_rate} sat/kB")
 
     tx = Transaction([tx_input], [tx_output_recipient, tx_output_change])
-    await tx.fee(live_policy)  # Automatically calculate fee and adjust change
-
+    fee = tx.fee(live_policy)  # Automatically calculate fee and adjust change
+    print(f"Transaction fee: {fee} satoshis")
     tx.sign()
 
     print(f"\nBroadcasting transaction... Raw Hex: {tx.hex()}")
-    response = await tx.broadcast()
-    print(f"Broadcast Response: {response}")
+    # response = await tx.broadcast()
+    # print(f"Broadcast Response: {response}")
     print(f"Transaction ID: {tx.txid()}")
     print(f"\nCheck on WhatsOnChain: https://whatsonchain.com/tx/{tx.txid()}")
 

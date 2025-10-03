@@ -16,7 +16,7 @@ is provided so consumers can share the cached rate across transactions.
 from bsv.fee_models.live_policy import LivePolicy
 
 policy = LivePolicy.get_instance()
-await tx.fee(policy)
+tx.fee(policy)
 ```
 
 ### Configuration
@@ -64,7 +64,7 @@ from bsv.fee_models.live_policy import LivePolicy
 tx = Transaction(...)
 
 # Use the shared singleton (default behaviour of Transaction.fee()).
-await tx.fee(LivePolicy.get_instance())
+tx.fee(LivePolicy.get_instance())
 
 # Or create a custom policy with a shorter cache TTL and private endpoint.
 policy = LivePolicy(
@@ -72,6 +72,6 @@ policy = LivePolicy(
     arc_policy_url="https://arc.example.com/v1/policy",
     api_key="Bearer <token>"
 )
-await tx.fee(policy)
+tx.fee(policy)
 ```
 
