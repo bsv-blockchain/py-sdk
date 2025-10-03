@@ -10,7 +10,9 @@ from bsv.keys import PublicKey
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("bsv.fee_models.live_policy").setLevel(logging.DEBUG)
 
-async def main():
+# async def main():
+
+def main():
     """
     A live test script to send BSV.
 
@@ -77,9 +79,15 @@ async def main():
 
     # Build, sign, and broadcast the transaction
     print("\nFetching live fee policy...")
-    live_policy = LivePolicy.get_instance() # Use a safer fallback rate
-    fee_rate = await live_policy.current_rate_sat_per_kb()
-    print(f"Using fee rate: {fee_rate} sat/kB")
+    # live_policy = LivePolicy.get_instance() # Use a safer fallback rate
+    live_policy = LivePolicy(
+        cache_ttl_ms=60_000,
+        arc_policy_url="https://arc.taal.com/v1/policy",
+        api_key="Bearer <token>"
+    )
+
+    # fee_rate = await live_policy.current_rate_sat_per_kb()
+    # print(f"Using fee rate: {fee_rate} sat/kB")
 
     tx = Transaction([tx_input], [tx_output_recipient, tx_output_change])
     fee = tx.fee(live_policy)  # Automatically calculate fee and adjust change
@@ -93,4 +101,5 @@ async def main():
     print(f"\nCheck on WhatsOnChain: https://whatsonchain.com/tx/{tx.txid()}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # asyncio.run(main())
+    main()

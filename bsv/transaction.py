@@ -171,43 +171,54 @@ class Transaction:
 
     estimated_size = estimated_byte_length
 
+    # Private helper method for handling asynchronous fee resolution and application
+    async def _resolve_and_apply_fee(self, fee_estimate, change_distribution):
+        """
+        A helper method to resolve and apply the transaction fee asynchronously.
+
+        :param fee_estimate: An awaitable object that resolves to the estimated fee
+        :param change_distribution: The method of distributing change ('equal' or 'random')
+        :return: The resolved fee value (int) or None in case of an error
+        """
+        try:
+            # Resolve the fee asynchronously
+            resolved_fee = await fee_estimate
+            # Apply the resolved fee to the transaction
+            self._apply_fee_amount(resolved_fee, change_distribution)
+            return resolved_fee
+        except Exception as e:
+            # Handle any errors and return None on failure
+            return None
+
     def fee(self, model_or_fee=None, change_distribution='equal'):
         """
-        Computes the fee for the transaction and adjusts the change outputs accordingly.
-        This method can be called synchronously, even if it internally uses async operations.
+        Computes the transaction fee and adjusts the change outputs accordingly.
+        This method can be called synchronously, even if it internally uses asynchronous operations.
 
-        :param model_or_fee: Fee model or fee amount. Defaults to a `LivePolicy` instance
-            that retrieves the latest mining fees from ARC if not provided.
-        :param change_distribution: Method of change distribution ('equal' or 'random'). Defaults to 'equal'.
+        :param model_or_fee: A fee model or a fee amount. If not provided, it defaults to an instance
+            of `LivePolicy` that fetches the latest mining fees.
+        :param change_distribution: Method of distributing change ('equal' or 'random'). Defaults to 'equal'.
         """
         if model_or_fee is None:
+            # Retrieve the default fee model
             model_or_fee = LivePolicy.get_instance(
                 fallback_sat_per_kb=int(TRANSACTION_FEE_RATE)
             )
 
-        # モデルが同期型の処理を返す場合
+        # If the fee is provided as a fixed value (synchronous)
         if isinstance(model_or_fee, int):
             self._apply_fee_amount(model_or_fee, change_distribution)
             return model_or_fee
 
-            # 非同期型の処理を返す場合
+        # If the fee estimation requires asynchronous computation
         fee_estimate = model_or_fee.compute_fee(self)
 
         if inspect.isawaitable(fee_estimate):
-
-            async def _resolve_and_apply():
-                try:
-                    resolved_fee = await fee_estimate
-                    self._apply_fee_amount(resolved_fee, change_distribution)
-                    return resolved_fee
-                except Exception as e:
-                    return None
-
-            # `async` を内部で実行して結果を取得
-            resolved_fee = asyncio.run(_resolve_and_apply())
+            # Execute the asynchronous task synchronously and get the result
+            resolved_fee = asyncio.run(self._resolve_and_apply_fee(fee_estimate, change_distribution))
             return resolved_fee
 
-            # 同期的な計算の結果を返す
+        # Apply the fee directly if it is computed synchronously
         self._apply_fee_amount(fee_estimate, change_distribution)
         return fee_estimate
 
