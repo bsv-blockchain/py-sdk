@@ -109,6 +109,8 @@ For a more detailed tutorial and advanced examples, check our [Documentation](#d
 
 Detailed documentation of the SDK with code examples can be found at [BSV Skills Center](https://docs.bsvblockchain.org/guides/sdks/py).
 
+- [Dynamic fee models](./docs/fee_models.md)
+
 You can also refer to the [User Test Report](./docs/Py-SDK%20User%20Test%20Report.pdf) for insights and feedback provided by
 [Yenpoint](https://yenpoint.jp/).
 
