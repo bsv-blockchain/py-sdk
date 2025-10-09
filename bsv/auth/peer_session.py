@@ -1,4 +1,3 @@
-# PeerSession.py - Ported from go-sdk/auth/types.go
 from typing import Optional
 from bsv.keys import PublicKey
 

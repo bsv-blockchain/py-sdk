@@ -3,7 +3,7 @@ from typing import Dict, Optional, Any, NamedTuple
 from bsv.keys import PublicKey, PrivateKey
 from bsv.utils import unsigned_to_varint, Reader, Writer, serialize_ecdsa_der, deserialize_ecdsa_der, hash256
 
-# Outpointの簡易表現
+# Simple representation of Outpoint
 class Outpoint(NamedTuple):
     txid: str  # 32byte hex string
     index: int

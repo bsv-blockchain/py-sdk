@@ -780,7 +780,7 @@ class Spend:
         return self.stack[len(self.stack) + i]
 
     def script_evaluation_error(self, message: str) -> None:
-        raise Exception(f"Script evaluation error: {message}\n\n"
+        raise RuntimeError(f"Script evaluation error: {message}\n\n"
                         f"Source TXID: {self.source_txid}\n"
                         f"Source output index: {self.source_output_index}\n"
                         f"Context: {self.context}\n"
