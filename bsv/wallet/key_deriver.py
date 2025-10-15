@@ -83,13 +83,23 @@ class KeyDeriver:
         return str(protocol.security_level).encode() + b":" + protocol.protocol.encode() + b":" + key_id.encode()
 
     def _branch_scalar(self, protocol: Protocol, key_id: str, cp_pub: PublicKey) -> int:
-        """Deterministic branch scalar from HMAC(ECDH(self_priv, cp_pub), seed)."""
+        """Deterministic branch scalar from HMAC(ECDH_x(self_priv, cp_pub), seed).
+        ECDH_x uses the 32-byte x-coordinate of the shared point (TS/Go parity).
+        """
         seed = self._seed_bytes(protocol, key_id)
         shared = cp_pub.derive_shared_secret(self._root_private_key)
-        branch = hmac_sha256(shared, seed)
+        # Our derive_shared_secret returns compressed public key (33 bytes). Take x-coordinate.
+        if isinstance(shared, (bytes, bytearray)) and len(shared) >= 33:
+            shared_key = bytes(shared)[1:33]
+        else:
+            shared_key = shared
+        branch = hmac_sha256(shared_key, seed)
         scalar = int.from_bytes(branch, 'big') % CURVE_ORDER
         if os.getenv("BSV_DEBUG", "0") == "1":
-            print(f"[DEBUG KeyDeriver._branch_scalar] seed={seed.hex()} scalar={scalar:x}")
+            try:
+                print(f"[DEBUG KeyDeriver._branch_scalar] seed={seed.hex()} shared_len={len(shared_key)} scalar={scalar:x}")
+            except Exception:
+                print(f"[DEBUG KeyDeriver._branch_scalar] scalar={scalar:x}")
         return scalar
 
     # ------------------------------------------------------------------
@@ -127,7 +137,11 @@ class KeyDeriver:
         cp_pub = counterparty.to_public_key(self._root_public_key)
         shared = cp_pub.derive_shared_secret(self._root_private_key)
         seed = self._seed_bytes(protocol, key_id)
-        return hmac_sha256(shared, seed)
+        if isinstance(shared, (bytes, bytearray)) and len(shared) >= 33:
+            shared_key = bytes(shared)[1:33]
+        else:
+            shared_key = shared
+        return hmac_sha256(shared_key, seed)
 
     # Identity key (root public)
     def identity_key(self) -> PublicKey:

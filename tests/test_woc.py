@@ -1,7 +1,7 @@
 import pytest
 from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcaster
 from bsv.constants import Network
-from bsv.broadcaster_core import BroadcastResponse, BroadcastFailure
+from bsv.broadcaster import BroadcastResponse, BroadcastFailure
 
 
 class TestWhatsOnChainBroadcast:
