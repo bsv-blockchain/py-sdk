@@ -72,6 +72,130 @@ class InternalizeActionResult(TypedDict):
     transactionId: Optional[TXIDHexString]
 
 
+class VerifySignatureResult(TypedDict):
+    """Result from verifySignature method."""
+    valid: bool
+
+
+class VerifyHmacResult(TypedDict):
+    """Result from verifyHmac method."""
+    valid: bool
+
+
+class EncryptResult(TypedDict):
+    """Result from encrypt method."""
+    ciphertext: bytes
+
+
+class DecryptResult(TypedDict):
+    """Result from decrypt method."""
+    plaintext: bytes
+
+
+class CreateHmacResult(TypedDict):
+    """Result from createHmac method."""
+    hmac: bytes
+
+
+class SignActionResult(TypedDict, total=False):
+    """Result from signAction method."""
+    txid: Optional[TXIDHexString]
+    tx: Optional[AtomicBEEF]
+    sendWithResults: Optional[List[Dict[str, Any]]]
+
+
+class AbortActionResult(TypedDict):
+    """Result from abortAction method."""
+    aborted: bool
+
+
+class ListActionsResult(TypedDict):
+    """Result from listActions method."""
+    totalActions: int
+    actions: List[Dict[str, Any]]
+
+
+class ListOutputsResult(TypedDict):
+    """Result from listOutputs method."""
+    totalOutputs: int
+    outputs: List[Dict[str, Any]]
+    BEEF: Optional[bytes]
+
+
+class ListCertificatesResult(TypedDict):
+    """Result from listCertificates method."""
+    totalCertificates: int
+    certificates: List[Dict[str, Any]]
+
+
+class DiscoverCertificatesResult(TypedDict):
+    """Result from discoverByIdentityKey and discoverByAttributes methods."""
+    totalCertificates: int
+    certificates: List[Dict[str, Any]]
+
+
+class ProveCertificateResult(TypedDict):
+    """Result from proveCertificate method."""
+    keyringForVerifier: Dict[str, str]
+
+
+class RelinquishCertificateResult(TypedDict):
+    """Result from relinquishCertificate method."""
+    relinquished: bool
+
+
+class RelinquishOutputResult(TypedDict):
+    """Result from relinquishOutput method."""
+    relinquished: bool
+
+
+class AuthenticatedResult(TypedDict):
+    """Result from isAuthenticated and waitForAuthentication methods."""
+    authenticated: bool
+
+
+class GetHeightResult(TypedDict):
+    """Result from getHeight method."""
+    height: int
+
+
+class GetHeaderResult(TypedDict):
+    """Result from getHeaderForHeight method."""
+    header: bytes
+
+
+class GetNetworkResult(TypedDict):
+    """Result from getNetwork method."""
+    network: str
+
+
+class GetVersionResult(TypedDict):
+    """Result from getVersion method."""
+    version: str
+
+
+class RevealCounterpartyKeyLinkageResult(TypedDict):
+    """Result from revealCounterpartyKeyLinkage method."""
+    encryptedLinkage: bytes
+    encryptedLinkageProof: bytes
+    prover: PubKeyHex
+    verifier: PubKeyHex
+    counterparty: PubKeyHex
+    revelationTime: str
+
+
+class RevealSpecificKeyLinkageResult(TypedDict):
+    """Result from revealSpecificKeyLinkage method."""
+    encryptedLinkage: bytes
+    encryptedLinkageProof: bytes
+    prover: PubKeyHex
+    verifier: PubKeyHex
+    counterparty: PubKeyHex
+    protocolID: WalletProtocol
+    keyID: str
+    proofType: int
+
+
 # ============================================================================
 # WalletInterface Protocol
 # ============================================================================
@@ -84,19 +208,51 @@ class WalletInterface(Protocol):
     This is the Python equivalent of ts-sdk's WalletInterface.
     It uses Protocol (PEP 544) to define structural subtyping (duck typing with type checking).
     
-    Key Methods:
-    - getPublicKey: Retrieve derived or identity public keys
-    - createSignature: Create digital signatures
-    - createAction: Create new Bitcoin transactions
-    - internalizeAction: Internalize transactions into wallet
+    Core Methods:
+    - get_public_key: Retrieve derived or identity public keys
+    - create_signature: Create digital signatures
+    - verify_signature: Verify digital signatures
+    - create_action: Create new Bitcoin transactions
+    - sign_action: Sign previously created transactions
+    - abort_action: Abort transactions in progress
+    - internalize_action: Internalize transactions into wallet
+    - list_actions: Query transaction history
+    - list_outputs: Query wallet UTXOs
+    - relinquish_output: Remove outputs from tracking
+    
+    Cryptographic Methods:
+    - encrypt: Encrypt data using derived keys
+    - decrypt: Decrypt data using derived keys
+    - create_hmac: Create HMAC for data authentication
+    - verify_hmac: Verify HMAC values
+    
+    Certificate Methods:
+    - acquire_certificate: Acquire identity certificates
+    - list_certificates: List owned certificates
+    - prove_certificate: Prove certificate fields to verifiers
+    - relinquish_certificate: Remove certificates from wallet
+    - discover_by_identity_key: Find certificates by identity key
+    - discover_by_attributes: Find certificates by attributes
+    
+    Key Linkage Methods:
+    - reveal_counterparty_key_linkage: Reveal all key linkage with counterparty
+    - reveal_specific_key_linkage: Reveal specific protocol key linkage
+    
+    Network/Authentication Methods:
+    - is_authenticated: Check authentication status
+    - wait_for_authentication: Wait for authentication
+    - get_height: Get current blockchain height
+    - get_header_for_height: Get block header at height
+    - get_network: Get network (mainnet/testnet)
+    - get_version: Get wallet version
     
     All methods follow the pattern:
-        method(args: Dict, originator: Optional[str]) -> Dict
+        method(args: Dict, originator: Optional[str]) -> TypedDict
     
     Where:
     - args: Dictionary containing method-specific parameters
     - originator: Optional FQDN of the application originating the request
-    - Returns: Dictionary with method-specific results
+    - Returns: TypedDict with method-specific results
     
     Error Handling:
     Methods should raise exceptions that include:
@@ -316,39 +472,196 @@ class WalletInterface(Protocol):
         """
         ...
     
-    # Optional: Additional methods from WalletInterface
-    # These can be added as needed for full ts-sdk compatibility
-    
     def encrypt(
         self,
         args: Dict[str, Any],
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
-    ) -> Dict[str, Any]:
-        """Encrypt data using derived keys (optional, for full compatibility)."""
+    ) -> EncryptResult:
+        """Encrypt data using derived keys."""
         ...
     
     def decrypt(
         self,
         args: Dict[str, Any],
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
-    ) -> Dict[str, Any]:
-        """Decrypt data using derived keys (optional, for full compatibility)."""
+    ) -> DecryptResult:
+        """Decrypt data using derived keys."""
         ...
     
     def create_hmac(
         self,
         args: Dict[str, Any],
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
-    ) -> Dict[str, Any]:
-        """Create HMAC (optional, for full compatibility)."""
+    ) -> CreateHmacResult:
+        """Create HMAC for data authentication."""
         ...
     
     def verify_signature(
         self,
         args: Dict[str, Any],
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> VerifySignatureResult:
+        """Verify a digital signature."""
+        ...
+    
+    def verify_hmac(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> VerifyHmacResult:
+        """Verify an HMAC."""
+        ...
+    
+    def sign_action(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> SignActionResult:
+        """Sign a previously created transaction."""
+        ...
+    
+    def abort_action(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> AbortActionResult:
+        """Abort a transaction that is in progress."""
+        ...
+    
+    def list_actions(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> ListActionsResult:
+        """List all transactions matching the specified labels."""
+        ...
+    
+    def list_outputs(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> ListOutputsResult:
+        """List spendable outputs kept within a specific basket."""
+        ...
+    
+    def relinquish_output(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> RelinquishOutputResult:
+        """Relinquish an output out of a basket."""
+        ...
+    
+    def acquire_certificate(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> Dict[str, Any]:
-        """Verify a digital signature (optional, for full compatibility)."""
+        """Acquire an identity certificate."""
+        ...
+    
+    def list_certificates(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> ListCertificatesResult:
+        """List identity certificates belonging to the user."""
+        ...
+    
+    def prove_certificate(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> ProveCertificateResult:
+        """Prove select fields of an identity certificate."""
+        ...
+    
+    def relinquish_certificate(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> RelinquishCertificateResult:
+        """Relinquish an identity certificate."""
+        ...
+    
+    def discover_by_identity_key(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> DiscoverCertificatesResult:
+        """Discover identity certificates by identity key."""
+        ...
+    
+    def discover_by_attributes(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> DiscoverCertificatesResult:
+        """Discover identity certificates by attributes."""
+        ...
+    
+    def reveal_counterparty_key_linkage(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> RevealCounterpartyKeyLinkageResult:
+        """Reveal key linkage between ourselves and a counterparty."""
+        ...
+    
+    def reveal_specific_key_linkage(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> RevealSpecificKeyLinkageResult:
+        """Reveal specific key linkage for a protocol and key combination."""
+        ...
+    
+    def is_authenticated(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> AuthenticatedResult:
+        """Check the authentication status of the user."""
+        ...
+    
+    def wait_for_authentication(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> AuthenticatedResult:
+        """Wait until the user is authenticated."""
+        ...
+    
+    def get_height(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> GetHeightResult:
+        """Retrieve the current height of the blockchain."""
+        ...
+    
+    def get_header_for_height(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> GetHeaderResult:
+        """Retrieve the block header at a specified height."""
+        ...
+    
+    def get_network(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> GetNetworkResult:
+        """Retrieve the Bitcoin network the client is using."""
+        ...
+    
+    def get_version(
+        self,
+        args: Dict[str, Any],
+        originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
+    ) -> GetVersionResult:
+        """Retrieve the current version of the wallet."""
         ...
 
 
@@ -410,6 +723,27 @@ __all__ = [
     'CreateSignatureResult',
     'CreateActionResult',
     'InternalizeActionResult',
+    'VerifySignatureResult',
+    'VerifyHmacResult',
+    'EncryptResult',
+    'DecryptResult',
+    'CreateHmacResult',
+    'SignActionResult',
+    'AbortActionResult',
+    'ListActionsResult',
+    'ListOutputsResult',
+    'ListCertificatesResult',
+    'DiscoverCertificatesResult',
+    'ProveCertificateResult',
+    'RelinquishCertificateResult',
+    'RelinquishOutputResult',
+    'AuthenticatedResult',
+    'GetHeightResult',
+    'GetHeaderResult',
+    'GetNetworkResult',
+    'GetVersionResult',
+    'RevealCounterpartyKeyLinkageResult',
+    'RevealSpecificKeyLinkageResult',
     
     # Helpers
     'is_wallet_interface',

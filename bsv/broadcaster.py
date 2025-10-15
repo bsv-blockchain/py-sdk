@@ -1,3 +1,5 @@
+#this will be deprecated in the future. Please use bsv/broadcasters/broadcaster.py
+
 from abc import ABC, abstractmethod
 from typing import Union, Dict, Any, TYPE_CHECKING
 

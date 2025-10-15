@@ -6,8 +6,6 @@ import base64
 from .transports.transport import Transport
 # Re-export PeerSession for compatibility with session_manager typing/tests
 from .peer_session import PeerSession
-# Import CounterpartyType to match Go SDK implementation
-from bsv.wallet.key_deriver import CounterpartyType
 
 
 class PeerOptions:
@@ -15,15 +13,17 @@ class PeerOptions:
                  wallet: Any = None,  # Should be replaced with WalletInterface
                  transport: Any = None,  # Should be replaced with Transport
                  certificates_to_request: Optional[Any] = None,  # Should be RequestedCertificateSet
-                 session_manager: Optional[Any] = None,  # SessionManager
+                 session_manager: Optional[Any] = None,  # Should be SessionManager
                  auto_persist_last_session: Optional[bool] = None,
-                 logger: Optional[logging.Logger] = None):
+                 logger: Optional[logging.Logger] = None,
+                 debug: bool = False):
         self.wallet = wallet
         self.transport = transport
         self.certificates_to_request = certificates_to_request
         self.session_manager = session_manager
         self.auto_persist_last_session = auto_persist_last_session
         self.logger = logger
+        self.debug = debug
 
 class Peer:
     def __init__(self, 
@@ -32,7 +32,8 @@ class Peer:
                  certificates_to_request: Optional[Any] = None,  # RequestedCertificateSet
                  session_manager: Optional[Any] = None,  # SessionManager
                  auto_persist_last_session: Optional[bool] = None,
-                 logger: Optional[logging.Logger] = None):
+                 logger: Optional[logging.Logger] = None,
+                 debug: bool = False):
         """
         Initialize a Peer instance.
         
@@ -51,6 +52,7 @@ class Peer:
             session_manager: Optional SessionManager (defaults to DefaultSessionManager)
             auto_persist_last_session: Whether to auto-persist sessions (default: True)
             logger: Optional logger instance
+            debug: Enable debug logging (default: False)
         """
         # Support both PeerOptions object and direct parameters (ts-sdk style)
         if isinstance(wallet, PeerOptions):
@@ -61,6 +63,7 @@ class Peer:
             self.session_manager = cfg.session_manager
             self.certificates_to_request = cfg.certificates_to_request
             self.logger = cfg.logger or logging.getLogger("Auth Peer")
+            self._debug = bool(getattr(cfg, 'debug', False))
             auto_persist_last_session = cfg.auto_persist_last_session
         else:
             # ts-sdk style: direct parameters
@@ -73,6 +76,7 @@ class Peer:
             self.session_manager = session_manager
             self.certificates_to_request = certificates_to_request
             self.logger = logger or logging.getLogger("Auth Peer")
+            self._debug = debug
         
         # Initialize callback registries
         self.on_general_message_received_callbacks: Dict[int, Callable] = {}
@@ -133,7 +137,12 @@ class Peer:
         Sets the _transport_ready flag to indicate whether transport setup succeeded.
         This can be checked by applications to verify peer health.
         """
+        if self._debug:
+            print("[Peer DEBUG] registering transport on_data handler")
+        
         def on_data(ctx, message):
+            if self._debug:
+                print(f"[Peer DEBUG] on_data received: type={getattr(message, 'message_type', None)}")
             return self.handle_incoming_message(ctx, message)
         
         try:
@@ -143,6 +152,8 @@ class Peer:
                 self.logger.error(error_msg)
                 self._transport_ready = False
             else:
+                if self._debug:
+                    print("[Peer DEBUG] transport handler registration ok")
                 self._transport_ready = True
         except Exception as e:
             error_msg = f"Exception during transport registration: {e}"
@@ -358,16 +369,14 @@ class Peer:
         """
         Processes incoming authentication messages.
         """
+        if self._debug:
+            print(f"[Peer DEBUG] handle_incoming_message: version={getattr(message, 'version', None)}, type={getattr(message, 'message_type', None)}")
         if message is None:
             return Exception("Invalid message")
-        
-        version = getattr(message, 'version', None)
-        msg_type = getattr(message, 'message_type', None)
-        
-        if version != "0.1":
-            return Exception(f"Invalid or unsupported message auth version! Received: {version}, expected: 0.1")
-        
+        if getattr(message, 'version', None) != "0.1":
+            return Exception(f"Invalid or unsupported message auth version! Received: {getattr(message, 'version', None)}, expected: 0.1")
         # Dispatch based on message type
+        msg_type = getattr(message, 'message_type', None)
         if msg_type == "initialRequest":
             return self.handle_initial_request(ctx, message, getattr(message, 'identity_key', None))
         elif msg_type == "initialResponse":
@@ -379,21 +388,29 @@ class Peer:
         elif msg_type == "general":
             return self.handle_general_message(ctx, message, getattr(message, 'identity_key', None))
         else:
-            return Exception(f"unknown message type: {msg_type}")
+            err_msg = f"unknown message type: {msg_type}"
+            self.logger.warning(err_msg)
+            return Exception(err_msg)
 
     def handle_initial_request(self, ctx: Any, message: Any, sender_public_key: Any) -> Optional[Exception]:
         """
         Processes an initial authentication request.
         """
+        if self._debug:
+            print("[Peer DEBUG] handle_initial_request: begin")
         initial_nonce = getattr(message, 'initial_nonce', None)
         if not initial_nonce:
             return Exception("Invalid nonce")
 
         # 1) Generate our session nonce
         our_nonce = self._generate_session_nonce(ctx)
+        if self._debug:
+            print(f"[Peer DEBUG] handle_initial_request: our_nonce={our_nonce}, peer_nonce={initial_nonce}")
 
         # 2) Create and store session (auth status may be downgraded if we plan to request certs)
         session = self._create_session_for_initial(sender_public_key, initial_nonce, our_nonce)
+        if self._debug:
+            print(f"[Peer DEBUG] handle_initial_request: session added, nonce={session.session_nonce}")
 
         # 3) Get our identity key
         identity_key_result = self.wallet.get_public_key(ctx, {'identityKey': True}, "auth-peer")
@@ -411,6 +428,8 @@ class Peer:
         if response_err is not None:
             return response_err
 
+        if self._debug:
+            print("[Peer DEBUG] handle_initial_request: response sent")
         return None
 
     def _generate_session_nonce(self, ctx: Any) -> str:
@@ -489,7 +508,7 @@ class Peer:
                 },
                 'key_id': f"{initial_nonce} {session.session_nonce}",
                 'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                    'type': 1,  # CounterpartyType.OTHER - explicit counterparty public key
                     'counterparty': getattr(message, 'identity_key', None)
                 }
             },
@@ -663,19 +682,8 @@ class Peer:
         """
         Processes the response to our initial authentication request.
         """
-        # Verify your_nonce matches TypeScript/Go implementation
-        your_nonce = getattr(message, 'your_nonce', None)
-        if not your_nonce:
-            return Exception("your_nonce is required for initialResponse")
-        
-        try:
-            from .utils import verify_nonce
-            valid = verify_nonce(your_nonce, self.wallet, {'type': 1}, ctx)
-            if not valid:
-                return Exception("Initial response nonce verification failed")
-        except Exception as e:
-            return Exception(f"Failed to validate nonce: {e}")
-        
+        if self._debug:
+            print("[Peer DEBUG] handle_initial_response: begin")
         session = self._retrieve_initial_response_session(sender_public_key, message)
         if session is None:
             return Exception(self.SESSION_NOT_FOUND)
@@ -713,13 +721,15 @@ class Peer:
                 },
                 'key_id': f"{getattr(message, 'your_nonce', '')} {getattr(message, 'initial_nonce', '')}",
                 'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                    'type': 3,
                     'counterparty': getattr(message, 'identity_key', None)
                 }
             },
             'data': sig_data,
             'signature': signature
         }, "auth-peer")
+        if self._debug:
+            print(f"[Peer DEBUG] handle_initial_response: verify_result={getattr(verify_result, 'valid', None)}")
         if verify_result is None or not getattr(verify_result, 'valid', False):
             return Exception("unable to verify signature in initial response")
         session.peer_nonce = getattr(message, 'initial_nonce', None)
@@ -831,6 +841,8 @@ class Peer:
         """
         Processes a certificate request message.
         """
+        if self._debug:
+            print("[Peer DEBUG] handle_certificate_request: begin")
         session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
         if session is None:
             return Exception(self.SESSION_NOT_FOUND)
@@ -850,6 +862,8 @@ class Peer:
                 return Exception("failed to get identity key for certificate response")
             certs_to_send = self._auto_acquire_certificates_for_request(ctx, canonical_req, subject_hex)
 
+        if self._debug:
+            print(f"[Peer DEBUG] handle_certificate_request: sending response, certs={len(certs_to_send or [])}")
         err = self.send_certificate_response(ctx, sender_public_key, certs_to_send or [])
         if err is not None:
             return Exception(f"failed to send certificate response: {err}")
@@ -866,14 +880,15 @@ class Peer:
                 },
                 'key_id': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
                 'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                    'type': 3,
                     'counterparty': sender_public_key
-                },
-                'forSelf': False
+                }
             },
             'data': cert_request_data,
             'signature': signature
         }, "auth-peer")
+        if self._debug:
+            print(f"[Peer DEBUG] handle_certificate_request: verify_result={getattr(verify_result, 'valid', None)}")
         if verify_result is None or not getattr(verify_result, 'valid', False):
             return Exception("certificate request - invalid signature")
         return None
@@ -886,6 +901,8 @@ class Peer:
     def _invoke_cert_request_callbacks(self, sender_public_key: Any, requested: Any):
         if not self.on_certificate_request_received_callbacks:
             return None
+        if self._debug:
+            print("[Peer DEBUG] handle_certificate_request: invoking request callbacks")
         for cb in tuple(self.on_certificate_request_received_callbacks.values()):
             try:
                 result = cb(sender_public_key, requested)
@@ -930,6 +947,8 @@ class Peer:
         """
         Processes a certificate response message.
         """
+        if self._debug:
+            print("[Peer DEBUG] handle_certificate_response: begin")
         session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
         if session is None:
             return Exception(self.SESSION_NOT_FOUND)
@@ -958,13 +977,15 @@ class Peer:
                 },
                 'key_id': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
                 'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                    'type': 3,
                     'counterparty': sender_public_key
                 }
             },
             'data': cert_data,
             'signature': signature
         }, "auth-peer")
+        if self._debug:
+            print(f"[Peer DEBUG] handle_certificate_response: verify_result={getattr(verify_result, 'valid', None)}")
         if verify_result is None or not getattr(verify_result, 'valid', False):
             return Exception("certificate response - invalid signature")
         return None
@@ -991,29 +1012,17 @@ class Peer:
         """
         Processes a general message.
         """
-        # Verify your_nonce (required for general messages, matches TypeScript/Go)
-        your_nonce = getattr(message, 'your_nonce', None)
-        if not your_nonce:
-            return Exception("your_nonce is required for general message")
-        
-        try:
-            from .utils import verify_nonce
-            valid = verify_nonce(your_nonce, self.wallet, {'type': 1}, ctx)
-            if not valid:
-                return Exception("Unable to verify nonce for general message")
-        except Exception as e:
-            return Exception(f"Failed to validate nonce: {e}")
-        
+        if self._debug:
+            print("[Peer DEBUG] handle_general_message: begin")
+        self._optionally_verify_nonce(ctx, message, sender_public_key)
         if self._is_loopback_echo(ctx, sender_public_key):
             return None
 
         session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
-        
         if session is None:
             return Exception(self.SESSION_NOT_FOUND)
 
         payload = getattr(message, 'payload', None)
-        
         data_to_verify = self._serialize_for_signature(payload)
         err = self._verify_general_message_signature(ctx, message, session, sender_public_key, data_to_verify)
         if err is not None:
@@ -1022,9 +1031,17 @@ class Peer:
         self._touch_session(session)
         if self.auto_persist_last_session:
             self.last_interacted_with_peer = sender_public_key
-        
         self._dispatch_general_message_callbacks(sender_public_key, payload)
         return None
+
+    def _optionally_verify_nonce(self, ctx: Any, message: Any, sender_public_key: Any) -> None:
+        try:
+            from .utils import verify_nonce
+            nonce = getattr(message, 'nonce', None)
+            if nonce and not verify_nonce(nonce, self.wallet, {"type": 3, "counterparty": sender_public_key}, ctx):
+                self.logger.warning("general message - nonce verification failed")
+        except Exception:
+            pass
 
     def _is_loopback_echo(self, ctx: Any, sender_public_key: Any) -> bool:
         try:
@@ -1038,7 +1055,7 @@ class Peer:
 
     def _verify_general_message_signature(self, ctx: Any, message: Any, session: Any, sender_public_key: Any, data_to_verify: bytes) -> Optional[Exception]:
         signature = getattr(message, 'signature', None)
-        enc = {
+        verify_result = self.wallet.verify_signature(ctx, {
             'encryption_args': {
                 'protocol_id': {
                     'securityLevel': 2,
@@ -1046,30 +1063,19 @@ class Peer:
                 },
                 'key_id': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
                 'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                    'type': 3,
                     'counterparty': sender_public_key
                 }
             },
             'data': data_to_verify,
             'signature': signature
-        }
-
-        verify_result = self.wallet.verify_signature(ctx, enc, "auth-peer")
-        
-        valid = False
-        if hasattr(verify_result, 'valid'):
-            valid = verify_result.valid
-        elif isinstance(verify_result, dict):
-            valid = verify_result.get('valid', False)
-        else:
-            valid = bool(verify_result)
-        
-        if not valid:
+        }, "auth-peer")
+        if not getattr(verify_result, 'valid', False):
             return Exception("general message - invalid signature")
         return None
 
     def _dispatch_general_message_callbacks(self, sender_public_key: Any, payload: Any) -> None:
-        for callback_id, callback in self.on_general_message_received_callbacks.items():
+        for callback in self.on_general_message_received_callbacks.values():
             try:
                 callback(sender_public_key, payload)
             except Exception as e:
@@ -1079,9 +1085,13 @@ class Peer:
         """
         Expire sessions older than max_age_sec. Should be called periodically.
         """
+        if self._debug:
+            print(f"[Peer DEBUG] expire_sessions: begin, max_age_sec={max_age_sec}")
         if hasattr(self.session_manager, 'expire_older_than'):
             try:
                 self.session_manager.expire_older_than(max_age_sec)
+                if self._debug:
+                    print("[Peer DEBUG] expire_sessions: used session_manager.expire_older_than")
                 return
             except Exception:
                 pass
@@ -1089,9 +1099,14 @@ class Peer:
         import time
         now = int(time.time() * 1000)
         if hasattr(self.session_manager, 'get_all_sessions'):
+            before = len(self.session_manager.get_all_sessions())
             for session in self.session_manager.get_all_sessions():
                 if hasattr(session, 'last_update') and now - session.last_update > max_age_sec * 1000:
                     self.session_manager.remove_session(session)
+                    self.logger.info(f"Session expired: {getattr(session, 'peer_identity_key', None)}")
+            after = len(self.session_manager.get_all_sessions())
+            if self._debug:
+                print(f"[Peer DEBUG] expire_sessions: removed={before - after}, remaining={after}")
 
     def stop(self):
         """
@@ -1100,6 +1115,8 @@ class Peer:
         - Deregister transport handler by installing a no-op
         - Clear registered callbacks to avoid leaks
         """
+        if self._debug:
+            print("[Peer DEBUG] stop: begin")
         # Best-effort: replace on_data with a no-op to stop receiving messages
         try:
             _ = self.transport.on_data(lambda _ctx, _msg: None)
@@ -1113,6 +1130,8 @@ class Peer:
             self.on_initial_response_received_callbacks.clear()
         except Exception:
             pass
+        if self._debug:
+            print("[Peer DEBUG] stop: done")
 
     def listen_for_general_messages(self, callback: Callable) -> int:
         """
@@ -1247,22 +1266,16 @@ class Peer:
 
     def _serialize_for_signature(self, data: Any) -> bytes:
         """
-        Helper to serialize data for signing.
-        For General Messages, payload should be used as-is (raw bytes).
+        Helper to serialize data for signing (JSON, UTF-8 encoded).
         """
-        try:
-            if isinstance(data, bytes):
-                # For General Messages: use raw payload bytes directly (TS/Go parity)
-                return data
-            elif isinstance(data, (dict, list)):
-                return json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
-            elif isinstance(data, str):
-                return data.encode("utf-8")
-            else:
-                return str(data).encode("utf-8")
-        except Exception as e:
-            self.logger.warning(f"_serialize_for_signature error: {e}")
-            return b""
+        if isinstance(data, (dict, list)):
+            return json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        elif isinstance(data, bytes):
+            return data
+        elif isinstance(data, str):
+            return data.encode("utf-8")
+        else:
+            return str(data).encode("utf-8")
 
     def to_peer(self, ctx: Any, message: bytes, identity_key: Optional[Any] = None, max_wait_time: int = 0) -> Optional[Exception]:
         """
@@ -1297,7 +1310,7 @@ class Peer:
                 },
                 'key_id': f"{request_nonce} {peer_session.peer_nonce}",
                 'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                    'type': 3,
                     'counterparty': peer_session.peer_identity_key
                 }
             },
@@ -1351,7 +1364,7 @@ class Peer:
                 },
                 'key_id': f"{request_nonce} {peer_session.peer_nonce}",
                 'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                    'type': 3,
                     'counterparty': None  # Peer public key if available
                 }
             },
@@ -1377,6 +1390,8 @@ class Peer:
         """
         Sends certificates back to a peer in response to a request.
         """
+        if self._debug:
+            print(f"[Peer DEBUG] send_certificate_response: begin, certs_in={(len(certificates) if isinstance(certificates, list) else 'n/a')}")
         peer_session = self.get_authenticated_session(ctx, identity_key, 0)
         if peer_session is None:
             return Exception(self.FAILED_TO_GET_AUTHENTICATED_SESSION)
@@ -1399,6 +1414,8 @@ class Peer:
         )
         # Canonicalize and sign the certificates payload
         canonical_certs = self._canonicalize_certificates_payload(certificates)
+        if self._debug:
+            print(f"[Peer DEBUG] send_certificate_response: canonical_count={len(canonical_certs)}")
         sig_result = self.wallet.create_signature(ctx, {
             'encryption_args': {
                 'protocol_id': {
@@ -1407,7 +1424,7 @@ class Peer:
                 },
                 'key_id': f"{response_nonce} {peer_session.peer_nonce}",
                 'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                    'type': 3,
                     'counterparty': None  # Peer public key if available
                 }
             },
@@ -1420,6 +1437,8 @@ class Peer:
         err = self.transport.send(ctx, cert_response)
         if err is not None:
             return Exception(f"failed to send certificate response: {err}")
+        if self._debug:
+            print("[Peer DEBUG] send_certificate_response: response sent")
         # Update session timestamp
         now = int(time.time() * 1000)
         peer_session.last_update = now
@@ -1429,13 +1448,48 @@ class Peer:
             self.last_interacted_with_peer = identity_key
         return None
 
-    # --- Helper methods for extensibility ---
+    # --- 1. Signature generation and verification ---
+    def sign_data(self, data: bytes) -> bytes:
+        """
+        Canonicalize and sign data using the wallet interface.
+        """
+        canonical_data = self._canonicalize(data)
+        return self.wallet.sign(canonical_data)
+
+    def verify_signature(self, data: bytes, signature: bytes, pubkey) -> bool:
+        """
+        Canonicalize and verify signature using the wallet interface.
+        """
+        canonical_data = self._canonicalize(data)
+        return self.wallet.verify(canonical_data, signature, pubkey)
+
     def _canonicalize(self, data: bytes) -> bytes:
         """
         Canonicalize data for signing/verifying. (Override as needed for protocol.)
         """
         return data
 
+    # --- 2. Certificate verification ---
+    def verify_certificate(self, cert) -> bool:
+        """
+        Verify a VerifiableCertificate using the cert store (chain, expiry, revocation).
+        """
+        if hasattr(cert, 'verify'):
+            return cert.verify(self.cert_store)
+        return False
+
+    # --- 3. RequestedCertificateSet validation ---
+    def validate_certificate_request(self, req_set) -> bool:
+        """
+        Validate a RequestedCertificateSet for required attributes and duplicates.
+        """
+        if not hasattr(req_set, 'is_valid') or not req_set.is_valid():
+            return False
+        if hasattr(self.cert_store, 'has_request') and self.cert_store.has_request(req_set):
+            return False
+        return True
+
+    # --- 4. Nonce verification and replay protection ---
     def verify_nonce(self, nonce: str, expiry: int = 300) -> bool:
         """
         Check nonce uniqueness and (optionally) expiry. Prevents replay attacks.
@@ -1449,7 +1503,7 @@ class Peer:
         # Expiry logic can be added here if nonce includes timestamp
         return True
 
-    # --- Event handler registration and emission ---
+    # --- 5. Event handler registration and emission ---
     def on(self, event: str, handler: Callable[..., Any]):
         """
         Register an event handler for a named event.
@@ -1467,13 +1521,96 @@ class Peer:
             except Exception as e:
                 self.logger.warning(f"Exception in event handler '{event}': {e}")
 
-
+    # --- 6. Custom error classes for unified error handling ---
 class PeerAuthError(Exception):
     """Raised for authentication-related errors in Peer."""
     pass
 
-
 class CertificateError(Exception):
     """Raised for certificate validation or issuance errors."""
-    pass
 
+    # --- 7. Serialization/deserialization helpers ---
+    def serialize_data(self, data: Any) -> bytes:
+        """
+        Serialize data to bytes (JSON canonical form by default).
+        """
+        try:
+            return json.dumps(data, sort_keys=True, separators=(",", ":")).encode('utf-8')
+        except Exception as e:
+            self._handle_error("Failed to serialize data", e, raise_exc=True)
+
+    def deserialize_data(self, data: bytes) -> Any:
+        """
+        Deserialize bytes to Python object (JSON by default).
+        """
+        try:
+            return json.loads(data.decode('utf-8'))
+        except Exception as e:
+            self._handle_error("Failed to deserialize data", e, raise_exc=True)
+
+    # --- 8. Session expiry and management ---
+    def expire_sessions(self, max_age_sec: int = 3600):
+        """
+        Expire sessions older than max_age_sec. Should be called periodically.
+        """
+        if self._debug:
+            print(f"[Peer DEBUG] expire_sessions: begin, max_age_sec={max_age_sec}")
+        if hasattr(self.session_manager, 'expire_older_than'):
+            try:
+                self.session_manager.expire_older_than(max_age_sec)
+                if self._debug:
+                    print("[Peer DEBUG] expire_sessions: used session_manager.expire_older_than")
+                return
+            except Exception:
+                pass
+        # Fallback path if expire_older_than is unavailable
+        import time
+        now = int(time.time() * 1000)
+        if hasattr(self.session_manager, 'get_all_sessions'):
+            before = len(self.session_manager.get_all_sessions())
+            for session in self.session_manager.get_all_sessions():
+                if hasattr(session, 'last_update') and now - session.last_update > max_age_sec * 1000:
+                    self.session_manager.remove_session(session)
+                    self.logger.info(f"Session expired: {getattr(session, 'peer_identity_key', None)}")
+            after = len(self.session_manager.get_all_sessions())
+            if self._debug:
+                print(f"[Peer DEBUG] expire_sessions: removed={before - after}, remaining={after}")
+
+    # --- 9. Transport security stub (for extension) ---
+    def secure_send(self, ctx: Any, message: Any) -> Optional[Exception]:
+        """
+        Send a message with additional security.
+
+        Parity with TS/Go SDKs:
+        - The current TS and Go implementations do not provide an additional
+          secure-send layer beyond signing. For protocol parity, we delegate
+          directly to the underlying transport.
+
+        Forward-compatibility:
+        - If a transport exposes a `secure_send` method, prefer it.
+        - Otherwise, fall back to `send`.
+        """
+        try:
+            secure = getattr(self.transport, 'secure_send', None)
+            if callable(secure):
+                return secure(ctx, message)
+        except Exception:
+            # Fall back to normal send on any error
+            pass
+        return self.transport.send(ctx, message)
+
+    # --- 10. Integration/E2E test utility ---
+    def _test_peer_integration(self, ctx: Any, test_message: Any) -> bool:
+        """
+        Test utility: send a message and check for expected response (for E2E/integration tests).
+        """
+        try:
+            err = self.transport.send(ctx, test_message)
+            if err is not None:
+                self.logger.warning(f"Test send failed: {err}")
+                return False
+            # Optionally, wait for and check response here
+            return True
+        except Exception as e:
+            self.logger.warning(f"Test integration error: {e}")
+            return False

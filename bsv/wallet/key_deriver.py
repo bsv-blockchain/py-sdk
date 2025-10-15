@@ -28,9 +28,19 @@ class Protocol:
 
 
 class CounterpartyType:
-    SELF = 0  # derive vs self
-    OTHER = 1  # explicit pubkey provided
-    ANYONE = 2  # special constant
+    """
+    Counterparty type constants matching Go SDK implementation.
+    
+    Go SDK reference:
+    - CounterpartyUninitialized = 0
+    - CounterpartyTypeAnyone    = 1
+    - CounterpartyTypeSelf      = 2
+    - CounterpartyTypeOther     = 3
+    """
+    UNINITIALIZED = 0  # Uninitialized/default state
+    ANYONE = 1         # Special constant for "anyone" counterparty
+    SELF = 2           # Derive vs self
+    OTHER = 3          # Explicit pubkey provided
 
 
 @dataclass
@@ -79,25 +89,25 @@ class KeyDeriver:
     # ------------------------------------------------------------------
     # Derivation core
     # ------------------------------------------------------------------
-    def _seed_bytes(self, protocol: Protocol, key_id: str) -> bytes:
-        return str(protocol.security_level).encode() + b":" + protocol.protocol.encode() + b":" + key_id.encode()
-
-    def _branch_scalar(self, protocol: Protocol, key_id: str, cp_pub: PublicKey) -> int:
-        """Deterministic branch scalar from HMAC(ECDH_x(self_priv, cp_pub), seed).
+    def _branch_scalar(self, invoice_number: str, cp_pub: PublicKey) -> int:
+        """Deterministic branch scalar from HMAC(ECDH_x(self_priv, cp_pub), invoice_number).
         ECDH_x uses the 32-byte x-coordinate of the shared point (TS/Go parity).
+        
+        This implementation now matches TypeScript/Go SDK behavior by using invoiceNumber
+        directly instead of generating a seed internally.
         """
-        seed = self._seed_bytes(protocol, key_id)
+        invoice_number_bin = invoice_number.encode('utf-8')
         shared = cp_pub.derive_shared_secret(self._root_private_key)
         # Our derive_shared_secret returns compressed public key (33 bytes). Take x-coordinate.
         if isinstance(shared, (bytes, bytearray)) and len(shared) >= 33:
             shared_key = bytes(shared)[1:33]
         else:
             shared_key = shared
-        branch = hmac_sha256(shared_key, seed)
+        branch = hmac_sha256(shared_key, invoice_number_bin)
         scalar = int.from_bytes(branch, 'big') % CURVE_ORDER
         if os.getenv("BSV_DEBUG", "0") == "1":
             try:
-                print(f"[DEBUG KeyDeriver._branch_scalar] seed={seed.hex()} shared_len={len(shared_key)} scalar={scalar:x}")
+                print(f"[DEBUG KeyDeriver._branch_scalar] invoice_number={invoice_number} shared_len={len(shared_key)} scalar={scalar:x}")
             except Exception:
                 print(f"[DEBUG KeyDeriver._branch_scalar] scalar={scalar:x}")
         return scalar
@@ -106,11 +116,17 @@ class KeyDeriver:
     # Public / Private / Symmetric derivations
     # ------------------------------------------------------------------
     def derive_private_key(self, protocol: Protocol, key_id: str, counterparty: Counterparty) -> PrivateKey:
-        self._validate_protocol(protocol)
-        self._validate_key_id(key_id)
-
+        """Derives a private key based on protocol ID, key ID, and counterparty.
+        
+        This implementation now matches TypeScript/Go SDK behavior:
+        1. Generate invoiceNumber using compute_invoice_number
+        2. Normalize counterparty
+        3. Call _branch_scalar with invoiceNumber
+        4. Compute derived key as (root + branch_scalar) mod N
+        """
+        invoice_number = self.compute_invoice_number(protocol, key_id)
         cp_pub = counterparty.to_public_key(self._root_public_key)
-        branch_k = self._branch_scalar(protocol, key_id, cp_pub)
+        branch_k = self._branch_scalar(invoice_number, cp_pub)
 
         derived_int = (self._root_private_key.int() + branch_k) % CURVE_ORDER
         return PrivateKey(derived_int)
@@ -122,26 +138,33 @@ class KeyDeriver:
         counterparty: Counterparty,
         for_self: bool = False,
     ) -> PublicKey:
+        """Derives a public key based on protocol ID, key ID, and counterparty.
+        
+        This implementation now matches TypeScript/Go SDK behavior by using invoiceNumber.
+        """
+        invoice_number = self.compute_invoice_number(protocol, key_id)
         # Determine counterparty pub used for tweak
         cp_pub = counterparty.to_public_key(self._root_public_key) if not for_self else self._root_public_key
-        delta = self._branch_scalar(protocol, key_id, cp_pub)
+        delta = self._branch_scalar(invoice_number, cp_pub)
         # tweaked public = cp_pub + delta*G
         delta_point = curve_multiply(delta, curve.g)
         new_point = curve_add(cp_pub.point(), delta_point)
         return PublicKey(new_point)
 
     def derive_symmetric_key(self, protocol: Protocol, key_id: str, counterparty: Counterparty) -> bytes:
-        """Symmetric 32-byte key: HMAC-SHA256(ECDH(self_root_priv, counterparty_pub), seed)."""
-        self._validate_protocol(protocol)
-        self._validate_key_id(key_id)
+        """Symmetric 32-byte key: HMAC-SHA256(ECDH(self_root_priv, counterparty_pub), invoice_number).
+        
+        This implementation now matches TypeScript/Go SDK behavior by using invoiceNumber.
+        """
+        invoice_number = self.compute_invoice_number(protocol, key_id)
+        invoice_number_bin = invoice_number.encode('utf-8')
         cp_pub = counterparty.to_public_key(self._root_public_key)
         shared = cp_pub.derive_shared_secret(self._root_private_key)
-        seed = self._seed_bytes(protocol, key_id)
         if isinstance(shared, (bytes, bytearray)) and len(shared) >= 33:
             shared_key = bytes(shared)[1:33]
         else:
             shared_key = shared
-        return hmac_sha256(shared_key, seed)
+        return hmac_sha256(shared_key, invoice_number_bin)
 
     # Identity key (root public)
     def identity_key(self) -> PublicKey:

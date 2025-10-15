@@ -50,16 +50,24 @@ class WalletImpl(WalletInterface):
     # Normalization helpers
     # -----------------------------
     def _parse_counterparty_type(self, t: Any) -> int:
+        """Parse counterparty type from various input formats.
+        
+        Matches Go SDK CounterpartyType values:
+        - UNINITIALIZED = 0
+        - ANYONE = 1
+        - SELF = 2
+        - OTHER = 3
+        """
         if isinstance(t, int):
             return t
         if isinstance(t, str):
             tl = t.lower()
             if tl in ("self", "me"):
-                return CounterpartyType.SELF
+                return CounterpartyType.SELF  # 2
             if tl in ("other", "counterparty"):
-                return CounterpartyType.OTHER
+                return CounterpartyType.OTHER  # 3
             if tl in ("anyone", "any"):
-                return CounterpartyType.ANYONE
+                return CounterpartyType.ANYONE  # 1
         return CounterpartyType.SELF
 
     def _normalize_counterparty(self, counterparty: Any) -> Counterparty:
