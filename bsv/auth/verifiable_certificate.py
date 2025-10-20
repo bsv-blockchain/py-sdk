@@ -36,8 +36,11 @@ class VerifiableCertificate:
         subject_key = getattr(self.certificate, 'subject', None)
         if subject_key is None:
             raise ValueError("Certificate subject is invalid or not initialized")
+        # Import CounterpartyType from key_deriver for consistency
+        from bsv.wallet.key_deriver import CounterpartyType
+        
         subject_counterparty = {  # Simulate Go's wallet.Counterparty
-            "type": 3,  # CounterpartyTypeOther
+            "type": CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
             "counterparty": subject_key
         }
         for field_name, encrypted_key_base64 in self.keyring.items():

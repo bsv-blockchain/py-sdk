@@ -50,16 +50,24 @@ class WalletImpl(WalletInterface):
     # Normalization helpers
     # -----------------------------
     def _parse_counterparty_type(self, t: Any) -> int:
+        """Parse counterparty type from various input formats.
+        
+        Matches Go SDK CounterpartyType values:
+        - UNINITIALIZED = 0
+        - ANYONE = 1
+        - SELF = 2
+        - OTHER = 3
+        """
         if isinstance(t, int):
             return t
         if isinstance(t, str):
             tl = t.lower()
             if tl in ("self", "me"):
-                return CounterpartyType.SELF
+                return CounterpartyType.SELF  # 2
             if tl in ("other", "counterparty"):
-                return CounterpartyType.OTHER
+                return CounterpartyType.OTHER  # 3
             if tl in ("anyone", "any"):
-                return CounterpartyType.ANYONE
+                return CounterpartyType.ANYONE  # 1
         return CounterpartyType.SELF
 
     def _normalize_counterparty(self, counterparty: Any) -> Counterparty:
@@ -155,7 +163,8 @@ class WalletImpl(WalletInterface):
                 to_sign = hash_to_sign
             else:
                 to_sign = hashlib.sha256(data).digest()
-            signature = priv.sign(to_sign)
+            # TS parity: sign the SHA-256 digest directly (no extra hashing in signer)
+            signature = priv.sign(to_sign, hasher=lambda m: m)
             return {"signature": signature}
         except Exception as e:
             return {"error": f"create_signature: {e}"}
@@ -169,6 +178,11 @@ class WalletImpl(WalletInterface):
             for_self = encryption_args.get("forSelf", False)
             if os.getenv("BSV_DEBUG", "0") == "1":
                 print(f"[DEBUG WalletImpl.verify_signature] enc_args={encryption_args}")
+                try:
+                    proto_dbg = protocol_id if not isinstance(protocol_id, dict) else protocol_id.get('protocol')
+                    print(f"[DEBUG WalletImpl.verify_signature] protocol={proto_dbg} key_id={key_id} for_self={for_self}")
+                except Exception:
+                    pass
             if protocol_id is None or key_id is None:
                 return {"error": "verify_signature: protocol_id and key_id are required"}
             if isinstance(protocol_id, dict):
@@ -177,6 +191,12 @@ class WalletImpl(WalletInterface):
                 protocol = protocol_id
             cp = self._normalize_counterparty(counterparty)
             pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self)
+            if os.getenv("BSV_DEBUG", "0") == "1":
+                try:
+                    cp_pub_dbg = cp.to_public_key(self.public_key)
+                    print(f"[DEBUG WalletImpl.verify_signature] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()} derived.pub={pub.hex()}")
+                except Exception as dbg_e:
+                    print(f"[DEBUG WalletImpl.verify_signature] cp normalization error: {dbg_e}")
             data = args.get("data", b"")
             hash_to_verify = args.get("hash_to_verify")
             signature = args.get("signature")
@@ -186,7 +206,54 @@ class WalletImpl(WalletInterface):
                 to_verify = hash_to_verify
             else:
                 to_verify = hashlib.sha256(data).digest()
-            valid = pub.verify(signature, to_verify)
+            if os.getenv("BSV_DEBUG", "0") == "1":
+                try:
+                    print(f"[DEBUG WalletImpl.verify_signature] data_len={len(data)} sha256={to_verify.hex()[:32]}.. sig_len={len(signature)}")
+                    print(f"[DEBUG WalletImpl.verify_signature] pub.hex={pub.hex()}")
+                except Exception:
+                    pass
+            # TS parity: verify against the SHA-256 digest directly (no extra hashing in verifier)
+            valid = pub.verify(signature, to_verify, hasher=lambda m: m)
+            if os.getenv("BSV_DEBUG", "0") == "1":
+                print(f"[DEBUG WalletImpl.verify_signature] valid={valid}")
+            
+            # SIGNATURE LEVEL VERIFICATION - 署名レベル詳細確認
+            print(f"[WALLET VERIFY] === SIGNATURE VERIFICATION START ===")
+            print(f"[WALLET VERIFY] originator: {originator}")
+            if isinstance(protocol_id, dict):
+                print(f"[WALLET VERIFY] protocol: {protocol_id.get('protocol', 'NONE')}")
+            print(f"[WALLET VERIFY] key_id: {key_id[:50] if key_id else 'NONE'}...")
+            if isinstance(counterparty, dict):
+                cp_obj = counterparty.get('counterparty')
+                if hasattr(cp_obj, 'hex'):
+                    print(f"[WALLET VERIFY] counterparty.hex: {cp_obj.hex()}")
+            
+            # 署名検証の核心データ
+            print(f"[WALLET VERIFY] derived_public_key: {pub.hex()}")
+            print(f"[WALLET VERIFY] data_to_verify_length: {len(data)}")
+            print(f"[WALLET VERIFY] data_digest (SHA-256): {to_verify.hex()}")
+            print(f"[WALLET VERIFY] signature_bytes: {signature.hex()}")
+            print(f"[WALLET VERIFY] signature_length: {len(signature)}")
+            
+            # ECDSA署名検証実行
+            print(f"[WALLET VERIFY] === CALLING pub.verify() ===")
+            valid = pub.verify(signature, to_verify, hasher=lambda m: m)
+            print(f"[WALLET VERIFY] === ECDSA RESULT: {valid} ===")
+            
+            if valid:
+                print(f"[WALLET VERIFY] ✅ SIGNATURE VERIFICATION SUCCESS!")
+            else:
+                print(f"[WALLET VERIFY] ❌ SIGNATURE VERIFICATION FAILED!")
+                # 追加デバッグ: 署名形式確認
+                try:
+                    print(f"[WALLET VERIFY] Signature DER format check...")
+                    from bsv.keys import PublicKey
+                    # 署名の基本検証
+                    print(f"[WALLET VERIFY] Signature first byte: 0x{signature[0]:02x}")
+                    print(f"[WALLET VERIFY] Expected DER start: 0x30")
+                except Exception as e:
+                    print(f"[WALLET VERIFY] Signature format check error: {e}")
+            
             return {"valid": valid}
         except Exception as e:
             return {"error": f"verify_signature: {e}"}
@@ -728,7 +795,15 @@ class WalletImpl(WalletInterface):
                                 from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcasterSync
                                 api_key = self._resolve_woc_api_key(args)
                                 woc_timeout = int(args.get("timeoutSeconds", int(os.getenv("WOC_TIMEOUT", "10"))))
-                                bc_woc = WhatsOnChainBroadcasterSync(network="main", api_key=api_key)
+                                
+                                # Determine network from private key
+                                network = "main"
+                                if hasattr(self, 'private_key') and hasattr(self.private_key, 'network'):
+                                    from bsv.constants import Network
+                                    if self.private_key.network == Network.TESTNET:
+                                        network = "test"
+                                
+                                bc_woc = WhatsOnChainBroadcasterSync(network=network, api_key=api_key)
                                 print(f"[INFO] Fallback broadcasting to WhatsOnChain. tx_hex: {tx_hex}")
                                 res = bc_woc.broadcast(tx_hex, api_key=api_key, timeout=woc_timeout)
                                 txid = res.get("txid")
@@ -742,7 +817,15 @@ class WalletImpl(WalletInterface):
                             from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcasterSync
                             api_key = self._resolve_woc_api_key(args)
                             woc_timeout = int(args.get("timeoutSeconds", int(os.getenv("WOC_TIMEOUT", "10"))))
-                            bc_woc = WhatsOnChainBroadcasterSync(network="main", api_key=api_key)
+                            
+                            # Determine network from private key
+                            network = "main"
+                            if hasattr(self, 'private_key') and hasattr(self.private_key, 'network'):
+                                from bsv.constants import Network
+                                if self.private_key.network == Network.TESTNET:
+                                    network = "test"
+                            
+                            bc_woc = WhatsOnChainBroadcasterSync(network=network, api_key=api_key)
                             print(f"[INFO] Fallback broadcasting to WhatsOnChain. tx_hex: {tx_hex}")
                             res = bc_woc.broadcast(tx_hex, api_key=api_key, timeout=woc_timeout)
                             txid = res.get("txid")
@@ -753,7 +836,15 @@ class WalletImpl(WalletInterface):
                     from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcasterSync
                     api_key = self._resolve_woc_api_key(args)
                     timeout = int(args.get("timeoutSeconds", int(os.getenv("WOC_TIMEOUT", "10"))) )
-                    bc = WhatsOnChainBroadcasterSync(network="main", api_key=api_key)
+                    
+                    # Determine network from private key
+                    network = "main"
+                    if hasattr(self, 'private_key') and hasattr(self.private_key, 'network'):
+                        from bsv.constants import Network
+                        if self.private_key.network == Network.TESTNET:
+                            network = "test"
+                    
+                    bc = WhatsOnChainBroadcasterSync(network=network, api_key=api_key)
                     print(f"[INFO] Broadcasting to WhatsOnChain. tx_hex: {tx_hex}")
                     res = bc.broadcast(tx_hex, api_key=api_key, timeout=timeout)
                     txid = res.get("txid")
@@ -1163,13 +1254,22 @@ class WalletImpl(WalletInterface):
 
     def _get_utxos_from_woc(self, address: str, api_key: Optional[str] = None, timeout: int = 10) -> list:
         """
-        Fetch UTXOs for the given address from Whatsonchain mainnet API and convert to SDK outputs format.
+        Fetch UTXOs for the given address from Whatsonchain API and convert to SDK outputs format.
         API key is loaded from the WOC_API_KEY environment variable (set via .env file).
+        Network is determined from the private key's network setting (testnet or mainnet).
         """
         import requests
         # Load API key via configured precedence (TS parity): explicit -> instance -> env
         api_key = api_key or self._woc_api_key or os.environ.get("WOC_API_KEY") or ""
-        url = f"https://api.whatsonchain.com/v1/bsv/main/address/{address}/unspent"
+        
+        # Determine network from private key
+        network = "main"
+        if hasattr(self, 'private_key') and hasattr(self.private_key, 'network'):
+            from bsv.constants import Network
+            if self.private_key.network == Network.TESTNET:
+                network = "test"
+        
+        url = f"https://api.whatsonchain.com/v1/bsv/{network}/address/{address}/unspent"
         headers = {}
         if api_key:
             headers["Authorization"] = api_key
@@ -1225,7 +1325,9 @@ class WalletImpl(WalletInterface):
 
     def _self_address(self) -> str:
         try:
-            return self.public_key.address()
+            # Use the private key's network to generate the correct address
+            network = self.private_key.network if hasattr(self, 'private_key') and hasattr(self.private_key, 'network') else None
+            return self.public_key.address(network=network) if network else self.public_key.address()
         except Exception:
             return ""
 
@@ -1256,7 +1358,11 @@ class WalletImpl(WalletInterface):
                     protocol = protocol_id
                 cp = self._normalize_counterparty(counterparty)
                 derived_pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self=False)
-                derived_addr = derived_pub.address()
+                
+                # Use the private key's network to generate the correct address
+                network = self.private_key.network if hasattr(self, 'private_key') and hasattr(self.private_key, 'network') else None
+                derived_addr = derived_pub.address(network=network) if network else derived_pub.address()
+                
                 if derived_addr and validate_address(derived_addr):
                     candidate_addresses.append(derived_addr)
                     if os.getenv("BSV_DEBUG", "0") == "1":
