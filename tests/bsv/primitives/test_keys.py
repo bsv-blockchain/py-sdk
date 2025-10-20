@@ -8,7 +8,7 @@ from bsv.curve import Point
 from bsv.hash import sha256
 from bsv.keys import PrivateKey, PublicKey, verify_signed_text
 from bsv.utils import text_digest, unstringify_ecdsa_recoverable
-from .test_transaction import digest1, digest2, digest3
+from tests.bsv.transaction.test_transaction import digest1, digest2, digest3
 
 private_key_hex = 'f97c89aaacf0cd2e47ddbacc97dae1f88bec49106ac37716c451dcdd008a4b62'
 private_key_bytes = bytes.fromhex(private_key_hex)

@@ -218,3 +218,35 @@ def test_encode_int():
     assert encode_int(8388608) == bytes.fromhex('04 00 00 80 00')
     assert encode_int(2147483647) == bytes.fromhex('04 FF FF FF 7F')
     assert encode_int(2147483648) == bytes.fromhex('05 00 00 00 80 00')
+
+
+def test_storageutils_uhrp_url():
+    from bsv.storage.utils import StorageUtils, UHRP_PREFIX
+    import hashlib
+    # Normalization
+    assert StorageUtils.normalize_url('uhrp://abcdef') == 'abcdef'
+    assert StorageUtils.normalize_url('web+uhrp://abcdef') == 'abcdef'
+    assert StorageUtils.normalize_url('other://abcdef') == 'other://abcdef'
+    # URL generation and validation
+    data = b'hello world'
+    uhrp_url = StorageUtils.get_url_for_file(data)
+    assert uhrp_url.startswith('uhrp://')
+    assert StorageUtils.is_valid_url(uhrp_url)
+    # Hash extraction matches SHA256
+    expected_hash = hashlib.sha256(data).digest()
+    actual_hash = StorageUtils.get_hash_from_url(uhrp_url)
+    assert actual_hash == expected_hash
+    # Invalid prefix
+    bad_url = 'uhrp://badbase58'
+    import pytest
+    with pytest.raises(Exception):
+        StorageUtils.get_hash_from_url(bad_url)
+    # Invalid length
+    from bsv.base58 import to_base58check
+    short_hash = b'1234'
+    bad_url2 = f"uhrp://{to_base58check(short_hash, UHRP_PREFIX)}"
+    with pytest.raises(Exception):
+        StorageUtils.get_hash_from_url(bad_url2)
+    # is_valid_url returns False for invalid
+    assert not StorageUtils.is_valid_url('uhrp://badbase58')
+    assert not StorageUtils.is_valid_url(bad_url2)
