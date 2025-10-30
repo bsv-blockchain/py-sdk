@@ -9,22 +9,7 @@ OPCODE_ALIASES = {
     'OP_FALSE': b'\x00',
     'OP_0': b'\x00',
     'OP_TRUE': b'\x51',
-    'OP_1': b'\x51',
-    'OP_2': b'\x52',
-    'OP_3': b'\x53',
-    'OP_4': b'\x54',
-    'OP_5': b'\x55',
-    'OP_6': b'\x56',
-    'OP_7': b'\x57',
-    'OP_8': b'\x58',
-    'OP_9': b'\x59',
-    'OP_10': b'\x5a',
-    'OP_11': b'\x5b',
-    'OP_12': b'\x5c',
-    'OP_13': b'\x5d',
-    'OP_14': b'\x5e',
-    'OP_15': b'\x5f',
-    'OP_16': b'\x60',
+    'OP_1': b'\x51'
 }
 
 # Build name->value mapping for all OpCodes
