@@ -340,4 +340,7 @@ class OpCode(bytes, Enum):
 
 
 OPCODE_VALUE_NAME_DICT: Dict[bytes, str] = {item.value: item.name for item in OpCode}
-OPCODE_VALUE_NAME_DICT[b'\x00'] = 'OP_0'
+# BRC-106 compliance: Use most human-readable names for output
+# When multiple names exist for the same opcode value, prefer the more descriptive one
+OPCODE_VALUE_NAME_DICT[b'\x00'] = 'OP_FALSE'  # More human-readable than OP_0
+OPCODE_VALUE_NAME_DICT[b'\x51'] = 'OP_TRUE'   # More human-readable than OP_1
