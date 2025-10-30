@@ -27,23 +27,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-- (Include new features or significant user-visible enhancements here.)
-
 ### Changed
-- (Detail modifications that are non-breaking but relevant to the end-users.)
-
-### Deprecated
-- (List features that are in the process of being phased out or replaced.)
-
-### Removed
-- (Indicate features or capabilities that were taken out of the project.)
+- Updated Script ASM output to use BRC-106 compliant format (outputs `OP_FALSE` instead of `OP_0` for better human readability)
+- Converted `test_arc_ef_or_rawhex.py` from unittest.TestCase to pytest style for better async test handling
 
 ### Fixed
-- (Document bugs that were fixed since the last release.)
-
-### Security
-- (Notify of any improvements related to security vulnerabilities or potential risks.)
+- Added missing test dependencies to requirements.txt: `ecdsa~=0.19.0` and `pytest-cov~=6.0.0`
+- Fixed pytest configuration by adding `asyncio_default_fixture_loop_scope` to eliminate deprecation warnings
+- Updated test expectations in `test_scripts.py` to match BRC-106 compliant ASM output
+- Resolved all pytest warnings for a clean test output (154 tests passing with zero warnings)
 
 
 ---
