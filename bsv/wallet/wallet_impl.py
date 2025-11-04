@@ -143,27 +143,41 @@ class WalletImpl(WalletInterface):
 
     def create_signature(self, ctx: Any, args: Dict, originator: str) -> Dict:
         try:
-            encryption_args = args.get("encryption_args", {})
-            protocol_id = encryption_args.get("protocol_id")
-            key_id = encryption_args.get("key_id")
-            counterparty = encryption_args.get("counterparty")
+            # BRC-100 compliant flat structure (Python snake_case)
+            protocol_id = args.get("protocol_id")
+            key_id = args.get("key_id")
+            counterparty = args.get("counterparty")
+            
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.create_signature] enc_args={encryption_args}")
+                print(f"[DEBUG WalletImpl.create_signature] protocol_id={protocol_id}, key_id={key_id}")
+            
             if protocol_id is None or key_id is None:
                 return {"error": "create_signature: protocol_id and key_id are required"}
-            if isinstance(protocol_id, dict):
-                protocol = SimpleNamespace(security_level=int(protocol_id.get("securityLevel", 0)), protocol=str(protocol_id.get("protocol", "")))
+            
+            # Handle protocol_id as list [security_level, protocol_string] or dict
+            if isinstance(protocol_id, (list, tuple)) and len(protocol_id) == 2:
+                protocol = SimpleNamespace(security_level=int(protocol_id[0]), protocol=str(protocol_id[1]))
+            elif isinstance(protocol_id, dict):
+                protocol = SimpleNamespace(
+                    security_level=int(protocol_id.get("security_level", 0)),
+                    protocol=str(protocol_id.get("protocol", ""))
+                )
             else:
                 protocol = protocol_id
+            
             cp = self._normalize_counterparty(counterparty)
             priv = self.key_deriver.derive_private_key(protocol, key_id, cp)
+            
+            # Get data or hash to sign
             data = args.get("data", b"")
-            hash_to_sign = args.get("hash_to_sign")
+            hash_to_sign = args.get("hash_to_directly_sign")
+            
             if hash_to_sign:
                 to_sign = hash_to_sign
             else:
                 to_sign = hashlib.sha256(data).digest()
-            # TS parity: sign the SHA-256 digest directly (no extra hashing in signer)
+            
+            # Sign the SHA-256 digest directly (no extra hashing in signer)
             signature = priv.sign(to_sign, hasher=lambda m: m)
             return {"signature": signature}
         except Exception as e:
@@ -171,37 +185,51 @@ class WalletImpl(WalletInterface):
 
     def verify_signature(self, ctx: Any, args: Dict, originator: str) -> Dict:
         try:
-            encryption_args = args.get("encryption_args", {})
-            protocol_id = encryption_args.get("protocol_id")
-            key_id = encryption_args.get("key_id")
-            counterparty = encryption_args.get("counterparty")
-            for_self = encryption_args.get("forSelf", False)
+            # BRC-100 compliant flat structure (Python snake_case)
+            protocol_id = args.get("protocol_id")
+            key_id = args.get("key_id")
+            counterparty = args.get("counterparty")
+            for_self = args.get("for_self", False)
+            
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.verify_signature] enc_args={encryption_args}")
                 try:
                     proto_dbg = protocol_id if not isinstance(protocol_id, dict) else protocol_id.get('protocol')
                     print(f"[DEBUG WalletImpl.verify_signature] protocol={proto_dbg} key_id={key_id} for_self={for_self}")
                 except Exception:
                     pass
+            
             if protocol_id is None or key_id is None:
                 return {"error": "verify_signature: protocol_id and key_id are required"}
-            if isinstance(protocol_id, dict):
-                protocol = SimpleNamespace(security_level=int(protocol_id.get("securityLevel", 0)), protocol=str(protocol_id.get("protocol", "")))
+            
+            # Handle protocol_id as list [security_level, protocol_string] or dict
+            if isinstance(protocol_id, (list, tuple)) and len(protocol_id) == 2:
+                protocol = SimpleNamespace(security_level=int(protocol_id[0]), protocol=str(protocol_id[1]))
+            elif isinstance(protocol_id, dict):
+                protocol = SimpleNamespace(
+                    security_level=int(protocol_id.get("security_level", 0)),
+                    protocol=str(protocol_id.get("protocol", ""))
+                )
             else:
                 protocol = protocol_id
+            
             cp = self._normalize_counterparty(counterparty)
             pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self)
+            
             if os.getenv("BSV_DEBUG", "0") == "1":
                 try:
                     cp_pub_dbg = cp.to_public_key(self.public_key)
                     print(f"[DEBUG WalletImpl.verify_signature] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()} derived.pub={pub.hex()}")
                 except Exception as dbg_e:
                     print(f"[DEBUG WalletImpl.verify_signature] cp normalization error: {dbg_e}")
+            
+            # Get data or hash to verify
             data = args.get("data", b"")
-            hash_to_verify = args.get("hash_to_verify")
+            hash_to_verify = args.get("hash_to_directly_verify")
             signature = args.get("signature")
+            
             if signature is None:
                 return {"error": "verify_signature: signature is required"}
+            
             if hash_to_verify:
                 to_verify = hash_to_verify
             else:

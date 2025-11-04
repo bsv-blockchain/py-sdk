@@ -119,15 +119,11 @@ class MasterCertificate(Certificate):
         """
         try:
             data_to_sign = cert.to_binary(include_signature=False)
+            # BRC-100 compliant flat structure (Python snake_case)
             sig_args = {
-                'encryption_args': {
-                    'protocol_id': {
-                        'securityLevel': 2,
-                        'protocol': 'certificate signature',
-                    },
+                'protocol_id': [2, 'certificate signature'],
                     'key_id': f"{certificate_type} {final_serial_number}",
                     'counterparty': {'type': 2},
-                },
                 'data': data_to_sign,
             }
             sig_res = None
