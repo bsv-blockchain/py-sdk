@@ -6,6 +6,7 @@ import subprocess
 import time
 import signal
 import os
+import sys
 from bsv.auth.clients.auth_fetch import AuthFetch, SimplifiedFetchRequestOptions
 from bsv.auth.requested_certificate_set import RequestedCertificateSet
 
@@ -26,13 +27,18 @@ class DummyWallet:
 @pytest_asyncio.fixture
 async def auth_server():
     """Start the full authentication server for testing"""
-    # Start the server process
+    # Use relative paths to find the server script
+    this_dir = os.path.dirname(__file__)
+    server_script = os.path.abspath(os.path.join(this_dir, "..", "test_auth_server_full.py"))
+    
+    # Start the server process using the current Python interpreter
     server_process = subprocess.Popen([
-        "/mnt/extra/bsv-blockchain/venv/bin/python3",
-        "/mnt/extra/bsv-blockchain/py-sdk/tests/test_auth_server_full.py"
-    ], env=dict(os.environ, PYTHONPATH="/mnt/extra/bsv-blockchain/py-sdk"))
+        sys.executable,
+        server_script,
+    ], env=os.environ)
+    
     # Wait for server to become ready by polling /health
-    import requests, time
+    import requests
     base = "http://localhost:8084"
     ok = False
     t0 = time.time()

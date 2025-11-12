@@ -43,6 +43,13 @@ class MockWallet:
 
     def verify_signature(self, ctx, args, originator: str):
         return MockSigResult(self._valid_verify)
+    
+    def verify_hmac(self, ctx, args, originator: str):
+        # Always return valid for nonce verification to pass
+        class HmacResult:
+            def __init__(self):
+                self.valid = True
+        return HmacResult()
 
 
 def test_initial_response_invalid_signature_returns_error():

@@ -23,9 +23,9 @@ def test_get_public_key_identity(transceiver):
 def test_get_public_key_derived(transceiver):
     args = {
         "identityKey": False,
-        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "protocolID": {"securityLevel": 1, "protocol": "testprotocol"},
         "keyID": "kid",
-        "counterparty": {"type": 0},
+        "counterparty": {"type": 1},
         "privileged": None,
         "privilegedReason": "",
         "forSelf": None,
@@ -49,9 +49,9 @@ def test_reveal_counterparty_key_linkage(transceiver):
 
 def test_reveal_specific_key_linkage(transceiver):
     resp = transceiver.reveal_specific_key_linkage(None, {
-        "protocolID": {"securityLevel": 1, "protocol": "p"},
+        "protocolID": {"securityLevel": 1, "protocol": "testprotocol"},
         "keyID": "kid",
-        "counterparty": {"type": 0},
+        "counterparty": {"type": 1},
         "privileged": None,
         "privilegedReason": "",
         "verifier": PrivateKey(2).public_key().serialize(),

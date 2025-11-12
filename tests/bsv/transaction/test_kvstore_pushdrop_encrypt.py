@@ -29,7 +29,7 @@ def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
     
     # Manually decrypt to validate compatibility
     ct = base64.b64decode(val[4:])
-    dec = wallet.decrypt(None, {"encryption_args": {"protocol_id": {"securityLevel": 2, "protocol": "kvctx"}, "key_id": "foo", "counterparty": {"type": 0}}, "ciphertext": ct}, "org")
+    dec = wallet.decrypt(None, {"encryption_args": {"protocol_id": {"securityLevel": 2, "protocol": "kvctx"}, "key_id": "foo", "counterparty": {"type": 2}}, "ciphertext": ct}, "org")
     assert isinstance(dec.get("plaintext"), (bytes, bytearray)) and dec["plaintext"].decode("utf-8") == "bar"
 
 

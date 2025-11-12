@@ -1030,6 +1030,23 @@ class Peer:
         data_to_verify = self._serialize_for_signature(payload)
         err = self._verify_general_message_signature(ctx, message, session, sender_public_key, data_to_verify)
         if err is not None:
+            if self.logger:
+                try:
+                    digest_preview = data_to_verify[:32].hex() if isinstance(data_to_verify, (bytes, bytearray)) else str(data_to_verify)[:64]
+                    self.logger.warning(
+                        "General message signature verification failed",
+                        extra={
+                            "error": str(err),
+                            "nonce": getattr(message, 'nonce', None),
+                            "session_nonce": getattr(session, 'session_nonce', None),
+                            "payload_digest_head": digest_preview,
+                            "payload_len": len(data_to_verify) if isinstance(data_to_verify, (bytes, bytearray)) else None,
+                        }
+                    )
+                except Exception:
+                    self.logger.warning(f"General message signature verification failed: {err}")
+            else:
+                print(f"[AUTH DEBUG] General message signature verification failed: {err}")
             return err
 
         self._touch_session(session)
@@ -1078,6 +1095,21 @@ class Peer:
             valid = bool(verify_result)
         
         if not valid:
+            if self.logger:
+                try:
+                    self.logger.warning(
+                        "Wallet verify_signature returned invalid",
+                        extra={
+                            "verify_result": getattr(verify_result, '__dict__', verify_result),
+                            "nonce": getattr(message, 'nonce', None),
+                            "session_nonce": session.session_nonce,
+                            "counterparty": getattr(sender_public_key, 'hex', lambda: sender_public_key)() if sender_public_key else None,
+                        }
+                    )
+                except Exception:
+                    self.logger.warning("Wallet verify_signature returned invalid")
+            else:
+                print("[AUTH DEBUG] Wallet verify_signature returned invalid")
             return Exception("general message - invalid signature")
         return None
 

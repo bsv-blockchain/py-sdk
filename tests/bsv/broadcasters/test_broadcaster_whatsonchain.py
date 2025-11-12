@@ -1,6 +1,8 @@
 import pytest
 from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcaster
 from bsv.constants import Network
+from bsv.broadcasters.broadcaster import BroadcastResponse, BroadcastFailure
+
 
 class TestWhatsOnChainBroadcast:
    def test_network_enum(self):

@@ -35,6 +35,20 @@ class WhatsOnChainTracker(ChainTracker):
                 f"Failed to verify merkleroot for height {height} because of an error: {response.json()}"
             )
 
+    async def current_height(self) -> int:
+        """Get current blockchain height from WhatsOnChain API.
+        
+        Implements ChainTracker.current_height() from SDK.
+        """
+        request_options = {"method": "GET", "headers": self.get_headers()}
+
+        response = await self.http_client.fetch(f"{self.URL}/chain/info", request_options)
+        if response.ok:
+            data = response.json()
+            return data.get("blocks", 0)
+        else:
+            raise RuntimeError(f"Failed to get current height: {response.json()}")
+
     def get_headers(self) -> Dict[str, str]:
         headers = {}
         if self.api_key:
