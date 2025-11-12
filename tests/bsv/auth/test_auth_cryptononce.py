@@ -50,7 +50,7 @@ def test_verify_nonce_invalid():
     assert not verify_nonce(nonce + 'ABC', wallet)
     assert not verify_nonce(nonce + '=', wallet)
     # base64で余計なデータ
-    extra = base64.b64encode(b'extra').decode()
+    # extra = base64.b64encode(b'extra').decode()
     n2 = base64.b64encode(base64.b64decode(nonce) + b'extra').decode()
     assert not verify_nonce(n2, wallet)
 

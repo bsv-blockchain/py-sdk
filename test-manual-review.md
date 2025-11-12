@@ -13,18 +13,18 @@ This file lists all 474 Python tests with clickable links to their locations.
 | 7 | `test_auth_fetch_full_protocol` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:68](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L68) | ✓ |  |
 | 8 | `test_auth_fetch_certificate_exchange` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:112](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L112) | ✗ | is not None not specific enough |
 | 9 | `test_auth_fetch_session_management` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:138](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L138) | ✓ |  |
-| 10 | `test_auth_fetch_error_handling` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:185](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L185) | — |  |
-| 11 | `test_authfetch_server_flow` | [bsv/auth/clients/test_auth_fetch_server_client.py:10](tests/bsv/auth/clients/test_auth_fetch_server_client.py#L10) | — |  |
-| 12 | `test_auth_fetch_fallback_to_http` | [bsv/auth/clients/test_auth_fetch_simple.py:62](tests/bsv/auth/clients/test_auth_fetch_simple.py#L62) | — |  |
-| 13 | `test_auth_fetch_json_post` | [bsv/auth/clients/test_auth_fetch_simple.py:88](tests/bsv/auth/clients/test_auth_fetch_simple.py#L88) | — |  |
-| 14 | `test_verify_raises_without_signature` | [bsv/auth/test_auth_certificate.py:33](tests/bsv/auth/test_auth_certificate.py#L33) | — |  |
-| 15 | `test_sign_and_verify` | [bsv/auth/test_auth_certificate.py:38](tests/bsv/auth/test_auth_certificate.py#L38) | — |  |
-| 16 | `test_binary_roundtrip_includes_signature` | [bsv/auth/test_auth_certificate.py:46](tests/bsv/auth/test_auth_certificate.py#L46) | — |  |
-| 17 | `test_create_nonce_error` | [bsv/auth/test_auth_cryptononce.py:36](tests/bsv/auth/test_auth_cryptononce.py#L36) | — |  |
-| 18 | `test_create_nonce_length` | [bsv/auth/test_auth_cryptononce.py:41](tests/bsv/auth/test_auth_cryptononce.py#L41) | — |  |
-| 19 | `test_verify_nonce_invalid` | [bsv/auth/test_auth_cryptononce.py:46](tests/bsv/auth/test_auth_cryptononce.py#L46) | — |  |
-| 20 | `test_verify_nonce_hmac_fail` | [bsv/auth/test_auth_cryptononce.py:57](tests/bsv/auth/test_auth_cryptononce.py#L57) | — |  |
-| 21 | `test_verify_nonce_success` | [bsv/auth/test_auth_cryptononce.py:62](tests/bsv/auth/test_auth_cryptononce.py#L62) | — |  |
+| 10 | `test_auth_fetch_error_handling` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:185](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L185) | ✗ | ANY Exception not specific enough |
+| 11 | `test_authfetch_server_flow` | [bsv/auth/clients/test_auth_fetch_server_client.py:10](tests/bsv/auth/clients/test_auth_fetch_server_client.py#L10) | ✓ |  |
+| 12 | `test_auth_fetch_fallback_to_http` | [bsv/auth/clients/test_auth_fetch_simple.py:62](tests/bsv/auth/clients/test_auth_fetch_simple.py#L62) | ✓ |  |
+| 13 | `test_auth_fetch_json_post` | [bsv/auth/clients/test_auth_fetch_simple.py:88](tests/bsv/auth/clients/test_auth_fetch_simple.py#L88) | ✓ |  |
+| 14 | `test_verify_raises_without_signature` | [bsv/auth/test_auth_certificate.py:33](tests/bsv/auth/test_auth_certificate.py#L33) | ✓ |  |
+| 15 | `test_sign_and_verify` | [bsv/auth/test_auth_certificate.py:38](tests/bsv/auth/test_auth_certificate.py#L38) | ✓ |  |
+| 16 | `test_binary_roundtrip_includes_signature` | [bsv/auth/test_auth_certificate.py:46](tests/bsv/auth/test_auth_certificate.py#L46) | ✓ |  |
+| 17 | `test_create_nonce_error` | [bsv/auth/test_auth_cryptononce.py:36](tests/bsv/auth/test_auth_cryptononce.py#L36) | ✓ |  |
+| 18 | `test_create_nonce_length` | [bsv/auth/test_auth_cryptononce.py:41](tests/bsv/auth/test_auth_cryptononce.py#L41) | ✓ |  |
+| 19 | `test_verify_nonce_invalid` | [bsv/auth/test_auth_cryptononce.py:46](tests/bsv/auth/test_auth_cryptononce.py#L46) | ✓ |  |
+| 20 | `test_verify_nonce_hmac_fail` | [bsv/auth/test_auth_cryptononce.py:57](tests/bsv/auth/test_auth_cryptononce.py#L57) | ✓ |  |
+| 21 | `test_verify_nonce_success` | [bsv/auth/test_auth_cryptononce.py:62](tests/bsv/auth/test_auth_cryptononce.py#L62) | ✓ |  |
 | 22 | `test_real_wallet_success` | [bsv/auth/test_auth_cryptononce.py:71](tests/bsv/auth/test_auth_cryptononce.py#L71) | — |  |
 | 23 | `test_serial_number_use_case` | [bsv/auth/test_auth_cryptononce.py:77](tests/bsv/auth/test_auth_cryptononce.py#L77) | — |  |
 | 24 | `test_create_certificate_fields_and_decrypt_roundtrip_single_field` | [bsv/auth/test_auth_master_certificate.py:27](tests/bsv/auth/test_auth_master_certificate.py#L27) | — |  |

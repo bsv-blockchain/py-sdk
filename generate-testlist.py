@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
 Generate a list of all Python tests with clickable links.
-Creates test-manual-review.md with all tests for manual review.
+Creates timestamped test-manual-review-YYYYMMDD-HHMMSS.md files
+to avoid overwriting manually reviewed files.
 """
 
 import re
 from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Optional
+from datetime import datetime
 
 
 @dataclass
@@ -120,8 +122,9 @@ def main():
     py_tests = parse_py_tests_with_lines(py_root)
     print(f"Found {len(py_tests)} Python tests")
     
-    # Write Python tests list file
-    python_tests_file = py_root / 'test-manual-review.md'
+    # Write Python tests list file with timestamp to avoid overwriting manual reviews
+    timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+    python_tests_file = py_root / f'test-manual-review-{timestamp}.md'
     
     print("\nGenerating Python tests list...")
     python_tests_markdown = generate_python_tests_list(py_tests, py_root, python_tests_file)
