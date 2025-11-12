@@ -194,36 +194,37 @@ def open_test_file(file_link: str) -> bool:
         # If file is outside workspace, use absolute path
         rel_path = abs_path
     
-    # Use cursor with --reuse-window and --goto flags
+    # Use cursor with -r (reuse-window) and -g (goto) flags
     # Note: cursor may return non-zero exit codes even on success, so we assume success if no exception
     try:
         if line_number:
             # Try relative path first (better for workspace files)
             if rel_path != abs_path:
-                subprocess.run(['cursor', '--reuse-window', '--goto', f"{rel_path}:{line_number}"], 
-                              check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
+                subprocess.run(['cursor', '-r', '-g', f"{rel_path}:{line_number}"],
+                              check=False, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, timeout=10, cwd=py_root)
                 # Assume success if no exception (cursor may return non-zero even on success)
                 return True
             # Fall back to absolute path
-            subprocess.run(['cursor', '--reuse-window', '--goto', f"{abs_path}:{line_number}"], 
-                          check=False, stdout=subprocess.DEVNULL, 
-                          stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
+            subprocess.run(['cursor', '-r', '-g', f"{abs_path}:{line_number}"],
+                          check=False, stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL, timeout=10, cwd=py_root)
             # Assume success if no exception
             return True
         else:
             if rel_path != abs_path:
-                subprocess.run(['cursor', '--reuse-window', rel_path], 
-                              check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
+                subprocess.run(['cursor', '-r', rel_path],
+                              check=False, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, timeout=10, cwd=py_root)
                 # Assume success if no exception
                 return True
-            subprocess.run(['cursor', '--reuse-window', abs_path], 
-                          check=False, stdout=subprocess.DEVNULL, 
-                          stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
+            subprocess.run(['cursor', '-r', abs_path],
+                          check=False, stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL, timeout=10, cwd=py_root)
             # Assume success if no exception
             return True
-    except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired):
+    except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
+        print(f"Failed to open file in editor: {e}")
         pass
     
     # Fall back to webbrowser for file:// URI (without line number, as file:// doesn't support it)

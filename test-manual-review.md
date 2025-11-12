@@ -4,15 +4,15 @@ This file lists all 474 Python tests with clickable links to their locations.
 
 | # | Test Name | File | Status | Notes |
 |---|-----------|-----|--------|-------|
-| 1 | `test_fetch_basic_request` | [bsv/auth/clients/test_auth_fetch.py:24](tests/bsv/auth/clients/test_auth_fetch.py#L24) | — |  |
-| 2 | `test_fetch_with_auth_headers` | [bsv/auth/clients/test_auth_fetch.py:50](tests/bsv/auth/clients/test_auth_fetch.py#L50) | — |  |
-| 3 | `test_fetch_error_handling` | [bsv/auth/clients/test_auth_fetch.py:75](tests/bsv/auth/clients/test_auth_fetch.py#L75) | — |  |
-| 4 | `test_consume_received_certificates` | [bsv/auth/clients/test_auth_fetch.py:95](tests/bsv/auth/clients/test_auth_fetch.py#L95) | — |  |
-| 5 | `test_validate_request_options` | [bsv/auth/clients/test_auth_fetch.py:107](tests/bsv/auth/clients/test_auth_fetch.py#L107) | — |  |
-| 6 | `test_authfetch_e2e` | [bsv/auth/clients/test_auth_fetch_e2e.py:54](tests/bsv/auth/clients/test_auth_fetch_e2e.py#L54) | — |  |
-| 7 | `test_auth_fetch_full_protocol` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:68](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L68) | — |  |
-| 8 | `test_auth_fetch_certificate_exchange` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:112](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L112) | — |  |
-| 9 | `test_auth_fetch_session_management` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:138](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L138) | — |  |
+| 1 | `test_fetch_basic_request` | [bsv/auth/clients/test_auth_fetch.py:24](tests/bsv/auth/clients/test_auth_fetch.py#L24) | ✓ |  |
+| 2 | `test_fetch_with_auth_headers` | [bsv/auth/clients/test_auth_fetch.py:50](tests/bsv/auth/clients/test_auth_fetch.py#L50) | ✓ |  |
+| 3 | `test_fetch_error_handling` | [bsv/auth/clients/test_auth_fetch.py:75](tests/bsv/auth/clients/test_auth_fetch.py#L75) | ✓ |  |
+| 4 | `test_consume_received_certificates` | [bsv/auth/clients/test_auth_fetch.py:95](tests/bsv/auth/clients/test_auth_fetch.py#L95) | ✓ |  |
+| 5 | `test_validate_request_options` | [bsv/auth/clients/test_auth_fetch.py:107](tests/bsv/auth/clients/test_auth_fetch.py#L107) | ✓ |  |
+| 6 | `test_authfetch_e2e` | [bsv/auth/clients/test_auth_fetch_e2e.py:54](tests/bsv/auth/clients/test_auth_fetch_e2e.py#L54) | ✓ |  |
+| 7 | `test_auth_fetch_full_protocol` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:68](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L68) | ✓ |  |
+| 8 | `test_auth_fetch_certificate_exchange` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:112](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L112) | ✗ | is not None not specific enough |
+| 9 | `test_auth_fetch_session_management` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:138](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L138) | ✓ |  |
 | 10 | `test_auth_fetch_error_handling` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:185](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L185) | — |  |
 | 11 | `test_authfetch_server_flow` | [bsv/auth/clients/test_auth_fetch_server_client.py:10](tests/bsv/auth/clients/test_auth_fetch_server_client.py#L10) | — |  |
 | 12 | `test_auth_fetch_fallback_to_http` | [bsv/auth/clients/test_auth_fetch_simple.py:62](tests/bsv/auth/clients/test_auth_fetch_simple.py#L62) | — |  |
@@ -346,11 +346,11 @@ This file lists all 474 Python tests with clickable links to their locations.
 | 340 | `test_storage_list_uploads_e2e` | [bsv/storage/test_storage_e2e.py:61](tests/bsv/storage/test_storage_e2e.py#L61) | — |  |
 | 341 | `test_storage_renew_file_e2e` | [bsv/storage/test_storage_e2e.py:71](tests/bsv/storage/test_storage_e2e.py#L71) | — |  |
 | 342 | `test_storage_download_hash_mismatch_e2e` | [bsv/storage/test_storage_e2e.py:87](tests/bsv/storage/test_storage_e2e.py#L87) | — |  |
-| 343 | `test_kvstore_set_get_encrypt_with_pushdrop_lock_before` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:10](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L10) | — |  |
-| 344 | `test_pushdrop_multiple_fields` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:36](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L36) | — |  |
-| 345 | `test_pushdrop_with_signature` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:54](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L54) | — |  |
-| 346 | `test_pushdrop_lock_after` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:74](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L74) | — |  |
-| 347 | `test_pushdrop_invalid_script` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:92](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L92) | — |  |
+| 343 | `test_kvstore_set_get_encrypt_with_pushdrop_lock_before` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:11](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L11) | — |  |
+| 344 | `test_pushdrop_multiple_fields` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:37](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L37) | — |  |
+| 345 | `test_pushdrop_with_signature` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:55](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L55) | — |  |
+| 346 | `test_pushdrop_lock_after` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:75](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L75) | — |  |
+| 347 | `test_pushdrop_invalid_script` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:93](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L93) | — |  |
 | 348 | `test_parse_from_hex` | [bsv/transaction/test_merkle_path.py:143](tests/bsv/transaction/test_merkle_path.py#L143) | — |  |
 | 349 | `test_serialize_to_hex` | [bsv/transaction/test_merkle_path.py:148](tests/bsv/transaction/test_merkle_path.py#L148) | — |  |
 | 350 | `test_compute_root` | [bsv/transaction/test_merkle_path.py:153](tests/bsv/transaction/test_merkle_path.py#L153) | — |  |
@@ -414,12 +414,12 @@ This file lists all 474 Python tests with clickable links to their locations.
 | 408 | `test_discover_by_attributes_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:70](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L70) | — |  |
 | 409 | `test_actions_flow_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:79](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L79) | — |  |
 | 410 | `test_certificates_flow_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:112](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L112) | — |  |
-| 411 | `test_get_public_key_identity` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:16](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L16) | — |  |
-| 412 | `test_get_public_key_derived` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:23](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L23) | — |  |
-| 413 | `test_reveal_counterparty_key_linkage` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:40](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L40) | — |  |
-| 414 | `test_reveal_specific_key_linkage` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:50](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L50) | — |  |
-| 415 | `test_get_public_key_error_frame_permission_denied` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:62](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L62) | — |  |
-| 416 | `test_reveal_counterparty_key_linkage_error_frame_permission_denied` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:70](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L70) | — |  |
+| 411 | `test_get_public_key_identity` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:17](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L17) | — |  |
+| 412 | `test_get_public_key_derived` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:24](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L24) | — |  |
+| 413 | `test_reveal_counterparty_key_linkage` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:41](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L41) | — |  |
+| 414 | `test_reveal_specific_key_linkage` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:51](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L51) | — |  |
+| 415 | `test_get_public_key_error_frame_permission_denied` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:63](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L63) | — |  |
+| 416 | `test_reveal_counterparty_key_linkage_error_frame_permission_denied` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:71](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L71) | — |  |
 | 417 | `test_encrypt_decrypt` | [bsv/wallet/substrates/test_wallet_wire_integration.py:27](tests/bsv/wallet/substrates/test_wallet_wire_integration.py#L27) | — |  |
 | 418 | `test_create_and_verify_signature` | [bsv/wallet/substrates/test_wallet_wire_integration.py:54](tests/bsv/wallet/substrates/test_wallet_wire_integration.py#L54) | — |  |
 | 419 | `test_create_and_verify_hmac` | [bsv/wallet/substrates/test_wallet_wire_integration.py:77](tests/bsv/wallet/substrates/test_wallet_wire_integration.py#L77) | — |  |
