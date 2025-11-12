@@ -4,10 +4,13 @@ BEEF / AtomicBEEF parsing utilities.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, TYPE_CHECKING
 
 from bsv.hash import hash256
 from bsv.transaction import Transaction  # existing parser
+
+if TYPE_CHECKING:
+    from bsv.merkle_path import MerklePath
 
 # ---------------------------------------------------------------------------
 # 
@@ -65,6 +68,124 @@ class Beef:
                     _link_inputs(parent.tx_obj)
         _link_inputs(btx.tx_obj)
         return btx
+
+    # --- builder: merge/edit APIs ---
+    def remove_existing_txid(self, txid: str) -> None:
+        from .beef_builder import remove_existing_txid as _rm
+        _rm(self, txid)
+
+    def merge_bump(self, bump: "MerklePath") -> int:
+        from .beef_builder import merge_bump as _merge_bump
+        return _merge_bump(self, bump)
+
+    def merge_raw_tx(self, raw_tx: bytes, bump_index: Optional[int] = None) -> BeefTx:
+        from .beef_builder import merge_raw_tx as _merge_raw_tx
+        return _merge_raw_tx(self, raw_tx, bump_index)
+
+    def merge_transaction(self, tx: Transaction) -> BeefTx:
+        from .beef_builder import merge_transaction as _merge_transaction
+        return _merge_transaction(self, tx)
+
+    def merge_txid_only(self, txid: str) -> BeefTx:
+        from .beef_builder import merge_txid_only as _merge_txid_only
+        return _merge_txid_only(self, txid)
+
+    def make_txid_only(self, txid: str) -> Optional[BeefTx]:
+        from .beef_builder import make_txid_only as _make_txid_only
+        return _make_txid_only(self, txid)
+
+    def merge_beef_tx(self, btx: BeefTx) -> BeefTx:
+        from .beef_builder import merge_beef_tx as _merge_beef_tx
+        return _merge_beef_tx(self, btx)
+
+    def merge_beef(self, other: "Beef") -> None:
+        from .beef_builder import merge_beef as _merge_beef
+        _merge_beef(self, other)
+
+    # --- validation APIs ---
+    def is_valid(self, allow_txid_only: bool = False) -> bool:
+        from .beef_validate import is_valid as _is_valid
+        return _is_valid(self, allow_txid_only=allow_txid_only)
+
+    def verify_valid(self, allow_txid_only: bool = False) -> tuple[bool, Dict[int, str]]:
+        from .beef_validate import verify_valid as _verify_valid
+        return _verify_valid(self, allow_txid_only=allow_txid_only)
+
+    def get_valid_txids(self) -> List[str]:
+        from .beef_validate import get_valid_txids as _get_valid_txids
+        return _get_valid_txids(self)
+
+    # --- serialization APIs ---
+    def to_binary(self) -> bytes:
+        from .beef_serialize import to_binary as _to_binary
+        return _to_binary(self)
+
+    def to_hex(self) -> str:
+        from .beef_serialize import to_hex as _to_hex
+        return _to_hex(self)
+
+    def to_binary_atomic(self, txid: str) -> bytes:
+        from .beef_serialize import to_binary_atomic as _to_binary_atomic
+        return _to_binary_atomic(self, txid)
+
+    # --- utilities ---
+    def find_bump(self, txid: str) -> Optional["MerklePath"]:
+        from .beef_utils import find_bump as _find_bump
+        return _find_bump(self, txid)
+
+    def find_atomic_transaction(self, txid: str) -> Optional[Transaction]:
+        from .beef_utils import find_atomic_transaction as _find_atomic
+        return _find_atomic(self, txid)
+
+    def to_log_string(self) -> str:
+        from .beef_utils import to_log_string as _to_log_string
+        return _to_log_string(self)
+
+    def add_computed_leaves(self) -> None:
+        from .beef_utils import add_computed_leaves as _add_computed_leaves
+        _add_computed_leaves(self)
+
+    def trim_known_txids(self, known_txids: List[str]) -> None:
+        from .beef_utils import trim_known_txids as _trim_known_txids
+        _trim_known_txids(self, known_txids)
+
+    def txid_only(self) -> "Beef":
+        from .beef_utils import txid_only_clone as _txid_only_clone
+        return _txid_only_clone(self)
+
+    async def verify(self, chaintracker, allow_txid_only: bool = False) -> bool:
+        """
+        Confirm validity by verifying computed merkle roots using ChainTracker.
+        """
+        from .beef_validate import verify_valid as _verify_valid
+        ok, roots = _verify_valid(self, allow_txid_only=allow_txid_only)
+        if not ok:
+            return False
+        # roots: Dict[height, root_hex]
+        for height, root in roots.items():
+            valid = await chaintracker.is_valid_root_for_height(root, height)
+            if not valid:
+                return False
+        return True
+
+    def merge_beef_bytes(self, data: bytes) -> None:
+        """
+        Merge BEEF serialized bytes into this Beef.
+        """
+        from .beef_builder import merge_beef as _merge_beef
+        other = new_beef_from_bytes(data)
+        _merge_beef(self, other)
+
+    def clone(self) -> "Beef":
+        """
+        Return a shallow clone of this Beef.
+        - BUMPs list is shallow-copied
+        - Transactions mapping is shallow-copied (entries reference same BeefTx)
+        """
+        c = Beef(version=self.version)
+        c.bumps = list(getattr(self, "bumps", []) or [])
+        c.txs = {txid: entry for txid, entry in getattr(self, "txs", {}).items()}
+        return c
 
 
 # ---------------------------------------------------------------------------

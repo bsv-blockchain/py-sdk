@@ -5,7 +5,7 @@ from typing import Optional, List
 from bsv.utils import to_hex, to_bytes
 from bsv.hash import hash256
 from bsv.merkle_path import MerklePath
-from .beef import Beef
+from .beef import Beef, BeefTx
 
 
 def find_bump(beef: Beef, txid: str) -> Optional[MerklePath]:
@@ -92,5 +92,50 @@ def trim_known_txids(beef: Beef, known_txids: List[str]) -> None:
     to_delete = [txid for txid, btx in beef.txs.items() if btx.data_format == 2 and txid in known]
     for txid in to_delete:
         beef.txs.pop(txid, None)
+
+
+def find_atomic_transaction(beef: Beef, txid: str):
+    """
+    Build the proof tree rooted at a specific Transaction.
+    - If the transaction is directly proven by a bump, attach it.
+    - Otherwise, recursively link parents and attach their bumps when available.
+    Returns the Transaction or None.
+    """
+    btx = beef.txs.get(txid)
+    if btx is None or btx.tx_obj is None:
+        return None
+
+    def _add_input_proof(tx) -> None:
+        mp = find_bump(beef, tx.txid())
+        if mp is not None:
+            tx.merkle_path = mp
+            return
+        for i in getattr(tx, "inputs", []) or []:
+            if getattr(i, "source_transaction", None) is None:
+                parent = beef.txs.get(getattr(i, "source_txid", None))
+                if parent and parent.tx_obj:
+                    i.source_transaction = parent.tx_obj
+            if getattr(i, "source_transaction", None) is not None:
+                p = find_bump(beef, i.source_transaction.txid())
+                if p is not None:
+                    i.source_transaction.merkle_path = p
+                else:
+                    _add_input_proof(i.source_transaction)
+
+    _add_input_proof(btx.tx_obj)
+    return btx.tx_obj
+
+
+def txid_only_clone(beef: Beef) -> Beef:
+    """
+    Create a clone Beef with all transactions represented as txid-only.
+    """
+    c = Beef(version=beef.version)
+    # shallow copy bumps
+    c.bumps = list(getattr(beef, "bumps", []) or [])
+    for txid, tx in beef.txs.items():
+        entry = BeefTx(txid=txid, tx_bytes=b"", tx_obj=None, data_format=2, bump_index=None)
+        c.txs[txid] = entry
+    return c
 
 
