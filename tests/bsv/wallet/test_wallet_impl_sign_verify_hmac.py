@@ -11,12 +11,11 @@ def wallet():
 
 def test_create_and_verify_signature_identity(wallet):
     data = b"sign me"
+    # BRC-100 compliant flat structure (Python snake_case)
     args = {
-        "encryption_args": {
-            "protocol_id": {"securityLevel": 2, "protocol": "auth message signature"},
+        "protocol_id": [2, "auth message signature"],
             "key_id": "identity",
             "counterparty": {"type": "self"},
-        },
         "data": data,
     }
     sig = wallet.create_signature(None, args, "test")

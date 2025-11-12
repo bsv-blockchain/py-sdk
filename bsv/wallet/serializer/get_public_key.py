@@ -16,7 +16,7 @@ def serialize_get_public_key_args(args: Dict[str, Any]) -> bytes:
         w.write_string(args.get("keyID", ""))
         cp = args.get("counterparty", {})
         cp_type = cp.get("type", 0)
-        if cp_type in (0, 11, 12):
+        if cp_type in (0, 1, 2, 11, 12):
             w.write_byte(cp_type)
         else:
             w.write_bytes(cp.get("counterparty", b""))
@@ -56,8 +56,8 @@ def deserialize_get_public_key_args(data: bytes) -> Dict[str, Any]:
         out["protocolID"] = {"securityLevel": int(sec), "protocol": proto}
         out["keyID"] = r.read_string()
         first = r.read_byte()
-        if first in (0, 11, 12):
-            out["counterparty"] = {"type": int(first)} if first != 0 else {"type": 0}
+        if first in (0, 1, 2, 11, 12):
+            out["counterparty"] = {"type": int(first)}
         else:
             rest = r.read_bytes(32)
             out["counterparty"] = {"type": 13, "counterparty": bytes([first]) + rest}

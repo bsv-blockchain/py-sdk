@@ -1,5 +1,6 @@
 import time
 import uuid
+import os
 
 from bsv.keys import PrivateKey
 from bsv.wallet.wallet_impl import WalletImpl
@@ -8,6 +9,8 @@ from bsv.keystore.local_kv_store import LocalKVStore
 
 
 def test_list_outputs_retention_filter_excludes_expired():
+    # Ensure WOC path is off for deterministic mock UTXO
+    os.environ.pop("USE_WOC", None)
     context = f"kvctx_{uuid.uuid4()}"
     priv = PrivateKey()
     wallet = WalletImpl(priv, permission_callback=lambda a: True)
@@ -32,6 +35,8 @@ def test_list_outputs_retention_filter_excludes_expired():
 
 
 def test_list_outputs_retention_filter_keeps_unbounded():
+    # Ensure WOC path is off for deterministic mock UTXO
+    os.environ.pop("USE_WOC", None)
     context = f"kvctx_{uuid.uuid4()}"
     priv = PrivateKey()
     wallet = WalletImpl(priv, permission_callback=lambda a: True)

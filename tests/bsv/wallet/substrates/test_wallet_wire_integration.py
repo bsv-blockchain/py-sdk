@@ -56,21 +56,17 @@ def test_create_and_verify_signature(user_wallet, counterparty_wallet, user_key,
     key_id = '4'
     data = sample_data
     sig = user_wallet.create_signature(None, {
-        'encryption_args': {
-            'protocol_id': {'securityLevel': 2, 'protocol': 'tests'},
+        'protocol_id': [2, 'tests'],  # BRC-100 compliant (Python snake_case)
             'key_id': key_id,
             'counterparty': counterparty_key.public_key().hex(),
-        },
         'data': data
     }, 'test')
     assert isinstance(sig, dict)
     assert isinstance(sig.get('signature', b''), (bytes, bytearray))
     ver = counterparty_wallet.verify_signature(None, {
-        'encryption_args': {
-            'protocol_id': {'securityLevel': 2, 'protocol': 'tests'},
+        'protocol_id': [2, 'tests'],  # BRC-100 compliant (Python snake_case)
             'key_id': key_id,
             'counterparty': user_key.public_key().hex(),
-        },
         'data': data,
         'signature': sig.get('signature', b'')
     }, 'test')

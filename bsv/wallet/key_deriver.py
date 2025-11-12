@@ -21,8 +21,10 @@ class Protocol:
     protocol: str
     
     def __init__(self, security_level: int, protocol: str):
-        if not isinstance(protocol, str) or len(protocol) < 5 or len(protocol) > 400:
-            raise ValueError("protocol names must be 5-400 characters")
+        # Allow 3-400 characters to match TS/Go (e.g., "ctx" is valid in tests)
+        # This matches _validate_protocol() behavior
+        if not isinstance(protocol, str) or len(protocol) < 3 or len(protocol) > 400:
+            raise ValueError("protocol names must be 3-400 characters")
         self.security_level = security_level
         self.protocol = protocol
 

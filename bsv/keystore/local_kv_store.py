@@ -553,7 +553,7 @@ class LocalKVStore(KVStoreInterface):
                     "encryption_args": {
                         "protocol_id": protocol_id,
                         "key_id": key_id,
-                        "counterparty": counterparty or {"type": 0}
+                        "counterparty": counterparty or {"type": 2}
                     },
                     "plaintext": value.encode('utf-8')
                 }

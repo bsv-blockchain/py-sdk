@@ -171,12 +171,12 @@ class TestKeyDeriver:
     def test_protocol_name_validation(self):
         """Test protocol name validation"""
         # Too short
-        with pytest.raises(ValueError, match='protocol names must be 5-400 characters'):
-            invalid_protocol = Protocol(0, 'test')  # 4 chars
+        with pytest.raises(ValueError, match='protocol names must be 3-400 characters'):
+            invalid_protocol = Protocol(0, 'ab')  # 2 chars
             self.key_deriver.compute_invoice_number(invalid_protocol, self.key_id)
         
         # Too long
-        with pytest.raises(ValueError, match='protocol names must be 5-400 characters'):
+        with pytest.raises(ValueError, match='protocol names must be 3-400 characters'):
             invalid_protocol = Protocol(0, 'a' * 401)
             self.key_deriver.compute_invoice_number(invalid_protocol, self.key_id)
         

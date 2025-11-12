@@ -134,6 +134,9 @@ def chain_tracker():
         async def is_valid_root_for_height(self, root: str, height: int) -> bool:
             return root == BRC74Root and height == BRC74JSON["blockHeight"]
 
+        async def current_height(self) -> int:
+            return BRC74JSON["blockHeight"]
+
     return MockChainTracker()
 
 

@@ -551,14 +551,12 @@ class PushDropUnlocker:
                 hash160_bytes = self.prev_locking_script[3:23]
                 print(f"[DEBUG] PushDropUnlocker.sign: P2PKH UTXO detected, hash160: {hash160_bytes.hex()}")
                 
-                # このhash160に対応する秘密鍵で署名
+                # このhash160に対応する秘密鍵で署名 (BRC-100 compliant with Python snake_case)
                 create_args = {
-                    "encryption_args": {
                         "protocol_id": self.protocol_id,
                         "key_id": self.key_id,
                         "counterparty": self.counterparty,
                         "hash160": hash160_bytes.hex(),
-                    },
                     "data": hash_to_sign,  # 署名対象のハッシュ
                 }
                 print(f"[DEBUG] PushDropUnlocker.sign: Calling wallet.create_signature with args: {create_args}")
