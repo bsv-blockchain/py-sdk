@@ -3,6 +3,7 @@ import pytest
 from bsv.wallet.substrates.wallet_wire_processor import WalletWireProcessor
 from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet.key_deriver import CounterpartyType
 from bsv.keys import PrivateKey
 
 
@@ -25,7 +26,7 @@ def test_get_public_key_derived(transceiver):
         "identityKey": False,
         "protocolID": {"securityLevel": 1, "protocol": "testprotocol"},
         "keyID": "kid",
-        "counterparty": {"type": 1},
+        "counterparty": {"type": CounterpartyType.ANYONE},
         "privileged": None,
         "privilegedReason": "",
         "forSelf": None,
@@ -51,7 +52,7 @@ def test_reveal_specific_key_linkage(transceiver):
     resp = transceiver.reveal_specific_key_linkage(None, {
         "protocolID": {"securityLevel": 1, "protocol": "testprotocol"},
         "keyID": "kid",
-        "counterparty": {"type": 1},
+        "counterparty": {"type": CounterpartyType.ANYONE},
         "privileged": None,
         "privilegedReason": "",
         "verifier": PrivateKey(2).public_key().serialize(),

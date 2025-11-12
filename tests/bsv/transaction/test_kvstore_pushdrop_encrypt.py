@@ -2,6 +2,7 @@ import base64
 
 from bsv.keys import PrivateKey
 from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet.key_deriver import CounterpartyType
 from bsv.keystore.interfaces import KVStoreConfig
 from bsv.keystore.local_kv_store import LocalKVStore
 from bsv.transaction.pushdrop import build_lock_before_pushdrop, decode_lock_before_pushdrop
@@ -29,7 +30,7 @@ def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
     
     # Manually decrypt to validate compatibility
     ct = base64.b64decode(val[4:])
-    dec = wallet.decrypt(None, {"encryption_args": {"protocol_id": {"securityLevel": 2, "protocol": "kvctx"}, "key_id": "foo", "counterparty": {"type": 2}}, "ciphertext": ct}, "org")
+    dec = wallet.decrypt(None, {"encryption_args": {"protocol_id": {"securityLevel": 2, "protocol": "kvctx"}, "key_id": "foo", "counterparty": {"type": CounterpartyType.SELF}}, "ciphertext": ct}, "org")
     assert isinstance(dec.get("plaintext"), (bytes, bytearray)) and dec["plaintext"].decode("utf-8") == "bar"
 
 
