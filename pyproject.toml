@@ -7,3 +7,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "e2e: marks tests as end-to-end tests (deselect with '-m \"not e2e\"')",
+]

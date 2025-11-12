@@ -571,12 +571,17 @@ class WalletImpl(WalletInterface):
                     ls_bytes = b""
             else:
                 ls_bytes = ls_val
+            # Serialize outputDescription to JSON if it's a dict
+            output_desc = o.get("outputDescription", "")
+            if isinstance(output_desc, dict):
+                import json
+                output_desc = json.dumps(output_desc)
             norm_outputs.append({
                 "outputIndex": int(i),
                 "satoshis": int(o.get("satoshis", 0)),
                 "lockingScript": ls_bytes,
                 "spendable": True,
-                "outputDescription": o.get("outputDescription", ""),
+                "outputDescription": output_desc,
                 "basket": o.get("basket", ""),
                 "tags": o.get("tags") or [],
                 "customInstructions": o.get("customInstructions"),
@@ -950,7 +955,12 @@ class WalletImpl(WalletInterface):
         """
         include = (args.get("include") or "").lower()
         # If caller requests entire transactions (BEEF), bypass WOC path (WOC cannot return BEEF)
-        use_woc = (os.getenv("USE_WOC", "0") == "1" or args.get("use_woc")) and not ("entire" in include or "transaction" in include)
+        # Check args first - if use_woc is explicitly set (True or False), respect it
+        # Otherwise fall back to environment variable
+        if "use_woc" in args:
+            use_woc = args.get("use_woc") and not ("entire" in include or "transaction" in include)
+        else:
+            use_woc = (os.getenv("USE_WOC", "0") == "1") and not ("entire" in include or "transaction" in include)
         try:
             print(f"[TRACE] [list_outputs] include='{include}' use_woc={use_woc} basket={args.get('basket')} tags={args.get('tags')}")
         except Exception:

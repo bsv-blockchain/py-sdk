@@ -38,7 +38,9 @@ def _make_peer() -> Peer:
     return Peer(PeerOptions(wallet=wallet, transport=transport, session_manager=session_manager))
 
 
-VECTORS_DIR = pathlib.Path(__file__).parent / "vectors" / "auth"
+# Vector files are in tests/vectors/auth/, not tests/bsv/auth/vectors/auth/
+# From tests/bsv/auth/ go up to tests/bsv/, then to tests/, then into vectors/auth/
+VECTORS_DIR = pathlib.Path(__file__).parent.parent.parent / "vectors" / "auth"
 
 
 @pytest.mark.skipif(not VECTORS_DIR.joinpath("certificate_request_vector.json").exists(), reason="Vector file not present")
