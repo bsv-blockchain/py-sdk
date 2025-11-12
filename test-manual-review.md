@@ -205,14 +205,14 @@ This file lists all 474 Python tests with clickable links to their locations.
 | 199 | `test_recombination_with_sample_shares` | [bsv/hd/test_key_shares.py:136](tests/bsv/hd/test_key_shares.py#L136) | ✗ | Could be improved to match actual WIF |
 | 200 | `test_create_backup_and_recover` | [bsv/hd/test_key_shares.py:161](tests/bsv/hd/test_key_shares.py#L161) | ✓ |  |
 | 201 | `test_insufficient_shares_for_recovery` | [bsv/hd/test_key_shares.py:172](tests/bsv/hd/test_key_shares.py#L172) | ✓ |  |
-| 202 | `test_share_format_validation` | [bsv/hd/test_key_shares.py:186](tests/bsv/hd/test_key_shares.py#L186) | — |  |
-| 203 | `test_set_and_get` | [bsv/keystore/test_keystore_local_kv_store.py:114](tests/bsv/keystore/test_keystore_local_kv_store.py#L114) | — |  |
-| 204 | `test_get_default_value` | [bsv/keystore/test_keystore_local_kv_store.py:121](tests/bsv/keystore/test_keystore_local_kv_store.py#L121) | — |  |
-| 205 | `test_remove_key` | [bsv/keystore/test_keystore_local_kv_store.py:126](tests/bsv/keystore/test_keystore_local_kv_store.py#L126) | — |  |
-| 206 | `test_invalid_key_errors` | [bsv/keystore/test_keystore_local_kv_store.py:134](tests/bsv/keystore/test_keystore_local_kv_store.py#L134) | — |  |
-| 207 | `test_invalid_value_errors` | [bsv/keystore/test_keystore_local_kv_store.py:144](tests/bsv/keystore/test_keystore_local_kv_store.py#L144) | — |  |
-| 208 | `test_list_outputs_retention_filter_excludes_expired` | [bsv/keystore/test_keystore_retention.py:11](tests/bsv/keystore/test_keystore_retention.py#L11) | — |  |
-| 209 | `test_list_outputs_retention_filter_keeps_unbounded` | [bsv/keystore/test_keystore_retention.py:37](tests/bsv/keystore/test_keystore_retention.py#L37) | — |  |
+| 202 | `test_share_format_validation` | [bsv/hd/test_key_shares.py:186](tests/bsv/hd/test_key_shares.py#L186) | ✓ |  |
+| 203 | `test_set_and_get` | [bsv/keystore/test_keystore_local_kv_store.py:114](tests/bsv/keystore/test_keystore_local_kv_store.py#L114) | ✓ |  |
+| 204 | `test_get_default_value` | [bsv/keystore/test_keystore_local_kv_store.py:121](tests/bsv/keystore/test_keystore_local_kv_store.py#L121) | ✓ |  |
+| 205 | `test_remove_key` | [bsv/keystore/test_keystore_local_kv_store.py:126](tests/bsv/keystore/test_keystore_local_kv_store.py#L126) | ✓ |  |
+| 206 | `test_invalid_key_errors` | [bsv/keystore/test_keystore_local_kv_store.py:134](tests/bsv/keystore/test_keystore_local_kv_store.py#L134) | ✓ |  |
+| 207 | `test_invalid_value_errors` | [bsv/keystore/test_keystore_local_kv_store.py:144](tests/bsv/keystore/test_keystore_local_kv_store.py#L144) | ✓ |  |
+| 208 | `test_list_outputs_retention_filter_excludes_expired` | [bsv/keystore/test_keystore_retention.py:11](tests/bsv/keystore/test_keystore_retention.py#L11) | ✓ |  |
+| 209 | `test_list_outputs_retention_filter_keeps_unbounded` | [bsv/keystore/test_keystore_retention.py:37](tests/bsv/keystore/test_keystore_retention.py#L37) | ✓ |  |
 | 210 | `test_aes_gcm_vectors` | [bsv/primitives/test_aes_gcm.py:8](tests/bsv/primitives/test_aes_gcm.py#L8) | — |  |
 | 211 | `test_ghash` | [bsv/primitives/test_aes_gcm.py:31](tests/bsv/primitives/test_aes_gcm.py#L31) | — |  |
 | 212 | `test_aescbc_encrypt_decrypt` | [bsv/primitives/test_aescbc.py:6](tests/bsv/primitives/test_aescbc.py#L6) | — |  |
