@@ -34,7 +34,7 @@ def parse_markdown_file(file_path: Path) -> List[TestReview]:
     
     if not file_path.exists():
         print(f"Error: File {file_path} does not exist.")
-        print("Please run ../generate-matching-tests.py from the SDK root to create the file.")
+        print("Please run generate-testlist.py from the SDK root to create the file.")
         sys.exit(1)
     
     content = file_path.read_text(encoding='utf-8')
@@ -170,82 +170,61 @@ def get_test_file_path(file_link: str) -> Tuple[Optional[Path], Optional[int]]:
 
 def open_test_file(file_link: str) -> bool:
     """Attempt to open the test file in an editor at the specified line number.
-    Tries cursor, code, and webbrowser in that order.
+    Uses cursor with goto functionality.
     Returns True if successfully opened, False otherwise."""
     file_path, line_number = get_test_file_path(file_link)
-    
+
     if not file_path:
         return False
-    
+
     # Resolve to absolute path and verify it exists
     abs_path_obj = file_path.resolve()
     if not abs_path_obj.exists():
+        print(f"File does not exist: {abs_path_obj}")
         return False
-    
+
     abs_path = str(abs_path_obj)
-    
+
     # Get the workspace root (py-sdk directory) for relative paths
     py_root = Path(__file__).parent.resolve()
-    
+
     # Try to get relative path from workspace root
     try:
         rel_path = str(abs_path_obj.relative_to(py_root))
     except ValueError:
         # If file is outside workspace, use absolute path
         rel_path = abs_path
-    
+
     # Use cursor with -r (reuse-window) and -g (goto) flags
-    # Note: cursor may return non-zero exit codes even on success, so we assume success if no exception
+    # Cursor is asynchronous, so we can't reliably detect success/failure
+    # We'll try the command and assume it worked if no exception occurs
     try:
         if line_number:
             # Try relative path first (better for workspace files)
             if rel_path != abs_path:
-                subprocess.run(['cursor', '-r', '-g', f"{rel_path}:{line_number}"],
-                              check=False, stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL, timeout=10, cwd=py_root)
-                # Assume success if no exception (cursor may return non-zero even on success)
+                result = subprocess.run(['cursor', '-r', '-g', f"{rel_path}:{line_number}"],
+                                       check=False, stdout=subprocess.DEVNULL,
+                                       stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
                 return True
             # Fall back to absolute path
-            subprocess.run(['cursor', '-r', '-g', f"{abs_path}:{line_number}"],
-                          check=False, stdout=subprocess.DEVNULL,
-                          stderr=subprocess.DEVNULL, timeout=10, cwd=py_root)
-            # Assume success if no exception
+            result = subprocess.run(['cursor', '-r', '-g', f"{abs_path}:{line_number}"],
+                                   check=False, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
             return True
         else:
             if rel_path != abs_path:
-                subprocess.run(['cursor', '-r', rel_path],
-                              check=False, stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL, timeout=10, cwd=py_root)
-                # Assume success if no exception
+                result = subprocess.run(['cursor', '-r', rel_path],
+                                       check=False, stdout=subprocess.DEVNULL,
+                                       stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
                 return True
-            subprocess.run(['cursor', '-r', abs_path],
-                          check=False, stdout=subprocess.DEVNULL,
-                          stderr=subprocess.DEVNULL, timeout=10, cwd=py_root)
-            # Assume success if no exception
+            result = subprocess.run(['cursor', '-r', abs_path],
+                                   check=False, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
             return True
     except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
         print(f"Failed to open file in editor: {e}")
-        pass
-    
-    # Fall back to webbrowser for file:// URI (without line number, as file:// doesn't support it)
-    try:
-        file_path = extract_file_path_from_link(file_link)
-        if file_path:
-            py_root = Path(__file__).parent.resolve()
-            if file_path.startswith('py-sdk/tests/'):
-                rel_path = file_path.replace('py-sdk/tests/', 'tests/')
-                full_path = py_root.parent / rel_path
-            elif file_path.startswith('tests/'):
-                full_path = py_root / file_path
-            else:
-                full_path = py_root / 'tests' / file_path
-            abs_path = str(full_path.resolve())
-            file_uri = f"file://{abs_path}"
-            webbrowser.open(file_uri)
-            return True
-    except Exception:
-        pass
-    
+        return False
+
     return False
 
 
@@ -268,7 +247,8 @@ def display_test(test: TestReview, total: int):
     
     # Automatically open the test file in editor
     if open_test_file(test.file_link):
-        print("(Opened in editor)")
+        # print("(Opened in editor)") 
+        pass
     else:
         print("(Could not open in editor)")
     
