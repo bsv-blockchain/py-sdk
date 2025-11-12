@@ -91,9 +91,14 @@ def validate_transactions(beef: Beef) -> ValidationResult:
                         ok = False
                         break
             if ok and btx.tx_obj is not None:
-                valid_txids.add(btx.txid)
-                has_proof.append(btx)
-                progress = True
+                # Require at least one input to already be valid to anchor to a proven chain.
+                # Transactions with zero inputs must have a bump to be considered valid.
+                if any(getattr(txin, "source_txid", None) in valid_txids for txin in btx.tx_obj.inputs):
+                    valid_txids.add(btx.txid)
+                    has_proof.append(btx)
+                    progress = True
+                else:
+                    still.append(btx)
             else:
                 still.append(btx)
         if not progress:
@@ -127,7 +132,10 @@ def verify_valid(beef: Beef, allow_txid_only: bool = False) -> Tuple[bool, Dict[
 
     def confirm_computed_root(mp: MerklePath, txid: str) -> bool:
         try:
-            root = mp.compute_root(txid)
+            try:
+                root = mp.compute_root(txid)  # type: ignore[arg-type]
+            except TypeError:
+                root = mp.compute_root()  # type: ignore[call-arg]
         except Exception:
             return False
         existing = roots.get(mp.block_height)
