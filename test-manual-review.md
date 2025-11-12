@@ -4,11 +4,11 @@ This file lists all 474 Python tests with clickable links to their locations.
 
 | # | Test Name | File | Status | Notes |
 |---|-----------|-----|--------|-------|
-| 1 | `test_fetch_basic_request` | [bsv/auth/clients/test_auth_fetch.py:24](tests/bsv/auth/clients/test_auth_fetch.py#L24) | ✓ |  |
-| 2 | `test_fetch_with_auth_headers` | [bsv/auth/clients/test_auth_fetch.py:50](tests/bsv/auth/clients/test_auth_fetch.py#L50) | ✓ |  |
-| 3 | `test_fetch_error_handling` | [bsv/auth/clients/test_auth_fetch.py:75](tests/bsv/auth/clients/test_auth_fetch.py#L75) | ✓ |  |
-| 4 | `test_consume_received_certificates` | [bsv/auth/clients/test_auth_fetch.py:95](tests/bsv/auth/clients/test_auth_fetch.py#L95) | ✓ |  |
-| 5 | `test_validate_request_options` | [bsv/auth/clients/test_auth_fetch.py:107](tests/bsv/auth/clients/test_auth_fetch.py#L107) | ✓ |  |
+| 1 | `test_fetch_basic_request` | [bsv/auth/clients/test_auth_fetch.py:24](tests/bsv/auth/clients/test_auth_fetch.py#L24) | — |  |
+| 2 | `test_fetch_with_auth_headers` | [bsv/auth/clients/test_auth_fetch.py:50](tests/bsv/auth/clients/test_auth_fetch.py#L50) | — |  |
+| 3 | `test_fetch_error_handling` | [bsv/auth/clients/test_auth_fetch.py:75](tests/bsv/auth/clients/test_auth_fetch.py#L75) | — |  |
+| 4 | `test_consume_received_certificates` | [bsv/auth/clients/test_auth_fetch.py:95](tests/bsv/auth/clients/test_auth_fetch.py#L95) | — |  |
+| 5 | `test_validate_request_options` | [bsv/auth/clients/test_auth_fetch.py:107](tests/bsv/auth/clients/test_auth_fetch.py#L107) | — |  |
 | 6 | `test_authfetch_e2e` | [bsv/auth/clients/test_auth_fetch_e2e.py:54](tests/bsv/auth/clients/test_auth_fetch_e2e.py#L54) | — |  |
 | 7 | `test_auth_fetch_full_protocol` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:68](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L68) | — |  |
 | 8 | `test_auth_fetch_certificate_exchange` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:112](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L112) | — |  |

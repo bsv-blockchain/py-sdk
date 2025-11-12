@@ -120,7 +120,7 @@ def extract_line_number_from_link(link: str) -> Optional[int]:
 
 
 def get_test_link(file_link: str) -> str:
-    """Generate a clickable file:// URI with line number for the test."""
+    """Generate a clickable file:// URI for the test (line numbers not supported in file:// URIs)."""
     file_path = extract_file_path_from_link(file_link)
     line_number = extract_line_number_from_link(file_link)
     
@@ -140,12 +140,10 @@ def get_test_link(file_link: str) -> str:
     # Convert to absolute path string
     abs_path = str(full_path.resolve())
     
-    # Create file:// URI with line number (file:///absolute/path format)
+    # Create file:// URI (file:// URIs don't support line numbers in the standard format)
     # Note: file:// URIs need three slashes: file:///path
-    if line_number:
-        return f"file://{abs_path}:{line_number}"
-    else:
-        return f"file://{abs_path}"
+    # If line number is needed, it will be handled by Cursor, not the file:// URI
+    return f"file://{abs_path}"
 
 
 def get_test_file_path(file_link: str) -> Tuple[Optional[Path], Optional[int]]:
@@ -196,63 +194,54 @@ def open_test_file(file_link: str) -> bool:
         # If file is outside workspace, use absolute path
         rel_path = abs_path
     
-    # Try cursor first (using --goto flag)
+    # Use cursor with --reuse-window and --goto flags
+    # Note: cursor may return non-zero exit codes even on success, so we assume success if no exception
     try:
         if line_number:
             # Try relative path first (better for workspace files)
             if rel_path != abs_path:
-                subprocess.run(['cursor', '--goto', f"{rel_path}:{line_number}"], 
+                subprocess.run(['cursor', '--reuse-window', '--goto', f"{rel_path}:{line_number}"], 
                               check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=2, cwd=py_root)
-            else:
-                # Fall back to absolute path
-                subprocess.run(['cursor', '--goto', f"{abs_path}:{line_number}"], 
-                              check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=2, cwd=py_root)
+                              stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
+                # Assume success if no exception (cursor may return non-zero even on success)
+                return True
+            # Fall back to absolute path
+            subprocess.run(['cursor', '--reuse-window', '--goto', f"{abs_path}:{line_number}"], 
+                          check=False, stdout=subprocess.DEVNULL, 
+                          stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
+            # Assume success if no exception
+            return True
         else:
             if rel_path != abs_path:
-                subprocess.run(['cursor', rel_path], 
+                subprocess.run(['cursor', '--reuse-window', rel_path], 
                               check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=2, cwd=py_root)
-            else:
-                subprocess.run(['cursor', abs_path], 
-                              check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=2, cwd=py_root)
-        # If no exception was raised, assume it worked
-        return True
+                              stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
+                # Assume success if no exception
+                return True
+            subprocess.run(['cursor', '--reuse-window', abs_path], 
+                          check=False, stdout=subprocess.DEVNULL, 
+                          stderr=subprocess.DEVNULL, timeout=5, cwd=py_root)
+            # Assume success if no exception
+            return True
     except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired):
         pass
     
-    # Try code second (using --goto flag)
+    # Fall back to webbrowser for file:// URI (without line number, as file:// doesn't support it)
     try:
-        if line_number:
-            if rel_path != abs_path:
-                subprocess.run(['code', '--goto', f"{rel_path}:{line_number}"], 
-                              check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=2, cwd=py_root)
+        file_path = extract_file_path_from_link(file_link)
+        if file_path:
+            py_root = Path(__file__).parent.resolve()
+            if file_path.startswith('py-sdk/tests/'):
+                rel_path = file_path.replace('py-sdk/tests/', 'tests/')
+                full_path = py_root.parent / rel_path
+            elif file_path.startswith('tests/'):
+                full_path = py_root / file_path
             else:
-                subprocess.run(['code', '--goto', f"{abs_path}:{line_number}"], 
-                              check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=2, cwd=py_root)
-        else:
-            if rel_path != abs_path:
-                subprocess.run(['code', rel_path], 
-                              check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=2, cwd=py_root)
-            else:
-                subprocess.run(['code', abs_path], 
-                              check=False, stdout=subprocess.DEVNULL, 
-                              stderr=subprocess.DEVNULL, timeout=2, cwd=py_root)
-        # If no exception was raised, assume it worked
-        return True
-    except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired):
-        pass
-    
-    # Fall back to webbrowser for file:// URI
-    try:
-        test_link = get_test_link(file_link)
-        webbrowser.open(test_link)
-        return True
+                full_path = py_root / 'tests' / file_path
+            abs_path = str(full_path.resolve())
+            file_uri = f"file://{abs_path}"
+            webbrowser.open(file_uri)
+            return True
     except Exception:
         pass
     
@@ -266,15 +255,21 @@ def display_test(test: TestReview, total: int):
     print("="*80)
     print(f"Test Name: {test.name}")
     
-    # Generate clickable test link
-    test_link = get_test_link(test.file_link)
-    print(f"Test Link: {test_link}")
+    # Get file path and line number for display (avoid printing file:// URI which triggers auto-open)
+    file_path, line_number = get_test_file_path(test.file_link)
+    if file_path:
+        if line_number:
+            print(f"Test File: {file_path}:{line_number}")
+        else:
+            print(f"Test File: {file_path}")
+    else:
+        print(f"Test Link: {test.file_link}")
     
     # Automatically open the test file in editor
     if open_test_file(test.file_link):
         print("(Opened in editor)")
     else:
-        print("(Could not open in editor - click the link above to open manually)")
+        print("(Could not open in editor)")
     
     if test.status:
         status_text = "✓ Sufficient" if test.status == "✓" else "✗ Insufficient"
