@@ -32,7 +32,7 @@ class TestKeyDeriver:
     def test_normalize_counterparty_throws_for_invalid(self):
         """Test that normalize_counterparty throws for invalid input"""
         # Test with invalid string
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"non-hexadecimal number found in fromhex\(\) arg at position 0"):
             self.key_deriver.normalize_counterparty('invalid_type')
         
         # Test with Counterparty with invalid type
@@ -170,6 +170,9 @@ class TestKeyDeriver:
     
     def test_protocol_name_validation(self):
         """Test protocol name validation"""
+        # Should not error
+        valid_protocol = Protocol(0, 'abc')  # 3 chars
+        self.key_deriver.compute_invoice_number(valid_protocol, self.key_id)
         # Too short
         with pytest.raises(ValueError, match='protocol names must be 3-400 characters'):
             invalid_protocol = Protocol(0, 'ab')  # 2 chars

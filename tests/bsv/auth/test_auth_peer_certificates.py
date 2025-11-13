@@ -83,8 +83,8 @@ def test_handle_certificate_request_valid_signature():
         requested_certificates={"types": {"t": ["f1"]}},
         signature=b"dummy",
     )
-    err = peer.handle_certificate_request(None, msg, sender_pub)
-    assert err is None
+    err = peer.handle_certificate_request(None, msg, sender_pub);
+    assert err is None;
 
 
 def test_handle_certificate_response_valid_signature_invokes_listener():

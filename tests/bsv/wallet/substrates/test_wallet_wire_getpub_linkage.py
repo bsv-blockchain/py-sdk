@@ -45,7 +45,7 @@ def test_reveal_counterparty_key_linkage(transceiver):
         "counterparty": PrivateKey(1).public_key().serialize(),
         "verifier": PrivateKey(2).public_key().serialize(),
     }, "origin")
-    assert isinstance(resp, dict)
+    assert isinstance(resp, dict);
 
 
 def test_reveal_specific_key_linkage(transceiver):
@@ -64,14 +64,14 @@ def test_get_public_key_error_frame_permission_denied():
     # permission denied triggers ERROR frame via PermissionError
     wallet = WalletImpl(PrivateKey(4321), permission_callback=lambda a: False)
     t = WalletWireTransceiver(WalletWireProcessor(wallet))
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match=r"get_public_key: Operation 'Get public key' was not permitted by the user."):
         t.get_public_key(None, {"identityKey": True, "seekPermission": True}, "origin")
 
 
 def test_reveal_counterparty_key_linkage_error_frame_permission_denied():
     wallet = WalletImpl(PrivateKey(4321), permission_callback=lambda a: False)
     t = WalletWireTransceiver(WalletWireProcessor(wallet))
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match=r"reveal_counterparty_key_linkage: Operation 'Reveal counterparty key linkage' was not permitted by the user."):
         t.reveal_counterparty_key_linkage(None, {
             "privileged": True,
             "privilegedReason": "need",

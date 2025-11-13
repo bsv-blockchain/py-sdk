@@ -263,6 +263,42 @@ def display_test(test: TestReview, total: int):
     print("="*80)
 
 
+def find_test_class(file_path: Path, test_name: str) -> Optional[str]:
+    """Find the class name that contains the given test method."""
+    try:
+        content = file_path.read_text(encoding='utf-8')
+        lines = content.split('\n')
+
+        # Find the line with the test method
+        test_line_idx = None
+        for i, line in enumerate(lines):
+            if re.match(rf'^\s*def\s+{re.escape(test_name)}\s*\(', line):
+                test_line_idx = i
+                break
+
+        if test_line_idx is None:
+            return None
+
+        # Work backwards from the test method to find the containing class
+        test_indent = len(lines[test_line_idx]) - len(lines[test_line_idx].lstrip())
+
+        for i in range(test_line_idx - 1, -1, -1):
+            line = lines[i]
+            stripped = line.strip()
+
+            # Look for class definitions
+            class_match = re.match(r'^\s*class\s+(\w+)', line)
+            if class_match:
+                class_indent = len(line) - len(line.lstrip())
+                # If the class has less indentation than the test method, it's the containing class
+                if class_indent < test_indent:
+                    return class_match.group(1)
+
+        return None
+    except Exception:
+        return None
+
+
 def run_test(test: TestReview) -> bool:
     """Run the specific test using pytest.
     Returns True if test passed, False otherwise."""
@@ -284,8 +320,14 @@ def run_test(test: TestReview) -> bool:
         # If file is outside the project, use absolute path
         rel_path = str(file_path)
 
-    # Run pytest with the specific test function
-    test_spec = f"{rel_path}::{test.name}"
+    # Try to find the class that contains this test method
+    class_name = find_test_class(file_path, test.name)
+
+    # Build the test specification
+    if class_name:
+        test_spec = f"{rel_path}::{class_name}::{test.name}"
+    else:
+        test_spec = f"{rel_path}::{test.name}"
 
     print(f"Running test: {test_spec}")
     print("-" * 60)
@@ -373,18 +415,34 @@ def main():
         print("No tests found in the file.")
         return
     
-    print(f"Loaded {len(tests)} tests for review.")
+    # Count tests by status
+    sufficient_count = sum(1 for test in tests if test.status == "✓")
+    needs_review_count = len(tests) - sufficient_count
+
+    print(f"Loaded {len(tests)} tests total.")
+    print(f"- {sufficient_count} tests marked as sufficient (will be skipped)")
+    print(f"- {needs_review_count} tests need review")
     print(f"Reading from and writing to: {review_file}")
     print("="*80)
     
-    # Find first unreviewed test (status is None or "—")
+    # Find first test that needs review (not sufficient)
     current_index = 0
     for i, test in enumerate(tests):
-        if test.status is None or test.status == "—":
+        if test.status != "✓":  # Skip tests marked as sufficient
             current_index = i
-            print(f"Starting at first unreviewed test: Test {test.number}")
+            if test.status is None or test.status == "—":
+                print(f"Starting at first unreviewed test: Test {test.number}")
+            else:
+                print(f"Starting at test needing review: Test {test.number} (Status: {test.status or '—'})")
             break
     
+    def find_next_non_sufficient_index(start_index: int) -> int:
+        """Find the next test that is not marked as sufficient."""
+        for i in range(start_index, len(tests)):
+            if tests[i].status != "✓":
+                return i
+        return len(tests)  # No more tests to review
+
     while current_index < len(tests):
         test = tests[current_index]
         display_test(test, len(tests))
@@ -401,30 +459,29 @@ def main():
             # Empty input - just continue the loop to reprompt
             continue
         elif action == "PREVIOUS":
+            # Find the previous test that needs review (skip sufficient ones)
             if current_index > 0:
-                current_index -= 1
+                for i in range(current_index - 1, -1, -1):
+                    if tests[i].status != "✓":
+                        current_index = i
+                        break
+                else:
+                    print("Already at the first test that needs review.")
             else:
-                print("Already at the first test.")
+                print("Already at the first test that needs review.")
             continue
         elif action == "SKIP":
-            current_index += 1
+            next_index = find_next_non_sufficient_index(current_index + 1)
+            if next_index < len(tests):
+                current_index = next_index
+            else:
+                print("No more tests to review!")
+                current_index = len(tests)
             continue
         elif action == "TEST":
-            # Run the test and automatically mark based on result
-            test_passed = run_test(test)
-            if test_passed:
-                test.status = "✓"
-                test.notes = ""  # Clear any previous notes
-                print("Automatically marked as sufficient (test passed)")
-            else:
-                test.status = "✗"
-                test.notes = "Test failed during execution"
-                print("Automatically marked as insufficient (test failed)")
-
-            # Auto-save after the change
-            write_markdown_file(review_file, tests)
-
-            # Stay on the same test for manual review
+            # Run the test for informational purposes only
+            run_test(test)
+            # Do not auto-mark or auto-advance - stay for manual review
             continue
 
         # Update test
@@ -437,8 +494,13 @@ def main():
             # Auto-save after each change
             write_markdown_file(review_file, tests)
             
-            # Auto-advance to next test after marking
-            current_index += 1
+            # Auto-advance to next test that needs review (skip sufficient ones)
+            next_index = find_next_non_sufficient_index(current_index + 1)
+            if next_index < len(tests):
+                current_index = next_index
+            else:
+                print("No more tests to review!")
+                current_index = len(tests)
     
     print(f"\nReview session complete. Reviewed {current_index} of {len(tests)} tests.")
     print(f"Review file updated: {review_file}")

@@ -35,7 +35,7 @@ class TestECDSAUtils:
         assert ser2 == rec
 
     def test_invalid_der_raises(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"invalid DER encoded 0001"):
             deserialize_ecdsa_der(b"\x00\x01")
 
 
