@@ -263,41 +263,96 @@ def display_test(test: TestReview, total: int):
     print("="*80)
 
 
+def run_test(test: TestReview) -> bool:
+    """Run the specific test using pytest.
+    Returns True if test passed, False otherwise."""
+    file_path, line_number = get_test_file_path(test.file_link)
+
+    if not file_path:
+        print(f"Could not determine file path for test: {test.name}")
+        return False
+
+    if not file_path.exists():
+        print(f"Test file does not exist: {file_path}")
+        return False
+
+    # Get the relative path from the project root for pytest
+    py_root = Path(__file__).parent.resolve()
+    try:
+        rel_path = str(file_path.relative_to(py_root))
+    except ValueError:
+        # If file is outside the project, use absolute path
+        rel_path = str(file_path)
+
+    # Run pytest with the specific test function
+    test_spec = f"{rel_path}::{test.name}"
+
+    print(f"Running test: {test_spec}")
+    print("-" * 60)
+
+    try:
+        # Don't capture output for more verbose display
+        result = subprocess.run(['python', '-m', 'pytest', test_spec, '-v', '-s'],
+                              cwd=py_root, timeout=60)
+
+        print("-" * 60)
+        if result.returncode == 0:
+            print("✓ Test PASSED")
+            return True
+        else:
+            print("✗ Test FAILED")
+            return False
+
+    except subprocess.TimeoutExpired:
+        print("✗ Test execution timed out")
+        return False
+    except FileNotFoundError:
+        print("✗ pytest not found. Make sure pytest is installed.")
+        return False
+    except Exception as e:
+        print(f"✗ Error running test: {e}")
+        return False
+
+
 def get_review_input() -> Tuple[Optional[str], Optional[str], str]:
     """Get review input from user.
     Returns: (status, action, notes_or_action)
     - status: "✓", "✗", or None
-    - action: "QUIT", "PREVIOUS", "SKIP", "REPROMPT", or None
+    - action: "QUIT", "PREVIOUS", "SKIP", "REPROMPT", "TEST", or None
     - notes_or_action: notes string if marking as insufficient, otherwise same as action
     """
     print("\nOptions:")
     print("  [p]ass - Mark test as sufficient (green tick)")
+    print("  [t]est - Run this specific test")
     print("  [s]kip - Skip this test (no change)")
     print("  [b]ack - Go back to previous test")
     print("  [q]uit - Save and exit")
     print("  (anything else) - Mark as insufficient with your input as notes")
-    
+
     choice = input("\nEnter choice: ").strip()
-    
+
     # Handle empty input - reprompt
     if not choice:
         print("Empty input. Please enter a valid choice.")
         return None, "REPROMPT", ""
-    
+
     choice_lower = choice.lower()
-    
+
     if choice_lower in ['q', 'quit']:
         return None, "QUIT", "QUIT"
-    
+
     if choice_lower in ['b', 'back']:
         return None, "PREVIOUS", "PREVIOUS"
-    
+
     if choice_lower in ['s', 'skip']:
         return None, "SKIP", "SKIP"
-    
+
+    if choice_lower in ['t', 'test']:
+        return None, "TEST", "TEST"
+
     if choice_lower in ['p', 'pass']:
         return "✓", None, ""
-    
+
     # Any other input = mark as insufficient with input as notes
     return "✗", None, choice
 
@@ -354,7 +409,24 @@ def main():
         elif action == "SKIP":
             current_index += 1
             continue
-        
+        elif action == "TEST":
+            # Run the test and automatically mark based on result
+            test_passed = run_test(test)
+            if test_passed:
+                test.status = "✓"
+                test.notes = ""  # Clear any previous notes
+                print("Automatically marked as sufficient (test passed)")
+            else:
+                test.status = "✗"
+                test.notes = "Test failed during execution"
+                print("Automatically marked as insufficient (test failed)")
+
+            # Auto-save after the change
+            write_markdown_file(review_file, tests)
+
+            # Stay on the same test for manual review
+            continue
+
         # Update test
         if status:
             test.status = status

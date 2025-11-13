@@ -1,483 +1,61 @@
 # Python Tests List
 
-This file lists all 474 Python tests with clickable links to their locations.
+This file lists all 52 Python tests with clickable links to their locations.
 
 | # | Test Name | File | Status | Notes |
 |---|-----------|-----|--------|-------|
-| 1 | `test_fetch_basic_request` | [bsv/auth/clients/test_auth_fetch.py:24](tests/bsv/auth/clients/test_auth_fetch.py#L24) | ✓ |  |
-| 2 | `test_fetch_with_auth_headers` | [bsv/auth/clients/test_auth_fetch.py:50](tests/bsv/auth/clients/test_auth_fetch.py#L50) | ✓ |  |
-| 3 | `test_fetch_error_handling` | [bsv/auth/clients/test_auth_fetch.py:75](tests/bsv/auth/clients/test_auth_fetch.py#L75) | ✓ |  |
-| 4 | `test_consume_received_certificates` | [bsv/auth/clients/test_auth_fetch.py:95](tests/bsv/auth/clients/test_auth_fetch.py#L95) | ✓ |  |
-| 5 | `test_validate_request_options` | [bsv/auth/clients/test_auth_fetch.py:107](tests/bsv/auth/clients/test_auth_fetch.py#L107) | ✓ |  |
-| 6 | `test_authfetch_e2e` | [bsv/auth/clients/test_auth_fetch_e2e.py:54](tests/bsv/auth/clients/test_auth_fetch_e2e.py#L54) | ✓ |  |
-| 7 | `test_auth_fetch_full_protocol` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:68](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L68) | ✓ |  |
-| 8 | `test_auth_fetch_certificate_exchange` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:112](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L112) | ✗ | is not None not specific enough |
-| 9 | `test_auth_fetch_session_management` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:138](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L138) | ✓ |  |
+| 8 | `test_auth_fetch_certificate_exchange` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:112](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L112) | ✓ |  |
 | 10 | `test_auth_fetch_error_handling` | [bsv/auth/clients/test_auth_fetch_full_e2e.py:185](tests/bsv/auth/clients/test_auth_fetch_full_e2e.py#L185) | ✗ | ANY Exception not specific enough |
-| 11 | `test_authfetch_server_flow` | [bsv/auth/clients/test_auth_fetch_server_client.py:10](tests/bsv/auth/clients/test_auth_fetch_server_client.py#L10) | ✓ |  |
-| 12 | `test_auth_fetch_fallback_to_http` | [bsv/auth/clients/test_auth_fetch_simple.py:62](tests/bsv/auth/clients/test_auth_fetch_simple.py#L62) | ✓ |  |
-| 13 | `test_auth_fetch_json_post` | [bsv/auth/clients/test_auth_fetch_simple.py:88](tests/bsv/auth/clients/test_auth_fetch_simple.py#L88) | ✓ |  |
-| 14 | `test_verify_raises_without_signature` | [bsv/auth/test_auth_certificate.py:33](tests/bsv/auth/test_auth_certificate.py#L33) | ✓ |  |
-| 15 | `test_sign_and_verify` | [bsv/auth/test_auth_certificate.py:38](tests/bsv/auth/test_auth_certificate.py#L38) | ✓ |  |
-| 16 | `test_binary_roundtrip_includes_signature` | [bsv/auth/test_auth_certificate.py:46](tests/bsv/auth/test_auth_certificate.py#L46) | ✓ |  |
-| 17 | `test_create_nonce_error` | [bsv/auth/test_auth_cryptononce.py:36](tests/bsv/auth/test_auth_cryptononce.py#L36) | ✓ |  |
-| 18 | `test_create_nonce_length` | [bsv/auth/test_auth_cryptononce.py:41](tests/bsv/auth/test_auth_cryptononce.py#L41) | ✓ |  |
-| 19 | `test_verify_nonce_invalid` | [bsv/auth/test_auth_cryptononce.py:46](tests/bsv/auth/test_auth_cryptononce.py#L46) | ✓ |  |
-| 20 | `test_verify_nonce_hmac_fail` | [bsv/auth/test_auth_cryptononce.py:57](tests/bsv/auth/test_auth_cryptononce.py#L57) | ✓ |  |
-| 21 | `test_verify_nonce_success` | [bsv/auth/test_auth_cryptononce.py:62](tests/bsv/auth/test_auth_cryptononce.py#L62) | ✓ |  |
 | 22 | `test_real_wallet_success` | [bsv/auth/test_auth_cryptononce.py:71](tests/bsv/auth/test_auth_cryptononce.py#L71) | ✗ | Unsure |
-| 23 | `test_serial_number_use_case` | [bsv/auth/test_auth_cryptononce.py:77](tests/bsv/auth/test_auth_cryptononce.py#L77) | ✓ |  |
-| 24 | `test_create_certificate_fields_and_decrypt_roundtrip_single_field` | [bsv/auth/test_auth_master_certificate.py:27](tests/bsv/auth/test_auth_master_certificate.py#L27) | ✓ |  |
-| 25 | `test_decrypt_fields_multiple` | [bsv/auth/test_auth_master_certificate.py:50](tests/bsv/auth/test_auth_master_certificate.py#L50) | ✓ |  |
-| 26 | `test_create_keyring_for_verifier_reencrypts_with_serial_number_in_key_id` | [bsv/auth/test_auth_master_certificate.py:65](tests/bsv/auth/test_auth_master_certificate.py#L65) | ✓ |  |
 | 27 | `test_issue_uses_get_public_key_identity_true_and_wallet_signature_priority` | [bsv/auth/test_auth_master_certificate.py:115](tests/bsv/auth/test_auth_master_certificate.py#L115) | ✗ | assert cert.signature == b"WALLET_SIG" WHAT? |
 | 28 | `test_issue_get_public_key_exception_then_fallback_to_public_key_attribute` | [bsv/auth/test_auth_master_certificate.py:151](tests/bsv/auth/test_auth_master_certificate.py#L151) | ✗ | assert cert.signature == b"WALLET_SIG" WHAT? |
-| 29 | `test_issue_get_public_key_failure_raises_value_error` | [bsv/auth/test_auth_master_certificate.py:178](tests/bsv/auth/test_auth_master_certificate.py#L178) | ✓ |  |
 | 30 | `test_issue_wallet_signature_fallback_to_private_key_and_verify` | [bsv/auth/test_auth_master_certificate.py:210](tests/bsv/auth/test_auth_master_certificate.py#L210) | ✗ | is not None |
-| 31 | `test_auto_persist_last_session_is_used_when_identity_none` | [bsv/auth/test_auth_peer_autopersist.py:53](tests/bsv/auth/test_auth_peer_autopersist.py#L53) | ✓ |  |
 | 32 | `test_unknown_message_type` | [bsv/auth/test_auth_peer_basic.py:70](tests/bsv/auth/test_auth_peer_basic.py#L70) | ✗ | No Exception type or value assertion |
 | 33 | `test_invalid_version` | [bsv/auth/test_auth_peer_basic.py:77](tests/bsv/auth/test_auth_peer_basic.py#L77) | ✗ | No Exception type or value |
 | 34 | `test_initial_request_missing_nonce` | [bsv/auth/test_auth_peer_basic.py:84](tests/bsv/auth/test_auth_peer_basic.py#L84) | ✗ | No Exception type or value |
-| 35 | `test_to_peer_happy_path_with_seeded_session` | [bsv/auth/test_auth_peer_basic.py:91](tests/bsv/auth/test_auth_peer_basic.py#L91) | ✓ |  |
-| 36 | `test_canonical_requested_certificates_json_golden` | [bsv/auth/test_auth_peer_canonical_json.py:40](tests/bsv/auth/test_auth_peer_canonical_json.py#L40) | ✓ |  |
-| 37 | `test_canonical_certificate_response_json_golden` | [bsv/auth/test_auth_peer_canonical_json.py:77](tests/bsv/auth/test_auth_peer_canonical_json.py#L77) | ✓ |  |
-| 38 | `test_handle_certificate_request_triggers_response_via_wallet_fallback` | [bsv/auth/test_auth_peer_cert_request_response_flow.py:83](tests/bsv/auth/test_auth_peer_cert_request_response_flow.py#L83) | ✓ |  |
-| 39 | `test_handle_certificate_request_uses_callback_when_registered` | [bsv/auth/test_auth_peer_cert_request_response_flow.py:115](tests/bsv/auth/test_auth_peer_cert_request_response_flow.py#L115) | ✓ |  |
 | 40 | `test_handle_certificate_request_valid_signature` | [bsv/auth/test_auth_peer_certificates.py:68](tests/bsv/auth/test_auth_peer_certificates.py#L68) | ✗ | Valid signature inferred err is None? |
 | 41 | `test_handle_certificate_response_valid_signature_invokes_listener` | [bsv/auth/test_auth_peer_certificates.py:90](tests/bsv/auth/test_auth_peer_certificates.py#L90) | ✗ | Unsure |
-| 42 | `test_canonicalize_certificates_payload_golden` | [bsv/auth/test_auth_peer_certificates.py:134](tests/bsv/auth/test_auth_peer_certificates.py#L134) | ✓ |  |
-| 43 | `test_request_certificates_sends_message` | [bsv/auth/test_auth_peer_certificates.py:185](tests/bsv/auth/test_auth_peer_certificates.py#L185) | ✓ |  |
-| 44 | `test_send_certificate_response_sends_message` | [bsv/auth/test_auth_peer_certificates.py:201](tests/bsv/auth/test_auth_peer_certificates.py#L201) | ✓ |  |
-| 45 | `test_ts_go_vector_certificate_request` | [bsv/auth/test_auth_peer_cross_language_vectors.py:47](tests/bsv/auth/test_auth_peer_cross_language_vectors.py#L47) | ✓ |  |
-| 46 | `test_ts_go_vector_certificate_response` | [bsv/auth/test_auth_peer_cross_language_vectors.py:69](tests/bsv/auth/test_auth_peer_cross_language_vectors.py#L69) | ✓ |  |
 | 47 | `test_mutual_authentication_and_general_message` | [bsv/auth/test_auth_peer_handshake.py:79](tests/bsv/auth/test_auth_peer_handshake.py#L79) | ✗ | # Wait for both directions    assert got_from_bob.wait(timeout=5)    assert got_from_alice.wait(timeout=5) asserting NOT NULL but could be errors? |
-| 48 | `test_initial_response_invalid_signature_returns_error` | [bsv/auth/test_auth_peer_messages.py:55](tests/bsv/auth/test_auth_peer_messages.py#L55) | ✓ |  |
-| 49 | `test_general_message_invalid_signature_returns_error` | [bsv/auth/test_auth_peer_messages.py:81](tests/bsv/auth/test_auth_peer_messages.py#L81) | ✓ |  |
 | 50 | `test_verify_nonce_uniqueness` | [bsv/auth/test_auth_peer_unit.py:56](tests/bsv/auth/test_auth_peer_unit.py#L56) | ✗ | Is this expected behaviour? |
-| 51 | `test_listener_registration_and_removal` | [bsv/auth/test_auth_peer_unit.py:62](tests/bsv/auth/test_auth_peer_unit.py#L62) | ✓ |  |
-| 52 | `test_event_on_emit` | [bsv/auth/test_auth_peer_unit.py:74](tests/bsv/auth/test_auth_peer_unit.py#L74) | ✓ |  |
 | 53 | `test_get_authenticated_session_returns_existing` | [bsv/auth/test_auth_peer_unit.py:85](tests/bsv/auth/test_auth_peer_unit.py#L85) | ✗ | auto_persist_last_session not referenced, default? |
-| 54 | `test_validate_certificates_unrequested_type` | [bsv/auth/test_auth_peer_validation_strict.py:49](tests/bsv/auth/test_auth_peer_validation_strict.py#L49) | ✓ |  |
-| 55 | `test_validate_certificates_missing_required_field` | [bsv/auth/test_auth_peer_validation_strict.py:61](tests/bsv/auth/test_auth_peer_validation_strict.py#L61) | ✓ |  |
-| 56 | `test_validate_certificates_unrequested_certifier` | [bsv/auth/test_auth_peer_validation_strict.py:72](tests/bsv/auth/test_auth_peer_validation_strict.py#L72) | ✓ |  |
-| 57 | `test_add_and_get_session_by_nonce_and_identity_key` | [bsv/auth/test_auth_session_manager.py:12](tests/bsv/auth/test_auth_session_manager.py#L12) | ✓ |  |
-| 58 | `test_add_session_missing_nonce_raises` | [bsv/auth/test_auth_session_manager.py:29](tests/bsv/auth/test_auth_session_manager.py#L29) | ✓ |  |
-| 59 | `test_add_session_missing_identity_key_is_allowed` | [bsv/auth/test_auth_session_manager.py:41](tests/bsv/auth/test_auth_session_manager.py#L41) | ✓ |  |
-| 60 | `test_remove_session_removes_from_both_maps` | [bsv/auth/test_auth_session_manager.py:53](tests/bsv/auth/test_auth_session_manager.py#L53) | ✓ |  |
-| 61 | `test_remove_session_with_undefined_identifiers_is_noop` | [bsv/auth/test_auth_session_manager.py:71](tests/bsv/auth/test_auth_session_manager.py#L71) | ✓ |  |
-| 62 | `test_has_session` | [bsv/auth/test_auth_session_manager.py:81](tests/bsv/auth/test_auth_session_manager.py#L81) | ✓ |  |
-| 63 | `test_get_session_by_identity_key_prefers_newer_when_same_auth_state` | [bsv/auth/test_auth_session_manager.py:94](tests/bsv/auth/test_auth_session_manager.py#L94) | ✓ |  |
-| 64 | `test_get_session_by_identity_key_prefers_authenticated_even_if_older` | [bsv/auth/test_auth_session_manager.py:114](tests/bsv/auth/test_auth_session_manager.py#L114) | ✓ |  |
-| 65 | `test_get_verifiable_certificates_success` | [bsv/auth/test_auth_utils.py:67](tests/bsv/auth/test_auth_utils.py#L67) | ✓ |  |
-| 66 | `test_get_verifiable_certificates_empty` | [bsv/auth/test_auth_utils.py:92](tests/bsv/auth/test_auth_utils.py#L92) | ✓ |  |
-| 67 | `test_get_verifiable_certificates_list_error` | [bsv/auth/test_auth_utils.py:100](tests/bsv/auth/test_auth_utils.py#L100) | ✓ |  |
-| 68 | `test_get_verifiable_certificates_prove_error` | [bsv/auth/test_auth_utils.py:108](tests/bsv/auth/test_auth_utils.py#L108) | ✓ |  |
-| 69 | `test_validate_certificates_success` | [bsv/auth/test_auth_utils.py:126](tests/bsv/auth/test_auth_utils.py#L126) | ✓ |  |
-| 70 | `test_validate_certificates_mismatched_identity` | [bsv/auth/test_auth_utils.py:144](tests/bsv/auth/test_auth_utils.py#L144) | ✓ |  |
-| 71 | `test_validate_certificates_invalid_signature` | [bsv/auth/test_auth_utils.py:163](tests/bsv/auth/test_auth_utils.py#L163) | ✓ |  |
-| 72 | `test_validate_certificates_unrequested_certifier` | [bsv/auth/test_auth_utils.py:190](tests/bsv/auth/test_auth_utils.py#L190) | ✓ |  |
-| 73 | `test_validate_certificates_unrequested_type` | [bsv/auth/test_auth_utils.py:213](tests/bsv/auth/test_auth_utils.py#L213) | ✓ |  |
-| 74 | `test_validate_certificates_decrypt_error` | [bsv/auth/test_auth_utils.py:236](tests/bsv/auth/test_auth_utils.py#L236) | ✓ |  |
-| 75 | `test_validate_certificates_multiple` | [bsv/auth/test_auth_utils.py:263](tests/bsv/auth/test_auth_utils.py#L263) | ✓ |  |
-| 76 | `test_wallet_creation` | [bsv/auth/test_metanet_desktop_auth.py:671](tests/bsv/auth/test_metanet_desktop_auth.py#L671) | ✓ |  |
-| 77 | `test_public_key_generation` | [bsv/auth/test_metanet_desktop_auth.py:677](tests/bsv/auth/test_metanet_desktop_auth.py#L677) | ✓ |  |
-| 78 | `test_signature_creation` | [bsv/auth/test_metanet_desktop_auth.py:684](tests/bsv/auth/test_metanet_desktop_auth.py#L684) | ✓ |  |
-| 79 | `test_auth_client_creation` | [bsv/auth/test_metanet_desktop_auth.py:698](tests/bsv/auth/test_metanet_desktop_auth.py#L698) | ✓ |  |
-| 80 | `test_auth_status_initial` | [bsv/auth/test_metanet_desktop_auth.py:706](tests/bsv/auth/test_metanet_desktop_auth.py#L706) | ✓ |  |
-| 81 | `test_mock_transport` | [bsv/auth/test_metanet_desktop_auth.py:714](tests/bsv/auth/test_metanet_desktop_auth.py#L714) | ✓ |  |
-| 82 | `test_callback` | [bsv/auth/test_metanet_desktop_auth.py:722](tests/bsv/auth/test_metanet_desktop_auth.py#L722) | ✓ |  |
-| 83 | `test_mock_session_manager` | [bsv/auth/test_metanet_desktop_auth.py:736](tests/bsv/auth/test_metanet_desktop_auth.py#L736) | ✓ |  |
-| 84 | `test_mock_peer_session` | [bsv/auth/test_metanet_desktop_auth.py:749](tests/bsv/auth/test_metanet_desktop_auth.py#L749) | ✓ |  |
-| 85 | `test_full_auth_flow_with_mocks` | [bsv/auth/test_metanet_desktop_auth.py:758](tests/bsv/auth/test_metanet_desktop_auth.py#L758) | ✓ |  |
-| 86 | `test_authenticated_request_with_mocks` | [bsv/auth/test_metanet_desktop_auth.py:766](tests/bsv/auth/test_metanet_desktop_auth.py#L766) | ✓ |  |
-| 87 | `test_error_handling_network_error` | [bsv/auth/test_metanet_desktop_auth.py:782](tests/bsv/auth/test_metanet_desktop_auth.py#L782) | ✓ |  |
-| 88 | `test_error_handling_auth_failure` | [bsv/auth/test_metanet_desktop_auth.py:791](tests/bsv/auth/test_metanet_desktop_auth.py#L791) | ✓ |  |
-| 89 | `test_auth_flow_without_mocks` | [bsv/auth/test_metanet_desktop_auth.py:800](tests/bsv/auth/test_metanet_desktop_auth.py#L800) | ✓ |  |
-| 90 | `test_real_libraries_with_mock_server` | [bsv/auth/test_metanet_desktop_auth.py:810](tests/bsv/auth/test_metanet_desktop_auth.py#L810) | ✓ |  |
-| 91 | `test_full_real_library_integration` | [bsv/auth/test_metanet_desktop_auth.py:896](tests/bsv/auth/test_metanet_desktop_auth.py#L896) | ✓ |  |
-| 92 | `test_mock_server_authentication_flow` | [bsv/auth/test_metanet_desktop_auth.py:948](tests/bsv/auth/test_metanet_desktop_auth.py#L948) | ✓ |  |
-| 93 | `test_mock_server_rpc_endpoint` | [bsv/auth/test_metanet_desktop_auth.py:1000](tests/bsv/auth/test_metanet_desktop_auth.py#L1000) | ✓ |  |
-| 94 | `test_server_error_handling` | [bsv/auth/test_metanet_desktop_auth.py:1062](tests/bsv/auth/test_metanet_desktop_auth.py#L1062) | ✓ |  |
 | 95 | `test_single_process_server_management` | [bsv/auth/test_metanet_desktop_auth.py:1318](tests/bsv/auth/test_metanet_desktop_auth.py#L1318) | ✗ | Printing results without asserting |
-| 96 | `test_session_expiry_removes_old_sessions` | [bsv/auth/test_session_expiry.py:7](tests/bsv/auth/test_session_expiry.py#L7) | ✓ |  |
-| 97 | `test_send_without_handler_returns_error` | [bsv/auth/transports/test_auth_transport_http.py:19](tests/bsv/auth/transports/test_auth_transport_http.py#L19) | ✓ |  |
-| 98 | `test_send_general_performs_http_and_notifies_handler` | [bsv/auth/transports/test_auth_transport_http.py:28](tests/bsv/auth/transports/test_auth_transport_http.py#L28) | ✓ |  |
 | 99 | `test_beef_unknown_version_errors` | [bsv/beef/test_beef_hardening.py:4](tests/bsv/beef/test_beef_hardening.py#L4) | ✗ | Should assert Exception message |
-| 100 | `test_atomic_subject_missing_returns_none_last_tx` | [bsv/beef/test_beef_hardening.py:13](tests/bsv/beef/test_beef_hardening.py#L13) | ✓ |  |
-| 101 | `test_beef_v2_txidonly_then_raw_deduplicate` | [bsv/beef/test_beef_hardening.py:28](tests/bsv/beef/test_beef_hardening.py#L28) | ✓ |  |
 | 102 | `test_beef_v2_truncated_bumps_and_txs` | [bsv/beef/test_beef_hardening.py:41](tests/bsv/beef/test_beef_hardening.py#L41) | ✗ | Missing Exception type or message |
-| 103 | `test_beef_v2_mixed_txidonly_and_rawtx_linking` | [bsv/beef/test_beef_hardening.py:54](tests/bsv/beef/test_beef_hardening.py#L54) | ✓ |  |
-| 104 | `test_beef_bump_normalization_merging` | [bsv/beef/test_beef_hardening.py:84](tests/bsv/beef/test_beef_hardening.py#L84) | ✓ |  |
-| 105 | `test_atomicbeef_nested_parsing` | [bsv/beef/test_beef_hardening.py:110](tests/bsv/beef/test_beef_hardening.py#L110) | ✓ |  |
-| 106 | `test_atomicbeef_deeply_nested` | [bsv/beef/test_beef_hardening.py:126](tests/bsv/beef/test_beef_hardening.py#L126) | ✓ |  |
 | 107 | `test_beef_v2_bump_index_out_of_range` | [bsv/beef/test_beef_hardening.py:144](tests/bsv/beef/test_beef_hardening.py#L144) | ✗ | Should raise ValueError + Exception message |
-| 108 | `test_beef_v2_txidonly_rawtx_duplicate_order` | [bsv/beef/test_beef_hardening.py:154](tests/bsv/beef/test_beef_hardening.py#L154) | ✓ |  |
-| 109 | `test_beef_v2_extreme_tx_and_bump_count` | [bsv/beef/test_beef_hardening.py:167](tests/bsv/beef/test_beef_hardening.py#L167) | ✓ |  |
-| 110 | `test_beef_v2_txidonly_only` | [bsv/beef/test_beef_hardening.py:181](tests/bsv/beef/test_beef_hardening.py#L181) | ✓ |  |
-| 111 | `test_atomicbeef_subject_not_in_inner` | [bsv/beef/test_beef_hardening.py:191](tests/bsv/beef/test_beef_hardening.py#L191) | ✓ |  |
-| 112 | `test_parse_beef_ex_from_transaction_beef_v1` | [bsv/beef/test_beef_parity.py:1](tests/bsv/beef/test_beef_parity.py#L1) | ✓ |  |
-| 113 | `test_find_transaction_for_signing_links_inputs` | [bsv/beef/test_beef_parity.py:14](tests/bsv/beef/test_beef_parity.py#L14) | ✓ |  |
 | 114 | `test_kvstore_set_get_remove_e2e` | [bsv/beef/test_kvstore_beef_e2e.py:87](tests/bsv/beef/test_kvstore_beef_e2e.py#L87) | ✗ | assert list count decrement |
-| 115 | `test_kvstore_remove_multiple_outputs_looping` | [bsv/beef/test_kvstore_beef_e2e.py:123](tests/bsv/beef/test_kvstore_beef_e2e.py#L123) | ✓ |  |
-| 116 | `test_kvstore_remove_paging_and_relinquish_path` | [bsv/beef/test_kvstore_beef_e2e.py:138](tests/bsv/beef/test_kvstore_beef_e2e.py#L138) | ✓ |  |
 | 117 | `test_beef_v2_raw_and_bump_chain_linking_best_effort` | [bsv/beef/test_kvstore_beef_e2e.py:149](tests/bsv/beef/test_kvstore_beef_e2e.py#L149) | ✗ | Better Exception assertion |
 | 118 | `test_sighash_rules_end_byte_matrix` | [bsv/beef/test_kvstore_beef_e2e.py:161](tests/bsv/beef/test_kvstore_beef_e2e.py#L161) | ✗ | Incomplete or misunderstood, missing sign_outputs_mode=1 ? |
-| 119 | `test_bump_normalization_reindexes_transactions` | [bsv/beef/test_kvstore_beef_e2e.py:186](tests/bsv/beef/test_kvstore_beef_e2e.py#L186) | ✓ |  |
-| 120 | `test_e2e_preimage_consistency_acp_single_none` | [bsv/beef/test_kvstore_beef_e2e.py:201](tests/bsv/beef/test_kvstore_beef_e2e.py#L201) | ✓ |  |
-| 121 | `test_unlocker_input_output_scope_constraints_for_sighash_modes` | [bsv/beef/test_kvstore_beef_e2e.py:241](tests/bsv/beef/test_kvstore_beef_e2e.py#L241) | ✓ |  |
-| 122 | `test_beef_atomic_and_v2_basic_parsing` | [bsv/beef/test_kvstore_beef_e2e.py:321](tests/bsv/beef/test_kvstore_beef_e2e.py#L321) | ✓ |  |
-| 123 | `test_merklepath_verify_with_mock_chaintracker` | [bsv/beef/test_kvstore_beef_e2e.py:336](tests/bsv/beef/test_kvstore_beef_e2e.py#L336) | ✓ |  |
-| 124 | `test_woc_chaintracker_online_root_validation` | [bsv/beef/test_kvstore_beef_e2e.py:356](tests/bsv/beef/test_kvstore_beef_e2e.py#L356) | ✓ |  |
-| 125 | `test_online_woc_sample_tx_verify_optional` | [bsv/beef/test_kvstore_beef_e2e.py:385](tests/bsv/beef/test_kvstore_beef_e2e.py#L385) | ✓ |  |
-| 126 | `test_transaction_verify_with_merkle_proof_and_chaintracker` | [bsv/beef/test_kvstore_beef_e2e.py:425](tests/bsv/beef/test_kvstore_beef_e2e.py#L425) | ✓ |  |
-| 127 | `test_kvstore_set_transaction_verify_with_merkle_proof` | [bsv/beef/test_kvstore_beef_e2e.py:448](tests/bsv/beef/test_kvstore_beef_e2e.py#L448) | ✓ |  |
-| 128 | `test_transaction_verify_with_real_vectors_or_online` | [bsv/beef/test_kvstore_beef_e2e.py:488](tests/bsv/beef/test_kvstore_beef_e2e.py#L488) | ✓ |  |
-| 129 | `test_kv_vectors_set_verify_full` | [bsv/beef/test_kvstore_beef_e2e.py:529](tests/bsv/beef/test_kvstore_beef_e2e.py#L529) | ✓ |  |
-| 130 | `test_kv_vectors_remove_verify_full` | [bsv/beef/test_kvstore_beef_e2e.py:557](tests/bsv/beef/test_kvstore_beef_e2e.py#L557) | ✓ |  |
-| 131 | `test_kv_vectors_dir_verify_full` | [bsv/beef/test_kvstore_beef_e2e.py:585](tests/bsv/beef/test_kvstore_beef_e2e.py#L585) | ✓ |  |
-| 132 | `test_vectors_dir_verify_full_generic` | [bsv/beef/test_kvstore_beef_e2e.py:616](tests/bsv/beef/test_kvstore_beef_e2e.py#L616) | ✓ |  |
-| 133 | `test_pushdrop_unlocker_sighash_flags` | [bsv/beef/test_kvstore_beef_e2e.py:652](tests/bsv/beef/test_kvstore_beef_e2e.py#L652) | ✓ | [A |
 | 134 | `test_kvstore_get_uses_beef_when_available` | [bsv/beef/test_kvstore_beef_e2e.py:679](tests/bsv/beef/test_kvstore_beef_e2e.py#L679) | ✗ | No mention of beef |
 | 135 | `test_kvstore_remove_stringifies_spends_and_uses_input_beef` | [bsv/beef/test_kvstore_beef_e2e.py:693](tests/bsv/beef/test_kvstore_beef_e2e.py#L693) | ✗ | Unsure! |
 | 136 | `test_unlocking_script_length_estimate_vs_actual_set_and_remove` | [bsv/beef/test_kvstore_beef_e2e.py:752](tests/bsv/beef/test_kvstore_beef_e2e.py#L752) | ✗ | ? |
-| 137 | `test_der_low_s_distribution_bounds_with_estimate` | [bsv/beef/test_kvstore_beef_e2e.py:802](tests/bsv/beef/test_kvstore_beef_e2e.py#L802) | ✓ |  |
-| 138 | `test_unlocker_signature_length_distribution_matrix_real_wallet` | [bsv/beef/test_kvstore_beef_e2e.py:828](tests/bsv/beef/test_kvstore_beef_e2e.py#L828) | ✓ |  |
-| 139 | `test_signature_hash_integrity_with_preimage` | [bsv/beef/test_kvstore_beef_e2e.py:867](tests/bsv/beef/test_kvstore_beef_e2e.py#L867) | ✓ |  |
 | 140 | `test_beef_v2_txidonly_and_bad_format_varint_errors` | [bsv/beef/test_kvstore_beef_e2e.py:890](tests/bsv/beef/test_kvstore_beef_e2e.py#L890) | ✗ | Exception errors could be better |
 | 141 | `test_beef_mixed_versions_and_atomic_selection_logic` | [bsv/beef/test_kvstore_beef_e2e.py:919](tests/bsv/beef/test_kvstore_beef_e2e.py#L919) | ✗ | assert exception? |
-| 142 | `test_parse_beef_ex_selection_priority` | [bsv/beef/test_kvstore_beef_e2e.py:934](tests/bsv/beef/test_kvstore_beef_e2e.py#L934) | ✓ |  |
-| 143 | `test_unlocker_histogram_with_transaction_preimage_optional` | [bsv/beef/test_kvstore_beef_e2e.py:964](tests/bsv/beef/test_kvstore_beef_e2e.py#L964) | ✓ |  |
 | 144 | `test_beef_v2_mixed_txidonly_and_rawtx` | [bsv/beef/test_kvstore_beef_e2e.py:1035](tests/bsv/beef/test_kvstore_beef_e2e.py#L1035) | ✗ | Unsure |
-| 145 | `test_beef_v2_invalid_bump_structure` | [bsv/beef/test_kvstore_beef_e2e.py:1045](tests/bsv/beef/test_kvstore_beef_e2e.py#L1045) | ✓ |  |
-| 146 | `test_beef_atomic_with_invalid_inner` | [bsv/beef/test_kvstore_beef_e2e.py:1054](tests/bsv/beef/test_kvstore_beef_e2e.py#L1054) | ✓ |  |
-| 147 | `test_beef_v1_invalid_transaction` | [bsv/beef/test_kvstore_beef_e2e.py:1063](tests/bsv/beef/test_kvstore_beef_e2e.py#L1063) | ✓ |  |
 | 148 | `test_beef_v2_duplicate_txidonly_and_rawtx` | [bsv/beef/test_kvstore_beef_e2e.py:1072](tests/bsv/beef/test_kvstore_beef_e2e.py#L1072) | ✗ | Where is duplicate & raw? |
-| 149 | `test_beef_v2_bad_varint` | [bsv/beef/test_kvstore_beef_e2e.py:1083](tests/bsv/beef/test_kvstore_beef_e2e.py#L1083) | ✓ |  |
-| 150 | `test_kvstore_set_get_remove_e2e_with_action_log` | [bsv/beef/test_kvstore_beef_e2e.py:1093](tests/bsv/beef/test_kvstore_beef_e2e.py#L1093) | ✓ |  |
-| 151 | `test_kvstore_cross_sdk_encryption_compat` | [bsv/beef/test_kvstore_beef_e2e.py:1155](tests/bsv/beef/test_kvstore_beef_e2e.py#L1155) | ✓ |  |
 | 152 | `test_kvstore_mixed_encrypted_and_plaintext_keys` | [bsv/beef/test_kvstore_beef_e2e.py:1195](tests/bsv/beef/test_kvstore_beef_e2e.py#L1195) | ✗ | Add list count assertion? |
-| 153 | `test_kvstore_beef_edge_case_vectors` | [bsv/beef/test_kvstore_beef_e2e.py:1232](tests/bsv/beef/test_kvstore_beef_e2e.py#L1232) | ✓ |  |
-| 154 | `test_broadcast_success` | [bsv/broadcasters/test_broadcaster_arc.py:20](tests/bsv/broadcasters/test_broadcaster_arc.py#L20) | ✓ |  |
-| 155 | `test_broadcast_failure` | [bsv/broadcasters/test_broadcaster_arc.py:46](tests/bsv/broadcasters/test_broadcaster_arc.py#L46) | ✓ |  |
-| 156 | `test_broadcast_exception` | [bsv/broadcasters/test_broadcaster_arc.py:65](tests/bsv/broadcasters/test_broadcaster_arc.py#L65) | ✓ | [A |
-| 157 | `test_sync_broadcast_success` | [bsv/broadcasters/test_broadcaster_arc.py:77](tests/bsv/broadcasters/test_broadcaster_arc.py#L77) | ✓ |  |
-| 158 | `test_sync_broadcast_failure` | [bsv/broadcasters/test_broadcaster_arc.py:103](tests/bsv/broadcasters/test_broadcaster_arc.py#L103) | ✓ |  |
-| 159 | `test_sync_broadcast_timeout_error` | [bsv/broadcasters/test_broadcaster_arc.py:122](tests/bsv/broadcasters/test_broadcaster_arc.py#L122) | ✓ |  |
-| 160 | `test_sync_broadcast_connection_error` | [bsv/broadcasters/test_broadcaster_arc.py:141](tests/bsv/broadcasters/test_broadcaster_arc.py#L141) | ✓ |  |
-| 161 | `test_sync_broadcast_exception` | [bsv/broadcasters/test_broadcaster_arc.py:160](tests/bsv/broadcasters/test_broadcaster_arc.py#L160) | ✓ |  |
-| 162 | `test_check_transaction_status_success` | [bsv/broadcasters/test_broadcaster_arc.py:172](tests/bsv/broadcasters/test_broadcaster_arc.py#L172) | ✓ |  |
-| 163 | `test_categorize_transaction_status_mined` | [bsv/broadcasters/test_broadcaster_arc.py:196](tests/bsv/broadcasters/test_broadcaster_arc.py#L196) | ✓ |  |
 | 164 | `test_categorize_transaction_status_progressing` | [bsv/broadcasters/test_broadcaster_arc.py:206](tests/bsv/broadcasters/test_broadcaster_arc.py#L206) | ✗ | p[3~ |
-| 165 | `test_categorize_transaction_status_warning` | [bsv/broadcasters/test_broadcaster_arc.py:215](tests/bsv/broadcasters/test_broadcaster_arc.py#L215) | ✓ |  |
-| 166 | `test_categorize_transaction_status_0confirmation` | [bsv/broadcasters/test_broadcaster_arc.py:225](tests/bsv/broadcasters/test_broadcaster_arc.py#L225) | ✓ |  |
-| 167 | `test_all_inputs_have_source_transaction` | [bsv/broadcasters/test_broadcaster_arc_ef_or_rawhex.py:57](tests/bsv/broadcasters/test_broadcaster_arc_ef_or_rawhex.py#L57) | ✓ |  |
-| 168 | `test_some_inputs_missing_source_transaction` | [bsv/broadcasters/test_broadcaster_arc_ef_or_rawhex.py:70](tests/bsv/broadcasters/test_broadcaster_arc_ef_or_rawhex.py#L70) | ✓ |  |
-| 169 | `test_no_inputs_have_source_transaction` | [bsv/broadcasters/test_broadcaster_arc_ef_or_rawhex.py:84](tests/bsv/broadcasters/test_broadcaster_arc_ef_or_rawhex.py#L84) | ✓ |  |
-| 170 | `test_network_enum` | [bsv/broadcasters/test_broadcaster_whatsonchain.py:8](tests/bsv/broadcasters/test_broadcaster_whatsonchain.py#L8) | ✓ |  |
-| 171 | `test_network_string` | [bsv/broadcasters/test_broadcaster_whatsonchain.py:16](tests/bsv/broadcasters/test_broadcaster_whatsonchain.py#L16) | ✓ |  |
-| 172 | `test_invalid_network` | [bsv/broadcasters/test_broadcaster_whatsonchain.py:30](tests/bsv/broadcasters/test_broadcaster_whatsonchain.py#L30) | ✓ |  |
-| 173 | `test_is_valid_root_for_height_success` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:16](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L16) | ✓ |  |
-| 174 | `test_is_valid_root_for_height_mismatch` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:39](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L39) | ✓ |  |
-| 175 | `test_is_valid_root_for_height_not_found` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:55](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L55) | ✓ |  |
-| 176 | `test_is_valid_root_for_height_error` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:71](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L71) | ✓ |  |
-| 177 | `test_query_tx_success` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:86](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L86) | ✓ |  |
-| 178 | `test_query_tx_with_api_key` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:94](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L94) | ✓ |  |
-| 179 | `test_query_tx_network_error` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:108](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L108) | ✓ |  |
-| 180 | `test_get_headers_with_api_key` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:130](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L130) | ✓ |  |
-| 181 | `test_get_headers_without_api_key` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:140](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L140) | ✓ |  |
-| 182 | `test_network_validation` | [bsv/chaintrackers/test_chaintracker_whatsonchain.py:147](tests/bsv/chaintrackers/test_chaintracker_whatsonchain.py#L147) | ✓ |  |
-| 183 | `test_xkey` | [bsv/hd/test_hd.py:22](tests/bsv/hd/test_hd.py#L22) | ✓ |  |
 | 184 | `test_ckd` | [bsv/hd/test_hd.py:60](tests/bsv/hd/test_hd.py#L60) | ✗ | [3~p |
-| 185 | `test_wordlist` | [bsv/hd/test_hd.py:75](tests/bsv/hd/test_hd.py#L75) | ✓ |  |
-| 186 | `test_mnemonic` | [bsv/hd/test_hd.py:91](tests/bsv/hd/test_hd.py#L91) | ✓ |  |
-| 187 | `test_derive` | [bsv/hd/test_hd.py:141](tests/bsv/hd/test_hd.py#L141) | ✓ |  |
-| 188 | `test_key_derivation_consistency` | [bsv/hd/test_hd_bip.py:12](tests/bsv/hd/test_hd_bip.py#L12) | ✓ |  |
-| 189 | `test_invalid_mnemonic` | [bsv/hd/test_hd_bip.py:47](tests/bsv/hd/test_hd_bip.py#L47) | ✓ |  |
-| 190 | `test_invalid_derivation_path` | [bsv/hd/test_hd_bip.py:52](tests/bsv/hd/test_hd_bip.py#L52) | ✓ |  |
-| 191 | `test_split_private_key_into_shares_correctly` | [bsv/hd/test_key_shares.py:18](tests/bsv/hd/test_key_shares.py#L18) | ✓ |  |
-| 192 | `test_recombine_shares_into_private_key_correctly` | [bsv/hd/test_key_shares.py:38](tests/bsv/hd/test_key_shares.py#L38) | ✓ |  |
-| 193 | `test_invalid_threshold_or_total_shares_type` | [bsv/hd/test_key_shares.py:52](tests/bsv/hd/test_key_shares.py#L52) | ✓ |  |
-| 194 | `test_invalid_threshold_value` | [bsv/hd/test_key_shares.py:66](tests/bsv/hd/test_key_shares.py#L66) | ✓ |  |
-| 195 | `test_invalid_total_shares_value` | [bsv/hd/test_key_shares.py:75](tests/bsv/hd/test_key_shares.py#L75) | ✓ |  |
-| 196 | `test_threshold_greater_than_total_shares` | [bsv/hd/test_key_shares.py:84](tests/bsv/hd/test_key_shares.py#L84) | ✓ |  |
-| 197 | `test_duplicate_share_in_recovery_with_sample_data` | [bsv/hd/test_key_shares.py:93](tests/bsv/hd/test_key_shares.py#L93) | ✓ |  |
-| 198 | `test_parse_and_verify_sample_shares` | [bsv/hd/test_key_shares.py:110](tests/bsv/hd/test_key_shares.py#L110) | ✓ |  |
 | 199 | `test_recombination_with_sample_shares` | [bsv/hd/test_key_shares.py:136](tests/bsv/hd/test_key_shares.py#L136) | ✗ | Could be improved to match actual WIF |
-| 200 | `test_create_backup_and_recover` | [bsv/hd/test_key_shares.py:161](tests/bsv/hd/test_key_shares.py#L161) | ✓ |  |
-| 201 | `test_insufficient_shares_for_recovery` | [bsv/hd/test_key_shares.py:172](tests/bsv/hd/test_key_shares.py#L172) | ✓ |  |
-| 202 | `test_share_format_validation` | [bsv/hd/test_key_shares.py:186](tests/bsv/hd/test_key_shares.py#L186) | ✓ |  |
-| 203 | `test_set_and_get` | [bsv/keystore/test_keystore_local_kv_store.py:114](tests/bsv/keystore/test_keystore_local_kv_store.py#L114) | ✓ |  |
-| 204 | `test_get_default_value` | [bsv/keystore/test_keystore_local_kv_store.py:121](tests/bsv/keystore/test_keystore_local_kv_store.py#L121) | ✓ |  |
-| 205 | `test_remove_key` | [bsv/keystore/test_keystore_local_kv_store.py:126](tests/bsv/keystore/test_keystore_local_kv_store.py#L126) | ✓ |  |
-| 206 | `test_invalid_key_errors` | [bsv/keystore/test_keystore_local_kv_store.py:134](tests/bsv/keystore/test_keystore_local_kv_store.py#L134) | ✓ |  |
-| 207 | `test_invalid_value_errors` | [bsv/keystore/test_keystore_local_kv_store.py:144](tests/bsv/keystore/test_keystore_local_kv_store.py#L144) | ✓ |  |
-| 208 | `test_list_outputs_retention_filter_excludes_expired` | [bsv/keystore/test_keystore_retention.py:11](tests/bsv/keystore/test_keystore_retention.py#L11) | ✓ |  |
-| 209 | `test_list_outputs_retention_filter_keeps_unbounded` | [bsv/keystore/test_keystore_retention.py:37](tests/bsv/keystore/test_keystore_retention.py#L37) | ✓ |  |
-| 210 | `test_aes_gcm_vectors` | [bsv/primitives/test_aes_gcm.py:8](tests/bsv/primitives/test_aes_gcm.py#L8) | ✓ |  |
-| 211 | `test_ghash` | [bsv/primitives/test_aes_gcm.py:31](tests/bsv/primitives/test_aes_gcm.py#L31) | ✓ |  |
-| 212 | `test_aescbc_encrypt_decrypt` | [bsv/primitives/test_aescbc.py:6](tests/bsv/primitives/test_aescbc.py#L6) | ✓ |  |
-| 213 | `test_base58` | [bsv/primitives/test_base58.py:11](tests/bsv/primitives/test_base58.py#L11) | ✓ |  |
-| 214 | `test_base58check_encode` | [bsv/primitives/test_base58.py:21](tests/bsv/primitives/test_base58.py#L21) | ✓ |  |
-| 215 | `test_base58check_decode` | [bsv/primitives/test_base58.py:26](tests/bsv/primitives/test_base58.py#L26) | ✓ |  |
-| 216 | `test_to_base58check` | [bsv/primitives/test_base58.py:35](tests/bsv/primitives/test_base58.py#L35) | ✓ |  |
-| 217 | `test_aes_gcm` | [bsv/primitives/test_encrypted_message.py:8](tests/bsv/primitives/test_encrypted_message.py#L8) | ✓ |  |
-| 218 | `test_brc78` | [bsv/primitives/test_encrypted_message.py:16](tests/bsv/primitives/test_encrypted_message.py#L16) | ✓ |  |
-| 219 | `test_sha256` | [bsv/primitives/test_hash.py:9](tests/bsv/primitives/test_hash.py#L9) | ✓ |  |
-| 220 | `test_double_sha256` | [bsv/primitives/test_hash.py:13](tests/bsv/primitives/test_hash.py#L13) | ✓ |  |
-| 221 | `test_ripemd160_sha256` | [bsv/primitives/test_hash.py:17](tests/bsv/primitives/test_hash.py#L17) | ✓ |  |
-| 222 | `test_hmac_sha256` | [bsv/primitives/test_hash.py:27](tests/bsv/primitives/test_hash.py#L27) | ✓ |  |
-| 223 | `test_hmac_sha512` | [bsv/primitives/test_hash.py:31](tests/bsv/primitives/test_hash.py#L31) | ✓ |  |
-| 224 | `test_public_key` | [bsv/primitives/test_keys.py:29](tests/bsv/primitives/test_keys.py#L29) | ✓ |  |
-| 225 | `test_private_key` | [bsv/primitives/test_keys.py:57](tests/bsv/primitives/test_keys.py#L57) | ✓ |  |
-| 226 | `test_verify` | [bsv/primitives/test_keys.py:101](tests/bsv/primitives/test_keys.py#L101) | ✓ |  |
-| 227 | `test_sign` | [bsv/primitives/test_keys.py:116](tests/bsv/primitives/test_keys.py#L116) | ✓ |  |
-| 228 | `test_ecdh` | [bsv/primitives/test_keys.py:136](tests/bsv/primitives/test_keys.py#L136) | ✓ |  |
-| 229 | `test_encryption` | [bsv/primitives/test_keys.py:143](tests/bsv/primitives/test_keys.py#L143) | ✓ |  |
-| 230 | `test_brc42` | [bsv/primitives/test_keys.py:151](tests/bsv/primitives/test_keys.py#L151) | ✓ |  |
-| 231 | `test_ecdh_shared_secret_symmetry_and_length` | [bsv/primitives/test_keys_ecdh.py:4](tests/bsv/primitives/test_keys_ecdh.py#L4) | ✓ | `p |
-| 232 | `test_private_key_creation_from_int` | [bsv/primitives/test_keys_private.py:13](tests/bsv/primitives/test_keys_private.py#L13) | ✓ |  |
-| 233 | `test_private_key_creation_from_hex` | [bsv/primitives/test_keys_private.py:21](tests/bsv/primitives/test_keys_private.py#L21) | ✓ |  |
-| 234 | `test_private_key_creation_from_bytes` | [bsv/primitives/test_keys_private.py:29](tests/bsv/primitives/test_keys_private.py#L29) | ✓ |  |
-| 235 | `test_private_key_validation` | [bsv/primitives/test_keys_private.py:36](tests/bsv/primitives/test_keys_private.py#L36) | ✓ |  |
-| 236 | `test_private_key_invalid_validation` | [bsv/primitives/test_keys_private.py:51](tests/bsv/primitives/test_keys_private.py#L51) | ✓ |  |
-| 237 | `test_public_key_derivation` | [bsv/primitives/test_keys_private.py:61](tests/bsv/primitives/test_keys_private.py#L61) | ✓ |  |
-| 238 | `test_child_key_derivation` | [bsv/primitives/test_keys_private.py:71](tests/bsv/primitives/test_keys_private.py#L71) | ✓ |  |
-| 239 | `test_shared_secret_derivation` | [bsv/primitives/test_keys_private.py:88](tests/bsv/primitives/test_keys_private.py#L88) | ✓ |  |
-| 240 | `test_message_signing` | [bsv/primitives/test_keys_private.py:104](tests/bsv/primitives/test_keys_private.py#L104) | ✓ |  |
-| 241 | `test_wif_encoding_decoding` | [bsv/primitives/test_keys_private.py:123](tests/bsv/primitives/test_keys_private.py#L123) | ✓ |  |
-| 242 | `test_hex_encoding` | [bsv/primitives/test_keys_private.py:136](tests/bsv/primitives/test_keys_private.py#L136) | ✓ |  |
-| 243 | `test_deterministic_key_derivation` | [bsv/primitives/test_keys_private.py:148](tests/bsv/primitives/test_keys_private.py#L148) | ✓ |  |
-| 244 | `test_public_key_from_private_key` | [bsv/primitives/test_keys_public.py:19](tests/bsv/primitives/test_keys_public.py#L19) | ✓ |  |
-| 245 | `test_public_key_from_hex_string` | [bsv/primitives/test_keys_public.py:27](tests/bsv/primitives/test_keys_public.py#L27) | ✓ |  |
-| 246 | `test_public_key_from_bytes` | [bsv/primitives/test_keys_public.py:35](tests/bsv/primitives/test_keys_public.py#L35) | ✓ |  |
-| 247 | `test_public_key_point_conversion` | [bsv/primitives/test_keys_public.py:43](tests/bsv/primitives/test_keys_public.py#L43) | ✓ |  |
-| 248 | `test_public_key_serialization` | [bsv/primitives/test_keys_public.py:52](tests/bsv/primitives/test_keys_public.py#L52) | ✓ |  |
-| 249 | `test_public_key_hex_encoding` | [bsv/primitives/test_keys_public.py:66](tests/bsv/primitives/test_keys_public.py#L66) | ✓ |  |
-| 250 | `test_shared_secret_derivation` | [bsv/primitives/test_keys_public.py:75](tests/bsv/primitives/test_keys_public.py#L75) | ✓ |  |
-| 251 | `test_child_key_derivation` | [bsv/primitives/test_keys_public.py:89](tests/bsv/primitives/test_keys_public.py#L89) | ✓ |  |
-| 252 | `test_message_verification` | [bsv/primitives/test_keys_public.py:106](tests/bsv/primitives/test_keys_public.py#L106) | ✓ |  |
-| 253 | `test_address_generation` | [bsv/primitives/test_keys_public.py:131](tests/bsv/primitives/test_keys_public.py#L131) | ✓ |  |
-| 254 | `test_invalid_public_key_creation` | [bsv/primitives/test_keys_public.py:143](tests/bsv/primitives/test_keys_public.py#L143) | ✓ |  |
-| 255 | `test_public_key_equality` | [bsv/primitives/test_keys_public.py:154](tests/bsv/primitives/test_keys_public.py#L154) | ✓ |  |
-| 256 | `test_compressed_uncompressed_consistency` | [bsv/primitives/test_keys_public.py:167](tests/bsv/primitives/test_keys_public.py#L167) | ✓ |  |
-| 257 | `test_ecdh_key_exchange` | [bsv/primitives/test_keys_public.py:185](tests/bsv/primitives/test_keys_public.py#L185) | ✓ |  |
-| 258 | `test_signature_roundtrip` | [bsv/primitives/test_keys_public.py:201](tests/bsv/primitives/test_keys_public.py#L201) | ✓ |  |
-| 259 | `test_key_encoding_formats` | [bsv/primitives/test_keys_public.py:223](tests/bsv/primitives/test_keys_public.py#L223) | ✓ |  |
-| 260 | `test_signs_message_for_recipient` | [bsv/primitives/test_signed_message.py:7](tests/bsv/primitives/test_signed_message.py#L7) | ✓ |  |
-| 261 | `test_signs_message_for_anyone` | [bsv/primitives/test_signed_message.py:16](tests/bsv/primitives/test_signed_message.py#L16) | ✓ |  |
-| 262 | `test_fails_to_verify_message_with_wrong_version` | [bsv/primitives/test_signed_message.py:23](tests/bsv/primitives/test_signed_message.py#L23) | ✓ |  |
-| 263 | `test_fails_to_verify_message_with_no_verifier_when_required` | [bsv/primitives/test_signed_message.py:33](tests/bsv/primitives/test_signed_message.py#L33) | ✓ | pp |
-| 264 | `test_fails_to_verify_message_with_wrong_verifier` | [bsv/primitives/test_signed_message.py:42](tests/bsv/primitives/test_signed_message.py#L42) | ✓ |  |
-| 265 | `test_der_roundtrip_and_low_s` | [bsv/primitives/test_utils_ecdsa.py:16](tests/bsv/primitives/test_utils_ecdsa.py#L16) | ✓ |  |
-| 266 | `test_recoverable_roundtrip_and_stringify` | [bsv/primitives/test_utils_ecdsa.py:24](tests/bsv/primitives/test_utils_ecdsa.py#L24) | ✓ |  |
 | 267 | `test_invalid_der_raises` | [bsv/primitives/test_utils_ecdsa.py:37](tests/bsv/primitives/test_utils_ecdsa.py#L37) | ✗ | Match error str |
-| 268 | `test_from_base58_conversion` | [bsv/primitives/test_utils_encoding.py:22](tests/bsv/primitives/test_utils_encoding.py#L22) | ✓ |  |
-| 269 | `test_from_base58_with_leading_ones` | [bsv/primitives/test_utils_encoding.py:30](tests/bsv/primitives/test_utils_encoding.py#L30) | ✓ |  |
-| 270 | `test_from_base58_invalid_input` | [bsv/primitives/test_utils_encoding.py:37](tests/bsv/primitives/test_utils_encoding.py#L37) | ✓ |  |
-| 271 | `test_to_base58_conversion` | [bsv/primitives/test_utils_encoding.py:47](tests/bsv/primitives/test_utils_encoding.py#L47) | ✓ |  |
-| 272 | `test_to_base58_with_leading_zeros` | [bsv/primitives/test_utils_encoding.py:56](tests/bsv/primitives/test_utils_encoding.py#L56) | ✓ |  |
-| 273 | `test_base58_roundtrip` | [bsv/primitives/test_utils_encoding.py:62](tests/bsv/primitives/test_utils_encoding.py#L62) | ✓ |  |
-| 274 | `test_base58check_roundtrip_default_prefix` | [bsv/primitives/test_utils_encoding.py:80](tests/bsv/primitives/test_utils_encoding.py#L80) | ✓ |  |
-| 275 | `test_base58check_custom_prefix` | [bsv/primitives/test_utils_encoding.py:94](tests/bsv/primitives/test_utils_encoding.py#L94) | ✓ |  |
-| 276 | `test_base58check_invalid_checksum` | [bsv/primitives/test_utils_encoding.py:109](tests/bsv/primitives/test_utils_encoding.py#L109) | ✓ |  |
-| 277 | `test_base58check_hex_output` | [bsv/primitives/test_utils_encoding.py:121](tests/bsv/primitives/test_utils_encoding.py#L121) | ✓ |  |
-| 278 | `test_to_hex_conversion` | [bsv/primitives/test_utils_encoding.py:139](tests/bsv/primitives/test_utils_encoding.py#L139) | ✓ |  |
-| 279 | `test_from_hex_conversion` | [bsv/primitives/test_utils_encoding.py:153](tests/bsv/primitives/test_utils_encoding.py#L153) | ✓ |  |
-| 280 | `test_hex_roundtrip` | [bsv/primitives/test_utils_encoding.py:167](tests/bsv/primitives/test_utils_encoding.py#L167) | ✓ |  |
-| 281 | `test_hex_case_insensitive` | [bsv/primitives/test_utils_encoding.py:181](tests/bsv/primitives/test_utils_encoding.py#L181) | ✓ |  |
-| 282 | `test_bytes_to_list_conversion` | [bsv/primitives/test_utils_encoding.py:199](tests/bsv/primitives/test_utils_encoding.py#L199) | ✓ |  |
-| 283 | `test_empty_data_handling` | [bsv/primitives/test_utils_encoding.py:208](tests/bsv/primitives/test_utils_encoding.py#L208) | ✓ |  |
-| 284 | `test_zero_padding` | [bsv/primitives/test_utils_encoding.py:220](tests/bsv/primitives/test_utils_encoding.py#L220) | ✓ |  |
-| 285 | `test_encoding_consistency` | [bsv/primitives/test_utils_encoding.py:237](tests/bsv/primitives/test_utils_encoding.py#L237) | ✓ |  |
-| 286 | `test_large_data_handling` | [bsv/primitives/test_utils_encoding.py:256](tests/bsv/primitives/test_utils_encoding.py#L256) | ✓ |  |
 | 287 | `test_edge_cases` | [bsv/primitives/test_utils_encoding.py:270](tests/bsv/primitives/test_utils_encoding.py#L270) | ✗ | Single byte values = edge cases |
-| 288 | `test_unsigned_to_varint` | [bsv/primitives/test_utils_misc.py:15](tests/bsv/primitives/test_utils_misc.py#L15) | ✓ |  |
-| 289 | `test_unsigned_to_bytes` | [bsv/primitives/test_utils_misc.py:34](tests/bsv/primitives/test_utils_misc.py#L34) | ✓ |  |
-| 290 | `test_address` | [bsv/primitives/test_utils_misc.py:45](tests/bsv/primitives/test_utils_misc.py#L45) | ✓ |  |
-| 291 | `test_decode_wif` | [bsv/primitives/test_utils_misc.py:76](tests/bsv/primitives/test_utils_misc.py#L76) | ✓ |  |
-| 292 | `test_der_serialization` | [bsv/primitives/test_utils_misc.py:92](tests/bsv/primitives/test_utils_misc.py#L92) | ✓ |  |
-| 293 | `test_recoverable_serialization` | [bsv/primitives/test_utils_misc.py:121](tests/bsv/primitives/test_utils_misc.py#L121) | ✓ |  |
-| 294 | `test_text_digest` | [bsv/primitives/test_utils_misc.py:143](tests/bsv/primitives/test_utils_misc.py#L143) | ✓ |  |
-| 295 | `test_bits` | [bsv/primitives/test_utils_misc.py:148](tests/bsv/primitives/test_utils_misc.py#L148) | ✓ |  |
-| 296 | `test_get_pushdata_code` | [bsv/primitives/test_utils_misc.py:160](tests/bsv/primitives/test_utils_misc.py#L160) | ✓ |  |
-| 297 | `test_encode_pushdata` | [bsv/primitives/test_utils_misc.py:173](tests/bsv/primitives/test_utils_misc.py#L173) | ✓ |  |
-| 298 | `test_encode_int` | [bsv/primitives/test_utils_misc.py:193](tests/bsv/primitives/test_utils_misc.py#L193) | ✓ |  |
-| 299 | `test_storageutils_uhrp_url` | [bsv/primitives/test_utils_misc.py:223](tests/bsv/primitives/test_utils_misc.py#L223) | ✓ |  |
-| 300 | `test_var_int_num` | [bsv/primitives/test_utils_reader_writer.py:19](tests/bsv/primitives/test_utils_reader_writer.py#L19) | ✓ |  |
-| 301 | `test_var_int_num_overflow` | [bsv/primitives/test_utils_reader_writer.py:22](tests/bsv/primitives/test_utils_reader_writer.py#L22) | ✓ |  |
-| 302 | `test_write_endianness_and_to_bytes` | [bsv/primitives/test_utils_reader_writer.py:28](tests/bsv/primitives/test_utils_reader_writer.py#L28) | ✓ |  |
-| 303 | `test_read_endianness_and_varint` | [bsv/primitives/test_utils_reader_writer.py:49](tests/bsv/primitives/test_utils_reader_writer.py#L49) | ✓ |  |
-| 304 | `test_varint_roundtrip` | [bsv/primitives/test_utils_reader_writer.py:78](tests/bsv/primitives/test_utils_reader_writer.py#L78) | ✓ |  |
 | 305 | `test_register_and_list_basket` | [bsv/registry/test_registry_client.py:20](tests/bsv/registry/test_registry_client.py#L20) | ✗ | Add list len assertion |
 | 306 | `test_register_protocol_and_list` | [bsv/registry/test_registry_client.py:36](tests/bsv/registry/test_registry_client.py#L36) | ✗ | No assertions |
 | 307 | `test_register_certificate_and_list` | [bsv/registry/test_registry_client.py:48](tests/bsv/registry/test_registry_client.py#L48) | ✗ | No assertions |
 | 308 | `test_resolve_mock` | [bsv/registry/test_registry_client.py:61](tests/bsv/registry/test_registry_client.py#L61) | ✗ | Assert list len |
-| 309 | `test_revoke_flow_mock` | [bsv/registry/test_registry_client.py:83](tests/bsv/registry/test_registry_client.py#L83) | ✓ |  |
 | 310 | `test_walletwire_resolver_filters` | [bsv/registry/test_registry_client.py:98](tests/bsv/registry/test_registry_client.py#L98) | ✗ | Assert list len or content? |
-| 311 | `test_script_build_chunks_pushdata_opcodes` | [bsv/script/test_script_chunk_oppushdata.py:6](tests/bsv/script/test_script_chunk_oppushdata.py#L6) | ✓ |  |
-| 312 | `test_script_serialization_with_pushdata` | [bsv/script/test_script_chunk_oppushdata.py:124](tests/bsv/script/test_script_chunk_oppushdata.py#L124) | ✓ |  |
-| 313 | `test_script` | [bsv/script/test_scripts.py:13](tests/bsv/script/test_scripts.py#L13) | ✓ |  |
-| 314 | `test_p2pkh` | [bsv/script/test_scripts.py:28](tests/bsv/script/test_scripts.py#L28) | ✓ |  |
-| 315 | `test_op_return` | [bsv/script/test_scripts.py:89](tests/bsv/script/test_scripts.py#L89) | ✓ |  |
-| 316 | `test_p2pk` | [bsv/script/test_scripts.py:101](tests/bsv/script/test_scripts.py#L101) | ✓ |  |
-| 317 | `test_bare_multisig` | [bsv/script/test_scripts.py:156](tests/bsv/script/test_scripts.py#L156) | ✓ |  |
-| 318 | `test_is_push_only` | [bsv/script/test_scripts.py:213](tests/bsv/script/test_scripts.py#L213) | ✓ |  |
-| 319 | `test_to_asm` | [bsv/script/test_scripts.py:222](tests/bsv/script/test_scripts.py#L222) | ✓ |  |
-| 320 | `test_from_asm` | [bsv/script/test_scripts.py:229](tests/bsv/script/test_scripts.py#L229) | ✓ |  |
-| 321 | `test_find_and_delete` | [bsv/script/test_scripts.py:266](tests/bsv/script/test_scripts.py#L266) | ✓ |  |
-| 322 | `test_r_puzzle` | [bsv/script/test_scripts.py:270](tests/bsv/script/test_scripts.py#L270) | ✓ |  |
-| 323 | `test_p2pkh_sighash_acp` | [bsv/script/test_scripts.py:333](tests/bsv/script/test_scripts.py#L333) | ✓ |  |
-| 324 | `test_publish_file_network_error` | [bsv/storage/test_storage.py:21](tests/bsv/storage/test_storage.py#L21) | ✓ |  |
-| 325 | `test_download_no_host` | [bsv/storage/test_storage.py:28](tests/bsv/storage/test_storage.py#L28) | ✓ |  |
-| 326 | `test_download_network_error` | [bsv/storage/test_storage.py:33](tests/bsv/storage/test_storage.py#L33) | ✓ |  |
-| 327 | `test_publish_file_upload_error` | [bsv/storage/test_storage.py:42](tests/bsv/storage/test_storage.py#L42) | ✓ |  |
-| 328 | `test_publish_file_402_payment` | [bsv/storage/test_storage.py:82](tests/bsv/storage/test_storage.py#L82) | ✓ |  |
-| 329 | `test_publish_file_auth_error` | [bsv/storage/test_storage.py:145](tests/bsv/storage/test_storage.py#L145) | ✓ |  |
-| 330 | `test_find_file_success` | [bsv/storage/test_storage.py:191](tests/bsv/storage/test_storage.py#L191) | ✓ |  |
-| 331 | `test_find_file_error` | [bsv/storage/test_storage.py:205](tests/bsv/storage/test_storage.py#L205) | ✓ |  |
-| 332 | `test_list_uploads_success` | [bsv/storage/test_storage.py:216](tests/bsv/storage/test_storage.py#L216) | ✓ |  |
-| 333 | `test_list_uploads_error` | [bsv/storage/test_storage.py:233](tests/bsv/storage/test_storage.py#L233) | ✓ |  |
-| 334 | `test_renew_file_success` | [bsv/storage/test_storage.py:244](tests/bsv/storage/test_storage.py#L244) | ✓ |  |
-| 335 | `test_renew_file_error` | [bsv/storage/test_storage.py:258](tests/bsv/storage/test_storage.py#L258) | ✓ |  |
-| 336 | `test_downloader_hash_mismatch` | [bsv/storage/test_storage.py:269](tests/bsv/storage/test_storage.py#L269) | ✓ |  |
-| 337 | `test_downloader_download_error` | [bsv/storage/test_storage.py:283](tests/bsv/storage/test_storage.py#L283) | ✓ |  |
 | 338 | `test_storage_upload_download_e2e` | [bsv/storage/test_storage_e2e.py:22](tests/bsv/storage/test_storage_e2e.py#L22) | ✗ | Insufficient 'or' |
-| 339 | `test_storage_find_file_e2e` | [bsv/storage/test_storage_e2e.py:43](tests/bsv/storage/test_storage_e2e.py#L43) | ✓ |  |
 | 340 | `test_storage_list_uploads_e2e` | [bsv/storage/test_storage_e2e.py:61](tests/bsv/storage/test_storage_e2e.py#L61) | ✗ | Assert len list or content |
-| 341 | `test_storage_renew_file_e2e` | [bsv/storage/test_storage_e2e.py:71](tests/bsv/storage/test_storage_e2e.py#L71) | ✓ |  |
-| 342 | `test_storage_download_hash_mismatch_e2e` | [bsv/storage/test_storage_e2e.py:87](tests/bsv/storage/test_storage_e2e.py#L87) | ✓ |  |
 | 343 | `test_kvstore_set_get_encrypt_with_pushdrop_lock_before` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:11](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L11) | ✗ | Missing pushdrop lock before? |
-| 344 | `test_pushdrop_multiple_fields` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:37](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L37) | ✓ |  |
-| 345 | `test_pushdrop_with_signature` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:55](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L55) | ✓ |  |
-| 346 | `test_pushdrop_lock_after` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:75](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L75) | ✓ |  |
-| 347 | `test_pushdrop_invalid_script` | [bsv/transaction/test_kvstore_pushdrop_encrypt.py:93](tests/bsv/transaction/test_kvstore_pushdrop_encrypt.py#L93) | ✓ |  |
-| 348 | `test_parse_from_hex` | [bsv/transaction/test_merkle_path.py:143](tests/bsv/transaction/test_merkle_path.py#L143) | ✓ |  |
-| 349 | `test_serialize_to_hex` | [bsv/transaction/test_merkle_path.py:148](tests/bsv/transaction/test_merkle_path.py#L148) | ✓ |  |
-| 350 | `test_compute_root` | [bsv/transaction/test_merkle_path.py:153](tests/bsv/transaction/test_merkle_path.py#L153) | ✓ |  |
-| 351 | `test_verify_using_chain_tracker` | [bsv/transaction/test_merkle_path.py:161](tests/bsv/transaction/test_merkle_path.py#L161) | ✓ |  |
-| 352 | `test_combine_paths` | [bsv/transaction/test_merkle_path.py:167](tests/bsv/transaction/test_merkle_path.py#L167) | ✓ |  |
-| 353 | `test_reject_invalid_bumps` | [bsv/transaction/test_merkle_path.py:202](tests/bsv/transaction/test_merkle_path.py#L202) | ✓ |  |
-| 354 | `test_verify_valid_bumps` | [bsv/transaction/test_merkle_path.py:210](tests/bsv/transaction/test_merkle_path.py#L210) | ✓ |  |
-| 355 | `test_pushdrop_lock_includes_signature_by_default` | [bsv/transaction/test_pushdrop_parity.py:8](tests/bsv/transaction/test_pushdrop_parity.py#L8) | ✓ |  |
-| 356 | `test_pushdrop_decode_restores_small_ints` | [bsv/transaction/test_pushdrop_parity.py:22](tests/bsv/transaction/test_pushdrop_parity.py#L22) | ✓ |  |
-| 357 | `test_pushdrop_lock_after_and_decode` | [bsv/transaction/test_pushdrop_parity.py:39](tests/bsv/transaction/test_pushdrop_parity.py#L39) | ✓ |  |
-| 358 | `test_pushdrop_include_signature_flag_changes_field_count` | [bsv/transaction/test_pushdrop_parity.py:51](tests/bsv/transaction/test_pushdrop_parity.py#L51) | ✓ |  |
-| 359 | `test_pushdrop_unlock_sign_and_estimate` | [bsv/transaction/test_pushdrop_parity.py:65](tests/bsv/transaction/test_pushdrop_parity.py#L65) | ✓ |  |
-| 360 | `test_pushdrop_sighash_modes_match_range` | [bsv/transaction/test_pushdrop_parity.py:80](tests/bsv/transaction/test_pushdrop_parity.py#L80) | ✓ |  |
-| 361 | `test_pushdrop_sighash_flag_values_and_anyonecanpay` | [bsv/transaction/test_pushdrop_parity.py:93](tests/bsv/transaction/test_pushdrop_parity.py#L93) | ✓ |  |
-| 362 | `test_pushdrop_unlock_lock_after_sign_and_estimate` | [bsv/transaction/test_pushdrop_parity.py:118](tests/bsv/transaction/test_pushdrop_parity.py#L118) | ✓ |  |
-| 363 | `test_sign_action_sighash_bip143_acp_parity` | [bsv/transaction/test_pushdrop_parity.py:132](tests/bsv/transaction/test_pushdrop_parity.py#L132) | ✓ |  |
-| 364 | `test_complex_case` | [bsv/transaction/test_spend.py:26](tests/bsv/transaction/test_spend.py#L26) | ✓ |  |
-| 365 | `test_new_tx` | [bsv/transaction/test_transaction.py:69](tests/bsv/transaction/test_transaction.py#L69) | ✓ |  |
-| 366 | `test_transaction_from_hex` | [bsv/transaction/test_transaction.py:81](tests/bsv/transaction/test_transaction.py#L81) | ✓ |  |
-| 367 | `test_transaction_parse_script_offsets` | [bsv/transaction/test_transaction.py:86](tests/bsv/transaction/test_transaction.py#L86) | ✓ |  |
-| 368 | `test_transaction_to_hex` | [bsv/transaction/test_transaction.py:102](tests/bsv/transaction/test_transaction.py#L102) | ✓ |  |
-| 369 | `test_transaction_serialize` | [bsv/transaction/test_transaction.py:106](tests/bsv/transaction/test_transaction.py#L106) | ✓ |  |
-| 370 | `test_transaction_hash` | [bsv/transaction/test_transaction.py:110](tests/bsv/transaction/test_transaction.py#L110) | ✓ |  |
-| 371 | `test_transaction_id` | [bsv/transaction/test_transaction.py:115](tests/bsv/transaction/test_transaction.py#L115) | ✓ |  |
-| 372 | `test_transaction_add_input` | [bsv/transaction/test_transaction.py:120](tests/bsv/transaction/test_transaction.py#L120) | ✓ |  |
-| 373 | `test_transaction_add_output` | [bsv/transaction/test_transaction.py:128](tests/bsv/transaction/test_transaction.py#L128) | ✓ |  |
-| 374 | `test_transaction_signing_hydrate_scripts` | [bsv/transaction/test_transaction.py:136](tests/bsv/transaction/test_transaction.py#L136) | ✓ |  |
-| 375 | `test_estimated_byte_length` | [bsv/transaction/test_transaction.py:175](tests/bsv/transaction/test_transaction.py#L175) | ✓ |  |
-| 376 | `test_beef_serialization` | [bsv/transaction/test_transaction.py:195](tests/bsv/transaction/test_transaction.py#L195) | ✓ |  |
-| 377 | `test_from_reader` | [bsv/transaction/test_transaction.py:203](tests/bsv/transaction/test_transaction.py#L203) | ✓ |  |
-| 378 | `test_from_hex` | [bsv/transaction/test_transaction.py:260](tests/bsv/transaction/test_transaction.py#L260) | ✓ |  |
-| 379 | `test_transaction_bytes_io` | [bsv/transaction/test_transaction.py:314](tests/bsv/transaction/test_transaction.py#L314) | ✓ |  |
-| 380 | `test_output` | [bsv/transaction/test_transaction.py:344](tests/bsv/transaction/test_transaction.py#L344) | ✓ |  |
-| 381 | `test_digest` | [bsv/transaction/test_transaction.py:350](tests/bsv/transaction/test_transaction.py#L350) | ✓ |  |
-| 382 | `test_transaction` | [bsv/transaction/test_transaction.py:410](tests/bsv/transaction/test_transaction.py#L410) | ✓ |  |
-| 383 | `test_transaction_bytes_io` | [bsv/transaction/test_transaction.py:480](tests/bsv/transaction/test_transaction.py#L480) | ✓ |  |
-| 384 | `test_from_hex` | [bsv/transaction/test_transaction.py:507](tests/bsv/transaction/test_transaction.py#L507) | ✓ |  |
-| 385 | `test_from_reader` | [bsv/transaction/test_transaction.py:561](tests/bsv/transaction/test_transaction.py#L561) | ✓ |  |
-| 386 | `test_beef_serialization` | [bsv/transaction/test_transaction.py:618](tests/bsv/transaction/test_transaction.py#L618) | ✓ |  |
-| 387 | `test_ef_serialization` | [bsv/transaction/test_transaction.py:625](tests/bsv/transaction/test_transaction.py#L625) | ✓ |  |
 | 388 | `test_input_auto_txid` | [bsv/transaction/test_transaction.py:648](tests/bsv/transaction/test_transaction.py#L648) | ✗ | What Exception, match |
 | 389 | `test_transaction_fee_with_default_rate` | [bsv/transaction/test_transaction.py:670](tests/bsv/transaction/test_transaction.py#L670) | ✗ | See file, missing test tx.verify() ? |
-| 390 | `test_create_action_args_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:27](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L27) | ✓ |  |
-| 391 | `test_create_action_result_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:71](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L71) | ✓ |  |
-| 392 | `test_sign_action_args_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:78](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L78) | ✓ |  |
-| 393 | `test_list_actions_args_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:89](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L89) | ✓ |  |
-| 394 | `test_internalize_action_args_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:109](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L109) | ✓ |  |
-| 395 | `test_list_certificates_args_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:133](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L133) | ✓ |  |
-| 396 | `test_prove_certificate_args_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:141](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L141) | ✓ |  |
-| 397 | `test_list_certificates_result_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:162](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L162) | ✓ |  |
-| 398 | `test_internalize_action_result_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:179](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L179) | ✓ |  |
-| 399 | `test_sign_action_result_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:186](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L186) | ✓ |  |
-| 400 | `test_certificate_base_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:201](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L201) | ✓ |  |
-| 401 | `test_relinquish_certificate_result_roundtrip` | [bsv/wallet/serializer/test_serializers_roundtrip.py:216](tests/bsv/wallet/serializer/test_serializers_roundtrip.py#L216) | ✓ |  |
-| 402 | `test_to_origin_header_vectors` | [bsv/wallet/substrates/test_to_origin_header.py:29](tests/bsv/wallet/substrates/test_to_origin_header.py#L29) | ✓ |  |
-| 403 | `test_to_origin_header_malformed` | [bsv/wallet/substrates/test_to_origin_header.py:34](tests/bsv/wallet/substrates/test_to_origin_header.py#L34) | ✓ |  |
-| 404 | `test_list_actions_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:19](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L19) | ✓ |  |
-| 405 | `test_internalize_action_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:30](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L30) | ✓ |  |
-| 406 | `test_list_certificates_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:51](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L51) | ✓ |  |
-| 407 | `test_discover_by_identity_key_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:61](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L61) | ✓ |  |
-| 408 | `test_discover_by_attributes_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:70](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L70) | ✓ |  |
-| 409 | `test_actions_flow_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:79](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L79) | ✓ |  |
-| 410 | `test_certificates_flow_e2e` | [bsv/wallet/substrates/test_wallet_wire_actions_certs.py:112](tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py#L112) | ✓ |  |
-| 411 | `test_get_public_key_identity` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:17](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L17) | ✓ |  |
-| 412 | `test_get_public_key_derived` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:24](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L24) | ✓ |  |
 | 413 | `test_reveal_counterparty_key_linkage` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:41](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L41) | ✗ | improve assertion |
 | 414 | `test_reveal_specific_key_linkage` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:51](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L51) | ✗ | improve assertions |
 | 415 | `test_get_public_key_error_frame_permission_denied` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:63](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L63) | ✗ | Specific error string match needed |
 | 416 | `test_reveal_counterparty_key_linkage_error_frame_permission_denied` | [bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py:71](tests/bsv/wallet/substrates/test_wallet_wire_getpub_linkage.py#L71) | ✗ | Specific error string match needed |
-| 417 | `test_encrypt_decrypt` | [bsv/wallet/substrates/test_wallet_wire_integration.py:27](tests/bsv/wallet/substrates/test_wallet_wire_integration.py#L27) | ✓ |  |
-| 418 | `test_create_and_verify_signature` | [bsv/wallet/substrates/test_wallet_wire_integration.py:54](tests/bsv/wallet/substrates/test_wallet_wire_integration.py#L54) | ✓ |  |
-| 419 | `test_create_and_verify_hmac` | [bsv/wallet/substrates/test_wallet_wire_integration.py:77](tests/bsv/wallet/substrates/test_wallet_wire_integration.py#L77) | ✓ |  |
-| 420 | `test_xdm_constructor_throws_if_no_window` | [bsv/wallet/substrates/test_xdm.py:40](tests/bsv/wallet/substrates/test_xdm.py#L40) | ✓ |  |
-| 421 | `test_xdm_constructor_throws_if_no_postMessage` | [bsv/wallet/substrates/test_xdm.py:44](tests/bsv/wallet/substrates/test_xdm.py#L44) | ✓ |  |
-| 422 | `test_xdm_constructor_success` | [bsv/wallet/substrates/test_xdm.py:50](tests/bsv/wallet/substrates/test_xdm.py#L50) | ✓ |  |
-| 423 | `test_xdm_invoke_calls_postMessage` | [bsv/wallet/substrates/test_xdm.py:55](tests/bsv/wallet/substrates/test_xdm.py#L55) | ✓ |  |
-| 424 | `test_xdm_invoke_raises_if_no_parent` | [bsv/wallet/substrates/test_xdm.py:67](tests/bsv/wallet/substrates/test_xdm.py#L67) | ✓ |  |
-| 425 | `test_query_tx_mempool_404` | [bsv/wallet/test_wallet_broadcast_helper.py:19](tests/bsv/wallet/test_wallet_broadcast_helper.py#L19) | ✓ |  |
-| 426 | `test_query_tx_mempool_known_unconfirmed` | [bsv/wallet/test_wallet_broadcast_helper.py:29](tests/bsv/wallet/test_wallet_broadcast_helper.py#L29) | ✓ |  |
-| 427 | `test_query_tx_mempool_confirmed` | [bsv/wallet/test_wallet_broadcast_helper.py:39](tests/bsv/wallet/test_wallet_broadcast_helper.py#L39) | ✓ |  |
-| 428 | `test_funding_adds_inputs_and_change_low_fee` | [bsv/wallet/test_wallet_funding.py:19](tests/bsv/wallet/test_wallet_funding.py#L19) | ✓ |  |
-| 429 | `test_fee_rate_affects_change_amount` | [bsv/wallet/test_wallet_funding.py:52](tests/bsv/wallet/test_wallet_funding.py#L52) | ✓ |  |
-| 430 | `test_no_change_when_dust` | [bsv/wallet/test_wallet_funding.py:84](tests/bsv/wallet/test_wallet_funding.py#L84) | ✓ |  |
-| 431 | `test_encrypt_decrypt_identity` | [bsv/wallet/test_wallet_impl.py:16](tests/bsv/wallet/test_wallet_impl.py#L16) | ✓ |  |
-| 432 | `test_get_public_key_identity` | [bsv/wallet/test_wallet_impl.py:27](tests/bsv/wallet/test_wallet_impl.py#L27) | ✓ |  |
-| 433 | `test_encrypt_decrypt_with_protocol_two_parties` | [bsv/wallet/test_wallet_impl.py:34](tests/bsv/wallet/test_wallet_impl.py#L34) | ✓ |  |
-| 434 | `test_seek_permission_prompt` | [bsv/wallet/test_wallet_impl.py:64](tests/bsv/wallet/test_wallet_impl.py#L64) | ✓ |  |
-| 435 | `test_seek_permission_denied_returns_error_dict` | [bsv/wallet/test_wallet_impl.py:79](tests/bsv/wallet/test_wallet_impl.py#L79) | ✓ |  |
-| 436 | `test_create_and_verify_signature_identity` | [bsv/wallet/test_wallet_impl_sign_verify_hmac.py:12](tests/bsv/wallet/test_wallet_impl_sign_verify_hmac.py#L12) | ✓ |  |
-| 437 | `test_create_and_verify_hmac_other_counterparty` | [bsv/wallet/test_wallet_impl_sign_verify_hmac.py:28](tests/bsv/wallet/test_wallet_impl_sign_verify_hmac.py#L28) | ✓ |  |
-| 438 | `test_compute_invoice_number` | [bsv/wallet/test_wallet_keyderiver.py:27](tests/bsv/wallet/test_wallet_keyderiver.py#L27) | ✓ |  |
 | 439 | `test_normalize_counterparty_throws_for_invalid` | [bsv/wallet/test_wallet_keyderiver.py:32](tests/bsv/wallet/test_wallet_keyderiver.py#L32) | ✗ | match string error? |
 | 440 | `test_normalize_counterparty_self` | [bsv/wallet/test_wallet_keyderiver.py:43](tests/bsv/wallet/test_wallet_keyderiver.py#L43) | ✗ | 2nd half commented out |
-| 441 | `test_normalize_counterparty_anyone` | [bsv/wallet/test_wallet_keyderiver.py:54](tests/bsv/wallet/test_wallet_keyderiver.py#L54) | ✓ |  |
-| 442 | `test_normalize_counterparty_other` | [bsv/wallet/test_wallet_keyderiver.py:63](tests/bsv/wallet/test_wallet_keyderiver.py#L63) | ✓ |  |
-| 443 | `test_normalize_counterparty_public_key` | [bsv/wallet/test_wallet_keyderiver.py:69](tests/bsv/wallet/test_wallet_keyderiver.py#L69) | ✓ |  |
-| 444 | `test_normalize_counterparty_hex_string` | [bsv/wallet/test_wallet_keyderiver.py:74](tests/bsv/wallet/test_wallet_keyderiver.py#L74) | ✓ |  |
-| 445 | `test_derive_private_key_for_self` | [bsv/wallet/test_wallet_keyderiver.py:80](tests/bsv/wallet/test_wallet_keyderiver.py#L80) | ✓ |  |
-| 446 | `test_derive_private_key_for_other` | [bsv/wallet/test_wallet_keyderiver.py:89](tests/bsv/wallet/test_wallet_keyderiver.py#L89) | ✓ |  |
-| 447 | `test_derive_public_key_for_self` | [bsv/wallet/test_wallet_keyderiver.py:100](tests/bsv/wallet/test_wallet_keyderiver.py#L100) | ✓ |  |
-| 448 | `test_derive_public_key_for_other` | [bsv/wallet/test_wallet_keyderiver.py:110](tests/bsv/wallet/test_wallet_keyderiver.py#L110) | ✓ |  |
-| 449 | `test_derive_symmetric_key` | [bsv/wallet/test_wallet_keyderiver.py:116](tests/bsv/wallet/test_wallet_keyderiver.py#L116) | ✓ |  |
-| 450 | `test_identity_key` | [bsv/wallet/test_wallet_keyderiver.py:127](tests/bsv/wallet/test_wallet_keyderiver.py#L127) | ✓ |  |
-| 451 | `test_protocol_validation` | [bsv/wallet/test_wallet_keyderiver.py:132](tests/bsv/wallet/test_wallet_keyderiver.py#L132) | ✓ |  |
-| 452 | `test_key_id_validation` | [bsv/wallet/test_wallet_keyderiver.py:155](tests/bsv/wallet/test_wallet_keyderiver.py#L155) | ✓ |  |
 | 453 | `test_protocol_name_validation` | [bsv/wallet/test_wallet_keyderiver.py:171](tests/bsv/wallet/test_wallet_keyderiver.py#L171) | ✗ | Add should not raise protocol invoice |
-| 454 | `test_deterministic_derivation` | [bsv/wallet/test_wallet_keyderiver.py:198](tests/bsv/wallet/test_wallet_keyderiver.py#L198) | ✓ |  |
-| 455 | `test_different_parameters_produce_different_keys` | [bsv/wallet/test_wallet_keyderiver.py:215](tests/bsv/wallet/test_wallet_keyderiver.py#L215) | ✓ |  |
-| 456 | `test_decrypt_fields_success` | [test_auth_verifiable_certificate.py:47](tests/test_auth_verifiable_certificate.py#L47) | ✓ |  |
-| 457 | `test_decrypt_fields_requires_keyring` | [test_auth_verifiable_certificate.py:53](tests/test_auth_verifiable_certificate.py#L53) | ✓ |  |
-| 458 | `test_missing_field_in_certificate_raises` | [test_auth_verifiable_certificate.py:59](tests/test_auth_verifiable_certificate.py#L59) | ✓ |  |
-| 459 | `test_build_and_import_package` | [test_build_package.py:15](tests/test_build_package.py#L15) | ✓ |  |
-| 460 | `test_kv_set_get_remove_lock_before_signed_encrypted` | [test_kvstore_pushdrop_e2e.py:16](tests/test_kvstore_pushdrop_e2e.py#L16) | ✓ |  |
 | 461 | `test_kv_set_get_lock_after_signed_plain` | [test_kvstore_pushdrop_e2e.py:26](tests/test_kvstore_pushdrop_e2e.py#L26) | ✗ | After signed? |
-| 462 | `test_kv_set_get_remove_lock_after_signed_encrypted` | [test_kvstore_pushdrop_e2e.py:34](tests/test_kvstore_pushdrop_e2e.py#L34) | ✓ |  |
-| 463 | `test_create_action_args_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:27](tests/wallet/serializer/test_serializers_roundtrip.py#L27) | ✓ |  |
-| 464 | `test_create_action_result_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:71](tests/wallet/serializer/test_serializers_roundtrip.py#L71) | ✓ |  |
-| 465 | `test_sign_action_args_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:78](tests/wallet/serializer/test_serializers_roundtrip.py#L78) | ✓ |  |
-| 466 | `test_list_actions_args_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:89](tests/wallet/serializer/test_serializers_roundtrip.py#L89) | ✓ |  |
-| 467 | `test_internalize_action_args_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:109](tests/wallet/serializer/test_serializers_roundtrip.py#L109) | ✓ |  |
-| 468 | `test_list_certificates_args_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:133](tests/wallet/serializer/test_serializers_roundtrip.py#L133) | ✓ |  |
-| 469 | `test_prove_certificate_args_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:141](tests/wallet/serializer/test_serializers_roundtrip.py#L141) | ✓ |  |
-| 470 | `test_list_certificates_result_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:162](tests/wallet/serializer/test_serializers_roundtrip.py#L162) | ✓ |  |
-| 471 | `test_internalize_action_result_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:179](tests/wallet/serializer/test_serializers_roundtrip.py#L179) | ✓ |  |
-| 472 | `test_sign_action_result_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:186](tests/wallet/serializer/test_serializers_roundtrip.py#L186) | ✓ |  |
-| 473 | `test_certificate_base_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:201](tests/wallet/serializer/test_serializers_roundtrip.py#L201) | ✓ |  |
-| 474 | `test_relinquish_certificate_result_roundtrip` | [wallet/serializer/test_serializers_roundtrip.py:216](tests/wallet/serializer/test_serializers_roundtrip.py#L216) | ✓ |  |
 
 ---
 
