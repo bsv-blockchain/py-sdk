@@ -447,6 +447,92 @@ class Transaction:
 
         return output_total <= input_total
 
+    def signature_hash(self, index: int) -> bytes:
+        """
+        Calculate the signature hash for the input at the specified index.
+        This is the hash that gets signed for transaction signing.
+        """
+        preimage = self.preimage(index)
+        return hash256(preimage)
+
+    def to_json(self) -> str:
+        """
+        Convert the transaction to a JSON string representation.
+        """
+        import json
+
+        tx_dict = {
+            "txid": self.txid(),
+            "version": self.version,
+            "lockTime": self.locktime,
+            "hex": self.hex(),
+            "inputs": [
+                {
+                    "txid": inp.source_txid if hasattr(inp, 'source_txid') and inp.source_txid else "",
+                    "vout": inp.source_output_index if hasattr(inp, 'source_output_index') else 0,
+                    "sequence": inp.sequence,
+                    "unlockingScript": inp.unlocking_script.hex() if inp.unlocking_script else "",
+                    "satoshis": inp.satoshis if hasattr(inp, 'satoshis') else 0,
+                }
+                for inp in self.inputs
+            ],
+            "outputs": [
+                {
+                    "satoshis": out.satoshis,
+                    "lockingScript": out.locking_script.hex(),
+                }
+                for out in self.outputs
+            ]
+        }
+
+        return json.dumps(tx_dict, indent=2)
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "Transaction":
+        """
+        Create a Transaction from a JSON string representation.
+        """
+        import json
+
+        tx_dict = json.loads(json_str)
+
+        # If hex is provided, use it directly
+        if "hex" in tx_dict:
+            return cls.from_hex(tx_dict["hex"])
+
+        # Otherwise, construct from components
+        # Create inputs
+        inputs = []
+        for inp_dict in tx_dict.get("inputs", []):
+            inp = TransactionInput(
+                source_txid=inp_dict.get("txid", ""),
+                source_output_index=inp_dict.get("vout", 0),
+                sequence=inp_dict.get("sequence", 0xFFFFFFFF),
+            )
+            if "satoshis" in inp_dict:
+                inp.satoshis = inp_dict["satoshis"]
+            if "unlockingScript" in inp_dict and inp_dict["unlockingScript"]:
+                from .script.script import Script
+                inp.unlocking_script = Script(bytes.fromhex(inp_dict["unlockingScript"]))
+            inputs.append(inp)
+
+        # Create outputs
+        outputs = []
+        for out_dict in tx_dict.get("vout", tx_dict.get("outputs", [])):
+            from .script.script import Script
+            out = TransactionOutput(
+                satoshis=out_dict["satoshis"],
+                locking_script=Script(bytes.fromhex(out_dict.get("lockingScript", out_dict.get("scriptPubKey", ""))))
+            )
+            outputs.append(out)
+
+        return cls(
+            tx_inputs=inputs,
+            tx_outputs=outputs,
+            version=tx_dict.get("version", 1),
+            locktime=tx_dict.get("lockTime", tx_dict.get("locktime", 0)),
+        )
+
     @classmethod
     def parse_script_offsets(cls, octets: Union[bytes, str]) -> Dict[str, List[Dict[str, int]]]:
         """
