@@ -116,7 +116,7 @@ def test_kvstore_set_get_remove_e2e():
         assert got == "bravo"
 
     # remove
-    txids = kv.remove(None, "alpha")
+    txids = kv.remove(None, "alpha");
     assert isinstance(txids, list)
 
 
@@ -153,9 +153,9 @@ def test_beef_v2_raw_and_bump_chain_linking_best_effort():
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x01" + b"\x00" + b"\x01" + b"\x01" + b"\x00"
     try:
         new_beef_from_bytes(v2)
-    except Exception:
+    except Exception as e:
         # Accept failure for malformed raw tx; parser should raise rather than crash entire process
-        pass
+        assert(str(e)=="unsupported operand type(s) for &: 'NoneType' and 'int'"); pass
 
 
 def test_sighash_rules_end_byte_matrix():

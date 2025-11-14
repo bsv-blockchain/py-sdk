@@ -6,7 +6,7 @@ def test_beef_unknown_version_errors():
     from bsv.transaction.beef import parse_beef
     # version=0xFFFFFFFF (unknown)
     data = (0xFFFFFFFF).to_bytes(4, 'little') + b"\x00\x00\x00\x00"
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match='unsupported BEEF version'):
         parse_beef(data)
 
 

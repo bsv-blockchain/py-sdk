@@ -350,7 +350,7 @@ def test_output():
 def test_digest():
     address = "1AfxgwYJrBgriZDLryfyKuSdBsi59jeBX9"
     # https://whatsonchain.com/tx/4674da699de44c9c5d182870207ba89e5ccf395e5101dab6b0900bbf2f3b16cb
-    expected_digest = [digest1]
+    expected_digests = [digest1]
     t: Transaction = Transaction()
     t_in = TransactionInput(
         source_transaction=Transaction(
@@ -371,7 +371,7 @@ def test_digest():
             satoshis=800,
         )
     )
-    assert tx_preimages(t.inputs, t.outputs, t.version, t.locktime) == expected_digest
+    assert tx_preimages(t.inputs, t.outputs, t.version, t.locktime) == expected_digests
 
     # https://whatsonchain.com/tx/c04bbd007ad3987f9b2ea8534175b5e436e43d64471bf32139b5851adf9f477e
     expected_digest = [digest2, digest3]

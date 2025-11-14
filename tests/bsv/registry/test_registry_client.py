@@ -30,8 +30,8 @@ class TestRegistryClient(unittest.TestCase):
         res = self.client.register_definition(None, data)
         self.assertIn("signableTransaction", res)
 
-        listed = self.client.list_own_registry_entries(None, "basket")
-        self.assertIsInstance(listed, list)
+        listed = self.client.list_own_registry_entries(None, "basket"); 
+        self.assertIsInstance(listed, list); assert len(listed) == 1
 
     def test_register_protocol_and_list(self):
         data = ProtocolDefinitionData(
@@ -78,7 +78,7 @@ class TestRegistryClient(unittest.TestCase):
             return [{"beef": rec.get("beef"), "outputIndex": rec.get("outputIndex")}]  # type: ignore
 
         out = self.client.resolve(None, "basket", {"basketID": "b1"}, resolver=resolver)
-        self.assertIsInstance(out, list)
+        self.assertIsInstance(out, list); assert len(out) == 1
 
     def test_revoke_flow_mock(self):
         data = BasketDefinitionData(
@@ -111,7 +111,7 @@ class TestRegistryClient(unittest.TestCase):
         r = WalletWireResolver(self.wallet)
         # Call via TS/Go-compatible entry (__call__ takes service name)
         outs = r(None, "ls_basketmap", {"basketID": "by"})
-        self.assertTrue(isinstance(outs, list))
+        self.assertTrue(isinstance(outs, list)); assert len(outs) == 1
 
 
 if __name__ == "__main__":

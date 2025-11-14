@@ -71,22 +71,22 @@ class TestPeerBasic:
         peer, *_ = make_peer_pair()
         other_pub = PrivateKey(9991).public_key()
         msg = AuthMessage(version="0.1", message_type="nope", identity_key=other_pub)
-        err = peer.handle_incoming_message(None, msg)
-        assert isinstance(err, Exception)
+        err = peer.handle_incoming_message(None, msg);
+        assert isinstance(err, Exception), err.message == 'unknown message type: nope'
 
     def test_invalid_version(self):
         peer, *_ = make_peer_pair()
         other_pub = PrivateKey(9992).public_key()
         msg = AuthMessage(version="9.9", message_type="general", identity_key=other_pub)
         err = peer.handle_incoming_message(None, msg)
-        assert isinstance(err, Exception)
+        assert isinstance(err, Exception), err.message == 'Invalid or unsupported message auth version! Received: 9.9, expected: 0.1'
 
     def test_initial_request_missing_nonce(self):
         peer, *_ = make_peer_pair()
         other_pub = PrivateKey(333).public_key()
         msg = AuthMessage(version="0.1", message_type="initialRequest", identity_key=other_pub, initial_nonce="")
         err = peer.handle_initial_request(None, msg, other_pub)
-        assert isinstance(err, Exception)
+        assert isinstance(err, Exception), err.message == 'Invalid nonce'
 
     def test_to_peer_happy_path_with_seeded_session(self):
         peer, session_manager, transport, _ = make_peer_pair()
