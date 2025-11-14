@@ -34,7 +34,7 @@ def test_add_computed_leaves_adds_row_node():
     beef.bumps.append(bump)
     add_computed_leaves(beef)
     # Expect one computed node added to row1
-    assert len(beef.bumps[0].path[1]) >= 1
+    assert len(beef.bumps[0].path[1]) == 1
 
 
 def test_trim_known_txids_removes_only_txid_only_entries():

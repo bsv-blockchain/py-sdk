@@ -25,10 +25,10 @@ def test_new_output_from_bytes_invalid_too_short_with_script():
     # If it parses, it should have invalid or unexpected data
     # The parser may be lenient and parse partial data, which is acceptable
     # The important thing is that it doesn't crash
-    if output is not None:
-        # If it parsed, verify it's a valid TransactionOutput object
-        assert isinstance(output, TransactionOutput)
-        # The data may be partially parsed, which is acceptable behavior
+    # if output is not None:
+    # If it parsed, verify it's a valid TransactionOutput object
+    assert isinstance(output, TransactionOutput)
+    # The data may be partially parsed, which is acceptable behavior
 
 
 def test_new_output_from_bytes_valid():
@@ -54,7 +54,7 @@ def test_output_string():
     # Test string representation
     str_repr = str(output)
     assert "TxOutput" in str_repr or "value" in str_repr.lower()
-    assert str(output.satoshis) in str_repr or "1252788362" in str_repr
+    assert str(output.satoshis) in str_repr
 
 
 def test_output_serialize():
@@ -120,7 +120,7 @@ def test_output_p2pkh_from_pubkey_hash():
     
     # Verify the script contains the expected PKH
     expected_pkh = "8fe80c75c9560e8b56ed64ea3c26e18d2c52211b"
-    assert expected_pkh in output.locking_script.hex() or expected_pkh.upper() in output.locking_script.hex().upper()
+    assert expected_pkh in output.locking_script.hex()
 
 
 def test_output_op_return():
@@ -140,7 +140,7 @@ def test_output_op_return():
     # Verify the script contains the data
     script_hex = output.locking_script.hex()
     assert script_hex.startswith("006a")  # OP_0 OP_RETURN
-    assert data_bytes.hex() in script_hex or data_bytes.hex().upper() in script_hex.upper()
+    assert data_bytes.hex() in script_hex
 
 
 def test_output_op_return_parts():
@@ -159,5 +159,5 @@ def test_output_op_return_parts():
     assert "006a" in script_hex  # OP_0 OP_RETURN
     # Each part should be in the script
     for part in data_parts:
-        assert part.hex() in script_hex or part.hex().upper() in script_hex.upper()
+        assert part.hex() in script_hex
 

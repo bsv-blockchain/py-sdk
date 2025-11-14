@@ -14,6 +14,9 @@ class ValidationResult:
         self.with_missing_inputs: List[str] = []
         self.missing_inputs: List[str] = []
 
+    def __str__(self) -> str:
+        return f"{{valid: {self.valid}, not_valid: {self.not_valid}, txid_only: {self.txid_only}, with_missing_inputs: {self.with_missing_inputs}, missing_inputs: {self.missing_inputs}}}"
+
 
 def _txids_in_bumps(beef: Beef) -> Set[str]:
     s: Set[str] = set()

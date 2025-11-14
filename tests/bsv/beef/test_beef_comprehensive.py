@@ -19,7 +19,7 @@ BRC62Hex = "0100beef01fe636d0c0007021400fe507c0c7aa754cef1f7889d5fd395cf1f785dd7
 def test_from_beef_error_case():
     """Test FromBEEF with invalid data (GO: TestFromBeefErrorCase)"""
     from bsv.transaction.beef import parse_beef
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="unsupported BEEF version"):
         parse_beef(b"invalid data")
 
 
@@ -30,7 +30,7 @@ def test_new_empty_beef_v1():
     assert beef_bytes[:4] == int(BEEF_V1).to_bytes(4, "little")
     # V1 format: version (4) + bumps (varint) + txs (varint)
     # Empty should be: version + 0x00 + 0x00
-    assert len(beef_bytes) >= 6
+    assert len(beef_bytes) == 6
 
 
 def test_new_empty_beef_v2():
@@ -40,7 +40,7 @@ def test_new_empty_beef_v2():
     assert beef_bytes[:4] == int(BEEF_V2).to_bytes(4, "little")
     # V2 format: version (4) + bumps (varint) + txs (varint)
     # Empty should be: version + 0x00 + 0x00
-    assert len(beef_bytes) >= 6
+    assert len(beef_bytes) == 6
 
 
 def test_beef_transaction_finding():
@@ -86,7 +86,7 @@ def test_beef_sort_txs():
     
     # Validate transactions
     result = validate_transactions(beef)
-    
+    # print(result)
     # After sorting, parent should be valid (no missing inputs, but no bump either)
     # Parent has no inputs, so it might be in not_valid if no bump is present
     # Child references parent, so once parent is in beef.txs, child should be able to validate
@@ -96,16 +96,16 @@ def test_beef_sort_txs():
     assert child_id in beef.txs
     
     # Parent should be in one of the result categories
-    assert (parent_id in result.valid or 
-            parent_id in result.with_missing_inputs or 
-            parent_id in result.not_valid or
-            parent_id in result.txid_only)
+    assert (
+            parent_id in result.not_valid # or parent_id in result.valid or 
+            # parent_id in result.with_missing_inputs or parent_id in result.txid_only
+            )
     
     # Child should also be in one of the result categories
-    assert (child_id in result.valid or 
-            child_id in result.with_missing_inputs or 
-            child_id in result.not_valid or
-            child_id in result.txid_only)
+    assert (
+            child_id in result.not_valid # or child_id in result.valid or 
+            # child_id in result.with_missing_inputs or child_id in result.txid_only
+            )
 
 
 def test_beef_to_log_string():
@@ -233,7 +233,7 @@ def test_beef_get_valid_txids():
     assert txid1 in valid_txids
     
     # txid2 might not be valid if not in bump and has no inputs
-    # This depends on validation logic
+    assert txid2 not in valid_txids
 
 
 def test_beef_find_transaction_for_signing():
@@ -356,7 +356,7 @@ def test_beef_error_handling():
     # Test invalid transaction format
     invalid_bytes = b"\xff\xff\xff\xff" + b"\x00" * 10
     
-    with pytest.raises((ValueError, Exception)):
+    with pytest.raises((ValueError, Exception), match="unsupported BEEF version"):
         new_beef_from_bytes(invalid_bytes)
 
 
@@ -378,7 +378,7 @@ def test_beef_edge_cases_txid_only():
     # Test that the transaction is not returned by GetValidTxids (unless in bump)
     valid_txids = beef.get_valid_txids()
     # If txid is not in any bump, it might not be in valid_txids
-    # This is expected behavior
+    assert txid not in valid_txids
 
 
 def test_beef_merge_beef_bytes():
@@ -403,7 +403,7 @@ def test_beef_merge_beef_bytes():
     
     # Test merging invalid BEEF bytes
     invalid_bytes = b"invalid beef data"
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="unsupported BEEF version"):
         beef1.merge_beef_bytes(invalid_bytes)
 
 
@@ -421,11 +421,8 @@ def test_beef_merge_beef_tx():
     assert len(beef.txs) == 1
     
     # Test handle nil transaction - Python doesn't allow None, but we can test TypeError
-    try:
+    with pytest.raises((TypeError, AttributeError, ValueError), match="'NoneType' object has no attribute 'data_format'"):
         beef.merge_beef_tx(None)  # type: ignore
-        assert False, "Should have raised an error"
-    except (TypeError, AttributeError, ValueError):
-        pass  # Expected
     
     # Test handle BeefTx with nil Transaction (txid-only)
     btx_nil = BeefTx(txid="55" * 32, tx_bytes=b"", tx_obj=None, data_format=2)
@@ -579,7 +576,7 @@ def test_beef_add_computed_leaves():
     add_computed_leaves(beef)
     
     # Verify the parent hash was computed and added
-    assert len(beef.bumps[0].path[1]) >= 1
+    assert len(beef.bumps[0].path[1]) == 1
     assert beef.bumps[0].path[1][0].get("offset") == 0
 
 
@@ -588,7 +585,7 @@ def test_beef_from_v1():
     beef_data = bytes.fromhex(BRC62Hex)
     beef = new_beef_from_bytes(beef_data)
     assert beef is not None
-    assert beef.version == BEEF_V1 or beef.version == BEEF_V2
+    assert beef.version == BEEF_V1
     assert beef.is_valid(allow_txid_only=False) or beef.is_valid(allow_txid_only=True)
 
 
@@ -627,10 +624,10 @@ def test_beef_verify():
     # Verify it's valid
     is_valid_result = beef.is_valid(allow_txid_only=True)
     # Should be valid or at least parseable
-    assert beef is not None
+    assert is_valid_result
     
     # Test verify_valid
-    ok, roots = beef.verify_valid(allow_txid_only=True)
+    ok, roots = beef.verify_valid(allow_txid_only=True);
     # May or may not be valid depending on chain tracker, but should not crash
     assert isinstance(ok, bool)
     assert isinstance(roots, dict)

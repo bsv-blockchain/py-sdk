@@ -57,6 +57,7 @@ def test_get_valid_txids_includes_txidonly_with_proof_and_chained_raw():
     vs = set(get_valid_txids(beef))
     # parent is valid because it appears in bump
     assert parent in vs
+    assert child not in vs
 
 
 def test_verify_valid_multiple_bumps_roots_and_txidonly():
@@ -113,7 +114,7 @@ def test_verify_valid_fails_when_bump_index_mismatch():
 
 
 def test_long_dependency_chain_requires_bump_for_validity():
-    from bsv.transaction.beef import Beef, BEEF_V2, BeefTx
+    from bsv.transaction.beef import Beef, BEEF_V2
 
     class Tx:
         def __init__(self, txid, inputs=None):
@@ -140,7 +141,7 @@ def test_long_dependency_chain_requires_bump_for_validity():
     tC = Tx(C, [Inp(B)])
     tD = Tx(D, [Inp(C)])
     # Merge in order without bumps
-    beef.merge_transaction(tA)
+    beef.merge_transaction(tA);
     beef.merge_transaction(tB)
     beef.merge_transaction(tC)
     beef.merge_transaction(tD)

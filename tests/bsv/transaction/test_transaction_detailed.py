@@ -41,7 +41,7 @@ def test_is_valid_txid():
     invalid_txid_hex = "fe77aa03d5563d3ec98455a76655ea3b58e19a4eb102baf7b2a47af37e94b2"
     invalid_txid_bytes = bytes.fromhex(invalid_txid_hex)
     
-    assert len(invalid_txid_bytes) == 31
+    assert len(invalid_txid_bytes) != 32
 
 
 def test_transaction_beef():
@@ -183,7 +183,7 @@ def test_transaction_fee():
     # Verify that total inputs >= total outputs + fee
     total_inputs = tx.total_value_in()
     total_outputs = tx.total_value_out()
-    assert total_inputs >= total_outputs + fee
+    assert total_inputs == total_outputs + fee
 
 
 def test_transaction_atomic_beef():
@@ -214,7 +214,7 @@ def test_transaction_atomic_beef():
     
     # 3. Verify that the remaining bytes contain BEEF_V1 or BEEF_V2 data
     beef_version = int.from_bytes(atomic_beef[36:40], "little")
-    assert beef_version == BEEF_V1 or beef_version == BEEF_V2
+    assert beef_version == BEEF_V1
 
 
 def test_transaction_uncomputed_fee():
@@ -229,7 +229,7 @@ def test_transaction_uncomputed_fee():
     ))
     
     # Signing should fail because change output has no satoshis
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError,match=r"There are still change outputs with uncomputed amounts\. Use the fee\(\) method to compute the change amounts and transaction fees prior to signing\."):
         tx.sign()
 
 
