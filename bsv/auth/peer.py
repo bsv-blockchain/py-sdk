@@ -2,6 +2,7 @@ from typing import Callable, Dict, Optional, Any, Set
 import logging
 import json
 import base64
+import threading
 
 from .transports.transport import Transport
 # Re-export PeerSession for compatibility with session_manager typing/tests
@@ -91,6 +92,7 @@ class Peer:
         self.on_certificate_request_received_callbacks: Dict[int, Callable] = {}
         self.on_initial_response_received_callbacks: Dict[int, dict] = {}
         self.callback_id_counter = 0
+        self._callback_counter_lock = threading.Lock()  # Thread safety for callback counter
         self.last_interacted_with_peer = None
 
         # Nonce management for replay protection
@@ -1163,8 +1165,9 @@ class Peer:
         """
         Registers a callback for general messages. Returns a callback ID.
         """
-        callback_id = self.callback_id_counter
-        self.callback_id_counter += 1
+        with self._callback_counter_lock:
+            callback_id = self.callback_id_counter
+            self.callback_id_counter += 1
         self.on_general_message_received_callbacks[callback_id] = callback
         return callback_id
 
@@ -1179,8 +1182,9 @@ class Peer:
         """
         Registers a callback for certificate reception. Returns a callback ID.
         """
-        callback_id = self.callback_id_counter
-        self.callback_id_counter += 1
+        with self._callback_counter_lock:
+            callback_id = self.callback_id_counter
+            self.callback_id_counter += 1
         self.on_certificate_received_callbacks[callback_id] = callback
         return callback_id
 
@@ -1195,8 +1199,9 @@ class Peer:
         """
         Registers a callback for certificate requests. Returns a callback ID.
         """
-        callback_id = self.callback_id_counter
-        self.callback_id_counter += 1
+        with self._callback_counter_lock:
+            callback_id = self.callback_id_counter
+            self.callback_id_counter += 1
         self.on_certificate_request_received_callbacks[callback_id] = callback
         return callback_id
 
@@ -1257,13 +1262,14 @@ class Peer:
             initial_nonce=session_nonce,
             requested_certificates=self.certificates_to_request
         )
-        # Set up a simple timeout mechanism (not concurrent)
+        # Set up timeout mechanism with thread-safe callback registration
         import threading
         response_event = threading.Event()
         response_holder = {'session': None}
-        # Register a callback for the response (simplified)
-        callback_id = self.callback_id_counter
-        self.callback_id_counter += 1
+        # Register a callback for the response (thread-safe)
+        with self._callback_counter_lock:
+            callback_id = self.callback_id_counter
+            self.callback_id_counter += 1
         def on_initial_response(peer_nonce):
             session.peer_nonce = peer_nonce
             session.is_authenticated = True

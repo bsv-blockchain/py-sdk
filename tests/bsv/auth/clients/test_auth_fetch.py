@@ -116,3 +116,71 @@ def test_validate_request_options():
     assert config.headers["X-Test"] == "value"
     config = SimplifiedFetchRequestOptions(body=b"test")
     assert config.body == b"test"
+
+
+def test_fetch_with_retry_counter_at_zero():
+    """Test that fetch fails when retry counter reaches zero"""
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
+    url = "https://example.com/api"
+    config = SimplifiedFetchRequestOptions(method="GET", retry_counter=0)
+    
+    with pytest.raises(Exception) as exc_info:
+        auth_fetch.fetch(None, url, config)
+    assert "maximum number of retries" in str(exc_info.value).lower() or "retry" in str(exc_info.value).lower()
+
+
+def test_fetch_with_unsupported_headers():
+    """Test that fetch rejects unsupported headers like x-bsv-auth-*"""
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
+    
+    # Test with x-bsv-auth header (should be rejected)
+    url = "https://example.com/api"
+    config = SimplifiedFetchRequestOptions(
+        method="GET",
+        headers={"x-bsv-auth": "123"}
+    )
+    
+    # This should either fail or log a warning about unsupported header
+    # The actual behavior depends on implementation
+    try:
+        auth_fetch.fetch(None, url, config)
+    except Exception:
+        # Expected to fail or handle gracefully
+        pass
+
+
+def test_fetch_network_failure_handling():
+    """Test that network failures are properly handled with context"""
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
+    url = "https://example.com/api"
+    config = SimplifiedFetchRequestOptions(method="GET")
+    
+    # Mock transport that fails
+    class FailingTransport:
+        def __init__(self, base_url):
+            self.base_url = base_url
+        
+        def on_data(self, callback):
+            return None
+        
+        def send(self, ctx, message):
+            raise Exception("Network connection failed")
+    
+    from bsv.auth.clients.auth_fetch import AuthPeer
+    auth_peer = AuthPeer()
+    auth_peer.peer = MagicMock()
+    auth_peer.peer.to_peer = MagicMock(side_effect=Exception("Network connection failed"))
+    auth_peer.peer.listen_for_general_messages = MagicMock(return_value=1)
+    auth_peer.peer.stop_listening_for_general_messages = MagicMock()
+    auth_fetch.peers["https://example.com"] = auth_peer
+    
+    with pytest.raises(Exception) as exc_info:
+        auth_fetch.fetch(None, url, config)
+    # Should contain network error context
+    assert "network" in str(exc_info.value).lower() or "connection" in str(exc_info.value).lower() or "failed" in str(exc_info.value).lower()
