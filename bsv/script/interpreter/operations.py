@@ -4,7 +4,7 @@ Opcode operations for script interpreter.
 Ported from go-sdk/script/interpreter/operations.go and py-sdk/bsv/script/spend.py
 """
 
-from typing import Optional
+from typing import Optional, List
 
 from bsv.constants import OpCode, SIGHASH
 from bsv.curve import curve
@@ -67,38 +67,168 @@ def minimally_encode(num: int) -> bytes:
     return bytes(octets)
 
 
-def check_signature_encoding(octets: bytes, require_low_s: bool = True) -> Optional[Error]:
-    """Check signature encoding."""
+def check_signature_encoding(octets: bytes, require_low_s: bool = True, require_der: bool = True, require_strict: bool = True) -> Optional[Error]:
+    """
+    Check signature encoding with detailed DER validation.
+
+    This implements the same validation as the Go SDK's checkSignatureEncoding.
+    """
     if octets == b"":
         return None
-    
+
     if len(octets) < 1:
-        return Error(ErrorCode.ERR_SIG_BADLENGTH, "signature too short")
-    
+        # Empty signatures are allowed but result in CHECKSIG returning false
+        return None
+
     sig, sighash_byte = octets[:-1], octets[-1]
-    
-    try:
-        sighash = SIGHASH(sighash_byte)
-    except (ValueError, TypeError):
-        return Error(ErrorCode.ERR_SIG_HASHTYPE, "invalid sighash type")
-    
-    try:
-        _, s = deserialize_ecdsa_der(sig)
-        if require_low_s and s > curve.n // 2:
-            return Error(ErrorCode.ERR_SIG_HIGH_S, "signature has high S value")
-    except Exception:
-        return Error(ErrorCode.ERR_SIG_DER, "invalid signature DER encoding")
-    
+
+    # Check sighash type only if DER validation is required
+    if require_der:
+        try:
+            sighash = SIGHASH(sighash_byte)
+        except (ValueError, TypeError):
+            return Error(ErrorCode.ERR_SIG_HASHTYPE, "invalid sighash type")
+
+    # If not requiring DER validation, skip the rest
+    if not require_der:
+        return None
+
+    # Detailed DER signature validation
+    sig_len = len(sig)
+
+    # Constants from Go SDK
+    asn1_sequence_id = 0x30
+    asn1_integer_id = 0x02
+    min_sig_len = 8
+    max_sig_len = 72
+
+    # Offsets within signature
+    sequence_offset = 0
+    data_len_offset = 1
+    r_type_offset = 2
+    r_len_offset = 3
+
+    # The signature must adhere to the minimum and maximum allowed length.
+    if sig_len < min_sig_len:
+        return Error(ErrorCode.ERR_SIG_TOO_SHORT, f"malformed signature: too short: {sig_len} < {min_sig_len}")
+    if sig_len > max_sig_len:
+        return Error(ErrorCode.ERR_SIG_TOO_LONG, f"malformed signature: too long: {sig_len} > {max_sig_len}")
+
+    # The signature must start with the ASN.1 sequence identifier.
+    if sig[sequence_offset] != asn1_sequence_id:
+        return Error(ErrorCode.ERR_SIG_INVALID_SEQ_ID, f"malformed signature: format has wrong type: {sig[sequence_offset]:#x}")
+
+    # The signature must indicate the correct amount of data for all elements
+    # related to R and S.
+    if int(sig[data_len_offset]) != sig_len - 2:
+        return Error(ErrorCode.ERR_SIG_INVALID_DATA_LEN,
+                    f"malformed signature: bad length: {sig[data_len_offset]} != {sig_len - 2}")
+
+    # Calculate the offsets of the elements related to S and ensure S is inside
+    # the signature.
+    r_len = int(sig[r_len_offset])
+    s_type_offset = r_type_offset + r_len + 1  # +1 for r_type byte
+    s_len_offset = s_type_offset + 1
+
+    if s_type_offset >= sig_len:
+        return Error(ErrorCode.ERR_SIG_MISSING_S_TYPE_ID, "malformed signature: S type indicator missing")
+    if s_len_offset >= sig_len:
+        return Error(ErrorCode.ERR_SIG_MISSING_S_LEN, "malformed signature: S length missing")
+
+    # The lengths of R and S must match the overall length of the signature.
+    s_offset = s_len_offset + 1
+    s_len = int(sig[s_len_offset])
+    if s_offset + s_len != sig_len:
+        return Error(ErrorCode.ERR_SIG_INVALID_S_LEN, "malformed signature: invalid S length")
+
+    # R elements must be ASN.1 integers.
+    if sig[r_type_offset] != asn1_integer_id:
+        return Error(ErrorCode.ERR_SIG_INVALID_R_INT_ID,
+                    f"malformed signature: R integer marker: {sig[r_type_offset]:#x} != {asn1_integer_id:#x}")
+
+    # Zero-length integers are not allowed for R.
+    if r_len == 0:
+        return Error(ErrorCode.ERR_SIG_ZERO_R_LEN, "malformed signature: R length is zero")
+
+    # R must not be negative.
+    r_start = r_len_offset + 1
+    if sig[r_start] & 0x80 != 0:
+        return Error(ErrorCode.ERR_SIG_NEGATIVE_R, "malformed signature: R is negative")
+
+    # Null bytes at the start of R are not allowed, unless R would otherwise be
+    # interpreted as a negative number.
+    if r_len > 1 and sig[r_start] == 0x00 and sig[r_start + 1] & 0x80 == 0:
+        return Error(ErrorCode.ERR_SIG_TOO_MUCH_R_PADDING, "malformed signature: R value has too much padding")
+
+    # S elements must be ASN.1 integers.
+    if sig[s_type_offset] != asn1_integer_id:
+        return Error(ErrorCode.ERR_SIG_INVALID_S_INT_ID,
+                    f"malformed signature: S integer marker: {sig[s_type_offset]:#x} != {asn1_integer_id:#x}")
+
+    # Zero-length integers are not allowed for S.
+    if s_len == 0:
+        return Error(ErrorCode.ERR_SIG_ZERO_S_LEN, "malformed signature: S length is zero")
+
+    # S must not be negative.
+    if sig[s_offset] & 0x80 != 0:
+        return Error(ErrorCode.ERR_SIG_NEGATIVE_S, "malformed signature: S is negative")
+
+    # Null bytes at the start of S are not allowed, unless S would otherwise be
+    # interpreted as a negative number.
+    if s_len > 1 and sig[s_offset] == 0x00 and sig[s_offset + 1] & 0x80 == 0:
+        return Error(ErrorCode.ERR_SIG_TOO_MUCH_S_PADDING, "malformed signature: S value has too much padding")
+
+    # Verify the S value is <= half the order of the curve.
+    if require_low_s:
+        s_value = int.from_bytes(sig[s_offset:s_offset + s_len], byteorder='big')
+        if s_value > curve.n // 2:
+            return Error(ErrorCode.ERR_SIG_HIGH_S, "signature is not canonical due to unnecessarily high S value")
+
     return None
 
 
-def check_public_key_encoding(octets: bytes) -> bool:
-    """Check public key encoding."""
+def remove_signature_from_script(script: List[ParsedOpcode], sig: bytes) -> List[ParsedOpcode]:
+    """
+    Remove all occurrences of the signature from the script.
+
+    This is used for sighash generation when not using FORKID.
+    """
+    result = []
+    for opcode in script:
+        if opcode.data != sig:
+            result.append(opcode)
+    return result
+
+
+def check_public_key_encoding(octets: bytes) -> Optional[Error]:
+    """
+    Check public key encoding with detailed validation matching TypeScript SDK.
+
+    Returns None if valid, Error if invalid.
+    """
+    if len(octets) == 0:
+        return Error(ErrorCode.ERR_PUBKEY_TYPE, "Public key is empty")
+
+    if len(octets) < 33:
+        return Error(ErrorCode.ERR_PUBKEY_TYPE, "The public key is too short, it must be at least 33 bytes")
+
+    # Check format based on first byte
+    if octets[0] == 0x04:  # Uncompressed
+        if len(octets) != 65:
+            return Error(ErrorCode.ERR_PUBKEY_TYPE, "The non-compressed public key must be 65 bytes")
+    elif octets[0] == 0x02 or octets[0] == 0x03:  # Compressed
+        if len(octets) != 33:
+            return Error(ErrorCode.ERR_PUBKEY_TYPE, "The compressed public key must be 33 bytes")
+    else:
+        return Error(ErrorCode.ERR_PUBKEY_TYPE, "The public key is in an unknown format")
+
+    # Try to parse the public key
     try:
         PublicKey(octets)
-        return True
     except Exception:
-        return False
+        return Error(ErrorCode.ERR_PUBKEY_TYPE, "The public key is in an unknown format")
+
+    return None
 
 
 # Opcode implementations
@@ -732,26 +862,79 @@ def opcode_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CHECKSIG requires at least two items on stack")
     
-    sig = t.dstack.pop_byte_array()
     pub_key = t.dstack.pop_byte_array()
+    sig = t.dstack.pop_byte_array()
     
-    # Check encoding
-    err = check_signature_encoding(sig, t.flags.has_flag(t.flags.VERIFY_LOW_S))
+    # Check encoding with appropriate flags
+    require_der = t.flags.has_flag(t.flags.VERIFY_DER_SIGNATURES) or t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
+    require_low_s = t.flags.has_flag(t.flags.VERIFY_LOW_S)
+    require_strict = t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
+
+    err = check_signature_encoding(sig, require_low_s, require_der, require_strict)
     if err:
         return err
     
-    if not check_public_key_encoding(pub_key):
-        return Error(ErrorCode.ERR_PUBKEY_TYPE, "invalid public key encoding")
+    # Only validate public key encoding if strict encoding is required
+    if require_strict:
+        err = check_public_key_encoding(pub_key)
+        if err:
+            return err
     
-    # For now, return False if no transaction context
-    # Full implementation would verify signature
-    if t.tx is None or t.prev_output is None:
-        if t.error_on_check_sig:
-            return Error(ErrorCode.ERR_INVALID_PARAMS, "tx and previous output required for CHECKSIG")
-        result = False
+    # Extract sighash type from signature
+    if len(sig) < 1:
+        # Empty signature is invalid for verification
+        t.dstack.push_byte_array(encode_bool(False))
+        return None
+
+    sighash_type = sig[-1]
+    sig_bytes = sig[:-1]
+
+    # Check sighash type encoding only if DER validation is required
+    if require_der:
+        try:
+            sighash_flag = SIGHASH(sighash_type)
+        except (ValueError, TypeError):
+            return Error(ErrorCode.ERR_SIG_HASHTYPE, "invalid sighash type")
     else:
-        # TODO: Implement full signature verification
+        # Use default sighash type when not validating DER
+        sighash_flag = SIGHASH.ALL
+
+    # Get script for sighash generation
+    sub_script = t.sub_script()
+
+    # Remove signature from script if not using FORKID
+    if not (sighash_flag & SIGHASH.FORKID):
+        # Remove all occurrences of this signature from the script
+        sub_script = remove_signature_from_script(sub_script, sig)
+
+    # Generate signature hash
+    try:
+        # Convert script opcodes back to bytes
+        script_bytes = b""
+        for opcode in sub_script:
+            if opcode.opcode_value < OpCode.OP_PUSHDATA1.value:
+                script_bytes += opcode.opcode_value.to_bytes(1, 'little')
+            elif opcode.data:
+                script_bytes += opcode.opcode_value.to_bytes(1, 'little') + opcode.data
+            else:
+                script_bytes += opcode.opcode_value.to_bytes(1, 'little')
+
+        # Use preimage method with sighash flag - need to extend Transaction class
+        sighash = t.tx.preimage(t.input_idx)  # TODO: Add sighash parameter support
+    except Exception as e:
+        t.dstack.push_byte_array(encode_bool(False))
+        return None
+
+    # Verify signature
+    try:
+        pubkey_obj = PublicKey(pub_key)
+        result = pubkey_obj.verify(sig_bytes, sighash)
+    except Exception:
         result = False
+
+    # Check for null fail
+    if not result and len(sig_bytes) > 0 and t.flags.has_flag(t.flags.VERIFY_NULLFAIL):
+        return Error(ErrorCode.ERR_NULLFAIL, "signature not empty on failed checksig")
     
     t.dstack.push_byte_array(encode_bool(result))
     return None

@@ -188,6 +188,12 @@ class Thread:
         self.shift_script()
         return self.script_idx >= len(self.scripts), None
 
+    def sub_script(self) -> "ParsedScript":
+        """Get the script starting from the most recent OP_CODESEPARATOR."""
+        # TODO: Implement proper OP_CODESEPARATOR handling
+        # For now, return the current script
+        return self.scripts[self.script_idx]
+
     def shift_script(self) -> None:
         """Move to next script."""
         self.script_idx += 1
