@@ -131,13 +131,67 @@ class HostReputationTracker:
         entry.last_error = msg
         self.save_to_storage()
 
+    def rank_hosts(self, hosts: List[str], now: int) -> List[RankedHost]:
+        """
+        Rank given hosts by reputation score.
+
+        Args:
+            hosts: List of host names to rank
+            now: Current timestamp in milliseconds
+
+        Returns:
+            List of ranked hosts sorted by score (highest first)
+        """
+        ranked = []
+
+        for host in hosts:
+            entry = self._get_or_create(host)
+
+            # Skip if in backoff period
+            if entry.backoff_until > now:
+                continue
+
+            # Calculate score
+            total_requests = entry.total_successes + entry.total_failures
+            if total_requests == 0:
+                score = 0.0
+            else:
+                success_rate = entry.total_successes / total_requests
+                latency_factor = 1.0
+                if entry.avg_latency_ms is not None:
+                    # Lower latency = higher score
+                    latency_factor = max(0.1, 1.0 - (entry.avg_latency_ms / 10000.0))
+                score = success_rate * latency_factor
+
+            ranked.append(RankedHost(
+                host=host,
+                score=score,
+                backoff_until=entry.backoff_until
+            ))
+
+        # Sort by score (highest first)
+        ranked.sort(key=lambda x: x.score, reverse=True)
+        return ranked
+
+    def get_host_entry(self, host: str) -> HostReputationEntry:
+        """
+        Get the reputation entry for a specific host.
+
+        Args:
+            host: Host name
+
+        Returns:
+            Host reputation entry
+        """
+        return self._get_or_create(host)
+
     def get_ranked_hosts(self, min_score: float = 0.0) -> List[RankedHost]:
         """
         Get hosts ranked by reputation score.
-        
+
         Args:
             min_score: Minimum score threshold
-            
+
         Returns:
             List of ranked hosts sorted by score (highest first)
         """
@@ -184,6 +238,10 @@ class HostReputationTracker:
         if host not in self.stats:
             self.stats[host] = HostReputationEntry(host=host)
         return self.stats[host]
+
+    def _save_to_store(self) -> None:
+        """Alias for save_to_storage for test compatibility."""
+        self.save_to_storage()
 
     def save_to_storage(self) -> None:
         """Save reputation data to storage."""

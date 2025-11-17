@@ -199,6 +199,11 @@ class LookupResolver:
         else:
             self.host_reputation = get_overlay_host_reputation_tracker()
 
+    async def lookup(self, question: LookupQuestion, timeout: Optional[int] = None) -> List[LookupOutput]:
+        """Lookup outputs for a given question. Delegates to query method."""
+        answer = await self.query(question, timeout)
+        return answer.outputs
+
     async def query(self, question: LookupQuestion, timeout: Optional[int] = None) -> LookupAnswer:
         """Given a LookupQuestion, returns a LookupAnswer with aggregated results."""
         competent_hosts = await self._get_competent_hosts(question.service)

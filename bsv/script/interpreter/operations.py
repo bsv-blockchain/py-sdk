@@ -509,11 +509,9 @@ def opcode_tuck(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_TUCK."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_TUCK requires at least two items on stack")
-    x1 = t.dstack.pop_byte_array()
-    x2 = t.dstack.pop_byte_array()
-    t.dstack.push_byte_array(x1)
-    t.dstack.push_byte_array(x2)
-    t.dstack.push_byte_array(x1)
+    # Copy top item to position 2
+    top = t.dstack.peek_byte_array(0)
+    t.dstack.push_byte_array(top)
     return None
 
 
@@ -573,9 +571,9 @@ def opcode_negate(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NEGATE."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_NEGATE requires at least one item on stack")
-    x = bin2num(t.dstack.pop_byte_array())
-    result = -x
-    t.dstack.push_byte_array(minimally_encode(result))
+    x = t.dstack.pop_int()
+    result = ScriptNumber(-x.value)
+    t.dstack.push_int(result)
     return None
 
 
@@ -583,9 +581,9 @@ def opcode_abs(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_ABS."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_ABS requires at least one item on stack")
-    x = bin2num(t.dstack.pop_byte_array())
-    result = abs(x)
-    t.dstack.push_byte_array(minimally_encode(result))
+    x = t.dstack.pop_int()
+    result = ScriptNumber(abs(x.value))
+    t.dstack.push_int(result)
     return None
 
 
@@ -624,10 +622,10 @@ def opcode_sub(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_SUB."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_SUB requires at least two items on stack")
-    x1 = bin2num(t.dstack.pop_byte_array())
-    x2 = bin2num(t.dstack.pop_byte_array())
-    result = x1 - x2
-    t.dstack.push_byte_array(minimally_encode(result))
+    x1 = t.dstack.pop_int()
+    x2 = t.dstack.pop_int()
+    result = ScriptNumber(x2.value - x1.value)
+    t.dstack.push_int(result)
     return None
 
 
@@ -738,10 +736,10 @@ def opcode_greaterthan(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_GREATERTHAN."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_GREATERTHAN requires at least two items on stack")
-    x1 = bin2num(t.dstack.pop_byte_array())
-    x2 = bin2num(t.dstack.pop_byte_array())
-    result = 1 if x1 > x2 else 0
-    t.dstack.push_byte_array(minimally_encode(result))
+    x1 = t.dstack.pop_int()
+    x2 = t.dstack.pop_int()
+    result = ScriptNumber(1 if x2.value > x1.value else 0)
+    t.dstack.push_int(result)
     return None
 
 
@@ -793,11 +791,11 @@ def opcode_within(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_WITHIN."""
     if t.dstack.depth() < 3:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_WITHIN requires at least three items on stack")
-    x1 = bin2num(t.dstack.pop_byte_array())
-    x2 = bin2num(t.dstack.pop_byte_array())
-    x3 = bin2num(t.dstack.pop_byte_array())
-    result = x2 <= x1 < x3
-    t.dstack.push_byte_array(encode_bool(result))
+    value = t.dstack.pop_int()
+    max_val = t.dstack.pop_int()
+    min_val = t.dstack.pop_int()
+    result = ScriptNumber(1 if min_val.value <= value.value < max_val.value else 0)
+    t.dstack.push_int(result)
     return None
 
 

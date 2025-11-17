@@ -131,8 +131,13 @@ class TestKVStoreBEEFParsing:
                 'tx': b'signed_tx_bytes'
             }
         })
-        
+
         wallet.sign_action = Mock(return_value={'txid': 'signedTxId'})
+
+        # Mock get_public_key to return a proper public key string
+        wallet.get_public_key = Mock(return_value={
+            'publicKey': '02' + '00' * 32  # 33-byte compressed public key
+        })
         
         config = KVStoreConfig(
             wallet=wallet,
@@ -245,6 +250,10 @@ class TestKVStoreRetentionPeriod:
         wallet.list_outputs = Mock(return_value={'outputs': [], 'BEEF': None})
         wallet.create_action = Mock(return_value={'txid': 'newTxId'})
         wallet.internalize_action = Mock(return_value={'accepted': True})
+        # Mock get_public_key to return a proper public key string
+        wallet.get_public_key = Mock(return_value={
+            'publicKey': '02' + '00' * 32  # 33-byte compressed public key
+        })
         
         config = KVStoreConfig(
             wallet=wallet,

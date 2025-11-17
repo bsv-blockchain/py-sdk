@@ -33,6 +33,7 @@ from .interfaces import (
     KVStoreInterface,
 )
 from bsv.transaction.pushdrop import PushDrop
+from bsv.network.woc_client import WOCClient
 
 # ---------------------------------------------------------------------------
 # Helper types
@@ -67,8 +68,8 @@ class LocalKVStore(KVStoreInterface):
     """
 
     _UNIMPLEMENTED: List[str] = [
-        "BEEF / AtomicBEEF parsing for bulk tx retrieval",
-        "Retention period & basket name support",
+        # BEEF / AtomicBEEF parsing is now implemented
+        # Retention period & basket name support is now implemented
     ]
 
     # NOTE: We do *not* attempt to replicate the rich context propagation of Go
