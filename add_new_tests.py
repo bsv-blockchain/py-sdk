@@ -92,3 +92,4 @@ if insert_index > 0:
     print(f'Total tests now: {new_total}')
 else:
     print('Could not find insertion point')
+

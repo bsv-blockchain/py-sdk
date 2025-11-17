@@ -37,3 +37,4 @@ for category in ['script', 'beef', 'headers_client', 'spv', 'auth', 'transaction
         if len(tests) > 3:
             print(f'    ... and {len(tests) - 3} more')
         print()
+
