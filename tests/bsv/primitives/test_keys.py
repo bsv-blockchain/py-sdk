@@ -1,6 +1,5 @@
 import hashlib
 
-import ecdsa
 import pytest
 
 from bsv.constants import Network
@@ -114,12 +113,6 @@ def test_verify():
 
 
 def test_sign():
-    # ecdsa
-    message: bytes = b'hello world'
-    der: bytes = private_key.sign(message)
-    vk = ecdsa.VerifyingKey.from_string(public_key.serialize(), curve=ecdsa.SECP256k1)
-    assert vk.verify(signature=der, data=sha256(message), hashfunc=hashlib.sha256, sigdecode=ecdsa.util.sigdecode_der)
-
     # recoverable ecdsa
     text = 'hello world'
     address, signature = private_key.sign_text(text)

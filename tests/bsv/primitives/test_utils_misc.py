@@ -236,16 +236,19 @@ def test_storageutils_uhrp_url():
     expected_hash = hashlib.sha256(data).digest()
     actual_hash = StorageUtils.get_hash_from_url(uhrp_url)
     assert actual_hash == expected_hash
-    # Invalid prefix
-    bad_url = 'uhrp://badbase58'
+    # Invalid prefix - use a valid base58check with wrong prefix
+    from bsv.base58 import to_base58check, from_base58check
+    # Create a valid base58check with wrong prefix (use a different prefix)
+    hash_bytes = b'\x00' * 32
+    wrong_prefix = b'\x01\x00'  # Wrong 2-byte prefix
+    bad_prefix_url = f"uhrp://{to_base58check(hash_bytes, wrong_prefix)}"
     import pytest
-    with pytest.raises(Exception):
-        StorageUtils.get_hash_from_url(bad_url)
-    # Invalid length
-    from bsv.base58 import to_base58check
-    short_hash = b'1234'
+    with pytest.raises(ValueError, match="Bad prefix for UHRP URL"):
+        StorageUtils.get_hash_from_url(bad_prefix_url)
+    # Invalid length - create valid base58check but with wrong hash length
+    short_hash = b'123456789012345678901234567890'  # 30 bytes instead of 32
     bad_url2 = f"uhrp://{to_base58check(short_hash, UHRP_PREFIX)}"
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError, match="Invalid hash length in UHRP URL"):
         StorageUtils.get_hash_from_url(bad_url2)
     # is_valid_url returns False for invalid
     assert not StorageUtils.is_valid_url('uhrp://badbase58')

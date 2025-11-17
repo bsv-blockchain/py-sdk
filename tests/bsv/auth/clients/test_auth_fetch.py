@@ -116,3 +116,79 @@ def test_validate_request_options():
     assert config.headers["X-Test"] == "value"
     config = SimplifiedFetchRequestOptions(body=b"test")
     assert config.body == b"test"
+
+
+def test_fetch_with_retry_counter_at_zero():
+    """Test that fetch fails when retry counter reaches zero"""
+    from requests.exceptions import RetryError
+
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
+    url = "https://example.com/api"
+    config = SimplifiedFetchRequestOptions(method="GET", retry_counter=0)
+
+    with pytest.raises(RetryError, match="request failed after maximum number of retries"):
+        auth_fetch.fetch(None, url, config)
+
+
+def test_fetch_with_unsupported_headers():
+    """Test that fetch properly handles unsupported headers"""
+    import logging
+    from unittest.mock import patch
+
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
+
+    # Test with x-bsv-auth header (should be excluded from serialization)
+    url = "https://example.com/api"
+    config = SimplifiedFetchRequestOptions(
+        method="GET",
+        headers={"x-bsv-auth": "should-be-excluded", "x-bsv-valid": "should-be-included"}
+    )
+
+    # Mock the peer to avoid actual network calls
+    with patch.object(auth_fetch, 'peers', {}) as mock_peers:
+        mock_peer = MagicMock()
+        mock_peer.peer.to_peer = MagicMock(return_value=None)
+        mock_peer.peer.listen_for_general_messages = MagicMock(return_value=1)
+        mock_peer.peer.stop_listening_for_general_messages = MagicMock()
+        mock_peers["https://example.com"] = mock_peer
+
+        # Capture log warnings by patching the logger instance
+        with patch.object(auth_fetch.logger, 'warning') as mock_warning:
+            try:
+                auth_fetch.fetch(None, url, config)
+            except Exception:
+                # May timeout or fail due to mocking, but that's ok for this test
+                pass
+
+            # Check that warnings were logged for unsupported headers
+            mock_warning.assert_called()
+
+            # Verify the warning was about the unsupported header
+            warning_calls = [call.args[0] for call in mock_warning.call_args_list]
+            assert any("Unsupported header in simplified fetch" in msg for msg in warning_calls)
+
+
+def test_fetch_network_failure_handling():
+    """Test that network failures are properly handled and re-raised as RuntimeError"""
+    from unittest.mock import patch
+
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
+    url = "https://example.com/api"
+    config = SimplifiedFetchRequestOptions(method="GET")
+
+    # Mock the peer to simulate network failure during to_peer call
+    with patch.object(auth_fetch, 'peers', {}) as mock_peers:
+        mock_peer = MagicMock()
+        mock_peer.peer.to_peer = MagicMock(side_effect=Exception("Network connection failed"))
+        mock_peer.peer.listen_for_general_messages = MagicMock(return_value=1)
+        mock_peer.peer.stop_listening_for_general_messages = MagicMock()
+        mock_peers["https://example.com"] = mock_peer
+
+        with pytest.raises(RuntimeError, match="Network connection failed"):
+            auth_fetch.fetch(None, url, config)

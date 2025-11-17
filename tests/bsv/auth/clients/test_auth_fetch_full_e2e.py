@@ -49,6 +49,7 @@ async def auth_server():
                 ok = True
                 break
         except Exception:
+            # Intentional: Health check may fail during server startup - retry loop handles this
             pass
         await asyncio.sleep(0.1)
     if not ok:
@@ -198,7 +199,7 @@ async def test_auth_fetch_error_handling(auth_server):
             if resp:
                 assert resp.status_code in [404, 200]  # 404 for not found, 200 for fallback
         except Exception:
-            # Expected for invalid endpoints
+            # Intentional: Expected for invalid endpoints - test verifies graceful error handling
             pass
         
         print("✓ Error handling test passed")

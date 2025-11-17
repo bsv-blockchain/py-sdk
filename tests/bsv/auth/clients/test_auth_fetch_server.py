@@ -19,6 +19,7 @@ async def handle_authfetch(request):
     try:
         msg = json.loads(data.decode())
     except Exception:
+        # Intentional: Server error handling - catch all exceptions to return proper HTTP error
         return web.Response(status=400, text="Invalid message format")
 
     msg_type = msg.get("message_type")

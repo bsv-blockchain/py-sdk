@@ -6,7 +6,7 @@ def test_beef_unknown_version_errors():
     from bsv.transaction.beef import parse_beef
     # version=0xFFFFFFFF (unknown)
     data = (0xFFFFFFFF).to_bytes(4, 'little') + b"\x00\x00\x00\x00"
-    with pytest.raises(Exception, match='unsupported BEEF version'):
+    with pytest.raises(ValueError, match='unsupported BEEF version'):
         parse_beef(data)
 
 
@@ -21,7 +21,8 @@ def test_atomic_subject_missing_returns_none_last_tx():
         assert subject == (b"\x33" * 32)[::-1].hex()
         assert last_tx is None
     except Exception:
-        # Accept failure for invalid inner; parser may raise
+        # Intentional: Accept failure for invalid inner; parser may raise various exceptions
+        # Both success (with last_tx=None) and failure are acceptable outcomes for this test
         pass
 
 
@@ -35,6 +36,8 @@ def test_beef_v2_txidonly_then_raw_deduplicate():
         # when parsed, either raise earlier or record one tx entry at most
         assert len(beef.txs) <= 1
     except Exception:
+        # Intentional: Parser may raise various exceptions for invalid data
+        # Both successful parsing (with deduplication) and failure are acceptable
         pass
 
 
@@ -43,11 +46,11 @@ def test_beef_v2_truncated_bumps_and_txs():
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
     # v2 with bumps=2 but no bump bytes
     v2_bad_bumps = int(BEEF_V2).to_bytes(4, 'little') + b"\x02"
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_bytes(v2_bad_bumps)
     # v2 with bumps=0 and missing tx count
     v2_missing_txcount = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_bytes(v2_missing_txcount)
 
 # --- Additional E2E/edge-case tests for BEEF/AtomicBEEF ---
@@ -77,7 +80,8 @@ def test_beef_v2_mixed_txidonly_and_rawtx_linking():
     # Both parent and child should be present, and child input should link to parent
     assert parent_id in beef.txs and child_id in beef.txs
     btx = beef.find_transaction_for_signing(child_id)
-    assert btx is not None and btx.tx_obj is not None
+    assert btx is not None
+    assert btx.tx_obj is not None
     assert btx.tx_obj.inputs[0].source_transaction is not None
     assert btx.tx_obj.inputs[0].source_transaction.txid() == parent_id
 
@@ -120,7 +124,8 @@ def test_atomicbeef_nested_parsing():
     atomic = int(ATOMIC_BEEF).to_bytes(4, 'little') + bytes.fromhex(t.txid())[::-1] + beef_bytes
     beef, subject, last_tx = parse_beef_ex(atomic)
     assert subject == t.txid()
-    assert last_tx is not None and last_tx.txid() == t.txid()
+    assert last_tx is not None
+    assert last_tx.txid() == t.txid()
 
 
 def test_atomicbeef_deeply_nested():
@@ -138,7 +143,8 @@ def test_atomicbeef_deeply_nested():
     atomic3 = int(ATOMIC_BEEF).to_bytes(4, 'little') + bytes.fromhex(t.txid())[::-1] + atomic2
     beef, subject, last_tx = parse_beef_ex(atomic3)
     assert subject == t.txid()
-    assert last_tx is not None and last_tx.txid() == t.txid()
+    assert last_tx is not None
+    assert last_tx.txid() == t.txid()
 
 
 def test_beef_v2_bump_index_out_of_range():
@@ -147,7 +153,7 @@ def test_beef_v2_bump_index_out_of_range():
     # version, bumps=1, txs=1, kind=RawTxAndBumpIndex, bumpIndex=2 (invalid)
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x01" + b"\x00" + b"\x01" + b"\x01" + b"\x02" + b"\x00"
     import pytest
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_bytes(v2)
 
 
@@ -161,6 +167,8 @@ def test_beef_v2_txidonly_rawtx_duplicate_order():
         # Should not crash, and only one entry for txid
         assert list(beef.txs.keys()).count(txid.hex()) <= 1
     except Exception:
+        # Intentional: Parser may raise various exceptions for invalid data
+        # Both successful parsing (with deduplication) and failure are acceptable
         pass
 
 
@@ -170,11 +178,11 @@ def test_beef_v2_extreme_tx_and_bump_count():
     # Large bump count (but no actual bump data)
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\xFD\xFF\xFF"  # 0xFFFF bumps (truncated)
     import pytest
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_bytes(v2)
     # Large tx count (but no actual tx data)
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\xFD\xFF\xFF"
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError, match="unsupported tx data format"):
         new_beef_from_bytes(v2)
 
 

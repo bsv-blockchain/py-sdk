@@ -10,7 +10,8 @@ def test_merge_txid_only_and_make_txid_only():
     assert txid in beef.txs and beef.txs[txid].data_format == 2
     # make_txid_only should return the same state for the same txid
     btx2 = beef.make_txid_only(txid)
-    assert btx2 is not None and btx2.data_format == 2
+    assert btx2 is not None
+    assert btx2.data_format == 2
 
 
 def test_merge_transaction_sets_bump_index_when_bump_proves_txid():

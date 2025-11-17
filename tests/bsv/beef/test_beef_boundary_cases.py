@@ -52,7 +52,7 @@ def test_merge_raw_tx_invalid_bump_index_raises():
     t.outputs = [TransactionOutput(Script(b"\x51"), 1)]
     raw = t.serialize()
     beef = Beef(version=BEEF_V2)
-    with pytest.raises(Exception, match="invalid bump index"):
+    with pytest.raises((ValueError, TypeError), match="invalid bump index"):
         merge_raw_tx(beef, raw, bump_index=1)  # no bumps -> index out of range
 
 
@@ -79,7 +79,7 @@ def test_to_binary_dedupes_txid_only_and_raw_for_same_txid():
 def test_new_beef_from_atomic_bytes_too_short_raises():
     """AtomicBEEF shorter than 36 bytes must raise."""
     from bsv.transaction.beef import new_beef_from_atomic_bytes
-    with pytest.raises(Exception, match="too short"):
+    with pytest.raises(ValueError, match="too short"):
         new_beef_from_atomic_bytes(b"\x01\x01\x01")  # shorter than 36
 
 

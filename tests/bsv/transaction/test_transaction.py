@@ -659,7 +659,7 @@ def test_input_auto_txid():
     assert tx_in.source_txid == 'e6adcaf6b86fb5d690a3bade36011cd02f80dd364f1ecf2bb04902aa1b6bf455'
     
     prev_tx.outputs[0].locking_script = None
-    with pytest.raises(Exception):
+    with pytest.raises(AttributeError, match="'NoneType' object has no attribute"):
         tx_in = TransactionInput(
             source_transaction=prev_tx,
             source_output_index=0,

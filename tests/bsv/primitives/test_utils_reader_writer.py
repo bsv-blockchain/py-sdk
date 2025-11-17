@@ -89,6 +89,7 @@ class TestReaderPrimitives:
             r2 = LowLevelReader(w.to_bytes())
             parsed = r2.read_var_int_num()
         except Exception:
+            # Intentional: Optional import/parsing may fail - test continues with fallback logic
             pass
 
         if parsed is not None:

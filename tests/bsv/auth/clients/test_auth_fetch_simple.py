@@ -42,6 +42,7 @@ def auth_full_server():
                 ok = True
                 break
         except Exception:
+            # Intentional: Health check may fail during server startup - retry loop handles this
             pass
         time.sleep(0.1)
     if not ok:

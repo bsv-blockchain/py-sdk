@@ -98,7 +98,7 @@ def test_storage_download_hash_mismatch_e2e():
     from bsv.storage.utils import StorageUtils
     bad_url = StorageUtils.get_url_for_file(bad_data)
     import pytest
-    with pytest.raises(Exception):
+    with pytest.raises(DownloadError, match="Hash mismatch"):
         downloader.download(bad_url)
 
 
