@@ -103,6 +103,8 @@ class KVStoreConfig:
     # Optional TS/GO-style defaults for call arguments
     fee_rate: int | None = None
     default_ca: dict | None = None
+    # Optional options parity with TS
+    accept_delayed_broadcast: bool = False
 
 
 @dataclass
