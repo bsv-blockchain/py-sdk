@@ -3,6 +3,7 @@ import base64
 from .types import (
     DisplayableIdentity, IdentityClientOptions, CertificateFieldNameUnder50Bytes, OriginatorDomainNameStringUnder250Bytes
 )
+from .contacts_manager import ContactsManager
 from bsv.wallet.wallet_interface import WalletInterface
 
 class IdentityClient:
@@ -15,6 +16,7 @@ class IdentityClient:
         self.wallet = wallet
         self.options = options or IdentityClientOptions()
         self.originator = originator
+        self.contacts_manager = ContactsManager(wallet)
 
     def _reveal_fields_from_master_certificate(self, certificate, fields_to_reveal):
         from bsv.auth.master_certificate import MasterCertificate
@@ -99,12 +101,23 @@ class IdentityClient:
         # In the mock implementation, returns a zero TXID because actual txid cannot be obtained
         return "00" * 32
 
-    def resolve_by_identity_key(self, ctx: Any, args: Dict) -> List[DisplayableIdentity]:
+    def resolve_by_identity_key(self, ctx: Any, args: Dict, override_with_contacts: bool = True) -> List[DisplayableIdentity]:
         """
         Resolves certificates linked to the specified identity key and returns them as a DisplayableIdentity list.
         Connects to discover_by_identity_key in wallet/substrates.
         args: { 'identityKey': bytes|hex-str, 'limit'?: int, 'offset'?: int, 'seekPermission'?: bool }
+        override_with_contacts: If True, prioritize contacts over discovered identities
         """
+        identity_key = args.get('identityKey', '')
+        if isinstance(identity_key, bytes):
+            identity_key = identity_key.hex()
+        
+        # Check contacts first if override_with_contacts is True
+        if override_with_contacts:
+            contacts = self.contacts_manager.get_contacts(identity_key=identity_key)
+            if contacts:
+                return contacts
+        
         if self.wallet is None:
             return []
         try:
@@ -135,12 +148,24 @@ class IdentityClient:
         except Exception:
             return []
 
-    def resolve_by_attributes(self, ctx: Any, args: Dict) -> List[DisplayableIdentity]:
+    def resolve_by_attributes(self, ctx: Any, args: Dict, override_with_contacts: bool = True) -> List[DisplayableIdentity]:
         """
         Resolves certificates linked to the specified attributes and returns them as a DisplayableIdentity list.
         Connects to discover_by_attributes in wallet/substrates.
         args: { 'attributes': Dict[str,str], 'limit'?: int, 'offset'?: int, 'seekPermission'?: bool }
+        override_with_contacts: If True, prioritize contacts over discovered identities
         """
+        # Check contacts first if override_with_contacts is True
+        # Note: Contacts lookup by attributes would require scanning all contacts
+        # For now, we'll check contacts if identityKey is in attributes
+        if override_with_contacts:
+            attributes = args.get('attributes', {})
+            identity_key = attributes.get('identityKey')
+            if identity_key:
+                contacts = self.contacts_manager.get_contacts(identity_key=identity_key)
+                if contacts:
+                    return contacts
+        
         if self.wallet is None:
             return []
         try:

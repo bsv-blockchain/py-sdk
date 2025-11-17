@@ -34,3 +34,7 @@ def hmac_sha256(key: bytes, message: bytes) -> bytes:
 
 def hmac_sha512(key: bytes, message: bytes) -> bytes:
     return hmac.new(key, message, hashlib.sha512).digest()
+
+
+def hmac_sha1(key: bytes, message: bytes) -> bytes:
+    return hmac.new(key, message, hashlib.sha1).digest()
