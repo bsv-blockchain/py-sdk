@@ -227,3 +227,16 @@ class HostReputationTracker:
             except Exception:
                 pass
 
+
+# Global tracker instance (singleton)
+_global_tracker = HostReputationTracker()
+
+
+def get_overlay_host_reputation_tracker() -> HostReputationTracker:
+    """
+    Get the global overlay host reputation tracker instance.
+
+    :returns: Global HostReputationTracker instance
+    """
+    return _global_tracker
+

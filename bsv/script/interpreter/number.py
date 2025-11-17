@@ -33,20 +33,23 @@ class ScriptNumber:
         
         # Check for minimal encoding
         if require_minimal and len(data) > 1:
-            # Check if the last byte is zero when it shouldn't be
-            if (data[-1] & 0x7f) == 0:
-                # Check if the second-to-last byte has the sign bit set
-                if len(data) > 1 and (data[-2] & 0x80) == 0:
-                    raise ValueError("non-minimally encoded script number")
+            # Check if we have unnecessary leading zeros
+            if data[-1] == 0x00 and (data[-2] & 0x80) == 0:
+                raise ValueError("non-minimally encoded script number")
+            # Check if we have 0x80 followed by zeros (would be -0)
+            if data[-1] == 0x80 and len(data) > 1 and all(b == 0 for b in data[:-1]):
+                raise ValueError("non-minimally encoded script number")
         
         # Parse the number
         if len(data) == 1:
             byte_val = data[0]
             if byte_val == 0:
                 return cls(0)
-            if byte_val <= 0x7f:
+            if (byte_val & 0x80) == 0:
+                # Positive number
                 return cls(byte_val)
             else:
+                # Negative number
                 return cls(byte_val - 256)
         
         # Multi-byte number
@@ -68,29 +71,41 @@ class ScriptNumber:
         """Convert ScriptNumber to bytes."""
         if self.value == 0:
             return b"\x00"
-        
-        # Determine sign and absolute value
-        is_negative = self.value < 0
-        abs_value = abs(self.value)
-        
-        # Convert to bytes (little-endian)
+
+        # For negative numbers, use two's complement
+        if self.value < 0:
+            # Calculate two's complement
+            abs_value = abs(self.value)
+            # Find the minimum number of bytes needed
+            if abs_value <= 0x80:
+                # Can fit in one byte
+                complement = (256 - abs_value) & 0xFF
+                return bytes([complement])
+            else:
+                # Multi-byte two's complement
+                result = []
+                temp = (1 << (abs_value.bit_length() + 1)) - abs_value
+                while temp > 0 or len(result) == 0:
+                    result.append(temp & 0xFF)
+                    temp >>= 8
+                return bytes(result)
+
+        # For positive numbers
+        abs_value = self.value
         result = []
         while abs_value > 0:
             result.append(abs_value & 0xFF)
             abs_value >>= 8
-        
-        # Add sign bit to last byte if negative
-        if is_negative:
-            result[-1] |= 0x80
-        
-        # Ensure minimal encoding
+
+        # Ensure the highest byte doesn't have the sign bit set
+        if len(result) > 0 and (result[-1] & 0x80) != 0:
+            result.append(0x00)
+
+        # Minimal encoding
         if require_minimal and len(result) > 1:
-            # Check if we can remove the last byte
-            if (result[-1] & 0x7f) == 0:
-                if len(result) > 1 and (result[-2] & 0x80) == 0:
-                    # Can be more minimal
-                    pass
-        
+            while len(result) > 1 and result[-1] == 0 and (result[-2] & 0x80) == 0:
+                result.pop()
+
         return bytes(result)
 
     def __int__(self) -> int:

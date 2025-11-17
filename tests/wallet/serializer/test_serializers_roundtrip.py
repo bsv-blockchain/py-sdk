@@ -22,6 +22,12 @@ from bsv.wallet.serializer.relinquish_certificate import (
     serialize_relinquish_certificate_result,
     deserialize_relinquish_certificate_result,
 )
+from bsv.wallet.serializer.abort_action import (
+    serialize_abort_action_args,
+    deserialize_abort_action_args,
+    serialize_abort_action_result,
+    deserialize_abort_action_result,
+)
 
 
 def test_create_action_args_roundtrip():
@@ -217,4 +223,37 @@ def test_relinquish_certificate_result_roundtrip():
     src = {}
     data = serialize_relinquish_certificate_result(src)
     out = deserialize_relinquish_certificate_result(data)
+    assert out == {}
+
+
+def test_abort_action_args_roundtrip():
+    # Test with reference bytes
+    src = {"reference": b"test_reference"}
+    data = serialize_abort_action_args(src)
+    out = deserialize_abort_action_args(data)
+    assert out == src
+
+    # Test with None reference
+    src = {"reference": None}
+    data = serialize_abort_action_args(src)
+    out = deserialize_abort_action_args(data)
+    assert out == {"reference": b""}
+
+    # Test with empty reference
+    src = {"reference": b""}
+    data = serialize_abort_action_args(src)
+    out = deserialize_abort_action_args(data)
+    assert out == {"reference": b""}
+
+    # Test with missing reference key
+    src = {}
+    data = serialize_abort_action_args(src)
+    out = deserialize_abort_action_args(data)
+    assert out == {"reference": b""}
+
+
+def test_abort_action_result_roundtrip():
+    src = {}
+    data = serialize_abort_action_result(src)
+    out = deserialize_abort_action_result(data)
     assert out == {}

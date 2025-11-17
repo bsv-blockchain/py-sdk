@@ -1,12 +1,22 @@
-from typing import Union
-from ..http_client import HttpClient
+from typing import Union, Optional
 from ..constants import Network
 from .broadcaster import Broadcaster
-from .whatsonchain import WhatsOnChainBroadcaster
+from .arc import ARC, ARCConfig
 
 
-def default_broadcaster(network: Union[Network, str] = Network.MAINNET, http_client: HttpClient = None) -> Broadcaster:
-    return WhatsOnChainBroadcaster(network=network, http_client=http_client)
+def default_broadcaster(
+    is_testnet: bool = False,
+    config: Optional[ARCConfig] = None
+) -> Broadcaster:
+    """
+    Create a default ARC broadcaster for the specified network.
+
+    :param is_testnet: Whether to use testnet (default: False for mainnet)
+    :param config: Optional ARC configuration
+    :returns: ARC broadcaster instance
+    """
+    url = "https://testnet.arc.gorillapool.io" if is_testnet else "https://arc.gorillapool.io"
+    return ARC(url, config or ARCConfig())
 
 
 __all__ = ["default_broadcaster"]

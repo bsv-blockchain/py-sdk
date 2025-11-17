@@ -67,15 +67,49 @@ class TestEngine:
     def test_engine_with_fork_id(self):
         """Test engine with fork ID flag."""
         engine = Engine()
-        
+
         locking_script = Script.from_asm("51 OP_EQUAL")  # OP_1 OP_EQUAL
         unlocking_script = Script.from_asm("51")  # OP_1
-        
+
         err = engine.execute(
             with_scripts(locking_script, unlocking_script),
             with_fork_id(),
         )
-        
+
         # Engine should execute successfully with fork_id flag
+        assert err is None
+
+    @pytest.mark.parametrize("nop_opcode", [
+        "OP_NOP", "OP_NOP1", "OP_NOP2", "OP_NOP3", "OP_NOP4", "OP_NOP5",
+        "OP_NOP6", "OP_NOP7", "OP_NOP8", "OP_NOP9", "OP_NOP10"
+    ])
+    def test_nop_opcodes_execution(self, nop_opcode):
+        """Test that all NOP opcodes execute without errors."""
+        engine = Engine()
+
+        # Test script: push 1, execute NOP opcode, check equality
+        locking_script = Script.from_asm(f"51 {nop_opcode} OP_EQUAL")  # OP_1 NOP_OP OP_EQUAL
+        unlocking_script = Script.from_asm("51")  # OP_1
+
+        err = engine.execute(
+            with_scripts(locking_script, unlocking_script),
+        )
+
+        # NOP opcodes should not cause errors
+        assert err is None
+
+    def test_nop_opcodes_in_unlocking_script(self):
+        """Test NOP opcodes in unlocking script."""
+        engine = Engine()
+
+        # Test script with NOP opcodes in unlocking script
+        locking_script = Script.from_asm("51 OP_EQUAL")  # OP_1 OP_EQUAL
+        unlocking_script = Script.from_asm("OP_NOP1 OP_NOP5 OP_NOP10 51")  # NOPs then OP_1
+
+        err = engine.execute(
+            with_scripts(locking_script, unlocking_script),
+        )
+
+        # NOP opcodes in unlocking script should not cause errors
         assert err is None
 
