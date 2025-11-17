@@ -88,10 +88,7 @@ class TestVerifyScripts:
             )]
         )
         
-        # verify_scripts should raise error when source transaction is missing
-        with pytest.raises((ValueError, Exception)) as exc_info:
+        # verify_scripts should raise ValueError when source transaction is missing
+        with pytest.raises(ValueError, match="Verification failed because the input at index 0 of transaction .* is missing an associated source transaction"):
             await verify_scripts(tx)
-        
-        # Verify error message mentions missing source transaction
-        assert "source transaction" in str(exc_info.value).lower() or "missing" in str(exc_info.value).lower()
 

@@ -51,11 +51,11 @@ class TestPrivateKey:
     def test_private_key_invalid_validation(self):
         """Test that invalid private keys raise errors"""
         # Zero key should raise error
-        with pytest.raises((ValueError, Exception)):
+        with pytest.raises(ValueError):
             PrivateKey("0000000000000000000000000000000000000000000000000000000000000000")
         
         # Key >= curve order should raise error
-        with pytest.raises((ValueError, Exception)):
+        with pytest.raises(ValueError):
             PrivateKey("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141")
     
     def test_public_key_derivation(self):

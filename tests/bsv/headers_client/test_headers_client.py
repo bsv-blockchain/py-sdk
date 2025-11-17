@@ -116,13 +116,11 @@ class TestHeadersClientGetMerkleRoots:
                 json_data={}
             )
         )
-        
+
         client = HeadersClient("http://test.com", "test-api-key", mock_client)
-        
-        with pytest.raises(Exception) as exc_info:
+
+        with pytest.raises(Exception, match="Failed to get merkle roots: status=500"):
             await client.get_merkle_roots(10)
-        
-        assert "Failed to get merkle roots" in str(exc_info.value)
     
     @pytest.mark.asyncio
     async def test_get_merkle_roots_empty_response(self):
@@ -218,13 +216,11 @@ class TestHeadersClientWebhooks:
                 json_data={'error': 'Invalid webhook URL'}
             )
         )
-        
+
         client = HeadersClient("http://test.com", "test-api-key", mock_client)
-        
-        with pytest.raises(Exception) as exc_info:
+
+        with pytest.raises(Exception, match="failed to register webhook: status=400, body={'error': 'Invalid webhook URL'}"):
             await client.register_webhook("invalid-url", "token")
-        
-        assert "failed to register webhook" in str(exc_info.value).lower()
     
     @pytest.mark.asyncio
     async def test_unregister_webhook_success(self):
@@ -261,13 +257,11 @@ class TestHeadersClientWebhooks:
                 json_data={'error': 'Webhook not found'}
             )
         )
-        
+
         client = HeadersClient("http://test.com", "test-api-key", mock_client)
-        
-        with pytest.raises(Exception) as exc_info:
+
+        with pytest.raises(Exception, match="failed to unregister webhook: status=404, body={'error': 'Webhook not found'}"):
             await client.unregister_webhook("https://example.com/webhook")
-        
-        assert "failed to unregister webhook" in str(exc_info.value).lower()
     
     @pytest.mark.asyncio
     async def test_get_webhook_success(self):
@@ -310,13 +304,11 @@ class TestHeadersClientWebhooks:
                 json_data={'error': 'Webhook not found'}
             )
         )
-        
+
         client = HeadersClient("http://test.com", "test-api-key", mock_client)
-        
-        with pytest.raises(Exception) as exc_info:
+
+        with pytest.raises(Exception, match="failed to get webhook: status=404, body={'error': 'Webhook not found'}"):
             await client.get_webhook("https://example.com/webhook")
-        
-        assert "failed to get webhook" in str(exc_info.value).lower()
     
     @pytest.mark.asyncio
     async def test_webhook_with_multiple_error_counts(self):

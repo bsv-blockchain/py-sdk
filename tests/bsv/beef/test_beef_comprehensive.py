@@ -19,7 +19,7 @@ BRC62Hex = "0100beef01fe636d0c0007021400fe507c0c7aa754cef1f7889d5fd395cf1f785dd7
 def test_from_beef_error_case():
     """Test FromBEEF with invalid data (GO: TestFromBeefErrorCase)"""
     from bsv.transaction.beef import parse_beef
-    with pytest.raises(Exception, match="unsupported BEEF version"):
+    with pytest.raises(ValueError, match="unsupported BEEF version"):
         parse_beef(b"invalid data")
 
 
@@ -356,7 +356,7 @@ def test_beef_error_handling():
     # Test invalid transaction format
     invalid_bytes = b"\xff\xff\xff\xff" + b"\x00" * 10
     
-    with pytest.raises((ValueError, Exception), match="unsupported BEEF version"):
+    with pytest.raises(ValueError, match="unsupported BEEF version"):
         new_beef_from_bytes(invalid_bytes)
 
 
@@ -403,7 +403,7 @@ def test_beef_merge_beef_bytes():
     
     # Test merging invalid BEEF bytes
     invalid_bytes = b"invalid beef data"
-    with pytest.raises(Exception, match="unsupported BEEF version"):
+    with pytest.raises(ValueError, match="unsupported BEEF version"):
         beef1.merge_beef_bytes(invalid_bytes)
 
 

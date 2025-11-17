@@ -382,6 +382,7 @@ class MockHTTPServer:
                     if result == 0:
                         return True
             except Exception:
+                # Intentional: Network connection attempts may fail - retry loop handles this
                 pass
             time.sleep(0.1)
         return False
@@ -413,6 +414,7 @@ class MockTransport:
             try:
                 callback(ctx, message)
             except Exception:
+                # Intentional: Network connection attempts may fail - retry loop handles this
                 pass
 
 

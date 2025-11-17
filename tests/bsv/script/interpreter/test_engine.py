@@ -33,9 +33,8 @@ class TestEngine:
             with_scripts(locking_script, unlocking_script),
         )
         
-        # For now, we expect it to not crash
-        # Full validation will come with opcode implementation
-        assert err is None or isinstance(err, Exception)
+        # Engine should execute successfully (no error)
+        assert err is None
 
     def test_engine_execute_with_missing_scripts(self):
         """Test that engine returns error for missing scripts."""
@@ -62,8 +61,8 @@ class TestEngine:
             with_after_genesis(),
         )
         
-        # Should not crash
-        assert err is None or isinstance(err, Exception)
+        # Engine should execute successfully with after_genesis flag
+        assert err is None
 
     def test_engine_with_fork_id(self):
         """Test engine with fork ID flag."""
@@ -77,6 +76,6 @@ class TestEngine:
             with_fork_id(),
         )
         
-        # Should not crash
-        assert err is None or isinstance(err, Exception)
+        # Engine should execute successfully with fork_id flag
+        assert err is None
 

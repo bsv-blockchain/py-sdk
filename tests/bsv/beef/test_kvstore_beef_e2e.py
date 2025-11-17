@@ -418,6 +418,7 @@ def test_online_woc_sample_tx_verify_optional():
         loop.close()
         assert ok is True
     except Exception:
+        # Intentional: Skip test if online verification fails (network issues, endpoint unavailable)
         import pytest
         pytest.skip("Online WOC sample verify skipped due to endpoint or data unavailability")
 
@@ -884,7 +885,9 @@ def test_signature_hash_integrity_with_preimage():
             return b"digest"
     unlocker = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "p"}, "k", {"type": 0}, sign_outputs_mode=0, anyone_can_pay=False)
     _ = unlocker.sign(None, DummyTx(), 0)
-    assert wallet.last_args is not None and ("hash_to_sign" in wallet.last_args) and wallet.last_args["hash_to_sign"] == b"digest"
+    assert wallet.last_args is not None
+    assert "hash_to_sign" in wallet.last_args
+    assert wallet.last_args["hash_to_sign"] == b"digest"
 
 
 def test_beef_v2_txidonly_and_bad_format_varint_errors():
@@ -895,25 +898,19 @@ def test_beef_v2_txidonly_and_bad_format_varint_errors():
     assert beef.version == BEEF_V2
     # Bad: invalid format byte 0xFF
     v2_bad_fmt = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\x01" + b"\xFF"
-    try:
+    import pytest
+    with pytest.raises(ValueError, match="unsupported tx data format"):
         new_beef_from_bytes(v2_bad_fmt)
-        assert False, "expected error"
-    except Exception:
-        pass
     # Bad: bump index out of range
     v2_bad_bidx = int(BEEF_V2).to_bytes(4, 'little') + b"\x01" + b"\x00" + b"\x01" + b"\x01" + b"\x00"  # 1 bump(empty), 1 tx, kind=RawTxAndBumpIndex, bumpIndex=1 -> invalid
-    try:
+    import pytest
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_bytes(v2_bad_bidx)
-        assert False, "expected error"
-    except Exception:
-        pass
     # Bad: truncated varint (tx count missing)
     v2_bad_vi = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"
-    try:
+    import pytest
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_bytes(v2_bad_vi)
-        assert False, "expected error"
-    except Exception:
-        pass
 
 
 def test_beef_mixed_versions_and_atomic_selection_logic():
@@ -1044,30 +1041,24 @@ def test_beef_v2_mixed_txidonly_and_rawtx():
 
 def test_beef_v2_invalid_bump_structure():
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
+    import pytest
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x02" + b"\x00" + b"\x01" + b"\x02" + (b"\x22" * 32)
-    try:
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_bytes(v2)
-        assert False, "Expected error for truncated bumps"
-    except Exception as e:
-        assert _is_expected_beef_error(e)
 
 def test_beef_atomic_with_invalid_inner():
     from bsv.transaction.beef import ATOMIC_BEEF, new_beef_from_atomic_bytes
+    import pytest
     atomic = int(ATOMIC_BEEF).to_bytes(4, 'little') + (b"\x33" * 32) + b"\x00\x00\x00\x00"
-    try:
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_atomic_bytes(atomic)
-        assert False, "Expected error for invalid inner BEEF"
-    except Exception as e:
-        assert _is_expected_beef_error(e)
 
 def test_beef_v1_invalid_transaction():
     from bsv.transaction.beef import BEEF_V1, new_beef_from_bytes
+    import pytest
     v1 = int(BEEF_V1).to_bytes(4, 'little')
-    try:
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_bytes(v1)
-        assert False, "Expected error for missing tx body"
-    except Exception as e:
-        assert _is_expected_beef_error(e)
 
 def test_beef_v2_duplicate_txidonly_and_rawtx():
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
@@ -1082,12 +1073,10 @@ def test_beef_v2_duplicate_txidonly_and_rawtx():
 
 def test_beef_v2_bad_varint():
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
+    import pytest
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\xFD"
-    try:
+    with pytest.raises((ValueError, TypeError)):
         new_beef_from_bytes(v2)
-        assert False, "Expected error for truncated varint"
-    except Exception as e:
-        assert _is_expected_beef_error(e)
 
 
 def test_kvstore_set_get_remove_e2e_with_action_log():

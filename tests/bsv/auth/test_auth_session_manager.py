@@ -34,9 +34,8 @@ class TestDefaultSessionManager:
             last_update=1,
         )
 
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(ValueError, match="invalid session: session_nonce is required to add a session"):
             self.session_manager.add_session(session)
-        assert "session_nonce is required" in str(exc.value)
 
     def test_add_session_missing_identity_key_is_allowed(self):
         session = PeerSession(

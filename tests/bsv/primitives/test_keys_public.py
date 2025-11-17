@@ -143,11 +143,11 @@ class TestPublicKey:
     def test_invalid_public_key_creation(self):
         """Test that invalid public keys raise errors"""
         # Invalid hex string
-        with pytest.raises((ValueError, Exception)):
+        with pytest.raises(ValueError):
             PublicKey("invalid_hex")
         
         # Invalid point coordinates  
-        with pytest.raises((ValueError, Exception)):
+        with pytest.raises(ValueError):
             invalid_point = Point(10, 13)  # Not on curve
             PublicKey(invalid_point)
     

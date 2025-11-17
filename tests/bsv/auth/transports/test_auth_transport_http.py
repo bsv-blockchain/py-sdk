@@ -23,6 +23,8 @@ def test_send_without_handler_returns_error(monkeypatch):
     msg = AuthMessage(version="0.1", message_type="general", identity_key=identity_key, payload=b"{}", signature=b"")
     err = t.send(None, msg)
     assert isinstance(err, Exception)
+    # Verify error message indicates handler is missing
+    assert "handler" in str(err).lower() or "no handler" in str(err).lower() or "not registered" in str(err).lower()
 
 
 def test_send_general_performs_http_and_notifies_handler(monkeypatch):

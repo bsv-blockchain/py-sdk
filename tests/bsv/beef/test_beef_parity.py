@@ -30,7 +30,8 @@ def test_find_transaction_for_signing_links_inputs():
     beef.txs[parent_id] = BeefTx(txid=parent_id, tx_bytes=parent.serialize(), tx_obj=parent, data_format=0)
     beef.txs[child_id] = BeefTx(txid=child_id, tx_bytes=child.serialize(), tx_obj=child, data_format=0)
     btx = beef.find_transaction_for_signing(child_id)
-    assert btx is not None and btx.tx_obj is not None
+    assert btx is not None
+    assert btx.tx_obj is not None
     # After linking, child's input should reference parent in source_transaction
     assert btx.tx_obj.inputs[0].source_transaction is parent
 
