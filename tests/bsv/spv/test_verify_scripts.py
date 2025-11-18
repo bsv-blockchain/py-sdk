@@ -35,19 +35,89 @@ class TestVerifyScripts:
         
         This is the key difference from regular verify() - it should
         verify scripts even without merkle paths.
-        
-        Note: Currently skipped because Transaction.verify() method is not implemented yet.
         """
-        pytest.skip("Transaction.verify() method needs to be implemented")
+        from bsv.transaction import Transaction, TransactionInput, TransactionOutput
+        from bsv.keys import PrivateKey
+        from bsv.script.type import P2PKH
+        
+        # Create a simple P2PKH transaction
+        priv_key = PrivateKey()
+        pub_key = priv_key.public_key()
+        address = priv_key.address()
+        
+        # Create source transaction
+        source_tx = Transaction(
+            [],
+            [TransactionOutput(
+                locking_script=P2PKH().lock(address),
+                satoshis=1000
+            )]
+        )
+        
+        # Create spending transaction
+        tx = Transaction(
+            [TransactionInput(
+                source_transaction=source_tx,
+                source_output_index=0,
+                unlocking_script_template=P2PKH().unlock(priv_key),
+            )],
+            [TransactionOutput(
+                locking_script=P2PKH().lock(address),
+                satoshis=500
+            )]
+        )
+        
+        # Sign the transaction
+        tx.sign()
+        
+        # This should succeed even without merkle paths
+        # because verify_scripts uses GullibleHeadersClient
+        result = await verify_scripts(tx)
+        assert result is True, "verify_scripts should verify scripts without merkle proofs"
     
     @pytest.mark.asyncio
     async def test_verify_scripts_with_invalid_script(self):
         """
         Test that verify_scripts returns False for invalid scripts.
-        
-        Note: Currently skipped because Transaction.verify() method is not implemented yet.
         """
-        pytest.skip("Transaction.verify() method needs to be implemented")
+        from bsv.transaction import Transaction, TransactionInput, TransactionOutput
+        from bsv.keys import PrivateKey
+        from bsv.script.type import P2PKH
+        from bsv.script import Script
+        
+        # Create a simple P2PKH transaction with invalid signature
+        priv_key = PrivateKey()
+        wrong_key = PrivateKey()  # Different key - will create invalid signature
+        address = priv_key.address()
+        
+        # Create source transaction
+        source_tx = Transaction(
+            [],
+            [TransactionOutput(
+                locking_script=P2PKH().lock(address),
+                satoshis=1000
+            )]
+        )
+        
+        # Create spending transaction with wrong key
+        tx = Transaction(
+            [TransactionInput(
+                source_transaction=source_tx,
+                source_output_index=0,
+                unlocking_script_template=P2PKH().unlock(wrong_key),  # Wrong key!
+            )],
+            [TransactionOutput(
+                locking_script=P2PKH().lock(address),
+                satoshis=500
+            )]
+        )
+        
+        # Sign with wrong key - this should create an invalid signature
+        tx.sign()
+        
+        # verify_scripts should return False for invalid scripts
+        result = await verify_scripts(tx)
+        assert result is False, "verify_scripts should return False for invalid signature"
     
     @pytest.mark.asyncio
     async def test_verify_scripts_with_missing_source_transaction(self):

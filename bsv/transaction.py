@@ -417,35 +417,28 @@ class Transaction:
             source_output = tx_input.source_transaction.outputs[tx_input.source_output_index]
             input_total += source_output.satoshis
 
-            input_verified = await tx_input.source_transaction.verify(chaintracker)
+            input_verified = await tx_input.source_transaction.verify(chaintracker, scripts_only=scripts_only)
             if not input_verified:
                 return False
 
-            other_inputs = self.inputs[:i] + self.inputs[i + 1:]
-            spend = Spend({
-                'sourceTXID': tx_input.source_transaction.txid(),
-                'sourceOutputIndex': tx_input.source_output_index,
-                'sourceSatoshis': source_output.satoshis,
-                'lockingScript': source_output.locking_script,
-                'transactionVersion': self.version,
-                'otherInputs': other_inputs,
-                'inputIndex': i,
-                'unlockingScript': tx_input.unlocking_script,
-                'outputs': self.outputs,
-                'inputSequence': tx_input.sequence,
-                'lockTime': self.locktime,
-            })
-            spend_valid = spend.validate()
-            if not spend_valid:
+            # Use Engine-based script interpreter (matches Go SDK implementation)
+            from bsv.script.interpreter import Engine, with_tx, with_after_genesis, with_fork_id
+            
+            engine = Engine()
+            err = engine.execute(
+                with_tx(self, i, source_output),
+                with_after_genesis(),
+                with_fork_id()
+            )
+            
+            if err is not None:
+                # Script verification failed
                 return False
 
-        output_total = 0
-        for out in self.outputs:
-            if not out.satoshis:
-                raise ValueError("Every output must have a defined amount during transaction verification.")
-            output_total += out.satoshis
-
-        return output_total <= input_total
+        # All inputs verified successfully
+        # Note: We don't check input_total <= output_total here as the Go SDK doesn't either
+        # Fee validation would be done separately if needed
+        return True
 
     def signature_hash(self, index: int) -> bytes:
         """
