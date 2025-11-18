@@ -17,10 +17,20 @@ BRC62Hex = "0100beef01fe636d0c0007021400fe507c0c7aa754cef1f7889d5fd395cf1f785dd7
 
 
 def test_from_beef_error_case():
-    """Test FromBEEF with invalid data (GO: TestFromBeefErrorCase)"""
+    """Test FromBEEF with invalid data raises appropriate errors (GO: TestFromBeefErrorCase)."""
     from bsv.transaction.beef import parse_beef
+    
+    # Test invalid/unsupported data
     with pytest.raises(ValueError, match="unsupported BEEF version"):
         parse_beef(b"invalid data")
+    
+    # Test empty data - should raise some error
+    with pytest.raises(Exception):  # Can be ValueError, IndexError, or struct.error
+        parse_beef(b"")
+    
+    # Test truncated version header
+    with pytest.raises(Exception):  # Can be ValueError, IndexError, or struct.error
+        parse_beef(b"\x00\x01")
 
 
 def test_new_empty_beef_v1():
@@ -65,7 +75,7 @@ def test_beef_transaction_finding():
 
 
 def test_beef_sort_txs():
-    """Test transaction sorting/validation (GO: TestBeefSortTxs)"""
+    """Test transaction sorting/validation with parent-child relationships (GO: TestBeefSortTxs)."""
     beef = Beef(version=BEEF_V2)
     
     # Create parent transaction
@@ -73,16 +83,23 @@ def test_beef_sort_txs():
     parent.outputs = [TransactionOutput(Script(b"\x51"), 1000)]
     parent_id = parent.txid()
     
-    # Create child transaction
+    # Create child transaction that spends from parent
     child = Transaction()
     child_in = TransactionInput(source_txid=parent_id, source_output_index=0, unlocking_script=Script())
     child.inputs = [child_in]
     child.outputs = [TransactionOutput(Script(b"\x51"), 900)]
     child_id = child.txid()
     
-    # Add transactions
+    # Add transactions to BEEF
     beef.merge_transaction(child)
     beef.merge_transaction(parent)
+    
+    # Verify both transactions are in BEEF
+    assert parent_id in beef.txs, "Parent transaction should be in BEEF"
+    assert child_id in beef.txs, "Child transaction should be in BEEF"
+    
+    # Verify parent-child relationship is maintained
+    assert child.inputs[0].source_txid == parent_id, "Child should reference parent TXID"
     
     # Validate transactions
     result = validate_transactions(beef)
@@ -109,7 +126,7 @@ def test_beef_sort_txs():
 
 
 def test_beef_to_log_string():
-    """Test log string generation (GO: TestBeefToLogString)"""
+    """Test log string generation with transaction and bump information (GO: TestBeefToLogString)."""
     beef = Beef(version=BEEF_V2)
     
     class DummyBump:
@@ -123,7 +140,11 @@ def test_beef_to_log_string():
     
     log_str = to_log_string(beef)
     
-    # Verify log string contains expected information
+    # Verify log string is not empty and contains expected information
+    assert log_str is not None, "Log string should not be None"
+    assert len(log_str) > 0, "Log string should not be empty"
+    assert "BEEF" in log_str or "beef" in log_str.lower() or len(log_str) > 10, \
+        "Log string should contain BEEF information or be substantive"
     assert "BEEF with" in log_str
     assert "BUMPs" in log_str or "BUMP" in log_str
     assert "Transactions" in log_str or "Transaction" in log_str

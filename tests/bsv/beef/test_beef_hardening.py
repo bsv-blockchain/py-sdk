@@ -12,33 +12,60 @@ def test_beef_unknown_version_errors():
 
 def test_atomic_subject_missing_returns_none_last_tx():
     """AtomicBEEF with missing subject tx should return None for last_tx (Go/TS parity)."""
-    from bsv.transaction.beef import ATOMIC_BEEF
+    from bsv.transaction.beef import ATOMIC_BEEF, BEEF_V2
     from bsv.transaction import parse_beef_ex
-    # Build Atomic with subject txid 0x33.. but empty inner
-    atomic = int(ATOMIC_BEEF).to_bytes(4, 'little') + (b"\x33" * 32) + b"\x00\x00\x00\x00"
-    try:
-        beef, subject, last_tx = parse_beef_ex(atomic)
-        assert subject == (b"\x33" * 32)[::-1].hex()
-        assert last_tx is None
-    except Exception:
-        # Intentional: Accept failure for invalid inner; parser may raise various exceptions
-        # Both success (with last_tx=None) and failure are acceptable outcomes for this test
-        pass
+    
+    # Build Atomic with subject txid 0x33.. and valid empty BEEF V2 inner
+    # BEEF V2: version (4) + bumps count (1) + tx count (1) 
+    inner_beef = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\x00"  # Empty BEEF V2
+    subject_txid = b"\x33" * 32
+    atomic = int(ATOMIC_BEEF).to_bytes(4, 'little') + subject_txid + inner_beef
+    
+    # Parse should succeed but last_tx should be None when subject is not in inner BEEF
+    beef, subject, last_tx = parse_beef_ex(atomic)
+    
+    # Verify subject txid is correctly extracted
+    expected_subject = subject_txid[::-1].hex()
+    assert subject == expected_subject, f"Expected subject {expected_subject}, got {subject}"
+    
+    # Verify last_tx is None when subject transaction is missing from inner BEEF
+    assert last_tx is None, "Expected last_tx to be None when subject is not found in inner BEEF"
+    
+    # Verify beef structure is valid
+    assert beef is not None, "BEEF should be parsed successfully"
+    assert hasattr(beef, 'txs'), "BEEF should have txs attribute"
+    assert len(beef.txs) == 0, "Inner BEEF should be empty"
 
 
 def test_beef_v2_txidonly_then_raw_deduplicate():
     """BEEF V2: TxIDOnly followed by RawTx for same txid should deduplicate (Go/TS parity)."""
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
-    # v2: bumps=0, txs=2 => TxIDOnly(aa), RawTx(empty invalid -> expect raise or skip)
-    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\x02" + b"\x02" + (b"\xaa" * 32) + b"\x00" + b"\x00"
-    try:
-        beef = new_beef_from_bytes(v2)
-        # when parsed, either raise earlier or record one tx entry at most
-        assert len(beef.txs) <= 1
-    except Exception:
-        # Intentional: Parser may raise various exceptions for invalid data
-        # Both successful parsing (with deduplication) and failure are acceptable
-        pass
+    from bsv.transaction import Transaction, TransactionOutput
+    from bsv.script.script import Script
+    
+    # Create a real transaction for testing
+    tx = Transaction()
+    tx.outputs = [TransactionOutput(Script(b"\x51"), 1000)]
+    txid_bytes = bytes.fromhex(tx.txid())[::-1]
+    
+    # Build BEEF V2 with TxIDOnly followed by RawTx for same txid
+    v2 = int(BEEF_V2).to_bytes(4, 'little')
+    v2 += b"\x00"  # bumps=0
+    v2 += b"\x02"  # txs=2
+    v2 += b"\x02" + txid_bytes  # TxIDOnly
+    v2 += b"\x00" + tx.serialize()  # RawTx (same txid)
+    
+    # Parse should succeed and deduplicate
+    beef = new_beef_from_bytes(v2)
+    
+    # Verify deduplication: should have only 1 entry for this txid
+    assert len(beef.txs) == 1, f"Expected 1 transaction after deduplication, got {len(beef.txs)}"
+    assert tx.txid() in beef.txs, f"Transaction {tx.txid()} should be in BEEF"
+    
+    # Verify the entry is the RawTx (not TxIDOnly)
+    beef_tx = beef.txs[tx.txid()]
+    assert beef_tx.tx_obj is not None, "Deduplicated entry should have full transaction object"
+    assert beef_tx.data_format == 0, "Should keep RawTx format (0), not TxIDOnly (2)"
 
 
 def test_beef_v2_truncated_bumps_and_txs():
@@ -160,16 +187,36 @@ def test_beef_v2_bump_index_out_of_range():
 def test_beef_v2_txidonly_rawtx_duplicate_order():
     """BEEF V2: TxIDOnly, RawTx, TxIDOnly for same txid should deduplicate and not crash."""
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
-    txid = b"\xbb" * 32
-    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\x03" + b"\x02" + txid + b"\x00" + b"\x01" + b"\x00" + b"\x02" + txid
-    try:
-        beef = new_beef_from_bytes(v2)
-        # Should not crash, and only one entry for txid
-        assert list(beef.txs.keys()).count(txid.hex()) <= 1
-    except Exception:
-        # Intentional: Parser may raise various exceptions for invalid data
-        # Both successful parsing (with deduplication) and failure are acceptable
-        pass
+    from bsv.transaction import Transaction, TransactionOutput
+    from bsv.script.script import Script
+    
+    # Create a real transaction
+    tx = Transaction()
+    tx.outputs = [TransactionOutput(Script(b"\x51"), 1000)]
+    txid_bytes = bytes.fromhex(tx.txid())[::-1]
+    
+    # Build BEEF V2: TxIDOnly, RawTx, TxIDOnly (all same txid) - tests deduplication in various orders
+    v2 = int(BEEF_V2).to_bytes(4, 'little')
+    v2 += b"\x00"  # bumps=0
+    v2 += b"\x03"  # txs=3
+    v2 += b"\x02" + txid_bytes  # TxIDOnly
+    v2 += b"\x00" + tx.serialize()  # RawTx (same txid)
+    v2 += b"\x02" + txid_bytes  # TxIDOnly again
+    
+    # Parse should succeed and deduplicate
+    beef = new_beef_from_bytes(v2)
+    
+    # Should deduplicate to single entry
+    assert len(beef.txs) == 1, f"Expected 1 transaction after deduplication, got {len(beef.txs)}"
+    assert tx.txid() in beef.txs, f"Transaction {tx.txid()} should be in BEEF"
+    
+    # Verify only one occurrence in keys
+    txid_count = list(beef.txs.keys()).count(tx.txid())
+    assert txid_count == 1, f"TXID should appear exactly once in keys, found {txid_count}"
+    
+    # Verify we kept the RawTx (not TxIDOnly)
+    beef_tx = beef.txs[tx.txid()]
+    assert beef_tx.tx_obj is not None, "Should keep full transaction object, not just TxIDOnly"
 
 
 def test_beef_v2_extreme_tx_and_bump_count():

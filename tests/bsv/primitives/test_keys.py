@@ -127,18 +127,58 @@ def test_sign():
 
 
 def test_ecdh():
+    """Test Elliptic Curve Diffie-Hellman (ECDH) key exchange."""
     alice, bob = PrivateKey(), PrivateKey()
-    assert alice.derive_shared_secret(bob.public_key()) == bob.derive_shared_secret(alice.public_key())
+    
+    # Test basic ECDH property: alice_priv * bob_pub == bob_priv * alice_pub
+    alice_shared = alice.derive_shared_secret(bob.public_key())
+    bob_shared = bob.derive_shared_secret(alice.public_key())
+    assert alice_shared == bob_shared, \
+        "Shared secrets should match (ECDH property)"
+    
+    # Verify shared secret is bytes (33 bytes for compressed public key)
+    assert isinstance(alice_shared, bytes), f"Shared secret should be bytes, got {type(alice_shared)}"
+    assert len(alice_shared) in (32, 33), \
+        f"Shared secret should be 32 or 33 bytes (compressed), got {len(alice_shared)}"
+    
+    # Test with ephemeral key from public key (PrivateKey.derive vs PublicKey.derive)
     ephemeral = PrivateKey()
-    assert alice.public_key().derive_shared_secret(ephemeral) == alice.derive_shared_secret(ephemeral.public_key())
+    secret_from_pub = alice.public_key().derive_shared_secret(ephemeral)
+    secret_from_priv = alice.derive_shared_secret(ephemeral.public_key())
+    assert secret_from_pub == secret_from_priv, \
+        "Public key and private key ECDH methods should yield same result"
+    
+    # Verify different key pairs produce different shared secrets
+    charlie = PrivateKey()
+    alice_charlie_shared = alice.derive_shared_secret(charlie.public_key())
+    assert alice_charlie_shared != alice_shared, \
+        "Different key pairs should produce different shared secrets"
 
 
 def test_encryption():
+    """Test ECIES encryption/decryption with text data."""
     plain = 'hello world'
+    
+    # Test decryption of known encrypted text
     encrypted = ('QklFMQPkjNG3xxnfRv7oUDjUYPH2VN3VFrcglCcwmeYpJpsjRKnfl/XsS+dOg'
                  'ocRV6JKVHkfUZAKIHDo7vwxjv/BPkV5EA2Dl4RJ6d/jpWwgGdFBYA==')
-    assert private_key.decrypt_text(encrypted) == plain
-    assert private_key.decrypt_text(public_key.encrypt_text(plain)) == plain
+    decrypted = private_key.decrypt_text(encrypted)
+    assert decrypted == plain, f"Decryption should recover plaintext, got '{decrypted}'"
+    
+    # Test full encrypt/decrypt roundtrip
+    encrypted_new = public_key.encrypt_text(plain)
+    decrypted_new = private_key.decrypt_text(encrypted_new)
+    assert decrypted_new == plain, \
+        f"Encrypt/decrypt roundtrip should preserve plaintext, got '{decrypted_new}'"
+    
+    # Verify encryption produces different ciphertext each time (due to randomness)
+    encrypted_2 = public_key.encrypt_text(plain)
+    assert encrypted_new != encrypted_2, \
+        "Encryption should produce different ciphertext each time (with random ephemeral keys)"
+    
+    # But both should decrypt to same plaintext
+    assert private_key.decrypt_text(encrypted_2) == plain, \
+        "Different ciphertexts of same plaintext should decrypt correctly"
 
 
 def test_brc42():

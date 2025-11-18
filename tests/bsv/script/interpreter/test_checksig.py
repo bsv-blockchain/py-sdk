@@ -128,7 +128,15 @@ class TestCheckSigVectors:
         assert err is not None, f"Expected error but got OK for: {description}"
 
     def test_checksig_signature_verification(self):
-        """Test OP_CHECKSIG with real signature verification test vectors."""
+        """Test OP_CHECKSIG with real signature verification test vectors.
+        
+        Note: This test verifies that CHECKSIG correctly returns EVAL_FALSE when executed
+        without proper transaction context. This is expected behavior - CHECKSIG needs
+        transaction data to compute the sighash for verification.
+        
+        Full signature verification with transaction context is tested in other test files
+        (e.g., test_transaction.py::test_transaction_signing_hydrate_scripts).
+        """
         test_vectors = [
             # Basic P2PK test case - should return EVAL_FALSE due to no transaction context
             {
@@ -143,17 +151,21 @@ class TestCheckSigVectors:
             unlocking_script = Script.from_asm(test_case["unlocking"])
             locking_script = Script.from_asm(test_case["locking"])
 
-            # For now, test without transaction context - CHECKSIG should handle this gracefully
-            # Full signature verification requires proper transaction setup
+            # Test without transaction context - CHECKSIG should handle this gracefully
             engine = Engine()
             err = engine.execute(with_scripts(locking_script, unlocking_script))
 
             # CHECKSIG should execute and return EVAL_FALSE when signature verification fails
-            # (which is expected without proper transaction context)
-            assert err is not None, f"Expected EVAL_FALSE for {test_case['description']}: {err}"
-            assert is_error_code(err, ErrorCode.ERR_EVAL_FALSE), f"Expected EVAL_FALSE but got {err.code} for {test_case['description']}"
-
-            # TODO: Add proper transaction context tests when sighash calculation is implemented
+            # (which is expected without proper transaction context for sighash calculation)
+            assert err is not None, f"Expected error for {test_case['description']}, got None"
+            assert is_error_code(err, ErrorCode.ERR_EVAL_FALSE), \
+                f"Expected EVAL_FALSE but got {err.code} ({err}) for {test_case['description']}. " \
+                f"CHECKSIG requires transaction context to compute sighash for signature verification."
+            
+            # Verify signature and pubkey were on stack (consumed by CHECKSIG)
+            # If stack underflow occurred, we'd get ERR_INVALID_STACK_OPERATION instead
+            assert not is_error_code(err, ErrorCode.ERR_INVALID_STACK_OPERATION), \
+                "Should not be a stack operation error - signature and pubkey should be present"
 
     def test_checksig_stack_underflow_no_items(self):
         """Test OP_CHECKSIG with no stack items - ported from TypeScript invalid vectors."""

@@ -59,9 +59,18 @@ def test_storage_find_file_e2e():
     reason="E2E_STORAGE_URL not set; set to real storage service to run E2E test"
 )
 def test_storage_list_uploads_e2e():
+    """Test listing uploads returns a valid list (may be empty if no uploads exist)."""
     uploader = Uploader(storage_url=STORAGE_URL, wallet=DummyWallet())
     uploads = uploader.list_uploads()
-    assert isinstance(uploads, list)
+    
+    # Verify response is a list
+    assert isinstance(uploads, list), f"list_uploads should return a list, got {type(uploads)}"
+    
+    # If list is not empty, verify structure of upload entries
+    if len(uploads) > 0:
+        first_upload = uploads[0]
+        assert isinstance(first_upload, dict) or hasattr(first_upload, '__dict__'), \
+            "Upload entries should be dict-like or objects with attributes"
 
 @ pytest.mark.e2e
 @ pytest.mark.skipif(

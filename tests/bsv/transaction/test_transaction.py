@@ -67,20 +67,35 @@ tx2buf = bytes.fromhex(tx2hex)
 
 
 def test_new_tx():
+    """Test Transaction creation with default values and hex roundtrip."""
     tx = Transaction()
 
-    assert Transaction.from_hex(txbuf).hex() == txhex
+    # Verify hex parsing roundtrip
+    parsed_tx = Transaction.from_hex(txbuf)
+    assert parsed_tx.hex() == txhex, "Hex roundtrip should preserve transaction data"
 
-    # should set known defaults
-    assert tx.version == 1
-    assert len(tx.inputs) == 0
-    assert len(tx.outputs) == 0
-    assert tx.locktime == 0
+    # Verify known defaults for new transaction
+    assert tx.version == 1, "Default version should be 1"
+    assert len(tx.inputs) == 0, "New transaction should have no inputs"
+    assert len(tx.outputs) == 0, "New transaction should have no outputs"
+    assert tx.locktime == 0, "Default locktime should be 0"
+    
+    # Verify new transaction is serializable
+    serialized = tx.serialize()
+    assert len(serialized) > 0, "Empty transaction should still be serializable"
 
 
 def test_transaction_from_hex():
-    assert Transaction.from_hex(txhex).hex() == txhex
-    assert Transaction.from_hex(tx2hex).hex() == tx2hex
+    """Test Transaction.from_hex with multiple transaction formats."""
+    # Test first transaction format
+    tx1 = Transaction.from_hex(txhex)
+    assert tx1.hex() == txhex, f"Hex roundtrip failed for tx1"
+    assert len(tx1.hash()) == 32, "Transaction hash should be 32 bytes"
+    
+    # Test second transaction format
+    tx2 = Transaction.from_hex(tx2hex)
+    assert tx2.hex() == tx2hex, f"Hex roundtrip failed for tx2"
+    assert len(tx2.inputs) > 0 or len(tx2.outputs) > 0, "Parsed transaction should have inputs or outputs"
 
 
 def test_transaction_parse_script_offsets():
@@ -108,29 +123,68 @@ def test_transaction_serialize():
 
 
 def test_transaction_hash():
+    """Test transaction hash calculation (double SHA-256)."""
     tx = Transaction.from_hex(tx2buf)
-    assert tx.hash()[::-1].hex() == tx2idhex
+    tx_hash = tx.hash()
+    
+    # Verify hash properties
+    assert len(tx_hash) == 32, f"Transaction hash should be 32 bytes, got {len(tx_hash)}"
+    assert tx_hash[::-1].hex() == tx2idhex, "Reversed hash should match expected TXID"
+    
+    # Verify hash is deterministic
+    tx2 = Transaction.from_hex(tx2buf)
+    assert tx.hash() == tx2.hash(), "Same transaction should produce same hash"
 
 
 def test_transaction_id():
+    """Test transaction ID (TXID) generation."""
     tx = Transaction.from_hex(tx2buf)
-    assert tx.txid() == tx2idhex
+    txid = tx.txid()
+    
+    # Verify TXID format
+    assert txid == tx2idhex, f"Expected TXID {tx2idhex}, got {txid}"
+    assert len(txid) == 64, f"TXID should be 64 hex characters, got {len(txid)}"
+    assert all(c in '0123456789abcdef' for c in txid.lower()), "TXID should be valid hex string"
 
 
 def test_transaction_add_input():
+    """Test adding inputs to a transaction."""
     tx_in = TransactionInput()
     tx = Transaction()
-    assert len(tx.inputs) == 0
+    
+    # Verify initial state
+    assert len(tx.inputs) == 0, "New transaction should have no inputs"
+    
+    # Add input and verify
     tx.add_input(tx_in)
-    assert len(tx.inputs) == 1
+    assert len(tx.inputs) == 1, "Transaction should have 1 input after adding"
+    assert tx.inputs[0] is tx_in, "Added input should be the same object"
+    
+    # Verify multiple inputs
+    tx_in2 = TransactionInput()
+    tx.add_input(tx_in2)
+    assert len(tx.inputs) == 2, "Transaction should have 2 inputs"
 
 
 def test_transaction_add_output():
+    """Test adding outputs to a transaction."""
     tx_out = TransactionOutput(locking_script=Script("6a"), satoshis=0)
     tx = Transaction()
-    assert len(tx.outputs) == 0
+    
+    # Verify initial state
+    assert len(tx.outputs) == 0, "New transaction should have no outputs"
+    
+    # Add output and verify
     tx.add_output(tx_out)
-    assert len(tx.outputs) == 1
+    assert len(tx.outputs) == 1, "Transaction should have 1 output after adding"
+    assert tx.outputs[0] is tx_out, "Added output should be the same object"
+    assert tx.outputs[0].satoshis == 0, "Output satoshis should be preserved"
+    
+    # Verify multiple outputs
+    tx_out2 = TransactionOutput(locking_script=Script("51"), satoshis=1000)
+    tx.add_output(tx_out2)
+    assert len(tx.outputs) == 2, "Transaction should have 2 outputs"
+    assert tx.outputs[1].satoshis == 1000, "Second output satoshis should be correct"
 
 
 def test_transaction_signing_hydrate_scripts():

@@ -109,31 +109,45 @@ async def test_auth_fetch_full_protocol(auth_server):
     except Exception as e:
         pytest.fail(f"Full protocol test failed: {e}")
 
-@pytest.mark.asyncio 
+@pytest.mark.asyncio
+@pytest.mark.skip(reason="Certificate exchange requires server fixture with certificate response support. Skipped until auth_server fixture implements certificate exchange protocol.")
 async def test_auth_fetch_certificate_exchange(auth_server):
-    """Test certificate exchange functionality"""
-    try:
-        wallet = DummyWallet()
-        requested_certs = RequestedCertificateSet()
-        auth_fetch = AuthFetch(wallet, requested_certs)
-        
-        # Test certificate request
-        base_url = "http://localhost:8084"
-        certificates_to_request = {
-            "certifiers": ["03a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0123456789a"],
-            "types": ["test-certificate"]
-        }
-        
-        # This should trigger the certificate request flow
-        certs = auth_fetch.send_certificate_request(None, base_url, certificates_to_request)
-        
-        # Verify we received certificates
-        assert certs is not None
-        print("✓ Certificate exchange test passed")
-        
-    except Exception as e:
-        # Certificate exchange might not be fully implemented yet
-        print(f"Certificate exchange test skipped: {e}")
+    """Test certificate exchange functionality
+    
+    This test requires:
+    1. Server to handle certificate request messages
+    2. Server to respond with certificate response messages
+    3. Proper certificate validation and signing
+    
+    TODO: Implement certificate exchange in test_auth_server_full.py
+    """
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
+    
+    # Test certificate request
+    base_url = "http://localhost:8084"
+    certificates_to_request = {
+        "certifiers": ["03a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0123456789a"],
+        "types": ["test-certificate"]
+    }
+    
+    # This should trigger the certificate request flow
+    certs = auth_fetch.send_certificate_request(None, base_url, certificates_to_request)
+    
+    # Verify we received certificates
+    assert certs is not None, "Expected certificates to be returned"
+    assert isinstance(certs, list), "Certificates should be returned as a list"
+    assert len(certs) > 0, "Should receive at least one certificate"
+    
+    # Verify certificate structure
+    for cert in certs:
+        assert "certificate" in cert, "Each cert should have a certificate field"
+        cert_data = cert["certificate"]
+        assert "type" in cert_data, "Certificate should have a type"
+        assert "serialNumber" in cert_data, "Certificate should have a serial number"
+        assert "subject" in cert_data, "Certificate should have a subject"
+        assert "certifier" in cert_data, "Certificate should have a certifier"
 
 @pytest.mark.asyncio
 async def test_auth_fetch_session_management(auth_server):
@@ -184,28 +198,54 @@ async def test_auth_fetch_session_management(auth_server):
 
 @pytest.mark.asyncio
 async def test_auth_fetch_error_handling(auth_server):
-    """Test error handling in authentication flow"""
+    """Test error handling in authentication flow with invalid endpoints.
+    
+    Note: This test verifies graceful error handling. Both behaviors are acceptable:
+    - 404 response for non-existent endpoint (preferred)
+    - Exception raised for invalid endpoint (also valid)
+    - 200 response if fallback to regular HTTP occurs
+    
+    The key is that the system doesn't crash and handles errors gracefully.
+    """
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
+    
+    # Test with invalid endpoint - should handle gracefully
+    config = SimplifiedFetchRequestOptions(method="GET")
+    error_occurred = False
+    response_received = False
+    
     try:
-        wallet = DummyWallet()
-        requested_certs = RequestedCertificateSet()
-        auth_fetch = AuthFetch(wallet, requested_certs)
+        resp = auth_fetch.fetch(None, "http://localhost:8084/nonexistent", config)
+        response_received = True
         
-        # Test with invalid endpoint
-        config = SimplifiedFetchRequestOptions(method="GET")
-        
-        try:
-            resp = auth_fetch.fetch(None, "http://localhost:8084/nonexistent", config)
-            # Should either fail or fallback to regular HTTP
-            if resp:
-                assert resp.status_code in [404, 200]  # 404 for not found, 200 for fallback
-        except Exception:
-            # Intentional: Expected for invalid endpoints - test verifies graceful error handling
-            pass
-        
-        print("✓ Error handling test passed")
-        
+        # If response is returned, verify it's a valid HTTP response
+        if resp:
+            assert hasattr(resp, 'status_code'), "Response should have status_code attribute"
+            assert resp.status_code in [404, 200], \
+                f"Expected 404 (not found) or 200 (fallback), got {resp.status_code}"
+            
+            # 404 is preferred for non-existent endpoints
+            if resp.status_code == 404:
+                print("✓ Correctly returned 404 for non-existent endpoint")
+            elif resp.status_code == 200:
+                print("✓ Fell back to regular HTTP request")
+                
     except Exception as e:
-        pytest.fail(f"Error handling test failed: {e}")
+        # Exception is also acceptable - verify it's handled gracefully
+        error_occurred = True
+        error_msg = str(e)
+        print(f"✓ Gracefully raised exception for invalid endpoint: {type(e).__name__}")
+        
+        # Verify error message is meaningful (not a crash)
+        assert len(error_msg) > 0, "Exception should have a message"
+    
+    # One of the two outcomes should occur (either response or exception)
+    assert response_received or error_occurred, \
+        "Either a response or exception should occur for invalid endpoint"
+    
+    print("✓ Error handling test passed - system handles invalid endpoints gracefully")
 
 if __name__ == "__main__":
     # Run tests manually if needed
