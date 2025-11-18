@@ -38,3 +38,4 @@ for category in ['script', 'beef', 'headers_client', 'spv', 'auth', 'transaction
             print(f'    ... and {len(tests) - 3} more')
         print()
 
+

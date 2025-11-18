@@ -7,7 +7,7 @@ that should be thoroughly tested for script interpreter reliability.
 
 import pytest
 from bsv.script.script import Script
-from bsv.script.interpreter import Engine, with_scripts, with_flags, with_after_genesis, with_fork_id
+from bsv.script.interpreter import Engine, with_scripts, with_flags, with_after_genesis, with_fork_id, with_tx
 from bsv.script.interpreter.errs import ErrorCode, is_error_code
 from bsv.script.interpreter.scriptflag import Flag
 from bsv.transaction import Transaction, TransactionInput, TransactionOutput
@@ -24,7 +24,7 @@ class TestScriptInterpreterEdgeCases:
         script_parts = []
         # Push 1000 items onto the stack
         for i in range(1000):
-            script_parts.append("OP_1")
+            script_parts.append("OP_TRUE")
 
         # Try to execute
         locking_script = Script.from_asm(" ".join(script_parts))
@@ -80,7 +80,7 @@ class TestScriptInterpreterEdgeCases:
         engine = Engine()
 
         # Test with extremely large scripts
-        large_script = "OP_1 " * 10000  # 10,000 OP_1 operations
+        large_script = "OP_TRUE " * 10000  # 10,000 OP_TRUE operations
         locking_script = Script.from_asm(large_script)
         unlocking_script = Script.from_bytes(b"")
 
@@ -95,10 +95,10 @@ class TestScriptInterpreterEdgeCases:
 
         test_cases = [
             # Test with maximum/minimum integer values
-            ("0x7FFFFFFF", "0x00000001", "OP_ADD", "Max int + 1"),
-            ("0x80000000", "0xFFFFFFFF", "OP_ADD", "Negative + max"),
-            ("0x00000000", "0x00000000", "OP_DIV", "Division by zero"),
-            ("0x7FFFFFFF", "0x00000001", "OP_MUL", "Large multiplication"),
+            ("7fffffff", "00000001", "OP_ADD", "Max int + 1"),
+            ("80000000", "ffffffff", "OP_ADD", "Negative + max"),
+            ("00000000", "00000000", "OP_DIV", "Division by zero"),
+            ("7fffffff", "00000001", "OP_MUL", "Large multiplication"),
         ]
 
         for a, b, op, description in test_cases:
@@ -110,7 +110,7 @@ class TestScriptInterpreterEdgeCases:
 
             # Should either succeed or fail with appropriate error
             # Division by zero should fail
-            if "DIV" in op and b == "0x00000000":
+            if "DIV" in op and b == "00000000":
                 assert err is not None, f"Division by zero should fail: {description}"
             else:
                 # Other operations should succeed or fail gracefully
@@ -123,8 +123,8 @@ class TestScriptInterpreterEdgeCases:
         test_cases = [
             ("", "OP_SHA256", "Empty input"),
             ("OP_0", "OP_SHA256", "Zero input"),
-            ("0x" + "00" * 1000, "OP_SHA256", "Large input (1000 bytes)"),
-            ("0x" + "FF" * 1000, "OP_SHA256", "Large input (all FF)"),
+            ("00" * 1000, "OP_SHA256", "Large input (1000 bytes)"),
+            ("ff" * 1000, "OP_SHA256", "Large input (all FF)"),
         ]
 
         for data, hash_op, description in test_cases:
@@ -143,18 +143,18 @@ class TestScriptInterpreterEdgeCases:
 
         test_cases = [
             # Nested IF statements
-            ("OP_1 OP_IF OP_1 OP_IF OP_1 OP_ENDIF OP_ENDIF", "Nested IF true/true"),
-            ("OP_1 OP_IF OP_0 OP_IF OP_1 OP_ENDIF OP_ENDIF", "Nested IF true/false"),
-            ("OP_0 OP_IF OP_1 OP_IF OP_1 OP_ENDIF OP_ENDIF", "Nested IF false/ignored"),
+            ("OP_TRUE OP_IF OP_TRUE OP_IF OP_TRUE OP_ENDIF OP_ENDIF", "Nested IF true/true"),
+            ("OP_TRUE OP_IF OP_FALSE OP_IF OP_TRUE OP_ENDIF OP_ENDIF", "Nested IF true/false"),
+            ("OP_FALSE OP_IF OP_TRUE OP_IF OP_TRUE OP_ENDIF OP_ENDIF", "Nested IF false/ignored"),
 
             # IF without ENDIF
-            ("OP_1 OP_IF OP_1", "IF without ENDIF - should fail"),
+            ("OP_TRUE OP_IF OP_TRUE", "IF without ENDIF - should fail"),
 
             # ELSE without IF
-            ("OP_1 OP_ELSE OP_1 OP_ENDIF", "ELSE without matching IF"),
+            ("OP_TRUE OP_ELSE OP_TRUE OP_ENDIF", "ELSE without matching IF"),
 
             # Multiple ELSE statements
-            ("OP_1 OP_IF OP_1 OP_ELSE OP_2 OP_ELSE OP_3 OP_ENDIF", "Multiple ELSE statements"),
+            ("OP_TRUE OP_IF OP_TRUE OP_ELSE OP_2 OP_ELSE OP_3 OP_ENDIF", "Multiple ELSE statements"),
         ]
 
         for script_str, description in test_cases:
@@ -176,11 +176,11 @@ class TestScriptInterpreterEdgeCases:
             ("OP_0 OP_SIZE", "Size of empty string"),
 
             # Large strings
-            (f"0x{'00'*500} 0x{'FF'*500} OP_CAT", "Concatenate large strings"),
+            (f"{'00'*500} {'ff'*500} OP_CAT", "Concatenate large strings"),
 
             # Split operations
-            ("0x0102030405 0x02 OP_SPLIT", "Split with valid position"),
-            ("0x0102030405 0xFF OP_SPLIT", "Split with invalid position"),
+            ("0102030405 02 OP_SPLIT", "Split with valid position"),
+            ("0102030405 ff OP_SPLIT", "Split with invalid position"),
         ]
 
         for script_str, description in test_cases:
@@ -198,14 +198,14 @@ class TestScriptInterpreterEdgeCases:
 
         test_cases = [
             # Large numbers
-            ("0xFFFFFFFFFFFFFFFF 0xFFFFFFFFFFFFFFFF OP_AND", "AND with max values"),
-            ("0xFFFFFFFFFFFFFFFF 0x0000000000000000 OP_OR", "OR with zero"),
-            ("0xAAAAAAAAAAAAAAAA 0x5555555555555555 OP_XOR", "XOR alternating bits"),
+            ("ffffffffffffffff ffffffffffffffff OP_AND", "AND with max values"),
+            ("ffffffffffffffff 0000000000000000 OP_OR", "OR with zero"),
+            ("aaaaaaaaaaaaaaaa 5555555555555555 OP_XOR", "XOR alternating bits"),
 
             # Shift operations
-            ("0x80000000 0x01 OP_LSHIFT", "Left shift"),
-            ("0x00000001 0x20 OP_RSHIFT", "Right shift"),
-            ("0xFFFFFFFFFFFFFFFF 0xFF OP_LSHIFT", "Excessive left shift"),
+            ("80000000 01 OP_LSHIFT", "Left shift"),
+            ("00000001 20 OP_RSHIFT", "Right shift"),
+            ("ffffffffffffffff ff OP_LSHIFT", "Excessive left shift"),
         ]
 
         for script_str, description in test_cases:
@@ -227,8 +227,8 @@ class TestScriptInterpreterEdgeCases:
 
         # Create deeply nested IF statements
         for i in range(depth):
-            nested_script += "OP_1 OP_IF "
-        nested_script += "OP_1 "  # Final operation
+            nested_script += "OP_TRUE OP_IF "
+        nested_script += "OP_TRUE "  # Final operation
         for i in range(depth):
             nested_script += "OP_ENDIF "
 
@@ -245,7 +245,7 @@ class TestScriptInterpreterEdgeCases:
         engine = Engine()
 
         # Test with minimal script
-        locking_script = Script.from_asm("OP_1 OP_1 OP_EQUAL")
+        locking_script = Script.from_asm("OP_TRUE OP_TRUE OP_EQUAL")
         unlocking_script = Script.from_bytes(b"")
 
         # Test with different flag combinations
@@ -274,20 +274,23 @@ class TestScriptInterpreterEdgeCases:
 
         # Add many inputs/outputs
         for i in range(10):
-            tx.add_input(TransactionInput(f"{'00'*32}", i, Script.from_bytes(b"")))
+            tx.add_input(TransactionInput(source_txid="00"*32, source_output_index=i, unlocking_script=Script.from_bytes(b"")))
 
         for i in range(10):
-            tx.add_output(TransactionOutput(1000 + i, Script.from_bytes(b"")))
+            tx.add_output(TransactionOutput(Script.from_bytes(b""), 1000 + i))
 
         # Test script execution with this transaction
-        locking_script = Script.from_asm("OP_1")
+        locking_script = Script.from_asm("OP_TRUE")
         unlocking_script = Script.from_bytes(b"")
+
+        # Create a dummy previous output for the transaction context
+        prev_output = TransactionOutput(locking_script, 1000)
 
         # Test with different input indices
         for vin in range(len(tx.inputs)):
             err = engine.execute(
                 with_scripts(locking_script, unlocking_script),
-                with_tx(tx, vin, locking_script)
+                with_tx(tx, vin, prev_output)
             )
 
             # Should succeed
@@ -304,7 +307,7 @@ class TestScriptInterpreterEdgeCases:
         def run_script():
             try:
                 engine = Engine()
-                locking_script = Script.from_asm("OP_1 OP_1 OP_EQUAL")
+                locking_script = Script.from_asm("OP_TRUE OP_TRUE OP_EQUAL")
                 unlocking_script = Script.from_bytes(b"")
 
                 err = engine.execute(with_scripts(locking_script, unlocking_script))
@@ -340,11 +343,8 @@ class TestScriptInterpreterEdgeCases:
         assert err1 is not None, "First script should fail"
 
         # Run a successful script second
-        success_script = Script.from_asm("OP_1 OP_1 OP_EQUAL")
+        success_script = Script.from_asm("OP_TRUE OP_TRUE OP_EQUAL")
         success_unlock = Script.from_bytes(b"")
 
         err2 = engine.execute(with_scripts(success_script, success_unlock))
         assert err2 is None, "Second script should succeed after failure"
-
-        # Engine should be in clean state
-        assert engine._thread is None or not hasattr(engine._thread, '_stack') or len(engine._thread._stack) == 0

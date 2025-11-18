@@ -24,9 +24,9 @@ class TestVerifyScripts:
         Test verify_scripts with a BEEF transaction.
         
         This test ports TestSPVVerifyScripts from Go-SDK verify_test.go.
-        Note: BEEF parsing may not be fully implemented, so this test may be skipped.
+        Note: Currently skipped due to BEEF v1 parsing issues with transaction outputs.
         """
-        pytest.skip("BEEF parsing test - requires full BEEF implementation")
+        pytest.skip("BEEF v1 parsing fails on this data - requires investigation of transaction output handling")
     
     @pytest.mark.asyncio
     async def test_verify_scripts_skips_merkle_proof(self):
@@ -36,33 +36,18 @@ class TestVerifyScripts:
         This is the key difference from regular verify() - it should
         verify scripts even without merkle paths.
         
-        Note: This test verifies that verify_scripts() function exists
-        and can be called. Full script verification requires properly
-        constructed transactions with source transactions that can be verified.
+        Note: Currently skipped because Transaction.verify() method is not implemented yet.
         """
-        # Test that verify_scripts function exists and is callable
-        from bsv.spv import verify_scripts
-        assert callable(verify_scripts)
-        
-        # Note: Full integration test requires complex transaction setup
-        # with source transactions that can be verified recursively.
-        # The function implementation is tested via unit tests of the
-        # underlying Transaction.verify() method with scripts_only=True.
-        pytest.skip("Full integration test requires complex transaction setup - verify function exists")
+        pytest.skip("Transaction.verify() method needs to be implemented")
     
     @pytest.mark.asyncio
     async def test_verify_scripts_with_invalid_script(self):
         """
         Test that verify_scripts returns False for invalid scripts.
         
-        Note: This test verifies error handling. Full script validation
-        requires properly constructed transactions.
+        Note: Currently skipped because Transaction.verify() method is not implemented yet.
         """
-        # Test that verify_scripts handles errors appropriately
-        from bsv.spv import verify_scripts
-        assert callable(verify_scripts)
-        
-        pytest.skip("Full integration test requires complex transaction setup - verify function exists")
+        pytest.skip("Transaction.verify() method needs to be implemented")
     
     @pytest.mark.asyncio
     async def test_verify_scripts_with_missing_source_transaction(self):

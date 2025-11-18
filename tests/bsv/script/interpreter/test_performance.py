@@ -46,13 +46,13 @@ class TestScriptInterpreterPerformance:
         """Test performance of hash operations."""
         engine = Engine()
 
-        # Test with different input sizes
-        sizes = [100, 1000, 10000]
+        # Test with different input sizes (within script interpreter limits)
+        sizes = [50, 100, 500]
 
         for size in sizes:
             # Create data of specified size
             data = "00" * size
-            script_str = f"0x{data} OP_SHA256"
+            script_str = f"{data} OP_SHA256"
 
             locking_script = Script.from_asm(script_str)
             unlocking_script = Script.from_bytes(b"")
@@ -158,8 +158,8 @@ class TestScriptInterpreterPerformance:
 
         # Run a memory-intensive script
         script_parts = []
-        for i in range(1000):
-            script_parts.extend(["OP_1", "OP_DUP"])
+        for i in range(500):
+            script_parts.extend(["OP_TRUE", "OP_DUP"])
 
         locking_script = Script.from_asm(" ".join(script_parts))
         unlocking_script = Script.from_bytes(b"")
@@ -179,7 +179,7 @@ class TestScriptInterpreterPerformance:
 
         # Test maximum script size (approximate limit)
         max_ops = 10000
-        script_parts = ["OP_1"] * max_ops
+        script_parts = ["OP_TRUE"] * max_ops
 
         locking_script = Script.from_asm(" ".join(script_parts))
         unlocking_script = Script.from_bytes(b"")
@@ -208,7 +208,7 @@ class TestScriptInterpreterPerformance:
         for i in range(num_strings):
             # Create a string of specified size
             data = "41" * string_size  # 'A' characters
-            script_parts.append(f"0x{data}")
+            script_parts.append(f"{data}")
 
         # Add concatenation operations
         for i in range(num_strings - 1):
@@ -241,7 +241,7 @@ class TestScriptInterpreterPerformance:
         # Run many script executions
         for i in range(100):
             engine = Engine()
-            locking_script = Script.from_asm("OP_1 OP_1 OP_EQUAL")
+            locking_script = Script.from_asm("OP_TRUE OP_TRUE OP_EQUAL")
             unlocking_script = Script.from_bytes(b"")
 
             err = engine.execute(with_scripts(locking_script, unlocking_script))

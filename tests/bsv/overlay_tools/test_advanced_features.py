@@ -124,7 +124,7 @@ class TestAdvancedLookupResolver:
         tracker.record_failure("host2", "error")
         tracker.record_success("host3", 200)
 
-        ranked = tracker.rank_hosts()
+        ranked = tracker.rank_hosts(["host1", "host2", "host3"], int(time.time() * 1000))
 
         # Host1 should be ranked higher than host2
         host1_score = next((h.score for h in ranked if h.host == "host1"), 0)
@@ -139,11 +139,12 @@ class TestAdvancedLookupResolver:
         host = "failing_host"
         tracker.record_failure(host, "connection error")
         tracker.record_failure(host, "timeout")
+        tracker.record_failure(host, "another error")
 
         # Should have backoff applied
         entry = tracker.get_host_entry(host)
         assert entry.backoff_until > 0
-        assert entry.consecutive_failures == 2
+        assert entry.consecutive_failures == 3
 
     def test_host_recovery_after_success(self):
         """Test host recovery after success following failures."""
@@ -152,14 +153,16 @@ class TestAdvancedLookupResolver:
         host = "recovering_host"
         tracker.record_failure(host, "error1")
         tracker.record_failure(host, "error2")
+        tracker.record_failure(host, "error3")  # Need 3 failures to trigger backoff
 
         initial_backoff = tracker.get_host_entry(host).backoff_until
+        assert initial_backoff > 0  # Should have backoff after 3 failures
 
-        # Success should reduce backoff
+        # Success should reset backoff and consecutive failures
         tracker.record_success(host, 100)
 
         final_backoff = tracker.get_host_entry(host).backoff_until
-        assert final_backoff < initial_backoff
+        assert final_backoff == 0  # Success resets backoff
         assert tracker.get_host_entry(host).consecutive_failures == 0
 
 
@@ -412,7 +415,7 @@ class TestErrorHandling:
 
         # Test broadcaster with invalid BEEF
         config = SHIPBroadcasterConfig()
-        broadcaster = SHIPBroadcaster(config)
+        broadcaster = SHIPBroadcaster(["tm_test"], config)
 
         invalid_beef = TaggedBEEF(beef=b"", topics=[])
         # Should handle gracefully

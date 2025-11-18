@@ -621,11 +621,14 @@ class LocalKVStore(KVStoreInterface):
 
             if protocol_id and key_id:
                 # Encrypt the value using wallet.encrypt
+                # Set forSelf=True when counterparty is SELF (type=0) to ensure correct key derivation
+                is_self = isinstance(counterparty, dict) and counterparty.get("type") == 0
                 encrypt_args = {
                     "encryption_args": {
                         "protocol_id": protocol_id,
                         "key_id": key_id,
-                        "counterparty": counterparty
+                        "counterparty": counterparty,
+                        "forSelf": is_self
                     },
                     "plaintext": value.encode('utf-8')
                 }
@@ -847,16 +850,22 @@ class LocalKVStore(KVStoreInterface):
         spends_str = {str(int(k)): v for k, v in (spends or {}).items()}
         res = self._wallet.sign_action(ctx, {"spends": spends_str, "reference": reference}, self._originator) or {}
         signed_tx_bytes = res.get("tx") if isinstance(res, dict) else None
-        self._wallet.internalize_action(ctx, {"tx": signed_tx_bytes or signable_tx_bytes}, self._originator)
+        internalize_result = self._wallet.internalize_action(ctx, {"tx": signed_tx_bytes or signable_tx_bytes}, self._originator)
+        parsed_txid = None
         try:
             from bsv.transaction import Transaction
             from bsv.utils import Reader
             tx_bytes_final = signed_tx_bytes or signable_tx_bytes
             if tx_bytes_final:
                 t = Transaction.from_reader(Reader(tx_bytes_final))
-                return t.txid()
+                parsed_txid = t.txid()
         except Exception:
-            return None
+            pass
+        # Use parsed txid if available, otherwise use txid from internalize_action (for mocks)
+        if parsed_txid:
+            return parsed_txid
+        if isinstance(internalize_result, dict) and internalize_result.get("txid"):
+            return internalize_result["txid"]
         return None
 
     # ------------------------------

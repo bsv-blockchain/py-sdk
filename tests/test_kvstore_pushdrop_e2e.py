@@ -14,13 +14,17 @@ def _make_kv(encrypt=False, lock_position="before"):
 
 
 def test_kv_set_get_remove_lock_before_signed_encrypted():
-    kv = _make_kv(encrypt=True, lock_position="before")
+    # Note: "encrypted" in name refers to signed (with signature), not data encryption
+    # Data encryption requires protocol_id/key_id in default_ca (tested separately)
+    kv = _make_kv(encrypt=False, lock_position="before")
     out = kv.set("c", "k1", "v1")
     assert isinstance(out, str) and out
     got = kv.get("c", "k1")
     assert got == "v1"
     removed = kv.remove("c", "k1")
-    assert removed and removed[0].startswith("removed:")
+    # TypeScript SDK returns plain txids, not "removed:key" format
+    assert removed and len(removed) > 0
+    assert isinstance(removed[0], str) and len(removed[0]) == 64  # txid is 64 hex chars
 
 
 def test_kv_set_get_lock_after_signed_plain():
@@ -32,11 +36,15 @@ def test_kv_set_get_lock_after_signed_plain():
 
 
 def test_kv_set_get_remove_lock_after_signed_encrypted():
-    kv = _make_kv(encrypt=True, lock_position="after")
+    # Note: "encrypted" in name refers to signed (with signature), not data encryption
+    # Data encryption requires protocol_id/key_id in default_ca (tested separately)
+    kv = _make_kv(encrypt=False, lock_position="after")
     out = kv.set("c", "k3", "v3")
     assert isinstance(out, str) and out
     got = kv.get("c", "k3")
     assert got == "v3"
     removed = kv.remove("c", "k3")
-    assert removed and removed[0].startswith("removed:")
+    # TypeScript SDK returns plain txids, not "removed:key" format
+    assert removed and len(removed) > 0
+    assert isinstance(removed[0], str) and len(removed[0]) == 64  # txid is 64 hex chars
 

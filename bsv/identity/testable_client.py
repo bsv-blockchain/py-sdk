@@ -6,6 +6,7 @@ class TestableIdentityClient(IdentityClient):
     """
     Testable version of IdentityClient. Allows injection of wallet and originator, records call history, and returns dummy values for easy testing.
     """
+    __test__ = False  # Tell pytest this is not a test class
     def __init__(self, wallet: Optional[Any] = None, options: Optional[IdentityClientOptions] = None, originator: OriginatorDomainNameStringUnder250Bytes = "", record_calls: bool = True):
         super().__init__(wallet, options, originator)
         self.record_calls = record_calls

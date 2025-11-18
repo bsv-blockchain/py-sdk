@@ -34,6 +34,8 @@ class Historian:
                 - interpreterVersion: Version identifier for cache invalidation (default: 'v1')
                 - ctxKeyFn: Custom function to serialize context for cache keys
         """
+        if interpreter is None:
+            raise ValueError("interpreter is required")
         self.interpreter = interpreter
         self.debug = (options or {}).get('debug', False)
         self.history_cache = (options or {}).get('historyCache')

@@ -910,15 +910,23 @@ def opcode_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
         # Convert script opcodes back to bytes
         script_bytes = b""
         for opcode in sub_script:
-            if opcode.opcode_value < OpCode.OP_PUSHDATA1.value:
-                script_bytes += opcode.opcode_value.to_bytes(1, 'little')
-            elif opcode.data:
-                script_bytes += opcode.opcode_value.to_bytes(1, 'little') + opcode.data
-            else:
-                script_bytes += opcode.opcode_value.to_bytes(1, 'little')
+            # opcode.opcode is bytes (the opcode itself)
+            script_bytes += opcode.opcode
+            # If there's data, append it
+            if opcode.data:
+                script_bytes += opcode.data
 
-        # Use preimage method with sighash flag - need to extend Transaction class
-        sighash = t.tx.preimage(t.input_idx)  # TODO: Add sighash parameter support
+        # Set the computed script code as the locking script for preimage calculation
+        # This matches BIP-143 requirement and Go SDK implementation
+        from bsv.script.script import Script
+        original_locking_script = t.tx.inputs[t.input_idx].locking_script
+        t.tx.inputs[t.input_idx].locking_script = Script.from_bytes(script_bytes)
+        
+        # Calculate preimage with the computed script code
+        sighash = t.tx.preimage(t.input_idx)
+        
+        # Restore original locking script
+        t.tx.inputs[t.input_idx].locking_script = original_locking_script
     except Exception as e:
         t.dstack.push_byte_array(encode_bool(False))
         return None
@@ -931,7 +939,7 @@ def opcode_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
         result = False
 
     # Check for null fail
-    if not result and len(sig_bytes) > 0 and t.flags.has_flag(t.flags.VERIFY_NULLFAIL):
+    if not result and len(sig_bytes) > 0 and t.flags.has_flag(t.flags.VERIFY_NULL_FAIL):
         return Error(ErrorCode.ERR_NULLFAIL, "signature not empty on failed checksig")
     
     t.dstack.push_byte_array(encode_bool(result))

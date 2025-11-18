@@ -302,3 +302,4 @@ class TestBIP276RealWorldExamples:
         
         assert decoded == data
 
+

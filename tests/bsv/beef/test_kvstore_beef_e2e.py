@@ -119,6 +119,15 @@ def test_kvstore_set_get_remove_e2e():
     txids = kv.remove(None, "alpha");
     assert isinstance(txids, list)
 
+    # Verify the key is no longer available (list count should be 0)
+    outputs_after = kv._wallet.list_outputs(None, {
+        "basket": "kvctx",
+        "tags": ["alpha"],
+        "include": kv.ENTIRE_TXS,
+        "limit": 100,
+    }, "org") or {}
+    assert len(outputs_after.get("outputs", [])) == 0
+
 
 def test_kvstore_remove_multiple_outputs_looping():
     priv = PrivateKey()
@@ -678,14 +687,28 @@ def test_pushdrop_unlocker_sighash_flags():
 
 
 def test_kvstore_get_uses_beef_when_available():
+    """Verify that get operation uses BEEF data when available from wallet."""
     priv = PrivateKey()
     wallet = WalletImpl(priv, permission_callback=lambda a: True)
     kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=False, fee_rate=2))
-    # Set to ensure local cache exists, though get() should prefer on-chain path
+
+    # Set to create outputs with BEEF data
     kv.set(None, "key1", "value1")
+
+    # Mock wallet to return BEEF data
+    from unittest.mock import Mock
+    original_list_outputs = wallet.list_outputs
+    def mock_list_outputs(ctx, query, originator):
+        result = original_list_outputs(ctx, query, originator) or {}
+        # Add mock BEEF data to simulate on-chain retrieval
+        result["BEEF"] = b"mock_beef_data"
+        return result
+    wallet.list_outputs = mock_list_outputs
+
     val = kv.get(None, "key1", "")
-    # In mock, value falls back to local/plaintext; ensure string
+    # Verify BEEF data is available and used
     assert isinstance(val, str)
+    assert len(val) > 0  # Should retrieve the value using BEEF data
 
 
 # --- E2E/edge-case tests for KVStore BEEF flows ---
@@ -723,6 +746,8 @@ def test_kvstore_remove_stringifies_spends_and_uses_input_beef():
     # create_action should carry inputBEEF (may be empty bytes in this mock)
     ca = wallet.last_create_args or {}
     assert "inputBEEF" in ca
+    # Verify inputBEEF is bytes (stringified BEEF data)
+    assert isinstance(ca["inputBEEF"], (bytes, bytearray))
 
 
 def _assert_input_meta_valid(ims):
@@ -749,6 +774,20 @@ def _check_remove_unlocking_script_length(wallet, kv):
     if isinstance(ims, list) and ims:
         _assert_input_meta_valid(ims)
     _assert_spends_valid(wallet.last_sign_spends)
+
+    # Validate estimate vs actual like set operation
+    meta = wallet.last_create_inputs_meta
+    if meta and isinstance(meta, list):
+        ests = [int(m.get("unlockingScriptLength", 0)) for m in meta]
+        if ests:
+            assert all(70 <= e <= 80 for e in ests)
+            spends = wallet.last_sign_spends
+            # Remove flows may skip sign_action if outputs are empty
+            if spends is not None:
+                for s in (spends.values() if isinstance(spends, dict) else []):
+                    us = s.get("unlockingScript", b"")
+                    assert len(us) <= max(ests)
+                    assert len(us) >= 1 + 70 + 1
 
 def test_unlocking_script_length_estimate_vs_actual_set_and_remove():
     from bsv.keys import PrivateKey
@@ -901,15 +940,15 @@ def test_beef_v2_txidonly_and_bad_format_varint_errors():
     import pytest
     with pytest.raises(ValueError, match="unsupported tx data format"):
         new_beef_from_bytes(v2_bad_fmt)
-    # Bad: bump index out of range
-    v2_bad_bidx = int(BEEF_V2).to_bytes(4, 'little') + b"\x01" + b"\x00" + b"\x01" + b"\x01" + b"\x00"  # 1 bump(empty), 1 tx, kind=RawTxAndBumpIndex, bumpIndex=1 -> invalid
+    # Bad: bump index out of range (0 bumps available, index 0 requested)
+    v2_bad_bidx = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\x01" + b"\x01" + b"\x00"  # 0 bumps, 1 tx, RawTxAndBumpIndex, bumpIndex=0 -> invalid
     import pytest
-    with pytest.raises((ValueError, TypeError)):
+    with pytest.raises((ValueError, TypeError, AssertionError)):
         new_beef_from_bytes(v2_bad_bidx)
     # Bad: truncated varint (tx count missing)
     v2_bad_vi = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"
     import pytest
-    with pytest.raises((ValueError, TypeError)):
+    with pytest.raises((ValueError, TypeError), match="(buffer exhausted|too short|varint|NoneType.*integer)"):
         new_beef_from_bytes(v2_bad_vi)
 
 
@@ -921,11 +960,10 @@ def test_beef_mixed_versions_and_atomic_selection_logic():
     atomic = int(ATOMIC_BEEF).to_bytes(4, 'little') + (b"\x11" * 32) + v2
     beef, subject = new_beef_from_atomic_bytes(atomic)
     assert subject == (b"\x11" * 32)[::-1].hex()
-    # V1 should parse to a last transaction; create a dummy V1 (version-only invalid is expected to fail)
-    try:
-        _ = new_beef_from_bytes(int(BEEF_V1).to_bytes(4, 'little'))
-    except Exception:
-        pass
+    # V1 with only version bytes should fail to parse (incomplete BEEF)
+    import pytest
+    with pytest.raises((ValueError, TypeError)):
+        new_beef_from_bytes(int(BEEF_V1).to_bytes(4, 'little'))
 
 
 def test_parse_beef_ex_selection_priority():
@@ -1030,14 +1068,45 @@ def _is_expected_beef_error(e):
     )
 
 def test_beef_v2_mixed_txidonly_and_rawtx():
+    """BEEF V2: Mixed TxIDOnly and RawTx entries for different txids should both be present."""
+    from bsv.transaction import Transaction, TransactionOutput
+    from bsv.script.script import Script
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
-    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\x02" + b"\x02" + (b"\x11" * 32) + b"\x00" + b"\x01" + b"\x00"
-    try:
-        beef = new_beef_from_bytes(v2)
-        assert beef.version == BEEF_V2
-        assert len(beef.txs) == 2
-    except Exception as e:
-        assert _is_expected_beef_error(e)
+    
+    # Create two valid transactions with different txids
+    tx1 = Transaction()
+    tx1.outputs = [TransactionOutput(Script(b"\x51"), 1000)]
+    tx1_id = tx1.txid()
+    
+    tx2 = Transaction()
+    tx2.outputs = [TransactionOutput(Script(b"\x52"), 2000)]
+    tx2_id = tx2.txid()
+    
+    # Build BEEF V2: bumps=0, txs=2
+    # First entry: TxIDOnly for tx1
+    # Second entry: RawTx for tx2
+    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"  # bumps=0
+    v2 += b"\x02"  # txs=2
+    v2 += b"\x02" + bytes.fromhex(tx1_id)[::-1]  # TxIDOnly(tx1)
+    v2 += b"\x00" + tx2.serialize()  # RawTx(tx2)
+    
+    beef = new_beef_from_bytes(v2)
+    assert beef.version == BEEF_V2
+    assert len(beef.txs) == 2
+    
+    # Verify both entries exist
+    assert tx1_id in beef.txs
+    assert tx2_id in beef.txs
+    
+    # Verify data formats
+    tx1_entry = beef.txs[tx1_id]
+    assert tx1_entry.data_format == 2  # TxIDOnly
+    assert tx1_entry.tx_obj is None
+    
+    tx2_entry = beef.txs[tx2_id]
+    assert tx2_entry.data_format == 0  # RawTx
+    assert tx2_entry.tx_obj is not None
+    assert tx2_entry.tx_obj.txid() == tx2_id
 
 def test_beef_v2_invalid_bump_structure():
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
@@ -1061,15 +1130,35 @@ def test_beef_v1_invalid_transaction():
         new_beef_from_bytes(v1)
 
 def test_beef_v2_duplicate_txidonly_and_rawtx():
+    """BEEF V2: TxIDOnly followed by RawTx for same txid should deduplicate (RawTx replaces TxIDOnly)."""
+    from bsv.transaction import Transaction, TransactionOutput
+    from bsv.script.script import Script
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
-    txid = b"\x44" * 32
-    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\x02" + b"\x02" + txid + b"\x00" + b"\x01" + b"\x00"
-    try:
-        beef = new_beef_from_bytes(v2)
-        assert beef.version == BEEF_V2
-        assert len(beef.txs) == 1
-    except Exception as e:
-        assert _is_expected_beef_error(e)
+    
+    # Create a valid transaction
+    tx = Transaction()
+    tx.outputs = [TransactionOutput(Script(b"\x51"), 1000)]
+    tx_id = tx.txid()
+    
+    # Build BEEF V2: bumps=0, txs=2
+    # First entry: TxIDOnly for the txid
+    # Second entry: RawTx for the same txid (should deduplicate)
+    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"  # bumps=0
+    v2 += b"\x02"  # txs=2
+    v2 += b"\x02" + bytes.fromhex(tx_id)[::-1]  # TxIDOnly(tx)
+    v2 += b"\x00" + tx.serialize()  # RawTx(tx) - same txid
+    
+    beef = new_beef_from_bytes(v2)
+    assert beef.version == BEEF_V2
+    # Should deduplicate to 1 entry
+    assert len(beef.txs) == 1
+    
+    # Verify the final entry has the RawTx (not TxIDOnly)
+    assert tx_id in beef.txs
+    final_entry = beef.txs[tx_id]
+    assert final_entry.data_format == 0  # RawTx (replaced TxIDOnly)
+    assert final_entry.tx_obj is not None
+    assert final_entry.tx_obj.txid() == tx_id
 
 def test_beef_v2_bad_varint():
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
@@ -1211,11 +1300,29 @@ def test_kvstore_mixed_encrypted_and_plaintext_keys():
     got2 = kv2.get(None, "pkey", "")
     assert got1.startswith("enc:")
     assert got2 == "pval"
+    # Verify outputs exist before removal
+    outputs_before = wallet.list_outputs(None, {
+        "basket": "kvctx",
+        "tags": ["ekey", "pkey"],
+        "include": kv.ENTIRE_TXS,
+        "limit": 100,
+    }, "org") or {}
+    assert len(outputs_before.get("outputs", [])) >= 2
+
     # Remove both
     txids1 = kv.remove(None, "ekey")
     txids2 = kv2.remove(None, "pkey")
     assert isinstance(txids1, list)
     assert isinstance(txids2, list)
+
+    # Verify outputs are gone after removal
+    outputs_after = wallet.list_outputs(None, {
+        "basket": "kvctx",
+        "tags": ["ekey", "pkey"],
+        "include": kv.ENTIRE_TXS,
+        "limit": 100,
+    }, "org") or {}
+    assert len(outputs_after.get("outputs", [])) == 0
 
 
 def test_kvstore_beef_edge_case_vectors():

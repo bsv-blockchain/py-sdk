@@ -33,7 +33,7 @@ def create_mock_wallet() -> Mock:
         'BEEF': None
     })
     wallet.encrypt = Mock(return_value={
-        'ciphertext': list(TEST_ENCRYPTED_VALUE)
+        'ciphertext': TEST_ENCRYPTED_VALUE
     })
     wallet.decrypt = Mock(return_value={
         'plaintext': TEST_VALUE.encode('utf-8')
@@ -161,7 +161,7 @@ class TestLocalKVStoreSet:
             'BEEF': None
         }
         wallet.encrypt.return_value = {
-            'ciphertext': list(TEST_ENCRYPTED_VALUE)
+            'ciphertext': TEST_ENCRYPTED_VALUE
         }
         wallet.create_action.return_value = {
             'txid': 'newTxId'
