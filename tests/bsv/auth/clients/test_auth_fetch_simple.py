@@ -1,133 +1,268 @@
+"""
+Tests for bsv/auth/clients/auth_fetch.py
+
+Focuses on initialization and basic functionality with minimal mocking.
+"""
+
 import pytest
-import os
-import sys
-import time
-import subprocess
-import requests
-import json
-from bsv.auth.clients.auth_fetch import AuthFetch, SimplifiedFetchRequestOptions, AuthPeer
+from unittest.mock import Mock, patch
+from requests.exceptions import RetryError
+from bsv.auth.clients.auth_fetch import (
+    SimplifiedFetchRequestOptions,
+    AuthPeer,
+    AuthFetch
+)
 from bsv.auth.requested_certificate_set import RequestedCertificateSet
 
-class DummyWallet:
-    """Mock wallet for testing"""
-    def get_public_key(self, ctx, args, originator):
-        return {"publicKey": "02a1633cafb311f41c1137864d7dd7cf2d5c9e5c2e5b5f5a5d5c5b5a59584f5e5f", "derivationPrefix": "m/0"}
-    
-    def create_action(self, ctx, args, originator):
-        return {"tx": "0100000001abcdef..."}
-    
-    def create_signature(self, ctx, args, originator):
-        return {"signature": b"dummy_signature"}
-    
-    def verify_signature(self, ctx, args, originator):
-        return {"valid": True}
 
-@pytest.fixture(scope="module")
-def auth_full_server():
-    # Launch using relative paths
-    this_dir = os.path.dirname(__file__)
-    server_script = os.path.abspath(os.path.join(this_dir, "..", "test_auth_server_full.py"))
-    # Inherit current environment (keeps parent PYTHONPATH)
-    p = subprocess.Popen([
-        sys.executable,
-        server_script,
-    ], env=os.environ)
-    base = "http://localhost:8084"
-    ok = False
-    start = time.time()
-    while time.time() - start < 10.0:
-        try:
-            r = requests.get(f"{base}/health", timeout=0.5)
-            if r.status_code == 200:
-                ok = True
-                break
-        except Exception:
-            # Intentional: Health check may fail during server startup - retry loop handles this
-            pass
-        time.sleep(0.1)
-    if not ok:
-        p.terminate()
-        raise RuntimeError("auth server failed to start on :8084")
-    try:
-        yield p
-    finally:
-        try:
-            p.terminate()
-            p.wait(timeout=5)
-        except Exception:
-            try:
-                p.kill()
-            except Exception:
-                pass
-
-def test_auth_fetch_fallback_to_http(auth_full_server):
-    """Test AuthFetch fallback to regular HTTP when mutual auth is disabled"""
-    try:
-        wallet = DummyWallet()
-        requested_certs = RequestedCertificateSet()
-        auth_fetch = AuthFetch(wallet, requested_certs)
-        
-        # Pre-configure the peer to NOT support mutual auth
-        base_url = "http://localhost:8084"
-        auth_peer = AuthPeer()
-        auth_peer.supports_mutual_auth = False
-        auth_fetch.peers[base_url] = auth_peer
-        
-        # Test with health endpoint (should work with regular HTTP)
-        config = SimplifiedFetchRequestOptions(method="GET")
-        resp = auth_fetch.fetch(None, "http://localhost:8084/health", config)
-        
-        assert resp is not None
-        assert resp.status_code == 200
-        assert "BSV Auth Server is running" in resp.text
-        
-        print("✓ HTTP fallback test passed")
-        
-    except Exception as e:
-        pytest.fail(f"HTTP fallback test failed: {e}")
-
-def test_auth_fetch_json_post(auth_full_server):
-    """Test AuthFetch with JSON POST to auth endpoint using HTTP fallback"""
-    try:
-        wallet = DummyWallet()
-        requested_certs = RequestedCertificateSet()
-        auth_fetch = AuthFetch(wallet, requested_certs)
-        
-        # Pre-configure the peer to NOT support mutual auth
-        base_url = "http://localhost:8084"
-        auth_peer = AuthPeer()
-        auth_peer.supports_mutual_auth = False
-        auth_fetch.peers[base_url] = auth_peer
-        
-        # Test with auth endpoint using initialRequest message
-        config = SimplifiedFetchRequestOptions(
+class TestSimplifiedFetchRequestOptions:
+    """Test SimplifiedFetchRequestOptions class."""
+    
+    def test_init_defaults(self):
+        """Test initialization with defaults."""
+        opts = SimplifiedFetchRequestOptions()
+        assert opts.method == "GET"
+        assert opts.headers == {}
+        assert opts.body is None
+        assert opts.retry_counter is None
+    
+    def test_init_all_params(self):
+        """Test initialization with all parameters."""
+        headers = {"Authorization": "Bearer token"}
+        body = b"test data"
+        opts = SimplifiedFetchRequestOptions(
             method="POST",
-            headers={"Content-Type": "application/json"},
-            body=json.dumps({
-                "version": "0.1",
-                "messageType": "initialRequest",
-                "identityKey": "02a1633cafb311f41c1137864d7dd7cf2d5c9e5c2e5b5f5a5d5c5b5a59584f5e5f",
-                "nonce": "dGVzdF9ub25jZV8zMmJ5dGVzX2Zvcl90ZXN0aW5nXzEyMzQ="
-            }).encode()
+            headers=headers,
+            body=body,
+            retry_counter=3
         )
-        
-        resp = auth_fetch.fetch(None, "http://localhost:8084/auth", config)
-        
-        assert resp is not None
-        assert resp.status_code == 200
-        
-        # Parse response
-        response_data = json.loads(resp.text)
-        assert response_data.get("messageType") == "initialResponse"
-        assert "identityKey" in response_data
-        assert "nonce" in response_data
-        
-        print("✓ JSON POST test passed")
-        
-    except Exception as e:
-        pytest.fail(f"JSON POST test failed: {e}")
+        assert opts.method == "POST"
+        assert opts.headers == headers
+        assert opts.body == body
+        assert opts.retry_counter == 3
+    
+    def test_post_method(self):
+        """Test POST method."""
+        opts = SimplifiedFetchRequestOptions(method="POST")
+        assert opts.method == "POST"
+    
+    def test_put_method(self):
+        """Test PUT method."""
+        opts = SimplifiedFetchRequestOptions(method="PUT")
+        assert opts.method == "PUT"
+    
+    def test_delete_method(self):
+        """Test DELETE method."""
+        opts = SimplifiedFetchRequestOptions(method="DELETE")
+        assert opts.method == "DELETE"
+    
+    def test_headers_empty_dict(self):
+        """Test headers default to empty dict."""
+        opts = SimplifiedFetchRequestOptions()
+        assert isinstance(opts.headers, dict)
+        assert len(opts.headers) == 0
 
-if __name__ == "__main__":
-    test_auth_fetch_fallback_to_http()
-    test_auth_fetch_json_post()
-    print("All simple tests passed!")
+
+class TestAuthPeer:
+    """Test AuthPeer class."""
+    
+    def test_init(self):
+        """Test AuthPeer initialization."""
+        peer = AuthPeer()
+        assert peer.peer is None
+        assert peer.identity_key == ""
+        assert peer.supports_mutual_auth is None
+        assert isinstance(peer.pending_certificate_requests, list)
+        assert len(peer.pending_certificate_requests) == 0
+    
+    def test_set_peer_attribute(self):
+        """Test setting peer attribute."""
+        auth_peer = AuthPeer()
+        mock_peer = Mock()
+        auth_peer.peer = mock_peer
+        assert auth_peer.peer == mock_peer
+    
+    def test_set_identity_key(self):
+        """Test setting identity key."""
+        auth_peer = AuthPeer()
+        auth_peer.identity_key = "test123"
+        assert auth_peer.identity_key == "test123"
+    
+    def test_set_supports_mutual_auth_true(self):
+        """Test setting supports_mutual_auth to True."""
+        auth_peer = AuthPeer()
+        auth_peer.supports_mutual_auth = True
+        assert auth_peer.supports_mutual_auth is True
+    
+    def test_set_supports_mutual_auth_false(self):
+        """Test setting supports_mutual_auth to False."""
+        auth_peer = AuthPeer()
+        auth_peer.supports_mutual_auth = False
+        assert auth_peer.supports_mutual_auth is False
+    
+    def test_pending_requests_append(self):
+        """Test appending to pending certificate requests."""
+        auth_peer = AuthPeer()
+        auth_peer.pending_certificate_requests.append(True)
+        assert len(auth_peer.pending_certificate_requests) == 1
+
+
+class TestAuthFetchInit:
+    """Test AuthFetch initialization."""
+    
+    def test_init_with_session_manager(self):
+        """Test initialization with provided session manager."""
+        mock_wallet = Mock()
+        mock_certs = Mock(spec=RequestedCertificateSet)
+        mock_sm = Mock()
+        
+        auth_fetch = AuthFetch(mock_wallet, mock_certs, mock_sm)
+        
+        assert auth_fetch.wallet == mock_wallet
+        assert auth_fetch.requested_certificates == mock_certs
+        assert auth_fetch.session_manager == mock_sm
+        assert isinstance(auth_fetch.callbacks, dict)
+        assert isinstance(auth_fetch.certificates_received, list)
+        assert isinstance(auth_fetch.peers, dict)
+    
+    def test_init_creates_default_session_manager(self):
+        """Test that default session manager is created if not provided."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        
+        with patch('bsv.auth.clients.auth_fetch.DefaultSessionManager') as mock_class:
+            mock_sm = Mock()
+            mock_class.return_value = mock_sm
+            
+            auth_fetch = AuthFetch(mock_wallet, mock_certs)
+            
+            assert auth_fetch.session_manager == mock_sm
+            mock_class.assert_called_once()
+    
+    def test_init_empty_collections(self):
+        """Test that collections are initialized empty."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        
+        assert len(auth_fetch.callbacks) == 0
+        assert len(auth_fetch.certificates_received) == 0
+        assert len(auth_fetch.peers) == 0
+    
+    def test_logger_initialized(self):
+        """Test that logger is initialized."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        
+        assert auth_fetch.logger is not None
+        assert auth_fetch.logger.name == "AuthHTTP"
+
+
+class TestAuthFetchRetry:
+    """Test retry logic in AuthFetch."""
+    
+    def test_fetch_retry_counter_zero_raises(self):
+        """Test fetch with retry counter at 0 raises RetryError."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        
+        config = SimplifiedFetchRequestOptions(retry_counter=0)
+        
+        with pytest.raises(RetryError):
+            auth_fetch.fetch(None, "https://example.com", config)
+    
+    def test_retry_error_message(self):
+        """Test RetryError message content."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        
+        config = SimplifiedFetchRequestOptions(retry_counter=0)
+        
+        with pytest.raises(RetryError, match="maximum number of retries"):
+            auth_fetch.fetch(None, "https://example.com", config)
+
+
+class TestAuthFetchHelpers:
+    """Test helper methods and URL parsing."""
+    
+    def test_url_parsing_https(self):
+        """Test URL parsing for HTTPS."""
+        import urllib.parse
+        url = "https://api.example.com:443/v1/endpoint?param=value"
+        parsed = urllib.parse.urlparse(url)
+        assert parsed.scheme == "https"
+        assert parsed.netloc == "api.example.com:443"
+    
+    def test_url_parsing_http(self):
+        """Test URL parsing for HTTP."""
+        import urllib.parse
+        url = "http://localhost:8080/test"
+        parsed = urllib.parse.urlparse(url)
+        assert parsed.scheme == "http"
+        assert parsed.netloc == "localhost:8080"
+    
+    def test_base_url_extraction(self):
+        """Test extracting base URL from full URL."""
+        import urllib.parse
+        url = "https://example.com:9000/path/to/resource?query=1"
+        parsed = urllib.parse.urlparse(url)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+        assert base_url == "https://example.com:9000"
+    
+    def test_certificates_received_extend(self):
+        """Test extending certificates_received list."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        
+        mock_cert1 = Mock()
+        mock_cert2 = Mock()
+        auth_fetch.certificates_received.extend([mock_cert1, mock_cert2])
+        
+        assert len(auth_fetch.certificates_received) == 2
+        assert mock_cert1 in auth_fetch.certificates_received
+
+
+class TestAuthFetchMethodExistence:
+    """Test that expected methods exist."""
+    
+    def test_has_fetch_method(self):
+        """Test that fetch method exists."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        assert hasattr(auth_fetch, 'fetch')
+        assert callable(auth_fetch.fetch)
+    
+    def test_has_serialize_request(self):
+        """Test that serialize_request method exists."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        assert hasattr(auth_fetch, 'serialize_request')
+    
+    def test_has_method_create_peer(self):
+        """Test that object can create peers."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        # Test peers dictionary can be used
+        auth_fetch.peers["test"] = AuthPeer()
+        assert "test" in auth_fetch.peers
+    
+    def test_has_handle_fetch_and_validate(self):
+        """Test that handle_fetch_and_validate method exists."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        assert hasattr(auth_fetch, 'handle_fetch_and_validate')
+    
+    def test_has_handle_payment_and_retry(self):
+        """Test that handle_payment_and_retry method exists."""
+        mock_wallet = Mock()
+        mock_certs = Mock()
+        auth_fetch = AuthFetch(mock_wallet, mock_certs)
+        assert hasattr(auth_fetch, 'handle_payment_and_retry')

@@ -234,4 +234,32 @@ class Stack:
         items = [self.stk.pop(-(n + i + 1)) for i in range(n)]
         for item in reversed(items):
             self.push_byte_array(item)
+    
+    # Convenience methods for common operations
+    def push(self, data: bytes) -> None:
+        """Alias for push_byte_array."""
+        self.push_byte_array(data)
+    
+    def pop(self) -> bytes:
+        """Alias for pop_byte_array."""
+        return self.pop_byte_array()
+    
+    def peek(self, idx: int = 0) -> bytes:
+        """Alias for peek_byte_array."""
+        return self.peek_byte_array(idx)
+    
+    def dup(self) -> None:
+        """Duplicate the top item on the stack."""
+        self.dup_n(1)
+    
+    def swap(self) -> None:
+        """Swap the top two items on the stack."""
+        if len(self.stk) < 2:
+            raise ValueError("not enough items on stack to swap")
+        # Pop the top two items
+        top = self.pop_byte_array()
+        second = self.pop_byte_array()
+        # Push them back in swapped order
+        self.push_byte_array(top)
+        self.push_byte_array(second)
 

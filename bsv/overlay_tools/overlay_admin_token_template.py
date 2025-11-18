@@ -36,7 +36,7 @@ class OverlayAdminTokenTemplate:
         :returns: Decoded SHIP or SLAP advertisement
         """
         # Convert to bytes if needed
-        if isinstance(script, LockingScript):
+        if isinstance(script, Script):
             script_bytes = bytes.fromhex(script.to_hex())
         else:
             script_bytes = script

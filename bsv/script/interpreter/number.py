@@ -18,13 +18,14 @@ class ScriptNumber:
     @classmethod
     def from_bytes(cls, data: bytes, max_num_len: int = 4, require_minimal: bool = True) -> "ScriptNumber":
         """
-        Create a ScriptNumber from bytes.
+        Create a ScriptNumber from bytes using Bitcoin script number encoding.
         
         Args:
             data: The byte array to parse
             max_num_len: Maximum number length in bytes
             require_minimal: Whether to require minimal encoding
         """
+        # Zero is encoded as empty byte slice
         if len(data) == 0:
             return cls(0)
         
@@ -32,81 +33,79 @@ class ScriptNumber:
             raise ValueError(f"number exceeds max length: {len(data)} > {max_num_len}")
         
         # Check for minimal encoding
-        if require_minimal and len(data) > 1:
+        if require_minimal:
+            # Check for negative zero (0x80 by itself or 0x80 with all zeros before it)
+            if data[-1] == 0x80 and all(b == 0 for b in data[:-1]):
+                raise ValueError("non-minimally encoded script number")
+            
             # Check if we have unnecessary leading zeros
-            if data[-1] == 0x00 and (data[-2] & 0x80) == 0:
-                raise ValueError("non-minimally encoded script number")
-            # Check if we have 0x80 followed by zeros (would be -0)
-            if data[-1] == 0x80 and len(data) > 1 and all(b == 0 for b in data[:-1]):
-                raise ValueError("non-minimally encoded script number")
+            if len(data) > 1:
+                # If the last byte is 0x00 and the second-to-last doesn't have sign bit set
+                if data[-1] == 0x00 and (data[-2] & 0x80) == 0:
+                    raise ValueError("non-minimally encoded script number")
+                # If the last byte is 0x80 (negative) and second-to-last doesn't need it
+                # This would be something like [0x7f, 0x80] which could be just [0xff]
+                if len(data) > 1 and data[-1] == 0x80 and (data[-2] & 0x80) == 0:
+                    raise ValueError("non-minimally encoded script number")
         
-        # Parse the number
-        if len(data) == 1:
-            byte_val = data[0]
-            if byte_val == 0:
-                return cls(0)
-            if (byte_val & 0x80) == 0:
-                # Positive number
-                return cls(byte_val)
-            else:
-                # Negative number
-                return cls(byte_val - 256)
-        
-        # Multi-byte number
+        # Decode from little endian (including sign bit initially)
         result = 0
         for i, byte_val in enumerate(data):
-            if i == len(data) - 1:
-                # Last byte: check sign bit
-                if byte_val & 0x80:
-                    result |= (byte_val & 0x7f) << (i * 8)
-                    result -= (1 << (len(data) * 8))
-                else:
-                    result |= byte_val << (i * 8)
-            else:
-                result |= byte_val << (i * 8)
+            result |= byte_val << (i * 8)
+        
+        # When the most significant byte has the sign bit set, the result is negative.
+        # Remove the sign bit from the result and make it negative.
+        if data[-1] & 0x80:
+            # Clear the sign bit and negate
+            # Create mask to clear the sign bit: ~(0x80 << (8 * (len-1)))
+            sign_bit_mask = 0x80 << (8 * (len(data) - 1))
+            result &= ~sign_bit_mask
+            result = -result
         
         return cls(result)
 
     def bytes(self, require_minimal: bool = True) -> bytes:
-        """Convert ScriptNumber to bytes."""
+        """Convert ScriptNumber to bytes using Bitcoin script number encoding.
+        
+        Bitcoin uses sign-magnitude representation where the high bit of the
+        last byte indicates the sign.
+        """
+        # Zero encodes as empty byte slice
         if self.value == 0:
-            return b"\x00"
-
-        # For negative numbers, use two's complement
-        if self.value < 0:
-            # Calculate two's complement
-            abs_value = abs(self.value)
-            # Find the minimum number of bytes needed
-            if abs_value <= 0x80:
-                # Can fit in one byte
-                complement = (256 - abs_value) & 0xFF
-                return bytes([complement])
-            else:
-                # Multi-byte two's complement
-                result = []
-                temp = (1 << (abs_value.bit_length() + 1)) - abs_value
-                while temp > 0 or len(result) == 0:
-                    result.append(temp & 0xFF)
-                    temp >>= 8
-                return bytes(result)
-
-        # For positive numbers
-        abs_value = self.value
+            return b""
+        
+        # Take absolute value and track if negative
+        is_negative = self.value < 0
+        abs_value = abs(self.value)
+        
+        # Encode absolute value in little-endian
         result = []
         while abs_value > 0:
             result.append(abs_value & 0xFF)
             abs_value >>= 8
-
-        # Ensure the highest byte doesn't have the sign bit set
-        if len(result) > 0 and (result[-1] & 0x80) != 0:
-            result.append(0x00)
-
-        # Minimal encoding
-        if require_minimal and len(result) > 1:
-            while len(result) > 1 and result[-1] == 0 and (result[-2] & 0x80) == 0:
-                result.pop()
-
+        
+        # When the most significant byte already has the high bit set (0x80),
+        # an additional high byte is required to indicate whether the number
+        # is negative or positive. The additional byte is removed when converting
+        # back to an integral and its high bit is used to denote the sign.
+        #
+        # Otherwise, when the most significant byte does not already have the
+        # high bit set, use it to indicate the value is negative, if needed.
+        if result[-1] & 0x80:
+            # Need extra byte
+            if is_negative:
+                result.append(0x80)
+            else:
+                result.append(0x00)
+        elif is_negative:
+            # Set the sign bit on the last byte
+            result[-1] |= 0x80
+        
         return bytes(result)
+    
+    def to_bytes(self, require_minimal: bool = True) -> bytes:
+        """Alias for bytes() method for compatibility."""
+        return self.bytes(require_minimal)
 
     def __int__(self) -> int:
         """Convert to integer."""

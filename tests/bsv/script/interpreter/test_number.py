@@ -34,11 +34,25 @@ class TestScriptNumber(unittest.TestCase):
 
     def test_from_bytes_negative_single_byte(self):
         """Test from_bytes with negative single byte."""
-        num = ScriptNumber.from_bytes(b"\x80")  # 128, which becomes -128
-        self.assertEqual(num.value, -128)
+        # b"\x80" is negative zero, which should fail minimal encoding
+        with self.assertRaises(ValueError):
+            ScriptNumber.from_bytes(b"\x80", require_minimal=True)
+        
+        # But works without minimal encoding (decodes to 0)
+        num = ScriptNumber.from_bytes(b"\x80", require_minimal=False)
+        self.assertEqual(num.value, 0)
 
-        num = ScriptNumber.from_bytes(b"\x81")  # 129, which becomes -127
+        # -1 is encoded as 0x81
+        num = ScriptNumber.from_bytes(b"\x81")
+        self.assertEqual(num.value, -1)
+        
+        # -127 is encoded as 0xFF
+        num = ScriptNumber.from_bytes(b"\xff")
         self.assertEqual(num.value, -127)
+        
+        # -128 requires two bytes: 0x8080
+        num = ScriptNumber.from_bytes(b"\x80\x80")
+        self.assertEqual(num.value, -128)
 
     def test_from_bytes_multi_byte_positive(self):
         """Test from_bytes with multi-byte positive number."""
@@ -80,7 +94,8 @@ class TestScriptNumber(unittest.TestCase):
     def test_bytes_zero(self):
         """Test bytes() method with zero."""
         num = ScriptNumber(0)
-        self.assertEqual(num.bytes(), b"\x00")
+        # Zero encodes as empty bytes in Bitcoin script
+        self.assertEqual(num.bytes(), b"")
 
     def test_bytes_positive_small(self):
         """Test bytes() method with small positive number."""
@@ -95,17 +110,18 @@ class TestScriptNumber(unittest.TestCase):
     def test_bytes_negative(self):
         """Test bytes() method with negative number."""
         num = ScriptNumber(-42)
-        # -42 in two's complement: 256 - 42 = 214 = 0xd6
-        expected = b"\xd6"
+        # -42 in sign-magnitude: 42 = 0x2A, with sign bit: 0x2A | 0x80 = 0xAA
+        expected = b"\xaa"
         self.assertEqual(num.bytes(), expected)
 
     def test_bytes_negative_large(self):
         """Test bytes() method with large negative number."""
         num = ScriptNumber(-298)
-        # Just test that bytes() returns something for large negative numbers
-        bytes_data = num.bytes()
-        self.assertTrue(len(bytes_data) >= 1)
-        # Note: Multi-byte negative number parsing may have issues, but basic functionality works
+        # -298: abs = 298 = 0x12A = 0x2A + 0x01*256
+        # Little-endian: [0x2A, 0x01]
+        # Set sign bit on last byte: [0x2A, 0x81]
+        expected = b"\x2a\x81"
+        self.assertEqual(num.bytes(), expected)
 
     def test_roundtrip_positive(self):
         """Test roundtrip conversion for positive numbers."""

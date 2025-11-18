@@ -78,7 +78,7 @@ class HTTPSOverlayBroadcastFacilitator:
             # Combine BEEF and off-chain values
             from bsv.utils import Writer
             writer = Writer()
-            writer.write_var_int(len(tagged_beef.beef))
+            writer.write_varint(len(tagged_beef.beef))
             writer.write(tagged_beef.beef)
             writer.write(tagged_beef.off_chain_values)
             body = writer.to_bytes()

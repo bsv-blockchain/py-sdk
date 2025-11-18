@@ -36,6 +36,22 @@ class SIGHASH(int, Enum):
     NONE_ANYONECANPAY_FORKID = NONE_FORKID | ANYONECANPAY
     SINGLE_ANYONECANPAY_FORKID = SINGLE_FORKID | ANYONECANPAY
 
+    def __or__(self, other):
+        """Support OR operation while maintaining SIGHASH type."""
+        if isinstance(other, SIGHASH):
+            # Create a new SIGHASH instance with the OR'd value
+            result = int.__or__(self.value, other.value)
+            # Try to return an existing member, or create a pseudo-member
+            try:
+                return SIGHASH(result)
+            except ValueError:
+                # If the result isn't a defined member, create a pseudo-member
+                obj = int.__new__(SIGHASH, result)
+                obj._name_ = f"SIGHASH_{hex(result)}"
+                obj._value_ = result
+                return obj
+        return NotImplemented
+
     @classmethod
     def validate(cls, sighash: int) -> bool:
         return sighash in [

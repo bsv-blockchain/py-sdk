@@ -56,6 +56,7 @@ class ErrorCode(IntEnum):
     ERR_SIG_TYPE = 32
     ERR_SIG_DER = 33
     ERR_SIG_HIGH_S = 34
+    ERR_SIG_LOW_S = 34  # Alias for ERR_SIG_HIGH_S (same check)
     ERR_SIG_NULLFAIL = 35
     ERR_SIG_BADLENGTH = 36
     ERR_SIG_NONSCHNORR = 37

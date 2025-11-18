@@ -200,3 +200,135 @@ class TestSHIPBroadcaster:
         host_acknowledgments = {"host2": {"tm_test"}}
         result = broadcaster._check_acknowledgment_requirements(host_acknowledgments)
         assert not result
+    
+    @pytest.mark.asyncio
+    async def test_https_facilitator_send_success(self):
+        """Test HTTPSOverlayBroadcastFacilitator send succeeds."""
+        from unittest.mock import patch, AsyncMock, MagicMock
+        
+        facilitator = HTTPSOverlayBroadcastFacilitator()
+        tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
+        
+        # Mock aiohttp response
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.json = AsyncMock(return_value={"host1": {"outputs_to_admit": [0], "coins_to_retain": []}})
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock()
+        
+        # Mock session
+        mock_session = MagicMock()
+        mock_session.post.return_value = mock_response
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock()
+        
+        with patch('aiohttp.ClientSession', return_value=mock_session):
+            result = await facilitator.send("https://example.com", tagged_beef)
+            assert result is not None
+    
+    @pytest.mark.asyncio
+    async def test_https_facilitator_send_with_http_not_allowed(self):
+        """Test HTTPSOverlayBroadcastFacilitator rejects HTTP URLs."""
+        facilitator = HTTPSOverlayBroadcastFacilitator(allow_http=False)
+        tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
+        
+        with pytest.raises(ValueError, match='HTTPS facilitator can only use URLs that start with "https:"'):
+            await facilitator.send("http://example.com", tagged_beef)
+    
+    @pytest.mark.asyncio
+    async def test_https_facilitator_send_with_http_allowed(self):
+        """Test HTTPSOverlayBroadcastFacilitator allows HTTP when configured."""
+        from unittest.mock import patch, AsyncMock, MagicMock
+        
+        facilitator = HTTPSOverlayBroadcastFacilitator(allow_http=True)
+        tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
+        
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.json = AsyncMock(return_value={})
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock()
+        
+        mock_session = MagicMock()
+        mock_session.post.return_value = mock_response
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock()
+        
+        with patch('aiohttp.ClientSession', return_value=mock_session):
+            result = await facilitator.send("http://example.com", tagged_beef)
+            assert result is not None
+    
+    # Note: Off-chain values and failure paths tested implicitly through integration
+    
+    @pytest.mark.asyncio
+    async def test_https_facilitator_send_network_error(self):
+        """Test HTTPSOverlayBroadcastFacilitator handles network errors."""
+        from unittest.mock import patch, AsyncMock
+        
+        facilitator = HTTPSOverlayBroadcastFacilitator()
+        tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
+        
+        with patch('aiohttp.ClientSession', side_effect=Exception("Network error")):
+            with pytest.raises(Exception, match="Broadcast failed"):
+                await facilitator.send("https://example.com", tagged_beef)
+    
+    def test_check_acknowledgment_requirements_all_hosts(self):
+        """Test acknowledgment requirements for all hosts."""
+        broadcaster = TopicBroadcaster(["tm_test"])
+        broadcaster.require_acknowledgment_from_any_host_for_topics = None
+        broadcaster.require_acknowledgment_from_all_hosts_for_topics = ["tm_test"]
+        broadcaster.require_acknowledgment_from_specific_hosts_for_topics = {}
+        
+        # Should pass if all hosts acknowledge the topic
+        host_acknowledgments = {
+            "host1": {"tm_test"},
+            "host2": {"tm_test"}
+        }
+        result = broadcaster._check_acknowledgment_requirements(host_acknowledgments)
+        assert result
+        
+        # Should fail if not all hosts acknowledge
+        host_acknowledgments = {
+            "host1": {"tm_test"},
+            "host2": {"tm_other"}
+        }
+        result = broadcaster._check_acknowledgment_requirements(host_acknowledgments)
+        assert not result
+    
+    def test_tagged_beef_with_off_chain_values(self):
+        """Test TaggedBEEF with off-chain values."""
+        beef = b"test_beef"
+        topics = ["tm_test"]
+        off_chain = b"off_chain_data"
+        
+        tagged = TaggedBEEF(beef=beef, topics=topics, off_chain_values=off_chain)
+        assert tagged.beef == beef
+        assert tagged.topics == topics
+        assert tagged.off_chain_values == off_chain
+    
+    def test_admittance_instructions_minimal(self):
+        """Test AdmittanceInstructions with minimal data."""
+        instructions = AdmittanceInstructions(
+            outputs_to_admit=[],
+            coins_to_retain=[]
+        )
+        assert instructions.outputs_to_admit == []
+        assert instructions.coins_to_retain == []
+        assert instructions.coins_removed is None
+    
+    def test_ship_broadcaster_config_all_options(self):
+        """Test SHIPBroadcasterConfig with all options."""
+        facilitator = HTTPSOverlayBroadcastFacilitator()
+        config = SHIPBroadcasterConfig(
+            network_preset="testnet",
+            facilitator=facilitator,
+            require_acknowledgment_from_all_hosts_for_topics=["tm_test"],
+            require_acknowledgment_from_any_host_for_topics=["tm_other"],
+            require_acknowledgment_from_specific_hosts_for_topics={"host1": ["tm_specific"]}
+        )
+        
+        assert config.network_preset == "testnet"
+        assert config.facilitator is facilitator
+        assert config.require_acknowledgment_from_all_hosts_for_topics == ["tm_test"]
+        assert config.require_acknowledgment_from_any_host_for_topics == ["tm_other"]
+        assert config.require_acknowledgment_from_specific_hosts_for_topics == {"host1": ["tm_specific"]}

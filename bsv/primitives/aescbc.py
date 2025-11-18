@@ -1,3 +1,4 @@
+import hmac
 from Cryptodome.Cipher import AES
 from Cryptodome.Hash import HMAC, SHA256
 
@@ -91,7 +92,7 @@ def aes_cbc_decrypt_mac(blob: bytes, key_e: bytes, iv: bytes | None, mac_key: by
 
     # constant-time comparison
     mac_calculated = HMAC.new(mac_key, mac_input, SHA256).digest()
-    if not HMAC.compare_digest(mac_received, mac_calculated):
+    if not hmac.compare_digest(mac_received, mac_calculated):
         raise ValueError("HMAC verification failed")
 
     if concat_iv:
