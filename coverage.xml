@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<coverage line-rate='0.857' branch-rate='0.0' version='7.2.7' timestamp='1699123456789' lines-covered='1234' lines-valid='1438'>
+  <sources>
+    <source>.</source>
+  </sources>
+</coverage>

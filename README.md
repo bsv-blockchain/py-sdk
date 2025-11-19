@@ -3,6 +3,7 @@
 [![build](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml/badge.svg)](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)
 [![PyPI version](https://img.shields.io/pypi/v/bsv-sdk)](https://pypi.org/project/bsv-sdk)
 [![Python versions](https://img.shields.io/pypi/pyversions/bsv-sdk)](https://pypi.org/project/bsv-sdk)
+[![Coverage](https://img.shields.io/badge/coverage-85.7%25-green)](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)
 
 
 Welcome to the BSV Blockchain Libraries Project, the comprehensive Python SDK designed to provide an updated and unified layer for developing scalable applications on the BSV Blockchain. This SDK addresses the limitations of previous tools by offering a fresh, peer-to-peer approach, adhering to SPV, and ensuring privacy and scalability.
@@ -128,7 +129,7 @@ You can also refer to the [User Test Report](./docs/Py-SDK%20User%20Test%20Repor
 This project maintains high code quality standards with comprehensive test coverage:
 
 - **567+ tests** covering core functionality
-- **64%+ code coverage** across the entire codebase
+- **85.7%+ code coverage** across the entire codebase
 - Automated testing with GitHub Actions CI/CD
 
 ### Running Tests & Coverage
