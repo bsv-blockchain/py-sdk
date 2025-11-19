@@ -145,18 +145,18 @@ class Script:
             token = tokens[i]
             token = 'OP_0' if token == 'OP_FALSE' else token
             opcode: Optional[str] = None
-            opcode_value: Optional[bytes] = None
+            op_value: Optional[bytes] = None
             if token.startswith('OP_') and token in OPCODE_VALUE_NAME_DICT.values():
                 opcode = token
-                opcode_value = OpCode[opcode].value
+                op_value = OpCode[opcode].value
 
             if token == '0':
-                opcode_value = b'\x00'
-                chunks.append(ScriptChunk(opcode_value))
+                op_value = b'\x00'
+                chunks.append(ScriptChunk(op_value))
                 i += 1
             elif token == '-1':
-                opcode_value = OpCode.OP_1NEGATE
-                chunks.append(ScriptChunk(opcode_value))
+                op_value = OpCode.OP_1NEGATE
+                chunks.append(ScriptChunk(op_value))
                 i += 1
             elif opcode is None:
                 hex_string = tokens[i]
@@ -167,22 +167,22 @@ class Script:
                     raise ValueError('invalid hex string in script')
                 hex_len = len(hex_bytes)
                 if 0 <= hex_len < int.from_bytes(OpCode.OP_PUSHDATA1, 'big'):
-                    opcode_value = int.to_bytes(hex_len, 1, 'big')
+                    op_value = int.to_bytes(hex_len, 1, 'big')
                 elif hex_len < pow(2, 8):
-                    opcode_value = OpCode.OP_PUSHDATA1
+                    op_value = OpCode.OP_PUSHDATA1
                 elif hex_len < pow(2, 16):
-                    opcode_value = OpCode.OP_PUSHDATA2
+                    op_value = OpCode.OP_PUSHDATA2
                 elif hex_len < pow(2, 32):
-                    opcode_value = OpCode.OP_PUSHDATA4
-                chunks.append(ScriptChunk(opcode_value, hex_bytes))
+                    op_value = OpCode.OP_PUSHDATA4
+                chunks.append(ScriptChunk(op_value, hex_bytes))
                 i = i + 1
-            elif opcode_value == OpCode.OP_PUSHDATA1 \
-                    or opcode_value == OpCode.OP_PUSHDATA2 \
-                    or opcode_value == OpCode.OP_PUSHDATA4:
-                chunks.append(ScriptChunk(opcode_value, bytes.fromhex(tokens[i + 2])))
+            elif op_value == OpCode.OP_PUSHDATA1 \
+                    or op_value == OpCode.OP_PUSHDATA2 \
+                    or op_value == OpCode.OP_PUSHDATA4:
+                chunks.append(ScriptChunk(op_value, bytes.fromhex(tokens[i + 2])))
                 i += 3
             else:
-                chunks.append(ScriptChunk(opcode_value))
+                chunks.append(ScriptChunk(op_value))
                 i += 1
         return Script.from_chunks(chunks)
 

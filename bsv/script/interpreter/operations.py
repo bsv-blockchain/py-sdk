@@ -17,7 +17,7 @@ from bsv.utils import unsigned_to_bytes, deserialize_ecdsa_der
 
 from .errs import Error, ErrorCode
 from .number import ScriptNumber
-from .opcode_parser import ParsedOpcode
+from .op_parser import ParsedOpcode
 from .stack import Stack
 
 # Type hint for Thread to avoid circular import
@@ -232,7 +232,7 @@ def check_public_key_encoding(octets: bytes) -> Optional[Error]:
 
 
 # Opcode implementations
-def opcode_push_data(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_push_data(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle data push opcodes."""
     if pop.data is None:
         t.dstack.push_byte_array(b"")
@@ -246,25 +246,25 @@ def opcode_push_data(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_n(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_n(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_1 through OP_16."""
     n = int.from_bytes(pop.opcode, "big") - int.from_bytes(OpCode.OP_1, "big") + 1
     t.dstack.push_byte_array(minimally_encode(n))
     return None
 
 
-def opcode_1negate(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_1negate(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_1NEGATE."""
     t.dstack.push_byte_array(minimally_encode(-1))
     return None
 
 
-def opcode_nop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_nop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NOP."""
     return None
 
 
-def opcode_if(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_if(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_IF."""
     f = False
     if t.is_branch_executing():
@@ -277,7 +277,7 @@ def opcode_if(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_notif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_notif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NOTIF."""
     f = False
     if t.is_branch_executing():
@@ -290,7 +290,7 @@ def opcode_notif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_else(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_else(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_ELSE."""
     if len(t.cond_stack) == 0:
         return Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, "OP_ELSE requires preceding OP_IF")
@@ -298,7 +298,7 @@ def opcode_else(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_endif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_endif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_ENDIF."""
     if len(t.cond_stack) == 0:
         return Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, "OP_ENDIF requires preceding OP_IF")
@@ -306,7 +306,7 @@ def opcode_endif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_VERIFY."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_VERIFY requires at least one item on stack")
@@ -316,13 +316,13 @@ def opcode_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_return(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_return(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_RETURN."""
     t.early_return_after_genesis = True
     return Error(ErrorCode.ERR_EARLY_RETURN, "OP_RETURN executed")
 
 
-def opcode_to_alt_stack(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_to_alt_stack(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_TOALTSTACK."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_TOALTSTACK requires at least one item on stack")
@@ -331,7 +331,7 @@ def opcode_to_alt_stack(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_from_alt_stack(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_from_alt_stack(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_FROMALTSTACK."""
     if t.astack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_ALTSTACK_OPERATION, "OP_FROMALTSTACK requires at least one item on alt stack")
@@ -340,7 +340,7 @@ def opcode_from_alt_stack(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_2drop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_2drop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_2DROP."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_2DROP requires at least two items on stack")
@@ -349,7 +349,7 @@ def opcode_2drop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_2dup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_2dup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_2DUP."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_2DUP requires at least two items on stack")
@@ -360,7 +360,7 @@ def opcode_2dup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_3dup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_3dup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_3DUP."""
     if t.dstack.depth() < 3:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_3DUP requires at least three items on stack")
@@ -373,7 +373,7 @@ def opcode_3dup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_2over(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_2over(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_2OVER."""
     if t.dstack.depth() < 4:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_2OVER requires at least four items on stack")
@@ -384,7 +384,7 @@ def opcode_2over(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_2rot(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_2rot(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_2ROT."""
     if t.dstack.depth() < 6:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_2ROT requires at least six items on stack")
@@ -395,7 +395,7 @@ def opcode_2rot(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_2swap(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_2swap(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_2SWAP."""
     if t.dstack.depth() < 4:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_2SWAP requires at least four items on stack")
@@ -406,7 +406,7 @@ def opcode_2swap(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_ifdup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_ifdup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_IFDUP."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_IFDUP requires at least one item on stack")
@@ -416,14 +416,14 @@ def opcode_ifdup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_depth(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_depth(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_DEPTH."""
     depth = t.dstack.depth()
     t.dstack.push_byte_array(minimally_encode(depth))
     return None
 
 
-def opcode_drop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_drop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_DROP."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_DROP requires at least one item on stack")
@@ -431,7 +431,7 @@ def opcode_drop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_dup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_dup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_DUP."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_DUP requires at least one item on stack")
@@ -440,7 +440,7 @@ def opcode_dup(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_nip(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_nip(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NIP."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_NIP requires at least two items on stack")
@@ -448,7 +448,7 @@ def opcode_nip(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_over(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_over(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_OVER."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_OVER requires at least two items on stack")
@@ -457,7 +457,7 @@ def opcode_over(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_pick(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_pick(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_PICK."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_PICK requires at least two items on stack")
@@ -469,7 +469,7 @@ def opcode_pick(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_roll(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_roll(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_ROLL."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_ROLL requires at least two items on stack")
@@ -481,7 +481,7 @@ def opcode_roll(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_rot(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_rot(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_ROT."""
     if t.dstack.depth() < 3:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_ROT requires at least three items on stack")
@@ -494,7 +494,7 @@ def opcode_rot(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_swap(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_swap(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_SWAP."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_SWAP requires at least two items on stack")
@@ -505,7 +505,7 @@ def opcode_swap(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_tuck(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_tuck(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_TUCK."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_TUCK requires at least two items on stack")
@@ -515,7 +515,7 @@ def opcode_tuck(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_size(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_size(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_SIZE."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_SIZE requires at least one item on stack")
@@ -525,7 +525,7 @@ def opcode_size(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_equal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_equal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_EQUAL."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_EQUAL requires at least two items on stack")
@@ -536,9 +536,9 @@ def opcode_equal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_equal_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_equal_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_EQUALVERIFY."""
-    err = opcode_equal(pop, t)
+    err = op_equal(pop, t)
     if err:
         return err
     val = t.dstack.pop_byte_array()
@@ -547,7 +547,7 @@ def opcode_equal_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_1add(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_1add(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_1ADD."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_1ADD requires at least one item on stack")
@@ -557,7 +557,7 @@ def opcode_1add(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_1sub(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_1sub(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_1SUB."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_1SUB requires at least one item on stack")
@@ -567,7 +567,7 @@ def opcode_1sub(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_negate(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_negate(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NEGATE."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_NEGATE requires at least one item on stack")
@@ -577,7 +577,7 @@ def opcode_negate(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_abs(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_abs(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_ABS."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_ABS requires at least one item on stack")
@@ -587,7 +587,7 @@ def opcode_abs(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_not(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_not(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NOT."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_NOT requires at least one item on stack")
@@ -597,7 +597,7 @@ def opcode_not(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_0notequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_0notequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_0NOTEQUAL."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_0NOTEQUAL requires at least one item on stack")
@@ -607,7 +607,7 @@ def opcode_0notequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_add(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_add(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_ADD."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_ADD requires at least two items on stack")
@@ -618,7 +618,7 @@ def opcode_add(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_sub(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_sub(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_SUB."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_SUB requires at least two items on stack")
@@ -629,7 +629,7 @@ def opcode_sub(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_mul(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_mul(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_MUL."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_MUL requires at least two items on stack")
@@ -640,7 +640,7 @@ def opcode_mul(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_div(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_div(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_DIV."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_DIV requires at least two items on stack")
@@ -653,7 +653,7 @@ def opcode_div(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_mod(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_mod(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_MOD."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_MOD requires at least two items on stack")
@@ -666,7 +666,7 @@ def opcode_mod(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_booland(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_booland(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_BOOLAND."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_BOOLAND requires at least two items on stack")
@@ -677,7 +677,7 @@ def opcode_booland(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_boolor(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_boolor(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_BOOLOR."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_BOOLOR requires at least two items on stack")
@@ -688,7 +688,7 @@ def opcode_boolor(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_numequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_numequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NUMEQUAL."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_NUMEQUAL requires at least two items on stack")
@@ -699,9 +699,9 @@ def opcode_numequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_numequal_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_numequal_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NUMEQUALVERIFY."""
-    err = opcode_numequal(pop, t)
+    err = op_numequal(pop, t)
     if err:
         return err
     val = t.dstack.pop_byte_array()
@@ -710,7 +710,7 @@ def opcode_numequal_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_numnotequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_numnotequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NUMNOTEQUAL."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_NUMNOTEQUAL requires at least two items on stack")
@@ -721,7 +721,7 @@ def opcode_numnotequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_lessthan(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_lessthan(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_LESSTHAN."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_LESSTHAN requires at least two items on stack")
@@ -732,7 +732,7 @@ def opcode_lessthan(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_greaterthan(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_greaterthan(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_GREATERTHAN."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_GREATERTHAN requires at least two items on stack")
@@ -743,7 +743,7 @@ def opcode_greaterthan(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_lessthanorequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_lessthanorequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_LESSTHANOREQUAL."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_LESSTHANOREQUAL requires at least two items on stack")
@@ -754,7 +754,7 @@ def opcode_lessthanorequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_greaterthanorequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_greaterthanorequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_GREATERTHANOREQUAL."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_GREATERTHANOREQUAL requires at least two items on stack")
@@ -765,7 +765,7 @@ def opcode_greaterthanorequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]
     return None
 
 
-def opcode_min(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_min(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_MIN."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_MIN requires at least two items on stack")
@@ -776,7 +776,7 @@ def opcode_min(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_max(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_max(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_MAX."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_MAX requires at least two items on stack")
@@ -787,7 +787,7 @@ def opcode_max(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_within(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_within(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_WITHIN."""
     if t.dstack.depth() < 3:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_WITHIN requires at least three items on stack")
@@ -799,7 +799,7 @@ def opcode_within(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_ripemd160(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_ripemd160(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_RIPEMD160."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_RIPEMD160 requires at least one item on stack")
@@ -809,7 +809,7 @@ def opcode_ripemd160(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_sha1(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_sha1(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_SHA1."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_SHA1 requires at least one item on stack")
@@ -819,7 +819,7 @@ def opcode_sha1(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_sha256(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_sha256(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_SHA256."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_SHA256 requires at least one item on stack")
@@ -829,7 +829,7 @@ def opcode_sha256(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_hash160(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_hash160(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_HASH160."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_HASH160 requires at least one item on stack")
@@ -839,7 +839,7 @@ def opcode_hash160(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_hash256(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_hash256(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_HASH256."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_HASH256 requires at least one item on stack")
@@ -849,13 +849,13 @@ def opcode_hash256(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_codeseparator(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_codeseparator(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_CODESEPARATOR."""
     t.last_code_sep = t.script_off
     return None
 
 
-def opcode_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_CHECKSIG."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CHECKSIG requires at least two items on stack")
@@ -946,9 +946,9 @@ def opcode_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_checksig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_checksig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_CHECKSIGVERIFY."""
-    err = opcode_checksig(pop, t)
+    err = op_checksig(pop, t)
     if err:
         return err
     val = t.dstack.pop_byte_array()
@@ -957,7 +957,7 @@ def opcode_checksig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_CHECKMULTISIG."""
     # Simplified implementation - full version would verify signatures
     if t.dstack.depth() < 1:
@@ -973,9 +973,9 @@ def opcode_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_checkmultisig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_checkmultisig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_CHECKMULTISIGVERIFY."""
-    err = opcode_checkmultisig(pop, t)
+    err = op_checkmultisig(pop, t)
     if err:
         return err
     val = t.dstack.pop_byte_array()
@@ -984,7 +984,7 @@ def opcode_checkmultisig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Erro
     return None
 
 
-def opcode_cat(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_cat(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_CAT."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CAT requires at least two items on stack")
@@ -996,7 +996,7 @@ def opcode_cat(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_split(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_split(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_SPLIT."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_SPLIT requires at least two items on stack")
@@ -1009,7 +1009,7 @@ def opcode_split(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_num2bin(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_num2bin(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_NUM2BIN."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_NUM2BIN requires at least two items on stack")
@@ -1034,7 +1034,7 @@ def opcode_num2bin(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_bin2num(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_bin2num(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_BIN2NUM."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_BIN2NUM requires at least one item on stack")
@@ -1044,7 +1044,7 @@ def opcode_bin2num(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_invert(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_invert(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_INVERT."""
     if t.dstack.depth() < 1:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_INVERT requires at least one item on stack")
@@ -1054,7 +1054,7 @@ def opcode_invert(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_and(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_and(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_AND."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_AND requires at least two items on stack")
@@ -1067,7 +1067,7 @@ def opcode_and(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_or(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_or(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_OR."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_OR requires at least two items on stack")
@@ -1080,7 +1080,7 @@ def opcode_or(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_xor(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_xor(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_XOR."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_XOR requires at least two items on stack")
@@ -1093,7 +1093,7 @@ def opcode_xor(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_lshift(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_lshift(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_LSHIFT."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_LSHIFT requires at least two items on stack")
@@ -1109,7 +1109,7 @@ def opcode_lshift(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def opcode_rshift(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_rshift(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_RSHIFT."""
     if t.dstack.depth() < 2:
         return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_RSHIFT requires at least two items on stack")
@@ -1128,179 +1128,179 @@ def opcode_rshift(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
 # Opcode dispatch table
 OPCODE_DISPATCH = {
     # Data push opcodes
-    **{bytes([i]): opcode_push_data for i in range(1, 76)},  # OP_DATA_1 through OP_DATA_75
-    OpCode.OP_PUSHDATA1: opcode_push_data,
-    OpCode.OP_PUSHDATA2: opcode_push_data,
-    OpCode.OP_PUSHDATA4: opcode_push_data,
-    OpCode.OP_0: opcode_push_data,
-    OpCode.OP_1NEGATE: opcode_1negate,
-    OpCode.OP_1: opcode_n,
-    OpCode.OP_2: opcode_n,
-    OpCode.OP_3: opcode_n,
-    OpCode.OP_4: opcode_n,
-    OpCode.OP_5: opcode_n,
-    OpCode.OP_6: opcode_n,
-    OpCode.OP_7: opcode_n,
-    OpCode.OP_8: opcode_n,
-    OpCode.OP_9: opcode_n,
-    OpCode.OP_10: opcode_n,
-    OpCode.OP_11: opcode_n,
-    OpCode.OP_12: opcode_n,
-    OpCode.OP_13: opcode_n,
-    OpCode.OP_14: opcode_n,
-    OpCode.OP_15: opcode_n,
-    OpCode.OP_16: opcode_n,
+    **{bytes([i]): op_push_data for i in range(1, 76)},  # OP_DATA_1 through OP_DATA_75
+    OpCode.OP_PUSHDATA1: op_push_data,
+    OpCode.OP_PUSHDATA2: op_push_data,
+    OpCode.OP_PUSHDATA4: op_push_data,
+    OpCode.OP_0: op_push_data,
+    OpCode.OP_1NEGATE: op_1negate,
+    OpCode.OP_1: op_n,
+    OpCode.OP_2: op_n,
+    OpCode.OP_3: op_n,
+    OpCode.OP_4: op_n,
+    OpCode.OP_5: op_n,
+    OpCode.OP_6: op_n,
+    OpCode.OP_7: op_n,
+    OpCode.OP_8: op_n,
+    OpCode.OP_9: op_n,
+    OpCode.OP_10: op_n,
+    OpCode.OP_11: op_n,
+    OpCode.OP_12: op_n,
+    OpCode.OP_13: op_n,
+    OpCode.OP_14: op_n,
+    OpCode.OP_15: op_n,
+    OpCode.OP_16: op_n,
     # Control opcodes
-    OpCode.OP_NOP: opcode_nop,
-    OpCode.OP_NOP1: opcode_nop,
-    OpCode.OP_NOP2: opcode_nop,
-    OpCode.OP_NOP3: opcode_nop,
-    OpCode.OP_NOP4: opcode_nop,
-    OpCode.OP_NOP5: opcode_nop,
-    OpCode.OP_NOP6: opcode_nop,
-    OpCode.OP_NOP7: opcode_nop,
-    OpCode.OP_NOP8: opcode_nop,
-    OpCode.OP_NOP9: opcode_nop,
-    OpCode.OP_NOP10: opcode_nop,
-    OpCode.OP_NOP11: opcode_nop,
-    OpCode.OP_NOP12: opcode_nop,
-    OpCode.OP_NOP13: opcode_nop,
-    OpCode.OP_NOP14: opcode_nop,
-    OpCode.OP_NOP15: opcode_nop,
-    OpCode.OP_NOP16: opcode_nop,
-    OpCode.OP_NOP17: opcode_nop,
-    OpCode.OP_NOP18: opcode_nop,
-    OpCode.OP_NOP19: opcode_nop,
-    OpCode.OP_NOP20: opcode_nop,
-    OpCode.OP_NOP21: opcode_nop,
-    OpCode.OP_NOP22: opcode_nop,
-    OpCode.OP_NOP23: opcode_nop,
-    OpCode.OP_NOP24: opcode_nop,
-    OpCode.OP_NOP25: opcode_nop,
-    OpCode.OP_NOP26: opcode_nop,
-    OpCode.OP_NOP27: opcode_nop,
-    OpCode.OP_NOP28: opcode_nop,
-    OpCode.OP_NOP29: opcode_nop,
-    OpCode.OP_NOP30: opcode_nop,
-    OpCode.OP_NOP31: opcode_nop,
-    OpCode.OP_NOP32: opcode_nop,
-    OpCode.OP_NOP33: opcode_nop,
-    OpCode.OP_NOP34: opcode_nop,
-    OpCode.OP_NOP35: opcode_nop,
-    OpCode.OP_NOP36: opcode_nop,
-    OpCode.OP_NOP37: opcode_nop,
-    OpCode.OP_NOP38: opcode_nop,
-    OpCode.OP_NOP39: opcode_nop,
-    OpCode.OP_NOP40: opcode_nop,
-    OpCode.OP_NOP41: opcode_nop,
-    OpCode.OP_NOP42: opcode_nop,
-    OpCode.OP_NOP43: opcode_nop,
-    OpCode.OP_NOP44: opcode_nop,
-    OpCode.OP_NOP45: opcode_nop,
-    OpCode.OP_NOP46: opcode_nop,
-    OpCode.OP_NOP47: opcode_nop,
-    OpCode.OP_NOP48: opcode_nop,
-    OpCode.OP_NOP49: opcode_nop,
-    OpCode.OP_NOP50: opcode_nop,
-    OpCode.OP_NOP51: opcode_nop,
-    OpCode.OP_NOP52: opcode_nop,
-    OpCode.OP_NOP53: opcode_nop,
-    OpCode.OP_NOP54: opcode_nop,
-    OpCode.OP_NOP55: opcode_nop,
-    OpCode.OP_NOP56: opcode_nop,
-    OpCode.OP_NOP57: opcode_nop,
-    OpCode.OP_NOP58: opcode_nop,
-    OpCode.OP_NOP59: opcode_nop,
-    OpCode.OP_NOP60: opcode_nop,
-    OpCode.OP_NOP61: opcode_nop,
-    OpCode.OP_NOP62: opcode_nop,
-    OpCode.OP_NOP63: opcode_nop,
-    OpCode.OP_NOP64: opcode_nop,
-    OpCode.OP_NOP65: opcode_nop,
-    OpCode.OP_NOP66: opcode_nop,
-    OpCode.OP_NOP67: opcode_nop,
-    OpCode.OP_NOP68: opcode_nop,
-    OpCode.OP_NOP69: opcode_nop,
-    OpCode.OP_NOP70: opcode_nop,
-    OpCode.OP_NOP71: opcode_nop,
-    OpCode.OP_NOP72: opcode_nop,
-    OpCode.OP_NOP73: opcode_nop,
-    OpCode.OP_NOP77: opcode_nop,
-    OpCode.OP_IF: opcode_if,
-    OpCode.OP_NOTIF: opcode_notif,
-    OpCode.OP_ELSE: opcode_else,
-    OpCode.OP_ENDIF: opcode_endif,
-    OpCode.OP_VERIFY: opcode_verify,
-    OpCode.OP_RETURN: opcode_return,
+    OpCode.OP_NOP: op_nop,
+    OpCode.OP_NOP1: op_nop,
+    OpCode.OP_NOP2: op_nop,
+    OpCode.OP_NOP3: op_nop,
+    OpCode.OP_NOP4: op_nop,
+    OpCode.OP_NOP5: op_nop,
+    OpCode.OP_NOP6: op_nop,
+    OpCode.OP_NOP7: op_nop,
+    OpCode.OP_NOP8: op_nop,
+    OpCode.OP_NOP9: op_nop,
+    OpCode.OP_NOP10: op_nop,
+    OpCode.OP_NOP11: op_nop,
+    OpCode.OP_NOP12: op_nop,
+    OpCode.OP_NOP13: op_nop,
+    OpCode.OP_NOP14: op_nop,
+    OpCode.OP_NOP15: op_nop,
+    OpCode.OP_NOP16: op_nop,
+    OpCode.OP_NOP17: op_nop,
+    OpCode.OP_NOP18: op_nop,
+    OpCode.OP_NOP19: op_nop,
+    OpCode.OP_NOP20: op_nop,
+    OpCode.OP_NOP21: op_nop,
+    OpCode.OP_NOP22: op_nop,
+    OpCode.OP_NOP23: op_nop,
+    OpCode.OP_NOP24: op_nop,
+    OpCode.OP_NOP25: op_nop,
+    OpCode.OP_NOP26: op_nop,
+    OpCode.OP_NOP27: op_nop,
+    OpCode.OP_NOP28: op_nop,
+    OpCode.OP_NOP29: op_nop,
+    OpCode.OP_NOP30: op_nop,
+    OpCode.OP_NOP31: op_nop,
+    OpCode.OP_NOP32: op_nop,
+    OpCode.OP_NOP33: op_nop,
+    OpCode.OP_NOP34: op_nop,
+    OpCode.OP_NOP35: op_nop,
+    OpCode.OP_NOP36: op_nop,
+    OpCode.OP_NOP37: op_nop,
+    OpCode.OP_NOP38: op_nop,
+    OpCode.OP_NOP39: op_nop,
+    OpCode.OP_NOP40: op_nop,
+    OpCode.OP_NOP41: op_nop,
+    OpCode.OP_NOP42: op_nop,
+    OpCode.OP_NOP43: op_nop,
+    OpCode.OP_NOP44: op_nop,
+    OpCode.OP_NOP45: op_nop,
+    OpCode.OP_NOP46: op_nop,
+    OpCode.OP_NOP47: op_nop,
+    OpCode.OP_NOP48: op_nop,
+    OpCode.OP_NOP49: op_nop,
+    OpCode.OP_NOP50: op_nop,
+    OpCode.OP_NOP51: op_nop,
+    OpCode.OP_NOP52: op_nop,
+    OpCode.OP_NOP53: op_nop,
+    OpCode.OP_NOP54: op_nop,
+    OpCode.OP_NOP55: op_nop,
+    OpCode.OP_NOP56: op_nop,
+    OpCode.OP_NOP57: op_nop,
+    OpCode.OP_NOP58: op_nop,
+    OpCode.OP_NOP59: op_nop,
+    OpCode.OP_NOP60: op_nop,
+    OpCode.OP_NOP61: op_nop,
+    OpCode.OP_NOP62: op_nop,
+    OpCode.OP_NOP63: op_nop,
+    OpCode.OP_NOP64: op_nop,
+    OpCode.OP_NOP65: op_nop,
+    OpCode.OP_NOP66: op_nop,
+    OpCode.OP_NOP67: op_nop,
+    OpCode.OP_NOP68: op_nop,
+    OpCode.OP_NOP69: op_nop,
+    OpCode.OP_NOP70: op_nop,
+    OpCode.OP_NOP71: op_nop,
+    OpCode.OP_NOP72: op_nop,
+    OpCode.OP_NOP73: op_nop,
+    OpCode.OP_NOP77: op_nop,
+    OpCode.OP_IF: op_if,
+    OpCode.OP_NOTIF: op_notif,
+    OpCode.OP_ELSE: op_else,
+    OpCode.OP_ENDIF: op_endif,
+    OpCode.OP_VERIFY: op_verify,
+    OpCode.OP_RETURN: op_return,
     # Stack opcodes
-    OpCode.OP_TOALTSTACK: opcode_to_alt_stack,
-    OpCode.OP_FROMALTSTACK: opcode_from_alt_stack,
-    OpCode.OP_2DROP: opcode_2drop,
-    OpCode.OP_2DUP: opcode_2dup,
-    OpCode.OP_3DUP: opcode_3dup,
-    OpCode.OP_2OVER: opcode_2over,
-    OpCode.OP_2ROT: opcode_2rot,
-    OpCode.OP_2SWAP: opcode_2swap,
-    OpCode.OP_IFDUP: opcode_ifdup,
-    OpCode.OP_DEPTH: opcode_depth,
-    OpCode.OP_DROP: opcode_drop,
-    OpCode.OP_DUP: opcode_dup,
-    OpCode.OP_NIP: opcode_nip,
-    OpCode.OP_OVER: opcode_over,
-    OpCode.OP_PICK: opcode_pick,
-    OpCode.OP_ROLL: opcode_roll,
-    OpCode.OP_ROT: opcode_rot,
-    OpCode.OP_SWAP: opcode_swap,
-    OpCode.OP_TUCK: opcode_tuck,
-    OpCode.OP_SIZE: opcode_size,
+    OpCode.OP_TOALTSTACK: op_to_alt_stack,
+    OpCode.OP_FROMALTSTACK: op_from_alt_stack,
+    OpCode.OP_2DROP: op_2drop,
+    OpCode.OP_2DUP: op_2dup,
+    OpCode.OP_3DUP: op_3dup,
+    OpCode.OP_2OVER: op_2over,
+    OpCode.OP_2ROT: op_2rot,
+    OpCode.OP_2SWAP: op_2swap,
+    OpCode.OP_IFDUP: op_ifdup,
+    OpCode.OP_DEPTH: op_depth,
+    OpCode.OP_DROP: op_drop,
+    OpCode.OP_DUP: op_dup,
+    OpCode.OP_NIP: op_nip,
+    OpCode.OP_OVER: op_over,
+    OpCode.OP_PICK: op_pick,
+    OpCode.OP_ROLL: op_roll,
+    OpCode.OP_ROT: op_rot,
+    OpCode.OP_SWAP: op_swap,
+    OpCode.OP_TUCK: op_tuck,
+    OpCode.OP_SIZE: op_size,
     # Bitwise/arithmetic opcodes
-    OpCode.OP_EQUAL: opcode_equal,
-    OpCode.OP_EQUALVERIFY: opcode_equal_verify,
-    OpCode.OP_1ADD: opcode_1add,
-    OpCode.OP_1SUB: opcode_1sub,
-    OpCode.OP_NEGATE: opcode_negate,
-    OpCode.OP_ABS: opcode_abs,
-    OpCode.OP_NOT: opcode_not,
-    OpCode.OP_0NOTEQUAL: opcode_0notequal,
-    OpCode.OP_ADD: opcode_add,
-    OpCode.OP_SUB: opcode_sub,
-    OpCode.OP_MUL: opcode_mul,
-    OpCode.OP_DIV: opcode_div,
-    OpCode.OP_MOD: opcode_mod,
-    OpCode.OP_BOOLAND: opcode_booland,
-    OpCode.OP_BOOLOR: opcode_boolor,
-    OpCode.OP_NUMEQUAL: opcode_numequal,
-    OpCode.OP_NUMEQUALVERIFY: opcode_numequal_verify,
-    OpCode.OP_NUMNOTEQUAL: opcode_numnotequal,
-    OpCode.OP_LESSTHAN: opcode_lessthan,
-    OpCode.OP_GREATERTHAN: opcode_greaterthan,
-    OpCode.OP_LESSTHANOREQUAL: opcode_lessthanorequal,
-    OpCode.OP_GREATERTHANOREQUAL: opcode_greaterthanorequal,
-    OpCode.OP_MIN: opcode_min,
-    OpCode.OP_MAX: opcode_max,
-    OpCode.OP_WITHIN: opcode_within,
+    OpCode.OP_EQUAL: op_equal,
+    OpCode.OP_EQUALVERIFY: op_equal_verify,
+    OpCode.OP_1ADD: op_1add,
+    OpCode.OP_1SUB: op_1sub,
+    OpCode.OP_NEGATE: op_negate,
+    OpCode.OP_ABS: op_abs,
+    OpCode.OP_NOT: op_not,
+    OpCode.OP_0NOTEQUAL: op_0notequal,
+    OpCode.OP_ADD: op_add,
+    OpCode.OP_SUB: op_sub,
+    OpCode.OP_MUL: op_mul,
+    OpCode.OP_DIV: op_div,
+    OpCode.OP_MOD: op_mod,
+    OpCode.OP_BOOLAND: op_booland,
+    OpCode.OP_BOOLOR: op_boolor,
+    OpCode.OP_NUMEQUAL: op_numequal,
+    OpCode.OP_NUMEQUALVERIFY: op_numequal_verify,
+    OpCode.OP_NUMNOTEQUAL: op_numnotequal,
+    OpCode.OP_LESSTHAN: op_lessthan,
+    OpCode.OP_GREATERTHAN: op_greaterthan,
+    OpCode.OP_LESSTHANOREQUAL: op_lessthanorequal,
+    OpCode.OP_GREATERTHANOREQUAL: op_greaterthanorequal,
+    OpCode.OP_MIN: op_min,
+    OpCode.OP_MAX: op_max,
+    OpCode.OP_WITHIN: op_within,
     # Hash opcodes
-    OpCode.OP_RIPEMD160: opcode_ripemd160,
-    OpCode.OP_SHA1: opcode_sha1,
-    OpCode.OP_SHA256: opcode_sha256,
-    OpCode.OP_HASH160: opcode_hash160,
-    OpCode.OP_HASH256: opcode_hash256,
-    OpCode.OP_CODESEPARATOR: opcode_codeseparator,
-    OpCode.OP_CHECKSIG: opcode_checksig,
-    OpCode.OP_CHECKSIGVERIFY: opcode_checksig_verify,
-    OpCode.OP_CHECKMULTISIG: opcode_checkmultisig,
-    OpCode.OP_CHECKMULTISIGVERIFY: opcode_checkmultisig_verify,
+    OpCode.OP_RIPEMD160: op_ripemd160,
+    OpCode.OP_SHA1: op_sha1,
+    OpCode.OP_SHA256: op_sha256,
+    OpCode.OP_HASH160: op_hash160,
+    OpCode.OP_HASH256: op_hash256,
+    OpCode.OP_CODESEPARATOR: op_codeseparator,
+    OpCode.OP_CHECKSIG: op_checksig,
+    OpCode.OP_CHECKSIGVERIFY: op_checksig_verify,
+    OpCode.OP_CHECKMULTISIG: op_checkmultisig,
+    OpCode.OP_CHECKMULTISIGVERIFY: op_checkmultisig_verify,
     # Splice opcodes
-    OpCode.OP_CAT: opcode_cat,
-    OpCode.OP_SPLIT: opcode_split,
-    OpCode.OP_NUM2BIN: opcode_num2bin,
-    OpCode.OP_BIN2NUM: opcode_bin2num,
+    OpCode.OP_CAT: op_cat,
+    OpCode.OP_SPLIT: op_split,
+    OpCode.OP_NUM2BIN: op_num2bin,
+    OpCode.OP_BIN2NUM: op_bin2num,
     # Bitwise logic opcodes
-    OpCode.OP_INVERT: opcode_invert,
-    OpCode.OP_AND: opcode_and,
-    OpCode.OP_OR: opcode_or,
-    OpCode.OP_XOR: opcode_xor,
-    OpCode.OP_LSHIFT: opcode_lshift,
-    OpCode.OP_RSHIFT: opcode_rshift,
+    OpCode.OP_INVERT: op_invert,
+    OpCode.OP_AND: op_and,
+    OpCode.OP_OR: op_or,
+    OpCode.OP_XOR: op_xor,
+    OpCode.OP_LSHIFT: op_lshift,
+    OpCode.OP_RSHIFT: op_rshift,
 }
 

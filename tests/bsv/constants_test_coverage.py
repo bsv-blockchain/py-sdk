@@ -40,7 +40,7 @@ def test_constants_network():
 # Value checks
 # ========================================================================
 
-def test_opcode_values():
+def test_op_values():
     """Test OpCode values are integers."""
     try:
         from bsv.constants import OpCode

@@ -9,7 +9,7 @@ import pytest
 from bsv.script.interpreter.operations import (
     cast_to_bool, encode_bool, bin2num, minimally_encode,
     check_signature_encoding, check_public_key_encoding,
-    opcode_dup, opcode_hash160, opcode_equal_verify
+    op_dup, op_hash160, op_equal_verify
 )
 from bsv.script.interpreter.errs import Error, ErrorCode
 from bsv.script.interpreter.stack import Stack
@@ -124,7 +124,7 @@ class TestOperationsUtilityFunctions:
 class TestOperationsOpcodes:
     """Test opcode operations with mock threads."""
 
-    def test_opcode_dup(self):
+    def test_op_dup(self):
         """Test OP_DUP operation."""
         # Create mock thread with real stack
         mock_thread = Mock()
@@ -133,7 +133,7 @@ class TestOperationsOpcodes:
 
         # Test with empty stack
         stack.stk = []  # Clear the stack
-        result = opcode_dup(None, mock_thread)
+        result = op_dup(None, mock_thread)
         assert isinstance(result, Error)
         assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
@@ -141,13 +141,13 @@ class TestOperationsOpcodes:
         stack.stk = []  # Clear the stack
         test_data = b"test_data"
         stack.push_byte_array(test_data)
-        result = opcode_dup(None, mock_thread)
+        result = op_dup(None, mock_thread)
         assert result is None
         assert stack.depth() == 2
         assert stack.peek_byte_array(0) == test_data
         assert stack.peek_byte_array(1) == test_data
 
-    def test_opcode_hash160(self):
+    def test_op_hash160(self):
         """Test OP_HASH160 operation."""
         # Create mock thread with real stack
         mock_thread = Mock()
@@ -156,7 +156,7 @@ class TestOperationsOpcodes:
 
         # Test with empty stack
         stack.stk = []  # Clear the stack
-        result = opcode_hash160(None, mock_thread)
+        result = op_hash160(None, mock_thread)
         assert isinstance(result, Error)
         assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
@@ -164,13 +164,13 @@ class TestOperationsOpcodes:
         stack.stk = []  # Clear the stack
         test_data = b"Hello, World!"
         stack.push_byte_array(test_data)
-        result = opcode_hash160(None, mock_thread)
+        result = op_hash160(None, mock_thread)
         assert result is None
         assert stack.depth() == 1
         hash_result = stack.peek_byte_array(0)
         assert len(hash_result) == 20  # RIPEMD160 produces 20 bytes
 
-    def test_opcode_equal_verify(self):
+    def test_op_equal_verify(self):
         """Test OP_EQUALVERIFY operation."""
         # Create mock thread with real stack
         mock_thread = Mock()
@@ -179,7 +179,7 @@ class TestOperationsOpcodes:
 
         # Test with insufficient stack items
         stack.stk = []  # Clear the stack
-        result = opcode_equal_verify(None, mock_thread)
+        result = op_equal_verify(None, mock_thread)
         assert isinstance(result, Error)
         assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
@@ -188,7 +188,7 @@ class TestOperationsOpcodes:
         test_data = b"test_data"
         stack.push_byte_array(test_data)
         stack.push_byte_array(test_data)
-        result = opcode_equal_verify(None, mock_thread)
+        result = op_equal_verify(None, mock_thread)
         assert result is None
         assert stack.depth() == 0  # Should pop both items
 
@@ -196,7 +196,7 @@ class TestOperationsOpcodes:
         stack.stk = []  # Clear the stack
         stack.push_byte_array(b"test1")
         stack.push_byte_array(b"test2")
-        result = opcode_equal_verify(None, mock_thread)
+        result = op_equal_verify(None, mock_thread)
         assert isinstance(result, Error)
         assert result.code == ErrorCode.ERR_EQUAL_VERIFY
 

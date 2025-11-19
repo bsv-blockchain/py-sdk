@@ -72,18 +72,18 @@ def test_spend_cast_to_bool():
     assert Spend.cast_to_bool(b'\x02') == True
 
 
-def test_spend_is_opcode_disabled():
-    """Test Spend.is_opcode_disabled() class method."""
+def test_spend_is_op_disabled():
+    """Test Spend.is_op_disabled() class method."""
     from bsv.constants import OpCode
     
     # In BSV, most opcodes are ENABLED (including OP_CAT)
     # Only a few specific opcodes are disabled
-    assert Spend.is_opcode_disabled(OpCode.OP_CAT) == False  # OP_CAT is enabled in BSV
+    assert Spend.is_op_disabled(OpCode.OP_CAT) == False  # OP_CAT is enabled in BSV
     
     # Test standard opcodes that are definitely enabled
-    assert Spend.is_opcode_disabled(OpCode.OP_DUP) == False
-    assert Spend.is_opcode_disabled(OpCode.OP_HASH160) == False
-    assert Spend.is_opcode_disabled(OpCode.OP_CHECKSIG) == False
+    assert Spend.is_op_disabled(OpCode.OP_DUP) == False
+    assert Spend.is_op_disabled(OpCode.OP_HASH160) == False
+    assert Spend.is_op_disabled(OpCode.OP_CHECKSIG) == False
 
 
 def test_spend_minimally_encode():

@@ -185,7 +185,7 @@ class TestUtilsCoverage:
 class TestConstantsCoverage:
     """Test constants and enums for coverage."""
 
-    def test_opcode_values(self):
+    def test_op_values(self):
         """Test that all opcodes have valid values."""
         # Test some key opcodes
         assert OpCode.OP_0.value == b'\x00'
@@ -198,7 +198,7 @@ class TestConstantsCoverage:
         assert OpCode(b'\x00') == OpCode.OP_0
         assert OpCode(b'\x51') == OpCode.OP_1
 
-    def test_opcode_names(self):
+    def test_op_names(self):
         """Test opcode name access."""
         # Test that names are accessible
         assert hasattr(OpCode.OP_0, 'name')

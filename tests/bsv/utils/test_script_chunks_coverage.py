@@ -84,7 +84,7 @@ def test_serialize_chunks():
 # Chunk types branches
 # ========================================================================
 
-def test_chunk_opcode_detection():
+def test_chunk_op_detection():
     """Test detecting opcode chunks."""
     try:
         from bsv.utils.script_chunks import read_script_chunks

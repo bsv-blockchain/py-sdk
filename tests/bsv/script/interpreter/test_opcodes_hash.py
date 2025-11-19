@@ -12,9 +12,9 @@ References:
 import hashlib
 import pytest
 from bsv.script.interpreter.operations import (
-    opcode_ripemd160, opcode_sha1, opcode_sha256, opcode_hash160, opcode_hash256
+    op_ripemd160, op_sha1, op_sha256, op_hash160, op_hash256
 )
-from bsv.script.interpreter.opcode_parser import ParsedOpcode
+from bsv.script.interpreter.op_parser import ParsedOpcode
 from bsv.script.interpreter.stack import Stack
 from bsv.script.interpreter.config import BeforeGenesisConfig
 from bsv.script.interpreter.errs import Error, ErrorCode
@@ -36,7 +36,7 @@ class TestHashOpcodes:
         """Set up fresh thread for each test."""
         self.thread = MockThread()
 
-    def test_opcode_ripemd160_success(self):
+    def test_op_ripemd160_success(self):
         """Test OP_RIPEMD160."""
         # Setup: push some data
         test_data = b"hello world"
@@ -44,7 +44,7 @@ class TestHashOpcodes:
 
         # Execute opcode
         pop = ParsedOpcode(OpCode.OP_RIPEMD160, b"")
-        err = opcode_ripemd160(pop, self.thread)
+        err = op_ripemd160(pop, self.thread)
 
         # Verify: should push RIPEMD160 hash
         assert err is None
@@ -53,17 +53,17 @@ class TestHashOpcodes:
         expected = hashlib.new('ripemd160', test_data).digest()
         assert result == expected
 
-    def test_opcode_ripemd160_stack_underflow(self):
+    def test_op_ripemd160_stack_underflow(self):
         """Test OP_RIPEMD160 with empty stack."""
         assert self.thread.dstack.depth() == 0
 
         pop = ParsedOpcode(OpCode.OP_RIPEMD160, b"")
-        err = opcode_ripemd160(pop, self.thread)
+        err = op_ripemd160(pop, self.thread)
 
         assert err is not None
         assert err.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
-    def test_opcode_sha1_success(self):
+    def test_op_sha1_success(self):
         """Test OP_SHA1."""
         # Setup: push some data
         test_data = b"hello world"
@@ -71,7 +71,7 @@ class TestHashOpcodes:
 
         # Execute opcode
         pop = ParsedOpcode(OpCode.OP_SHA1, b"")
-        err = opcode_sha1(pop, self.thread)
+        err = op_sha1(pop, self.thread)
 
         # Verify: should push SHA1 hash
         assert err is None
@@ -80,7 +80,7 @@ class TestHashOpcodes:
         expected = hashlib.sha1(test_data).digest()
         assert result == expected
 
-    def test_opcode_sha256_success(self):
+    def test_op_sha256_success(self):
         """Test OP_SHA256."""
         # Setup: push some data
         test_data = b"hello world"
@@ -88,7 +88,7 @@ class TestHashOpcodes:
 
         # Execute opcode
         pop = ParsedOpcode(OpCode.OP_SHA256, b"")
-        err = opcode_sha256(pop, self.thread)
+        err = op_sha256(pop, self.thread)
 
         # Verify: should push SHA256 hash
         assert err is None
@@ -97,7 +97,7 @@ class TestHashOpcodes:
         expected = hashlib.sha256(test_data).digest()
         assert result == expected
 
-    def test_opcode_hash160_success(self):
+    def test_op_hash160_success(self):
         """Test OP_HASH160 - RIPEMD160(SHA256(data))."""
         # Setup: push some data
         test_data = b"hello world"
@@ -105,7 +105,7 @@ class TestHashOpcodes:
 
         # Execute opcode
         pop = ParsedOpcode(OpCode.OP_HASH160, b"")
-        err = opcode_hash160(pop, self.thread)
+        err = op_hash160(pop, self.thread)
 
         # Verify: should push HASH160 (RIPEMD160 of SHA256)
         assert err is None
@@ -115,7 +115,7 @@ class TestHashOpcodes:
         expected = hashlib.new('ripemd160', sha256_hash).digest()
         assert result == expected
 
-    def test_opcode_hash256_success(self):
+    def test_op_hash256_success(self):
         """Test OP_HASH256 - SHA256(SHA256(data))."""
         # Setup: push some data
         test_data = b"hello world"
@@ -123,7 +123,7 @@ class TestHashOpcodes:
 
         # Execute opcode
         pop = ParsedOpcode(OpCode.OP_HASH256, b"")
-        err = opcode_hash256(pop, self.thread)
+        err = op_hash256(pop, self.thread)
 
         # Verify: should push HASH256 (double SHA256)
         assert err is None
@@ -132,7 +132,7 @@ class TestHashOpcodes:
         expected = hashlib.sha256(hashlib.sha256(test_data).digest()).digest()
         assert result == expected
 
-    def test_opcode_hash160_empty_data(self):
+    def test_op_hash160_empty_data(self):
         """Test OP_HASH160 with empty data."""
         # Setup: push empty data
         test_data = b""
@@ -140,7 +140,7 @@ class TestHashOpcodes:
 
         # Execute opcode
         pop = ParsedOpcode(OpCode.OP_HASH160, b"")
-        err = opcode_hash160(pop, self.thread)
+        err = op_hash160(pop, self.thread)
 
         # Verify: should push hash of empty data
         assert err is None

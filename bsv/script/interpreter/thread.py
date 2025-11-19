@@ -10,7 +10,7 @@ from bsv.constants import OpCode
 
 from .config import BeforeGenesisConfig, AfterGenesisConfig, Config
 from .errs import Error, ErrorCode, is_error_code
-from .opcode_parser import DefaultOpcodeParser, ParsedOpcode, ParsedScript
+from .op_parser import DefaultOpcodeParser, ParsedOpcode, ParsedScript
 from .operations import OPCODE_DISPATCH
 from .options import ExecutionOptions
 from .scriptflag import Flag

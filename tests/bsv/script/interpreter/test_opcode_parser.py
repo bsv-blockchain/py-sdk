@@ -1,11 +1,11 @@
 """
-Comprehensive tests for bsv/script/interpreter/opcode_parser.py
+Comprehensive tests for bsv/script/interpreter/op_parser.py
 
 Tests ParsedOpcode and DefaultOpcodeParser classes.
 """
 
 import pytest
-from bsv.script.interpreter.opcode_parser import ParsedOpcode, DefaultOpcodeParser
+from bsv.script.interpreter.op_parser import ParsedOpcode, DefaultOpcodeParser
 from bsv.script.script import Script, ScriptChunk
 from bsv.constants import OpCode
 
@@ -13,13 +13,13 @@ from bsv.constants import OpCode
 class TestParsedOpcodeInit:
     """Test ParsedOpcode initialization."""
     
-    def test_init_with_opcode_only(self):
+    def test_init_with_op_only(self):
         """Test creating ParsedOpcode with only opcode."""
         opcode = ParsedOpcode(OpCode.OP_DUP)
         assert opcode.opcode == OpCode.OP_DUP
         assert opcode.data is None
     
-    def test_init_with_opcode_and_data(self):
+    def test_init_with_op_and_data(self):
         """Test creating ParsedOpcode with opcode and data."""
         data = b"test_data"
         opcode = ParsedOpcode(OpCode.OP_PUSHDATA1, data)
@@ -61,7 +61,7 @@ class TestIsDisabled:
         opcode = ParsedOpcode(OpCode.OP_VER)
         assert opcode.is_disabled() is True
     
-    def test_regular_opcode_not_disabled(self):
+    def test_regular_op_not_disabled(self):
         """Test that regular opcodes are not disabled."""
         opcode = ParsedOpcode(OpCode.OP_DUP)
         assert opcode.is_disabled() is False
@@ -95,7 +95,7 @@ class TestIsConditional:
         opcode = ParsedOpcode(OpCode.OP_ENDIF)
         assert opcode.is_conditional() is True
     
-    def test_regular_opcode_not_conditional(self):
+    def test_regular_op_not_conditional(self):
         """Test that regular opcodes are not conditional."""
         opcode = ParsedOpcode(OpCode.OP_DUP)
         assert opcode.is_conditional() is False
@@ -345,7 +345,7 @@ class TestDefaultOpcodeParserParse:
         assert parsed[1].opcode == OpCode.OP_HASH160
         assert parsed[2].opcode == OpCode.OP_EQUALVERIFY
     
-    def test_parse_opcode_with_data(self):
+    def test_parse_op_with_data(self):
         """Test parsing opcode with data."""
         parser = DefaultOpcodeParser()
         script = Script()
@@ -415,7 +415,7 @@ class TestDefaultOpcodeParserParse:
         assert parsed[0].is_disabled()
         assert not parsed[1].is_disabled()
     
-    def test_parse_returns_parsed_opcode_instances(self):
+    def test_parse_returns_parsed_op_instances(self):
         """Test that parse returns ParsedOpcode instances."""
         parser = DefaultOpcodeParser()
         script = Script()
