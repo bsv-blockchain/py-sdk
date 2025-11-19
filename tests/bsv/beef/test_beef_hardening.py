@@ -122,7 +122,7 @@ def test_beef_bump_normalization_merging():
         def compute_root(self):
             return self._root
         def combine(self, other):
-            self._root = self._root  # no-op for test
+            pass  # no-op for test
         def trim(self):
             pass
     beef = Beef(version=BEEF_V2)

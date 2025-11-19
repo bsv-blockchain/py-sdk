@@ -93,7 +93,7 @@ def test_concurrent_handshakes_same_peer():
 
     # Check that preliminary sessions were created (even if handshake times out)
     sessions = session_manager.get_all_sessions()
-    assert len(sessions) >= 0, "Sessions may or may not be created depending on timing"
+    assert isinstance(sessions, (list, dict)), "Sessions should be a valid collection"
 
     # Verify that any returned sessions have correct structure
     for _, session in results:
@@ -143,7 +143,7 @@ def test_concurrent_handshakes_different_peers():
 
     # Check that sessions were created
     sessions = session_manager.get_all_sessions()
-    assert len(sessions) >= 0, "Sessions may or may not be created depending on timing"
+    assert isinstance(sessions, (list, dict)), "Sessions should be a valid collection"
 
     # Verify that any returned sessions have correct structure and peer keys
     for _, session, expected_key in results:

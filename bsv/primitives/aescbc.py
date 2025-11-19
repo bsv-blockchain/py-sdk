@@ -63,7 +63,8 @@ def aes_cbc_encrypt_mac(data: bytes, key_e: bytes, iv: bytes, mac_key: bytes, co
     """
     cipher_text = AESCBCEncrypt(data, key_e, iv, concat_iv)
     # data used for MAC (same as Go: iv concatenated if concat_iv True)
-    mac_input = cipher_text if not concat_iv else cipher_text  # already includes iv when concat_iv True
+    # cipher_text already includes iv when concat_iv is True
+    mac_input = cipher_text
     mac = HMAC.new(mac_key, mac_input, SHA256).digest()
     return mac_input + mac
 

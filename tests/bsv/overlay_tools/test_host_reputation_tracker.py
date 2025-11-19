@@ -4,6 +4,7 @@ Tests for HostReputationTracker.
 Ported from TypeScript SDK.
 """
 
+import math
 from bsv.overlay_tools.host_reputation_tracker import (
     HostReputationTracker,
     RankedHost,
@@ -36,4 +37,4 @@ class TestHostReputationTracker:
         """Test RankedHost can be created."""
         host = RankedHost(host="https://example.com")
         assert host.host == "https://example.com"
-        assert host.score == 0.0
+        assert math.isclose(host.score, 0.0, abs_tol=1e-9)

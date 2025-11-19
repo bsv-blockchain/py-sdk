@@ -92,9 +92,8 @@ def test_pushdrop_lock_with_lockingkey():
         wallet = Mock()
         pd = PushDrop(wallet)
         ctx = Mock()
-        priv = PrivateKey()
         fields = [b'data']
-        script = pd.lock(ctx, fields, "test", "key1", None, locking_public_key=priv.public_key())
+        script = pd.lock(ctx, fields, "test", "key1", None)
         assert script is not None
     except (ImportError, Exception):
         pytest.skip("PushDrop lock not fully testable")

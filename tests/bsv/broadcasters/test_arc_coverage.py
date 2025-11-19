@@ -184,7 +184,8 @@ def test_arc_request_headers_with_callback():
 def test_arc_with_trailing_slash_in_url():
     """Test ARC with trailing slash in URL."""
     arc = ARC("https://arc.example.com/")
-    assert arc.URL == "https://arc.example.com/" or arc.URL == "https://arc.example.com"
+    # URL should be preserved as-is (with trailing slash)
+    assert arc.URL == "https://arc.example.com/"
 
 
 def test_arc_str_representation(arc):

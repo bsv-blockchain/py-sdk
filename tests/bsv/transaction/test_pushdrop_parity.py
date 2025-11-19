@@ -33,6 +33,7 @@ def test_pushdrop_decode_restores_small_ints():
     dec = decode_lock_before_pushdrop(script)
     assert dec is not None
     fs = dec.get("fields") or []
+    assert len(fs) >= 4, f"Expected at least 4 fields, got {len(fs)}"
     assert fs[:4] == fields
 
 

@@ -31,29 +31,32 @@ async def auth_server():
     this_dir = os.path.dirname(__file__)
     server_script = os.path.abspath(os.path.join(this_dir, "..", "test_auth_server_full.py"))
     
-    # Start the server process using the current Python interpreter
-    server_process = subprocess.Popen([
+    # Start the server process using the current Python interpreter (async)
+    server_process = await asyncio.create_subprocess_exec(
         sys.executable,
         server_script,
-    ], env=os.environ)
+        env=os.environ
+    )
     
     # Wait for server to become ready by polling /health
-    import requests
+    import aiohttp
     base = "http://localhost:8084"
     ok = False
     t0 = time.time()
     while time.time() - t0 < 10.0:
         try:
-            r = requests.get(f"{base}/health", timeout=0.5)
-            if r.status_code == 200:
-                ok = True
-                break
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{base}/health", timeout=aiohttp.ClientTimeout(total=0.5)) as r:
+                    if r.status == 200:
+                        ok = True
+                        break
         except Exception:
             # Intentional: Health check may fail during server startup - retry loop handles this
             pass
         await asyncio.sleep(0.1)
     if not ok:
         server_process.terminate()
+        await asyncio.wait_for(server_process.wait(), timeout=5)
         raise RuntimeError("auth server failed to start on :8084")
     
     yield server_process
@@ -61,8 +64,8 @@ async def auth_server():
     # Cleanup: terminate the server
     server_process.terminate()
     try:
-        server_process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
+        await asyncio.wait_for(server_process.wait(), timeout=5)
+    except asyncio.TimeoutError:
         server_process.kill()
 
 @pytest.mark.asyncio

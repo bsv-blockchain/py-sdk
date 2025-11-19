@@ -34,7 +34,7 @@ class TestHistorian:
         
         # For a coinbase transaction with 1 output, history should have entries
         # (exact structure depends on implementation)
-        assert len(history) >= 0, "History should be a valid list"
+        assert isinstance(history, list), "History should be a valid list"
         
         # Verify interpreter was used (non-empty history should have interpreted values)
         if len(history) > 0:

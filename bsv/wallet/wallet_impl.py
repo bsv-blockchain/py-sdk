@@ -1445,7 +1445,7 @@ class WalletImpl(WalletInterface):
             t = _Tx()
             for o in outs:
                 ls = o.get("lockingScript", b"")
-                ls_script = _Script(ls) if isinstance(ls, str) else _Script(ls)  # Scriptオブジェクトを直接作成
+                ls_script = _Script(bytes.fromhex(ls)) if isinstance(ls, str) else _Script(ls)  # Scriptオブジェクトを直接作成
                 t.add_output(_TxOut(ls_script, int(o.get("satoshis", 0))))
             for est_len in unlocking_lens:
                 ti = _TxIn(source_txid="00" * 32, source_output_index=0)

@@ -318,7 +318,7 @@ class TestOverlayIntegration:
 
         results = await resolver.lookup(question)
 
-        assert len(results) >= 0  # Should handle results gracefully
+        assert isinstance(results, list), "Results should be a list"  # Should handle results gracefully
 
     def test_reputation_tracker_persistence(self):
         """Test reputation tracker data persistence."""
