@@ -1,7 +1,10 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from bsv.wallet.substrates.serializer import Reader, Writer
-from .identity_certificate import serialize_identity_certificate, deserialize_identity_certificate_from_reader
+from .discovery_common import (
+    serialize_discover_certificates_result,
+    deserialize_discover_certificates_result,
+)
 
 
 def serialize_discover_by_attributes_args(args: Dict[str, Any]) -> bytes:
@@ -34,23 +37,10 @@ def deserialize_discover_by_attributes_args(data: bytes) -> Dict[str, Any]:
     }
 
 
-def serialize_discover_certificates_result(result: Dict[str, Any]) -> bytes:
-    w = Writer()
-    certs = result.get("certificates", [])
-    total = int(result.get("totalCertificates", len(certs)))
-    if total != len(certs):
-        total = len(certs)
-    w.write_varint(total)
-    for identity in certs:
-        w.write_bytes(serialize_identity_certificate(identity))
-    return w.to_bytes()
-
-
-def deserialize_discover_certificates_result(data: bytes) -> Dict[str, Any]:
-    r = Reader(data)
-    out: Dict[str, Any] = {"certificates": []}
-    total = r.read_varint()
-    out["totalCertificates"] = int(total)
-    for _ in range(int(total)):
-        out["certificates"].append(deserialize_identity_certificate_from_reader(r))
-    return out
+# Re-export common functions for backwards compatibility
+__all__ = [
+    "serialize_discover_by_attributes_args",
+    "deserialize_discover_by_attributes_args",
+    "serialize_discover_certificates_result",
+    "deserialize_discover_certificates_result",
+]

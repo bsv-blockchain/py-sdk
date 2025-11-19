@@ -67,6 +67,14 @@ class Reader(BytesIO):
         data = self.read(8)
         return int.from_bytes(data, byteorder='little') if data else None
 
+    def read_int64_le(self) -> Optional[int]:
+        data = self.read(8)
+        return int.from_bytes(data, byteorder='little', signed=True) if data else None
+
+    def read_int64_be(self) -> Optional[int]:
+        data = self.read(8)
+        return int.from_bytes(data, byteorder='big', signed=True) if data else None
+
     def read_var_int_num(self) -> Optional[int]:
         first_byte = self.read_uint8()
         if first_byte is None:

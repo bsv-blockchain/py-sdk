@@ -64,6 +64,18 @@ class Writer(BytesIO):
         self.write(struct.pack('<Q', n))
         return self
 
+    def write_int64_le(self, n: int) -> 'Writer':
+        self.write(struct.pack('<q', n))
+        return self
+
+    def write_int64_be(self, n: int) -> 'Writer':
+        self.write(struct.pack('>q', n))
+        return self
+
+    def write_bytes(self, buf: bytes) -> 'Writer':
+        self.write(buf)
+        return self
+
     def write_var_int_num(self, n: int) -> 'Writer':
         self.write(self.var_int_num(n))
         return self
