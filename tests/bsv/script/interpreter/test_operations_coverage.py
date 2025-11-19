@@ -8,9 +8,13 @@ by existing tests.
 import pytest
 from bsv.script.interpreter.operations import (
     cast_to_bool, encode_bool, bin2num, minimally_encode,
-    check_signature_encoding, check_public_key_encoding
+    check_signature_encoding, check_public_key_encoding,
+    opcode_dup, opcode_hash160, opcode_equal_verify
 )
-from bsv.script.interpreter.errs import Error
+from bsv.script.interpreter.errs import Error, ErrorCode
+from bsv.script.interpreter.stack import Stack
+from bsv.script.interpreter.config import BeforeGenesisConfig
+from unittest.mock import Mock
 
 
 class TestOperationsUtilityFunctions:
@@ -42,18 +46,22 @@ class TestOperationsUtilityFunctions:
         assert encode_bool(False) == b""
 
     def test_bin2num_comprehensive(self):
-        """Test bin2num with various inputs."""
+        """Test bin2num with various inputs matching Go implementation."""
+        # Test cases matching Go TestMakeScriptNum expectations
         test_cases = [
-            (b"", "Empty"),
-            (b"\x01", "Single byte positive"),
-            (b"\x7f", "Max positive single byte"),
-            (b"\x01\x00", "Little endian order"),
-            (b"\xff\xff", "Multi-byte value"),
+            (b"", 0, "Empty bytes"),
+            (b"\x01", 1, "Single byte positive"),
+            (b"\x7f", 127, "Max positive single byte"),
+            (b"\x80\x00", 128, "128 as little-endian bytes"),
+            (b"\x00\x01", 256, "256 as little-endian bytes"),
+            (b"\x81", -1, "Negative one"),
+            (b"\xff", -127, "Negative 127"),
+            (b"\x80\x80", -128, "Negative 128"),
         ]
 
-        for input_bytes, description in test_cases:
+        for input_bytes, expected, description in test_cases:
             result = bin2num(input_bytes)
-            assert isinstance(result, int), f"Should return int for {description}"
+            assert result == expected, f"Failed for {description}: got {result}, expected {expected}"
 
     def test_minimally_encode_comprehensive(self):
         """Test minimally_encode with various inputs."""
@@ -111,6 +119,86 @@ class TestOperationsUtilityFunctions:
             result = check_public_key_encoding(key)
             # Should return either None (valid) or Error (invalid)
             assert result is None or isinstance(result, Error)
+
+
+class TestOperationsOpcodes:
+    """Test opcode operations with mock threads."""
+
+    def test_opcode_dup(self):
+        """Test OP_DUP operation."""
+        # Create mock thread with real stack
+        mock_thread = Mock()
+        stack = Stack(BeforeGenesisConfig())
+        mock_thread.dstack = stack
+
+        # Test with empty stack
+        stack.stk = []  # Clear the stack
+        result = opcode_dup(None, mock_thread)
+        assert isinstance(result, Error)
+        assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
+
+        # Test with data
+        stack.stk = []  # Clear the stack
+        test_data = b"test_data"
+        stack.push_byte_array(test_data)
+        result = opcode_dup(None, mock_thread)
+        assert result is None
+        assert stack.depth() == 2
+        assert stack.peek_byte_array(0) == test_data
+        assert stack.peek_byte_array(1) == test_data
+
+    def test_opcode_hash160(self):
+        """Test OP_HASH160 operation."""
+        # Create mock thread with real stack
+        mock_thread = Mock()
+        stack = Stack(BeforeGenesisConfig())
+        mock_thread.dstack = stack
+
+        # Test with empty stack
+        stack.stk = []  # Clear the stack
+        result = opcode_hash160(None, mock_thread)
+        assert isinstance(result, Error)
+        assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
+
+        # Test with data
+        stack.stk = []  # Clear the stack
+        test_data = b"Hello, World!"
+        stack.push_byte_array(test_data)
+        result = opcode_hash160(None, mock_thread)
+        assert result is None
+        assert stack.depth() == 1
+        hash_result = stack.peek_byte_array(0)
+        assert len(hash_result) == 20  # RIPEMD160 produces 20 bytes
+
+    def test_opcode_equal_verify(self):
+        """Test OP_EQUALVERIFY operation."""
+        # Create mock thread with real stack
+        mock_thread = Mock()
+        stack = Stack(BeforeGenesisConfig())
+        mock_thread.dstack = stack
+
+        # Test with insufficient stack items
+        stack.stk = []  # Clear the stack
+        result = opcode_equal_verify(None, mock_thread)
+        assert isinstance(result, Error)
+        assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
+
+        # Test with equal values (should succeed and clear stack)
+        stack.stk = []  # Clear the stack
+        test_data = b"test_data"
+        stack.push_byte_array(test_data)
+        stack.push_byte_array(test_data)
+        result = opcode_equal_verify(None, mock_thread)
+        assert result is None
+        assert stack.depth() == 0  # Should pop both items
+
+        # Test with unequal values (should return error)
+        stack.stk = []  # Clear the stack
+        stack.push_byte_array(b"test1")
+        stack.push_byte_array(b"test2")
+        result = opcode_equal_verify(None, mock_thread)
+        assert isinstance(result, Error)
+        assert result.code == ErrorCode.ERR_EQUAL_VERIFY
 
 
 class TestOperationsIntegration:

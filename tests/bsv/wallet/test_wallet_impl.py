@@ -134,3 +134,382 @@ def test_seek_permission_denied_returns_error_dict():
     }
     res2 = wallet.encrypt(None, enc_args, "test")
     assert "error" in res2, "Encrypt should also be denied"
+
+
+def test_get_public_key_with_protocol_and_keyid(wallet):
+    """Test getting public key with protocol and keyID."""
+    args = {
+        "protocolID": {"securityLevel": 1, "protocol": "test"},  # Fixed: removed " protocol" suffix
+        "keyID": "test key 1"
+    }
+    result = wallet.get_public_key(None, args, "test")
+    
+    # Should return a public key
+    assert "publicKey" in result
+    assert isinstance(result["publicKey"], str)
+    assert len(result["publicKey"]) in (66, 130)
+
+
+def test_get_public_key_missing_required_args(wallet):
+    """Test get_public_key with missing required arguments."""
+    # Missing keyID
+    args = {"protocolID": [1, "test"]}
+    result = wallet.get_public_key(None, args, "test")
+    assert "error" in result
+    
+    # Missing protocolID
+    args = {"keyID": "test_key"}
+    result = wallet.get_public_key(None, args, "test")
+    assert "error" in result
+
+
+def test_get_public_key_with_counterparty(wallet, counterparty):
+    """Test get_public_key with different counterparty types."""
+    # Test with PublicKey counterparty
+    args = {
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
+        "counterparty": counterparty.hex()
+    }
+    result = wallet.get_public_key(None, args, "test")
+    assert "publicKey" in result
+    
+    # Test with dict counterparty
+    args = {
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
+        "counterparty": {"type": "other", "counterparty": counterparty.hex()}
+    }
+    result = wallet.get_public_key(None, args, "test")
+    assert "publicKey" in result
+
+
+def test_create_signature_basic(wallet):
+    """Test creating a signature."""
+    data = b"test data to sign"
+    args = {
+        "protocol_id": {"securityLevel": 1, "protocol": "test"},
+        "key_id": "key1",
+        "data": data
+    }
+    result = wallet.create_signature(None, args, "test")
+    
+    assert "signature" in result
+    assert "error" not in result
+    assert isinstance(result["signature"], bytes)
+    assert len(result["signature"]) > 0
+
+
+def test_create_signature_missing_args(wallet):
+    """Test create_signature with missing arguments."""
+    # Missing protocol_id
+    args = {"key_id": "key1", "data": b"test"}
+    result = wallet.create_signature(None, args, "test")
+    assert "error" in result
+    
+    # Missing key_id
+    args = {"protocol_id": {"securityLevel": 1, "protocol": "test"}, "data": b"test"}
+    result = wallet.create_signature(None, args, "test")
+    assert "error" in result
+
+
+def test_create_and_verify_signature(wallet):
+    """Test creating and verifying a signature."""
+    data = b"important message"
+    protocol_id = {"securityLevel": 1, "protocol": "test"}  # Fixed: removed " protocol" suffix
+    key_id = "signing key 1"
+    
+    # Create signature
+    sign_args = {
+        "protocol_id": protocol_id,
+        "key_id": key_id,
+        "data": data
+    }
+    sign_result = wallet.create_signature(None, sign_args, "test")
+    assert "signature" in sign_result
+    
+    # Verify signature
+    verify_args = {
+        "protocol_id": protocol_id,
+        "key_id": key_id,
+        "data": data,
+        "signature": sign_result["signature"]
+    }
+    verify_result = wallet.verify_signature(None, verify_args, "test")
+    assert "valid" in verify_result
+    assert verify_result["valid"] is True
+
+
+def test_verify_signature_with_invalid_data(wallet):
+    """Test that signature verification fails with tampered data."""
+    data = b"original message"
+    tampered_data = b"tampered message"
+    
+    # Create signature
+    sign_args = {
+        "protocol_id": {"securityLevel": 1, "protocol": "test"},
+        "key_id": "key1",
+        "data": data
+    }
+    sign_result = wallet.create_signature(None, sign_args, "test")
+    
+    # Try to verify with different data
+    verify_args = {
+        "protocol_id": {"securityLevel": 1, "protocol": "test"},
+        "key_id": "key1",
+        "data": tampered_data,
+        "signature": sign_result["signature"]
+    }
+    verify_result = wallet.verify_signature(None, verify_args, "test")
+    assert verify_result["valid"] is False
+
+
+def test_verify_signature_missing_args(wallet):
+    """Test verify_signature with missing arguments."""
+    # Missing signature
+    args = {
+        "protocol_id": {"securityLevel": 1, "protocol": "test"},
+        "key_id": "key1",
+        "data": b"test"
+    }
+    result = wallet.verify_signature(None, args, "test")
+    assert "error" in result
+    
+    # Missing protocol_id
+    args = {"key_id": "key1", "data": b"test", "signature": b"fake"}
+    result = wallet.verify_signature(None, args, "test")
+    assert "error" in result
+
+
+def test_create_and_verify_hmac(wallet):
+    """Test creating and verifying HMAC."""
+    data = b"test data for hmac"
+    enc_args = {
+        "protocol_id": {"securityLevel": 1, "protocol": "test"},
+        "key_id": "hmac_key_1"
+    }
+    
+    # Create HMAC
+    create_args = {"encryption_args": enc_args, "data": data}
+    hmac_result = wallet.create_hmac(None, create_args, "test")
+    assert "hmac" in hmac_result
+    assert "error" not in hmac_result
+    
+    # Verify HMAC
+    verify_args = {
+        "encryption_args": enc_args,
+        "data": data,
+        "hmac": hmac_result["hmac"]
+    }
+    verify_result = wallet.verify_hmac(None, verify_args, "test")
+    assert "valid" in verify_result
+    assert verify_result["valid"] is True
+
+
+def test_verify_hmac_with_tampered_data(wallet):
+    """Test that HMAC verification fails with tampered data."""
+    original_data = b"original data"
+    tampered_data = b"tampered data"
+    enc_args = {
+        "protocol_id": {"securityLevel": 1, "protocol": "test"},
+        "key_id": "key1"
+    }
+    
+    # Create HMAC
+    create_args = {"encryption_args": enc_args, "data": original_data}
+    hmac_result = wallet.create_hmac(None, create_args, "test")
+    
+    # Try to verify with different data
+    verify_args = {
+        "encryption_args": enc_args,
+        "data": tampered_data,
+        "hmac": hmac_result["hmac"]
+    }
+    verify_result = wallet.verify_hmac(None, verify_args, "test")
+    assert verify_result["valid"] is False
+
+
+def test_create_hmac_missing_args(wallet):
+    """Test create_hmac with missing arguments."""
+    # Missing key_id
+    args = {
+        "encryption_args": {"protocol_id": {"securityLevel": 1, "protocol": "test"}},
+        "data": b"test"
+    }
+    result = wallet.create_hmac(None, args, "test")
+    assert "error" in result
+
+
+def test_verify_hmac_missing_args(wallet):
+    """Test verify_hmac with missing arguments."""
+    # Missing hmac value
+    args = {
+        "encryption_args": {
+            "protocol_id": {"securityLevel": 1, "protocol": "test"},
+            "key_id": "key1"
+        },
+        "data": b"test"
+    }
+    result = wallet.verify_hmac(None, args, "test")
+    assert "error" in result
+
+
+def test_normalize_counterparty_types(wallet):
+    """Test _normalize_counterparty with various input types."""
+    # Test with dict
+    cp_dict = {"type": "self"}
+    cp = wallet._normalize_counterparty(cp_dict)
+    assert cp.type == 2  # SELF
+    
+    # Test with "other" type
+    pub = PrivateKey().public_key()
+    cp_dict = {"type": "other", "counterparty": pub.hex()}
+    cp = wallet._normalize_counterparty(cp_dict)
+    assert cp.type == 3  # OTHER
+    
+    # Test with hex string
+    cp = wallet._normalize_counterparty(pub.hex())
+    assert cp.type == 3  # OTHER
+    
+    # Test with PublicKey
+    cp = wallet._normalize_counterparty(pub)
+    assert cp.type == 3  # OTHER
+    
+    # Test with None
+    cp = wallet._normalize_counterparty(None)
+    assert cp.type == 2  # SELF
+
+
+def test_parse_counterparty_type(wallet):
+    """Test _parse_counterparty_type with various inputs."""
+    # Test integers
+    assert wallet._parse_counterparty_type(1) == 1  # ANYONE
+    assert wallet._parse_counterparty_type(2) == 2  # SELF
+    assert wallet._parse_counterparty_type(3) == 3  # OTHER
+    
+    # Test strings
+    assert wallet._parse_counterparty_type("self") == 2
+    assert wallet._parse_counterparty_type("me") == 2
+    assert wallet._parse_counterparty_type("other") == 3
+    assert wallet._parse_counterparty_type("counterparty") == 3
+    assert wallet._parse_counterparty_type("anyone") == 1
+    assert wallet._parse_counterparty_type("any") == 1
+    
+    # Test unknown/invalid input defaults to SELF
+    assert wallet._parse_counterparty_type("unknown") == 2
+    assert wallet._parse_counterparty_type(None) == 2
+
+
+def test_acquire_certificate(wallet):
+    """Test acquiring a certificate."""
+    args = {
+        "type": b"test_type",
+        "serialNumber": b"12345",
+        "certifier": "test_certifier",
+        "keyringForSubject": {"test": "data"},
+        "fields": {"field1": "value1"}
+    }
+    result = wallet.acquire_certificate(None, args, "test")
+    
+    # Should return empty dict on success
+    assert result == {}
+    
+    # Certificate should be stored
+    assert len(wallet._certificates) == 1
+    cert = wallet._certificates[0]
+    assert "certificateBytes" in cert
+    assert "keyring" in cert
+    assert "attributes" in cert
+
+
+def test_list_certificates(wallet):
+    """Test listing certificates."""
+    # Add some certificates
+    wallet.acquire_certificate(None, {
+        "type": b"type1",
+        "serialNumber": b"123",
+        "certifier": "cert1",
+        "fields": {"name": "cert1"}
+    }, "test")
+    
+    wallet.acquire_certificate(None, {
+        "type": b"type2",
+        "serialNumber": b"456",
+        "certifier": "cert2",
+        "fields": {"name": "cert2"}
+    }, "test")
+    
+    # List all certificates
+    result = wallet.list_certificates(None, {}, "test")
+    assert "certificates" in result
+    assert len(result["certificates"]) == 2
+
+
+def test_get_network(wallet):
+    """Test get_network returns mocknet by default."""
+    result = wallet.get_network(None, {}, "test")
+    assert "network" in result
+    # WalletImpl returns "mocknet" by default
+    assert result["network"] in ["mocknet", "mainnet"]
+
+
+def test_get_version(wallet):
+    """Test get_version returns version string."""
+    result = wallet.get_version(None, {}, "test")
+    assert "version" in result
+    assert isinstance(result["version"], str)
+
+
+def test_is_authenticated(wallet):
+    """Test is_authenticated returns True."""
+    result = wallet.is_authenticated(None, {}, "test")
+    assert "authenticated" in result
+    assert result["authenticated"] is True
+
+
+def test_abort_action(wallet):
+    """Test abort_action doesn't raise errors."""
+    # Should be a no-op and not raise
+    wallet.abort_action(None, {}, "test")
+
+
+def test_encrypt_decrypt_with_forself(wallet):
+    """Test encryption/decryption with forSelf flag."""
+    plain = b"self encrypted data"
+    enc_args = {
+        "encryption_args": {
+            "protocol_id": {"securityLevel": 1, "protocol": "test"},
+            "key_id": "key1",
+            "forSelf": True
+        },
+        "plaintext": plain
+    }
+    encrypted = wallet.encrypt(None, enc_args, "test")
+    assert "ciphertext" in encrypted
+    
+    dec_args = {
+        "encryption_args": {
+            "protocol_id": {"securityLevel": 1, "protocol": "test"},
+            "key_id": "key1",
+            "forSelf": True
+        },
+        "ciphertext": encrypted["ciphertext"]
+    }
+    decrypted = wallet.decrypt(None, dec_args, "test")
+    assert decrypted["plaintext"] == plain
+
+
+def test_wallet_initialization_with_woc_api_key():
+    """Test wallet initialization with WhatsOnChain API key."""
+    priv = PrivateKey()
+    api_key = "test_api_key_12345"
+    wallet = WalletImpl(priv, woc_api_key=api_key)
+    assert wallet._woc_api_key == api_key
+
+
+def test_wallet_initialization_with_load_env():
+    """Test wallet initialization with load_env flag."""
+    priv = PrivateKey()
+    # Should not raise even if dotenv is not available
+    wallet = WalletImpl(priv, load_env=True)
+    assert wallet is not None
