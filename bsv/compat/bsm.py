@@ -139,10 +139,7 @@ def recover_public_key(signature: bytes, message_hash: bytes) -> PublicKey:
     """
     # This is a placeholder - full implementation would use coincurve's recovery
     from coincurve import PublicKey as CcPublicKey
-    try:
-        # Try to recover using coincurve
-        recovered = CcPublicKey.from_signature_and_message(signature, message_hash, hasher=None)
-        return PublicKey(recovered.format(True))
-    except Exception:
-        return None
+    # Try to recover using coincurve
+    recovered = CcPublicKey.from_signature_and_message(signature, message_hash, hasher=None)
+    return PublicKey(recovered.format(True))
 

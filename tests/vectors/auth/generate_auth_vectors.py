@@ -12,7 +12,7 @@ class _CaptureTransport:
         self._cb = cb
         return None
 
-    def send(self, ctx, msg):
+    def send(self, _, _):
         return None
 
 
@@ -21,7 +21,7 @@ class _WalletOK:
         self._priv = priv
         self._pub = priv.public_key()
 
-    def get_public_key(self, ctx, args, originator: str):
+    def get_public_key(self, _, _, _: str):
         class R:
             pass
 
@@ -41,7 +41,7 @@ def generate_certificate_request_vector(out_path: Path) -> None:
     peer = _make_peer()
 
     cert_type_bytes = bytes.fromhex("aa" * 32)
-    cert_type_b64 = base64.b64encode(cert_type_bytes).decode("ascii")
+    _ = base64.b64encode(cert_type_bytes).decode("ascii")
     fields = ["z", "a", "m"]
     pk1 = PrivateKey(9001).public_key()
     pk2 = PrivateKey(9002).public_key()

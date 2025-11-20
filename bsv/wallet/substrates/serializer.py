@@ -145,10 +145,8 @@ class Reader:
         return int(val & 0xFFFFFFFF)
 
     def read_optional_bytes(self) -> Optional[bytes]:
-        length = self.read_varint()
-        if length == (1 << 64) - 1 or length == 0:
-            return None
-        return self.read_bytes(length)
+        """Read optional bytes (alias for read_int_bytes for API compatibility)."""
+        return self.read_int_bytes()
 
     def read_string_slice(self) -> Optional[List[str]]:
         count = self.read_varint()
@@ -436,7 +434,7 @@ def deserialize_create_action_args(data: bytes) -> dict:
             unlocking = r.read_int_bytes()
             if unlocking is None:
                 # When optional, we consumed negative one earlier and len
-                unlocking_len = r.read_varint()
+                _ = r.read_varint()  # unlocking_len consumed but not used
             input_description = r.read_string()
             seq = r.read_varint()
             if seq == (1 << 64) - 1:

@@ -82,7 +82,7 @@ class SyncHttpClient(HttpClient):
         try:
             json_data = response.json()
             formatted_json = {'data': json_data}
-        except (ValueError, requests.exceptions.JSONDecodeError):
+        except ValueError:
             formatted_json = {}
 
         ok = response.status_code >= 200 and response.status_code <= 299

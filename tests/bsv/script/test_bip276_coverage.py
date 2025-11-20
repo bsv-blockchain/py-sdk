@@ -67,7 +67,7 @@ def test_bip276_decode_invalid_prefix():
         from bsv.script.bip276 import decode
         
         try:
-            decoded = decode('invalid-prefix:abc123')
+            _ = decode('invalid-prefix:abc123')
             assert False, "Should have raised error"
         except ValueError:
             assert True
@@ -81,7 +81,7 @@ def test_bip276_decode_malformed():
         from bsv.script.bip276 import decode
         
         try:
-            decoded = decode('bitcoin-script:invalid')
+            _ = decode('bitcoin-script:invalid')
             assert True  # May handle gracefully
         except (ValueError, Exception):
             assert True  # Or raise error

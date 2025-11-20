@@ -810,7 +810,7 @@ class LocalKVStore(KVStoreInterface):
         }
 
     def _sign_and_relinquish_set(self, ctx: Any, key: str, outs: list, inputs_meta: list, signable: dict, signable_tx_bytes: bytes, input_beef: bytes) -> bytes | None:
-        spends = self._prepare_spends(ctx, key, inputs_meta, signable_tx_bytes, input_beef, outs)
+        spends = self._prepare_spends(key, inputs_meta, signable_tx_bytes, input_beef)
         try:
             spends_str_keys = {str(int(k)): v for k, v in (spends or {}).items()}
             res = self._wallet.sign_action(
@@ -907,7 +907,7 @@ class LocalKVStore(KVStoreInterface):
         signable = (ca_res.get("signableTransaction") or {}) if isinstance(ca_res, dict) else {}
         signable_tx_bytes = signable.get("tx") or b""
         reference = signable.get("reference") or b""
-        spends = self._prepare_spends(ctx, key, inputs_meta, signable_tx_bytes, input_beef, [])
+        spends = self._prepare_spends(key, inputs_meta, signable_tx_bytes, input_beef)
         spends_str = {str(int(k)): v for k, v in (spends or {}).items()}
         res = self._wallet.sign_action(ctx, {"spends": spends_str, "reference": reference}, self._originator) or {}
         signed_tx_bytes = res.get("tx") if isinstance(res, dict) else None
@@ -1007,7 +1007,7 @@ class LocalKVStore(KVStoreInterface):
             inputs_meta.append(meta)
         return inputs_meta
 
-    def _prepare_spends(self, ctx, key, inputs_meta, signable_tx_bytes, input_beef, outs):
+    def _prepare_spends(self, key, inputs_meta, signable_tx_bytes, input_beef):
         """
         Prepare spends dict for sign_action: {idx: {"unlockingScript": ...}}
         Go/TS parity: use PushDrop unlocker and signable transaction.

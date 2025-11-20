@@ -3,6 +3,9 @@ Coverage tests for totp/ modules - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_TOTP = "generate_totp not available"
+
 
 # ========================================================================
 # TOTP generation branches
@@ -20,7 +23,7 @@ def test_totp_generate():
             assert isinstance(totp, str)
             assert len(totp) == 6  # Standard TOTP length
         except (NameError, AttributeError):
-            pytest.skip("generate_totp not available")
+            pytest.skip(SKIP_TOTP)
     except ImportError:
         pytest.skip("TOTP module not available")
 
@@ -40,7 +43,7 @@ def test_totp_generate_with_timestamp():
             # generate_totp may not accept timestamp parameter
             pytest.skip("generate_totp doesn't support timestamp")
         except (NameError, AttributeError):
-            pytest.skip("generate_totp not available")
+            pytest.skip(SKIP_TOTP)
     except ImportError:
         pytest.skip("TOTP module not available")
 
@@ -102,7 +105,7 @@ def test_totp_with_custom_period():
             # generate_totp may not accept period parameter
             pytest.skip("generate_totp doesn't support period")
         except (NameError, AttributeError):
-            pytest.skip("generate_totp not available")
+            pytest.skip(SKIP_TOTP)
     except ImportError:
         pytest.skip("TOTP module not available")
 
@@ -121,7 +124,7 @@ def test_totp_with_custom_digits():
             # generate_totp may not accept digits parameter
             pytest.skip("generate_totp doesn't support digits")
         except (NameError, AttributeError):
-            pytest.skip("generate_totp not available")
+            pytest.skip(SKIP_TOTP)
     except ImportError:
         pytest.skip("TOTP module not available")
 
@@ -145,7 +148,7 @@ def test_totp_deterministic():
         except TypeError:
             pytest.skip("generate_totp doesn't support timestamp")
         except (NameError, AttributeError):
-            pytest.skip("generate_totp not available")
+            pytest.skip(SKIP_TOTP)
     except ImportError:
         pytest.skip("TOTP module not available")
 

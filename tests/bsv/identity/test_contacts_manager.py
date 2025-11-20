@@ -56,7 +56,7 @@ class TestContactsManager:
             'BEEF': b'mock_beef'
         }
         
-        contacts = self.contacts_manager.get_contacts(identity_key=identity_key)
+        _ = self.contacts_manager.get_contacts(identity_key=identity_key)
         # Should call list_outputs with appropriate tags
         assert self.wallet.list_outputs.called
 

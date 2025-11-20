@@ -45,7 +45,7 @@ def create_mock_transaction(target_size: int) -> Transaction:
 def test_satoshis_per_kb_init_default():
     """Test SatoshisPerKilobyte with default rate."""
     fee_model = SatoshisPerKilobyte(value=50)
-    assert fee_model is not None
+    assert fee_model  # Verify object creation succeeds
 
 
 def test_satoshis_per_kb_init_custom_rate():

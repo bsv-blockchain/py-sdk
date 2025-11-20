@@ -3,6 +3,9 @@ Coverage tests for spv/ modules - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_SPV = "SPV module not available"
+
 
 # ========================================================================
 # SPV module branches
@@ -14,7 +17,7 @@ def test_spv_module_exists():
         import bsv.spv
         assert bsv.spv is not None
     except ImportError:
-        pytest.skip("SPV module not available")
+        pytest.skip(SKIP_SPV)
 
 
 def test_spv_verify_merkle_proof():
@@ -32,7 +35,7 @@ def test_spv_verify_merkle_proof():
         except (NameError, AttributeError):
             pytest.skip("verify_merkle_proof not available")
     except ImportError:
-        pytest.skip("SPV module not available")
+        pytest.skip(SKIP_SPV)
 
 
 def test_spv_calculate_merkle_root():
@@ -49,7 +52,7 @@ def test_spv_calculate_merkle_root():
         except (NameError, AttributeError):
             pytest.skip("calculate_merkle_root not available")
     except ImportError:
-        pytest.skip("SPV module not available")
+        pytest.skip(SKIP_SPV)
 
 
 # ========================================================================
@@ -69,7 +72,7 @@ def test_spv_verify_header():
         except (NameError, AttributeError):
             pytest.skip("verify_header not available")
     except ImportError:
-        pytest.skip("SPV module not available")
+        pytest.skip(SKIP_SPV)
 
 
 # ========================================================================
@@ -91,5 +94,5 @@ def test_spv_verify_merkle_proof_empty():
         except (NameError, AttributeError):
             pytest.skip("verify_merkle_proof not available")
     except ImportError:
-        pytest.skip("SPV module not available")
+        pytest.skip(SKIP_SPV)
 

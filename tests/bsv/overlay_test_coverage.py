@@ -70,7 +70,7 @@ def test_overlay_submit():
         
         if hasattr(client, 'submit'):
             try:
-                result = client.submit({'data': 'test'})
+                _ = client.submit({'data': 'test'})
                 assert True
             except Exception:
                 # Expected without real overlay server
@@ -92,7 +92,7 @@ def test_overlay_lookup_empty():
         
         if hasattr(client, 'lookup'):
             try:
-                result = client.lookup('')
+                _ = client.lookup('')
                 assert True
             except (ValueError, Exception):
                 # Expected

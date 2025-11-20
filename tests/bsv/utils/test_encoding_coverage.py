@@ -73,7 +73,7 @@ def test_hex_decode_invalid():
     try:
         from bsv.utils.encoding import from_hex
         try:
-            result = from_hex("gg")
+            _ = from_hex("gg")
             assert False, "Should raise error"
         except ValueError:
             assert True

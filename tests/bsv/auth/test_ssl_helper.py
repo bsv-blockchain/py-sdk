@@ -37,9 +37,12 @@ class TestSSLHelper:
         """
         if for_client:
             # Client context that accepts self-signed certificates for testing
-            context = ssl.create_default_context()  # noqa: S323  # NOSONAR - Test environment only
+            # Using TLS 1.2+ with secure defaults from create_default_context()
+            context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)  # noqa: S323
             context.check_hostname = False  # noqa: S501  # NOSONAR - Required for self-signed test certs
             context.verify_mode = ssl.CERT_NONE  # noqa: S502  # NOSONAR - Test server uses self-signed certs
+            # Ensure minimum TLS 1.2
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
             return context
         
         if for_server:

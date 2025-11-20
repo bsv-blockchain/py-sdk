@@ -71,13 +71,9 @@ class CachedKeyDeriver:
 
     def reveal_specific_secret(self, counterparty: Counterparty, protocol: Protocol, key_id: str) -> Optional[bytes]:
         # NOTE: This method is a placeholder. The underlying KeyDeriver does not implement this in Python yet.
-        # TODO: Implement reveal_specific_secret in KeyDeriver and here.
-        key = self._make_cache_key('reveal_specific_secret', protocol, key_id, counterparty)
-        cached = self._cache_get(key)
-        if cached is not None:
-            return cached
-        # TODO: Call self.key_deriver.reveal_specific_secret when implemented
-        # secret = self.key_deriver.reveal_specific_secret(counterparty, protocol, key_id)
-        # self._cache_set(key, secret)
-        # return secret
+        # FUTURE: Implement reveal_specific_secret in KeyDeriver and add caching here.
+        # When KeyDeriver supports reveal_specific_secret, enable the following:
+        # 1. Check cache with self._make_cache_key('reveal_specific_secret', protocol, key_id, counterparty)
+        # 2. Call self.key_deriver.reveal_specific_secret(counterparty, protocol, key_id)
+        # 3. Cache and return the result
         raise NotImplementedError('reveal_specific_secret is not implemented in KeyDeriver')

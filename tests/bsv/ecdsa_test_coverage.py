@@ -3,6 +3,9 @@ Coverage tests for ecdsa.py - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_ECDSA = "ECDSA module not available"
+
 
 # ========================================================================
 # ECDSA operations branches
@@ -20,7 +23,7 @@ def test_ecdsa_sign():
         signature = sign(message_hash, priv.key)
         assert isinstance(signature, bytes)
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_ecdsa_verify():
@@ -37,7 +40,7 @@ def test_ecdsa_verify():
         
         assert is_valid == True
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_ecdsa_verify_invalid():
@@ -53,7 +56,7 @@ def test_ecdsa_verify_invalid():
         is_valid = verify(message_hash, invalid_sig, priv.public_key().serialize())
         assert is_valid == False
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 # ========================================================================
@@ -122,7 +125,7 @@ def test_ecdsa_sign_zero_hash():
         signature = sign(zero_hash, priv.key)
         assert isinstance(signature, bytes)
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_ecdsa_sign_max_hash():
@@ -137,7 +140,7 @@ def test_ecdsa_sign_max_hash():
         signature = sign(max_hash, priv.key)
         assert isinstance(signature, bytes)
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 # ========================================================================
@@ -161,7 +164,7 @@ def test_serialize_ecdsa_der_canonical_low_s():
         # DER format should start with 0x30
         assert signature[0] == 0x30
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_serialize_ecdsa_der_msb_prefix_r():
@@ -180,7 +183,7 @@ def test_serialize_ecdsa_der_msb_prefix_r():
         # Should contain the 0x00 prefix byte for r
         assert b'\x00\x80' in signature or signature[4] == 0x00  # Check for prefix
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_serialize_ecdsa_der_msb_prefix_s():
@@ -199,7 +202,7 @@ def test_serialize_ecdsa_der_msb_prefix_s():
         # Should contain the 0x00 prefix byte for s
         assert b'\x00\x80' in signature or b'\x02\x02\x00\x80' in signature  # Check for prefix
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_deserialize_ecdsa_der_invalid_formats():
@@ -227,7 +230,7 @@ def test_deserialize_ecdsa_der_invalid_formats():
         with pytest.raises(ValueError):
             deserialize_ecdsa_der(b'invalid')  # Non-hex
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_deserialize_ecdsa_recoverable_invalid_length():
@@ -243,7 +246,7 @@ def test_deserialize_ecdsa_recoverable_invalid_length():
         with pytest.raises(AssertionError):
             deserialize_ecdsa_recoverable(b'\x00' * 66)  # 66 bytes instead of 65
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_deserialize_ecdsa_recoverable_invalid_recovery_id():
@@ -259,7 +262,7 @@ def test_deserialize_ecdsa_recoverable_invalid_recovery_id():
         with pytest.raises(AssertionError):
             deserialize_ecdsa_recoverable(b'\x00' * 64 + b'\x04')  # Recovery ID = 4
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_serialize_ecdsa_recoverable_invalid_recovery_id():
@@ -275,7 +278,7 @@ def test_serialize_ecdsa_recoverable_invalid_recovery_id():
         with pytest.raises(AssertionError):
             serialize_ecdsa_recoverable((1, 2, 4))  # Recovery ID = 4
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_ecdsa_sign_invalid_private_key():
@@ -291,7 +294,7 @@ def test_ecdsa_sign_invalid_private_key():
         with pytest.raises((AttributeError, TypeError)):
             sign(b'\x01' * 32, "invalid")
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_ecdsa_verify_invalid_signature():
@@ -313,7 +316,7 @@ def test_ecdsa_verify_invalid_signature():
         # Test with invalid signature format
         assert verify(message_hash, b'invalid', pub.key) == False
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_ecdsa_verify_invalid_public_key():
@@ -334,7 +337,7 @@ def test_ecdsa_verify_invalid_public_key():
         with pytest.raises((AttributeError, TypeError)):
             verify(message_hash, signature, "invalid")
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_ecdsa_verify_invalid_message_hash():
@@ -357,7 +360,7 @@ def test_ecdsa_verify_invalid_message_hash():
         assert verify(b'\x01' * 31, signature, pub.key) == False  # Too short
         assert verify(b'\x01' * 33, signature, pub.key) == False  # Too long
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_ecdsa_recover_invalid_signature():
@@ -377,7 +380,7 @@ def test_ecdsa_recover_invalid_signature():
         with pytest.raises((ValueError, AssertionError)):
             recover(b'invalid', b'\x01' * 32)
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 
 
 def test_ecdsa_recover_invalid_message_hash():
@@ -400,5 +403,5 @@ def test_ecdsa_recover_invalid_message_hash():
         with pytest.raises((ValueError, AssertionError)):
             recover(signature, b'\x01' * 31)  # Too short
     except ImportError:
-        pytest.skip("ECDSA module not available")
+        pytest.skip(SKIP_ECDSA)
 

@@ -153,7 +153,7 @@ class RegistryClient:
         pub = self.wallet.get_public_key(ctx, {"identityKey": True}, self.originator) or {}
         operator = cast(str, pub.get("publicKey") or "")
 
-        protocol = _map_definition_type_to_wallet_protocol(data.definitionType)
+        _ = _map_definition_type_to_wallet_protocol(data.definitionType)  # Reserved for future use
         fields = _build_pushdrop_fields(data, operator)
 
         # Build lock-before pushdrop script

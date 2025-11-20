@@ -46,7 +46,7 @@ class WalletWireResolver:
             return []
         return self.query(ctx, definition_type, query)
 
-    def query(self, ctx: Any, definition_type: DefinitionType, query: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def query(self, ctx: Any, definition_type: DefinitionType, query: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         lo = self.wallet.list_outputs(
             ctx,
             {
@@ -71,7 +71,7 @@ class WalletWireResolver:
                 else:
                     from bsv.script.script import Script
                     ls_hex = Script(cast(bytes, ls_field)).hex()
-                rec = _parse_locking_script(definition_type, ls_hex)
+                _ = _parse_locking_script(definition_type, ls_hex)  # Validate script
             except Exception:
                 continue
 

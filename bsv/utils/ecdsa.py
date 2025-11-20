@@ -51,7 +51,7 @@ def serialize_ecdsa_recoverable(signature: Tuple[int, int, int]) -> bytes:
     return r + s + rec_id
 
 def stringify_ecdsa_recoverable(signature: bytes, compressed: bool = True) -> str:
-    r, s, recovery_id = deserialize_ecdsa_recoverable(signature)
+    _, _, recovery_id = deserialize_ecdsa_recoverable(signature)
     prefix: int = 27 + recovery_id + (4 if compressed else 0)
     signature: bytes = prefix.to_bytes(1, 'big') + signature[:-1]
     return b64encode(signature).decode('ascii')

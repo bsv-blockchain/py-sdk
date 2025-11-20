@@ -3,6 +3,9 @@ Coverage tests for aes_gcm.py - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_AES_GCM = "AES-GCM not available"
+
 
 # ========================================================================
 # AES-GCM encryption branches
@@ -16,7 +19,7 @@ def test_aes_gcm_encrypt_empty():
         encrypted = encrypt(b'', key)
         assert isinstance(encrypted, bytes) or True
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 
 
 def test_aes_gcm_encrypt_small():
@@ -28,7 +31,7 @@ def test_aes_gcm_encrypt_small():
         assert isinstance(encrypted, bytes)
         assert len(encrypted) > 0
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 
 
 def test_aes_gcm_encrypt_large():
@@ -41,7 +44,7 @@ def test_aes_gcm_encrypt_large():
         assert isinstance(encrypted, bytes)
         assert len(encrypted) > len(data)
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 
 
 # ========================================================================
@@ -60,7 +63,7 @@ def test_aes_gcm_decrypt_valid():
         
         assert decrypted == data
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 
 
 def test_aes_gcm_decrypt_wrong_key():
@@ -80,7 +83,7 @@ def test_aes_gcm_decrypt_wrong_key():
             # Expected to fail
             assert True
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 
 
 def test_aes_gcm_decrypt_invalid_data():
@@ -96,7 +99,7 @@ def test_aes_gcm_decrypt_invalid_data():
             # Expected to fail
             assert True
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 
 
 # ========================================================================
@@ -122,7 +125,7 @@ def test_aes_gcm_256_bit_key():
         encrypted = encrypt(b'test', key)
         assert isinstance(encrypted, bytes)
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 
 
 def test_aes_gcm_invalid_key_size():
@@ -138,7 +141,7 @@ def test_aes_gcm_invalid_key_size():
             # Expected to fail
             assert True
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 
 
 # ========================================================================
@@ -157,7 +160,7 @@ def test_aes_gcm_roundtrip():
         
         assert decrypted == original
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 
 
 def test_aes_gcm_different_keys_different_output():
@@ -173,5 +176,5 @@ def test_aes_gcm_different_keys_different_output():
         
         assert enc1 != enc2
     except ImportError:
-        pytest.skip("AES-GCM not available")
+        pytest.skip(SKIP_AES_GCM)
 

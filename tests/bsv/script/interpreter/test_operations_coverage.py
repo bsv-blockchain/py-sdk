@@ -133,7 +133,7 @@ class TestOperationsOpcodes:
 
         # Test with empty stack
         stack.stk = []  # Clear the stack
-        result = op_dup(None, mock_thread)
+        result = op_dup(None, mock_thread)  # type: ignore
         assert isinstance(result, Error)
         assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 

@@ -3,6 +3,9 @@ Coverage tests for aes_cbc.py - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_AES_CBC = "AES-CBC not available"
+
 
 # ========================================================================
 # AES-CBC encryption branches
@@ -16,7 +19,7 @@ def test_aes_cbc_encrypt_empty():
         encrypted = encrypt(b'', key)
         assert isinstance(encrypted, bytes) or True
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 def test_aes_cbc_encrypt_small():
@@ -28,7 +31,7 @@ def test_aes_cbc_encrypt_small():
         assert isinstance(encrypted, bytes)
         assert len(encrypted) > 0
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 def test_aes_cbc_encrypt_block_size():
@@ -40,7 +43,7 @@ def test_aes_cbc_encrypt_block_size():
         encrypted = encrypt(data, key)
         assert isinstance(encrypted, bytes)
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 def test_aes_cbc_encrypt_large():
@@ -53,7 +56,7 @@ def test_aes_cbc_encrypt_large():
         assert isinstance(encrypted, bytes)
         assert len(encrypted) >= len(data)
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 # ========================================================================
@@ -72,7 +75,7 @@ def test_aes_cbc_decrypt_valid():
         
         assert decrypted == data
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 def test_aes_cbc_decrypt_wrong_key():
@@ -89,7 +92,7 @@ def test_aes_cbc_decrypt_wrong_key():
         # Should produce garbage or error
         assert decrypted != data or True
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 def test_aes_cbc_decrypt_invalid_data():
@@ -99,13 +102,13 @@ def test_aes_cbc_decrypt_invalid_data():
         key = b'\x00' * 32
         
         try:
-            decrypted = decrypt(b'invalid', key)
+            _ = decrypt(b'invalid', key)
             assert True
         except Exception:
             # Expected to fail
             assert True
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 # ========================================================================
@@ -126,7 +129,7 @@ def test_aes_cbc_with_custom_iv():
             # encrypt may not accept IV parameter
             pytest.skip("encrypt doesn't support custom IV")
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 # ========================================================================
@@ -152,7 +155,7 @@ def test_aes_cbc_256_bit_key():
         encrypted = encrypt(b'test', key)
         assert isinstance(encrypted, bytes)
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 def test_aes_cbc_invalid_key_size():
@@ -162,13 +165,13 @@ def test_aes_cbc_invalid_key_size():
         key = b'\x00' * 15  # Invalid size
         
         try:
-            encrypted = encrypt(b'test', key)
+            _ = encrypt(b'test', key)
             assert True
         except ValueError:
             # Expected to fail
             assert True
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 
 
 # ========================================================================
@@ -187,5 +190,5 @@ def test_aes_cbc_roundtrip():
         
         assert decrypted == original
     except ImportError:
-        pytest.skip("AES-CBC not available")
+        pytest.skip(SKIP_AES_CBC)
 

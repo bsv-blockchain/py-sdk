@@ -74,18 +74,18 @@ class DRBG:
         
         self.K = bytearray(hmac_sha256(bytes(self.K), kmac_input))
         
-        # V = HMAC(K, V)
+        # Update V using HMAC(K, V)
         self.V = bytearray(hmac_sha256(bytes(self.K), bytes(self.V)))
         
         if seed is None:
             return
 
         # Additional update if seed provided
-        # K = HMAC(K, V || 0x01 || seed)
+        # Update K using HMAC(K, V || 0x01 || seed)
         kmac_input2 = bytes(self.V) + b'\x01' + seed
         self.K = bytearray(hmac_sha256(bytes(self.K), kmac_input2))
         
-        # V = HMAC(K, V)
+        # Update V using HMAC(K, V)
         self.V = bytearray(hmac_sha256(bytes(self.K), bytes(self.V)))
 
     def generate(self, length: int) -> str:
@@ -101,7 +101,7 @@ class DRBG:
         """
         temp = bytearray()
         while len(temp) < length:
-            # V = HMAC(K, V)
+            # Update V using HMAC(K, V)
             self.V = bytearray(hmac_sha256(bytes(self.K), bytes(self.V)))
             temp.extend(self.V)
 

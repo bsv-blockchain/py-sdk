@@ -122,7 +122,7 @@ def test_transaction_preimage_index_bounds():
     
     if hasattr(tx, 'preimage'):
         try:
-            preimage = tx.preimage(99)  # Out of bounds
+            _ = tx._(99)  # Out of bounds
             assert False, "Should raise error"
         except IndexError:
             assert True

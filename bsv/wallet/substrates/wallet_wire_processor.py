@@ -250,7 +250,7 @@ class WalletWireProcessor(WalletWire):
     
     def _handle_acquire_certificate(self, ctx, params, originator):
         ac_args = deserialize_acquire_certificate_args(params)
-        result = self.wallet.acquire_certificate(ctx, ac_args, originator)
+        _ = self.wallet.acquire_certificate(ctx, ac_args, originator)
         return write_result_frame(b"")  # No specific result payload
     
     def _handle_create_hmac(self, ctx, params, originator):

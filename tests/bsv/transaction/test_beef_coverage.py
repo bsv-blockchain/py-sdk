@@ -14,7 +14,7 @@ def test_beef_init():
     try:
         from bsv.transaction.beef import Beef
         beef = Beef(version=4)
-        assert beef is not None
+        assert beef  # Verify object creation succeeds
     except ImportError:
         pytest.skip("Beef not available")
 
@@ -62,7 +62,7 @@ def test_beef_deserialize():
         
         if hasattr(Beef, 'deserialize'):
             try:
-                beef = Beef.deserialize(b'')
+                _ = Beef.deserialize(b'')
                 assert True
             except Exception:
                 # Expected with empty data

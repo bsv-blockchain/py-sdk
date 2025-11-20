@@ -25,7 +25,7 @@ def counterparty_wallet(counterparty_key):
 
 
 def test_encrypt_decrypt(user_wallet, counterparty_wallet, user_key, counterparty_key):
-    protocol = Protocol(2, 'tests')
+    _ = Protocol(2, 'tests')
     key_id = '4'
     plaintext = sample_data
     # Encrypt with user, decrypt with counterparty
@@ -52,7 +52,7 @@ def test_encrypt_decrypt(user_wallet, counterparty_wallet, user_key, counterpart
 
 
 def test_create_and_verify_signature(user_wallet, counterparty_wallet, user_key, counterparty_key):
-    protocol = Protocol(2, 'tests')
+    _ = Protocol(2, 'tests')
     key_id = '4'
     data = sample_data
     sig = user_wallet.create_signature(None, {
@@ -75,7 +75,7 @@ def test_create_and_verify_signature(user_wallet, counterparty_wallet, user_key,
 
 
 def test_create_and_verify_hmac(user_wallet, counterparty_wallet, user_key, counterparty_key):
-    protocol = Protocol(2, 'tests')
+    _ = Protocol(2, 'tests')
     key_id = '4'
     data = sample_data
     h = user_wallet.create_hmac(None, {

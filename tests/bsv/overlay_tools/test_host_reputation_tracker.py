@@ -31,7 +31,7 @@ class TestHostReputationTracker:
     def test_host_reputation_tracker_creation(self):
         """Test HostReputationTracker can be created."""
         tracker = HostReputationTracker()
-        assert tracker is not None
+        assert tracker  # Verify object creation succeeds
 
     def test_ranked_host_creation(self):
         """Test RankedHost can be created."""

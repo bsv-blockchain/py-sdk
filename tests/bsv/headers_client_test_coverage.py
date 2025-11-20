@@ -3,6 +3,9 @@ Coverage tests for headers_client/ modules - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_HEADERS_CLIENT = "HeadersClient requires parameters"
+
 
 # ========================================================================
 # Headers client branches
@@ -18,7 +21,7 @@ def test_headers_client_init():
             assert client is not None
         except TypeError:
             # May require parameters
-            pytest.skip("HeadersClient requires parameters")
+            pytest.skip(SKIP_HEADERS_CLIENT)
     except (ImportError, AttributeError):
         pytest.skip("HeadersClient not available")
 
@@ -38,7 +41,7 @@ def test_headers_client_get_header():
                 except Exception:
                     pytest.skip("Requires valid configuration")
         except TypeError:
-            pytest.skip("HeadersClient requires parameters")
+            pytest.skip(SKIP_HEADERS_CLIENT)
     except (ImportError, AttributeError):
         pytest.skip("HeadersClient not available")
 
@@ -58,7 +61,7 @@ def test_headers_client_get_tip():
                 except Exception:
                     pytest.skip("Requires valid configuration")
         except TypeError:
-            pytest.skip("HeadersClient requires parameters")
+            pytest.skip(SKIP_HEADERS_CLIENT)
     except (ImportError, AttributeError):
         pytest.skip("HeadersClient not available")
 

@@ -269,7 +269,7 @@ def test_find_and_delete():
     
 def test_r_puzzle():
     private_key = PrivateKey()
-    public_key = private_key.public_key()
+    _ = private_key.address()
     
     k = PrivateKey().int()
     G: Point = curve.g

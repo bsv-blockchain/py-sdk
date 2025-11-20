@@ -84,7 +84,7 @@ def test_decode_roundtrip():
 def test_decode_invalid_character():
     """Test decode with invalid character."""
     try:
-        result = decode('0OIl')  # Contains invalid chars
+        _ = decode('0OIl')  # Contains invalid chars
         # May handle or raise
         assert True
     except (ValueError, Exception):

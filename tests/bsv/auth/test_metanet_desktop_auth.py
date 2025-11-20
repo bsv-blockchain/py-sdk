@@ -228,7 +228,7 @@ class MockHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             
             # Handle different RPC methods
             method = rpc_data.get('method')
-            params = rpc_data.get('params', [])
+            _ = rpc_data.get('_', [])
             
             if method == 'createAction':
                 # Simulate createAction response
@@ -528,8 +528,8 @@ class PySDKAuthClient:
         print("=== ステップ1: py-sdk初期認証要求 ===")
         
         try:
-            # py-sdkのPeerを使用して認証セッションを取得
-            # これにより自動的に初期認証要求が送信される
+            # Retrieve authenticated session using py-sdk Peer class
+            # This automatically sends the initial authentication request
             peer_session = self.peer.get_authenticated_session(max_wait_time=5000)
             
             if peer_session and peer_session.is_authenticated:
@@ -571,7 +571,7 @@ class PySDKAuthClient:
         
         try:
             # リクエストデータを準備
-            request_payload = {
+            _ = {
                 "method": method,
                 "url": f"/{endpoint}",
                 "headers": {"Content-Type": "application/json"},
@@ -591,8 +591,8 @@ class PySDKAuthClient:
             
             print(f"送信するリクエスト: {json.dumps(rpc_request, indent=2)}")
             
-            # py-sdkのPeerを使用して認証済みメッセージを送信
-            # これにより自動的に署名とヘッダーが生成される
+            # Send authenticated message using py-sdk Peer class
+            # Signature and headers are automatically generated
             result = self.peer.to_peer(
                 ctx={},  # コンテキスト（空でOK）
                 message=message_bytes,
@@ -622,7 +622,7 @@ class PySDKAuthClient:
         
         try:
             # ステップ1: py-sdk初期認証要求
-            auth_result = self.step1_initial_auth_request()
+            _ = self.step1_initial_auth_request()
             
             print("=" * 50)
             print("🎉 py-sdk認証フローが完了しました！")
@@ -686,7 +686,7 @@ class TestMetanetDesktopAuth(unittest.TestCase):
     def test_signature_creation(self):
         """Test signature creation from wallet"""
         test_data = b"test message"
-        args = {
+        _ = {
             'data': test_data,
             'encryption_args': {
                 'key_id': 'test_key_id'
@@ -1224,7 +1224,7 @@ def run_real_library_demo():
             
             # Test Peer creation
             from bsv.auth.peer import Peer
-            peer = Peer(peer_options)
+            _ = Peer(peer_options)
             print("✅ Peer: 作成成功")
             
             print("\n🎉 全ての実際のpy-sdkライブラリのテストが成功しました！")
@@ -1440,11 +1440,9 @@ def main():
             print("  python test_metanet_desktop_auth.py --real-demo # 実際のpy-sdkライブラリ on モックHTTPサーバー")
             print("  python test_metanet_desktop_auth.py --server-test # 単一プロセスでのサーバー管理テスト")
             print("  python test_metanet_desktop_auth.py --help   # このヘルプを表示")
-            return
         else:
             print(f"不明なオプション: {sys.argv[1]}")
             print("--help で使用方法を確認してください")
-            return
     else:
         # Default: run tests
         print("Running standalone unit tests...")

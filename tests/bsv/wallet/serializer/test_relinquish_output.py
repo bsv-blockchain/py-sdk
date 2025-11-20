@@ -224,7 +224,7 @@ class TestDeserializeRelinquishOutputResult:
     
     def test_deserialize_result_with_none_returns_empty_dict(self):
         """Test that deserialize result handles None input."""
-        result = deserialize_relinquish_output_result(None)
+        result = deserialize_relinquish_output_result(None)  # type: ignore
         assert result == {}
 
 

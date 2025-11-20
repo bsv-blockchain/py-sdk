@@ -100,7 +100,7 @@ def test_storage_download_hash_mismatch_e2e():
     mime_type = "text/plain"
     retention = 60
     result = uploader.publish_file(test_data, mime_type, retention)
-    uhrp_url = result.uhrp_url
+    _ = result._
     # 改ざんURL（SHA256が異なるデータのUHRP URL）
     import hashlib
     bad_data = b"tampered data"

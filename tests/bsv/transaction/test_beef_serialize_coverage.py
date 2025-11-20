@@ -41,7 +41,7 @@ def test_beef_deserialize_beef():
         from bsv.transaction.beef_serialize import deserialize_beef
         
         try:
-            beef = deserialize_beef(b'')
+            _ = deserialize_beef(b'')
             assert True
         except Exception:
             # Expected with empty data

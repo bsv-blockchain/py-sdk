@@ -146,7 +146,7 @@ class TestAuthFetchCallbacks:
     def test_callback_structure_created(self, auth_fetch):
         """Test that callback structure is created with resolve and reject."""
         # Test callback dict structure
-        nonce_b64 = "test_nonce"
+        _ = "test_nonce"
         
         # Manually create callback structure (as done in fetch)
         response_holder = {'resp': None, 'err': None}

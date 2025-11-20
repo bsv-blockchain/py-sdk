@@ -12,7 +12,7 @@ def test_chaintracker_interface_exists():
     """Test that ChainTracker interface exists."""
     try:
         from bsv.chaintracker import ChainTracker
-        assert ChainTracker is not None
+        assert ChainTracker  # Verify import succeeds and class exists
     except ImportError:
         pytest.skip("ChainTracker not available")
 
@@ -102,7 +102,7 @@ def test_chaintracker_get_header_negative():
         
         if hasattr(tracker, 'get_header'):
             try:
-                header = tracker.get_header(-1)
+                _ = tracker.get_header(-1)
                 assert True
             except (ValueError, IndexError):
                 # Expected
@@ -112,7 +112,7 @@ def test_chaintracker_get_header_negative():
 
 
 def test_chaintracker_get_header_future():
-    """Test getting header beyond current height."""
+    """Test getting _ beyond current height."""
     try:
         from bsv.chaintracker import DefaultChainTracker
         

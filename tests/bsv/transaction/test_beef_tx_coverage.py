@@ -15,7 +15,7 @@ def test_beef_tx_init():
         from bsv.transaction import Transaction
         tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
         beef_tx = BeefTx(txid="0"*64, tx_obj=tx)
-        assert beef_tx is not None
+        assert beef_tx  # Verify object creation succeeds
     except ImportError:
         pytest.skip("BeefTx not available")
 

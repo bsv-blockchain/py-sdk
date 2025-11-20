@@ -13,7 +13,7 @@ def test_polynomial_creation():
     try:
         from bsv.polynomial import Polynomial
         p = Polynomial([1, 2, 3])
-        assert p is not None
+        assert p  # Verify object creation succeeds
     except ImportError:
         pytest.skip("Polynomial not available")
 

@@ -3,6 +3,9 @@ Coverage tests for primitives.py - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_PRIMITIVES = "Primitives not available"
+
 
 # ========================================================================
 # Primitives branches
@@ -16,7 +19,7 @@ def test_primitives_hash256():
         assert isinstance(result, bytes)
         assert len(result) == 32
     except ImportError:
-        pytest.skip("Primitives not available")
+        pytest.skip(SKIP_PRIMITIVES)
 
 
 def test_primitives_hash160():
@@ -27,7 +30,7 @@ def test_primitives_hash160():
         assert isinstance(result, bytes)
         assert len(result) == 20
     except ImportError:
-        pytest.skip("Primitives not available")
+        pytest.skip(SKIP_PRIMITIVES)
 
 
 def test_primitives_sha256():
@@ -38,7 +41,7 @@ def test_primitives_sha256():
         assert isinstance(result, bytes)
         assert len(result) == 32
     except ImportError:
-        pytest.skip("Primitives not available")
+        pytest.skip(SKIP_PRIMITIVES)
 
 
 def test_primitives_ripemd160():
@@ -49,7 +52,7 @@ def test_primitives_ripemd160():
         assert isinstance(result, bytes)
         assert len(result) == 20
     except ImportError:
-        pytest.skip("Primitives not available")
+        pytest.skip(SKIP_PRIMITIVES)
 
 
 # ========================================================================
@@ -64,7 +67,7 @@ def test_hash256_empty():
         assert isinstance(result, bytes)
         assert len(result) == 32
     except ImportError:
-        pytest.skip("Primitives not available")
+        pytest.skip(SKIP_PRIMITIVES)
 
 
 def test_hash160_empty():
@@ -75,7 +78,7 @@ def test_hash160_empty():
         assert isinstance(result, bytes)
         assert len(result) == 20
     except ImportError:
-        pytest.skip("Primitives not available")
+        pytest.skip(SKIP_PRIMITIVES)
 
 
 def test_hash256_large_data():
@@ -87,5 +90,5 @@ def test_hash256_large_data():
         assert isinstance(result, bytes)
         assert len(result) == 32
     except ImportError:
-        pytest.skip("Primitives not available")
+        pytest.skip(SKIP_PRIMITIVES)
 

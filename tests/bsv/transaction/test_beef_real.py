@@ -12,7 +12,7 @@ def test_beef_initialization():
     # Test the REAL constructor (BEEF is a dataclass requiring version)
     beef = Beef(version=4022206465)
     
-    assert beef is not None
+    assert beef  # Verify object creation succeeds
     assert hasattr(beef, 'to_binary')
     assert hasattr(beef, 'merge_beef')
 
@@ -306,7 +306,7 @@ def test_beef_find_transaction_for_signing():
 
 def test_beef_merge_bump():
     """Test BEEF.merge_bump() method."""
-    beef = Beef(version=4022206465)
+    _ = Beef(version=4022206465)
     
     # Test the REAL merge_bump() method
     # MerklePath is not exported directly, skip this test

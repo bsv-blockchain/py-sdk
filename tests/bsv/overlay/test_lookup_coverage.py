@@ -28,7 +28,7 @@ def test_overlay_lookup_query():
         
         if hasattr(lookup, 'query'):
             try:
-                result = lookup.query('test')
+                _ = lookup.query('test')
                 assert True
             except Exception:
                 # Expected without overlay network
@@ -65,7 +65,7 @@ def test_overlay_lookup_empty_query():
         
         if hasattr(lookup, 'query'):
             try:
-                result = lookup.query('')
+                _ = lookup.query('')
                 assert True
             except (ValueError, Exception):
                 # Expected

@@ -2,6 +2,9 @@
 Coverage tests for signature.py - untested branches.
 """
 import pytest
+
+# Constants
+TEST_MESSAGE = TEST_MESSAGE
 from bsv.keys import PrivateKey
 
 
@@ -164,7 +167,7 @@ def test_signature_verification_invalid_signature_formats():
     """Test signature verification with various invalid signature formats."""
     priv = PrivateKey()
     pub = priv.public_key()
-    message = b"test message"
+    message = TEST_MESSAGE
 
     # Test with completely invalid signature
     with pytest.raises(ValueError):
@@ -203,7 +206,7 @@ def test_signature_verification_wrong_key():
     priv2 = PrivateKey()
     pub2 = priv2.public_key()
 
-    message = b"test message"
+    message = TEST_MESSAGE
     signature = priv1.sign(message)
 
     # Should fail verification with wrong key
@@ -237,7 +240,7 @@ def test_signature_verification_edge_cases():
     priv = PrivateKey()
     pub = priv.public_key()
 
-    message = b"test message"
+    message = TEST_MESSAGE
     signature = priv.sign(message)
 
     # Test verification with None message (should work with default hasher)
@@ -260,7 +263,7 @@ def test_signature_deterministic_with_different_hashers():
         from bsv.constants import hash256, sha256
 
         priv = PrivateKey()
-        message = b"test message"
+        message = TEST_MESSAGE
 
         # Test with hash256
         sig1 = priv.sign(message, hash256)
@@ -286,7 +289,7 @@ def test_signature_verification_with_different_hashers():
 
         priv = PrivateKey()
         pub = priv.public_key()
-        message = b"test message"
+        message = TEST_MESSAGE
 
         # Sign with hash256, verify with hash256
         sig1 = priv.sign(message, hash256)
@@ -308,7 +311,7 @@ def test_signature_verification_with_different_hashers():
 
 def test_signature_invalid_private_key_types():
     """Test signature creation with invalid private key types."""
-    message = b"test message"
+    message = TEST_MESSAGE
 
     # Test with None
     with pytest.raises((AttributeError, TypeError)):
@@ -327,9 +330,9 @@ def test_signature_invalid_private_key_types():
 
 
 def test_signature_invalid_public_key_types():
-    """Test signature verification with invalid public key types."""
+    """Test _ verification with invalid public key types."""
     priv = PrivateKey()
-    message = b"test message"
+    message = TEST_MESSAGE
     signature = priv.sign(message)
 
     # Test with None public key
@@ -353,7 +356,7 @@ def test_signature_concurrent_usage():
 
     priv = PrivateKey()
     pub = priv.public_key()
-    message = b"test message"
+    message = TEST_MESSAGE
 
     results = []
     errors = []

@@ -41,7 +41,7 @@ def test_download_network_error(downloader, monkeypatch):
 
 def test_publish_file_upload_error(uploader, monkeypatch):
     # Force AuthFetch to use HTTP fallback by patching the fetch method
-    original_fetch = uploader.auth_fetch.fetch
+    _ = uploader.auth_fetch.fetch
     def mock_fetch(ctx, url_str, config):
         # Force HTTP fallback by calling handle_fetch_and_validate directly
         from urllib.parse import urlparse
@@ -81,7 +81,7 @@ def test_publish_file_upload_error(uploader, monkeypatch):
 
 def test_publish_file_402_payment(uploader, monkeypatch):
     # Force AuthFetch to use HTTP fallback by patching the fetch method
-    original_fetch = uploader.auth_fetch.fetch
+    _ = uploader.auth_fetch.fetch
     def mock_fetch(ctx, url_str, config):
         # Force HTTP fallback by calling handle_fetch_and_validate directly
         from urllib.parse import urlparse
@@ -149,7 +149,7 @@ def test_publish_file_auth_error(monkeypatch):
     uploader = Uploader(storage_url='https://dummy-storage', wallet=BadWallet())
     
     # Force AuthFetch to use HTTP fallback by patching the fetch method
-    original_fetch = uploader.auth_fetch.fetch
+    _ = uploader.auth_fetch.fetch
     def mock_fetch(ctx, url_str, config):
         # Force HTTP fallback by calling handle_fetch_and_validate directly
         from urllib.parse import urlparse

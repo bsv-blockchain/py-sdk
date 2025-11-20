@@ -13,7 +13,7 @@ from bsv.script.script import Script
 def test_tx_json_standard():
     """Test standard tx should marshal and unmarshal correctly (GO: TestTx_JSON)"""
     priv = PrivateKey("KznvCNc6Yf4iztSThoMH6oHWzH9EgjfodKxmeuUGPq5DEX5maspS")
-    assert priv is not None
+    assert priv  # Verify object creation succeeds
     
     unlocker = P2PKH().unlock(priv)
     tx = Transaction()

@@ -3,6 +3,9 @@ Coverage tests for merkle_tree_parent.py - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_MERKLE_TREE_PARENT = "merkle_tree_parent not available"
+
 
 # ========================================================================
 # Merkle tree parent calculation branches
@@ -20,7 +23,7 @@ def test_merkle_tree_parent_basic():
         assert isinstance(parent, bytes)
         assert len(parent) == 32
     except ImportError:
-        pytest.skip("merkle_tree_parent not available")
+        pytest.skip(SKIP_MERKLE_TREE_PARENT)
 
 
 def test_merkle_tree_parent_same_nodes():
@@ -34,7 +37,7 @@ def test_merkle_tree_parent_same_nodes():
         assert isinstance(parent, bytes)
         assert len(parent) == 32
     except ImportError:
-        pytest.skip("merkle_tree_parent not available")
+        pytest.skip(SKIP_MERKLE_TREE_PARENT)
 
 
 def test_merkle_tree_parent_deterministic():
@@ -50,7 +53,7 @@ def test_merkle_tree_parent_deterministic():
         
         assert parent1 == parent2
     except ImportError:
-        pytest.skip("merkle_tree_parent not available")
+        pytest.skip(SKIP_MERKLE_TREE_PARENT)
 
 
 # ========================================================================
@@ -70,7 +73,7 @@ def test_merkle_tree_parent_order_matters():
         
         assert parent1 != parent2
     except ImportError:
-        pytest.skip("merkle_tree_parent not available")
+        pytest.skip(SKIP_MERKLE_TREE_PARENT)
 
 
 def test_merkle_tree_parent_invalid_length():
@@ -85,7 +88,7 @@ def test_merkle_tree_parent_invalid_length():
             # Expected
             assert True
     except ImportError:
-        pytest.skip("merkle_tree_parent not available")
+        pytest.skip(SKIP_MERKLE_TREE_PARENT)
 
 
 def test_merkle_tree_parent_empty():
@@ -100,5 +103,5 @@ def test_merkle_tree_parent_empty():
             # Expected
             assert True
     except ImportError:
-        pytest.skip("merkle_tree_parent not available")
+        pytest.skip(SKIP_MERKLE_TREE_PARENT)
 

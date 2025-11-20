@@ -3,6 +3,9 @@ Coverage tests for curve.py - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_CURVE = "Curve operations not available"
+
 
 # ========================================================================
 # Curve operations branches
@@ -16,7 +19,7 @@ def test_point_addition():
         result = point_add((0, 0), (0, 0))
         assert result is not None or True
     except (ImportError, AttributeError):
-        pytest.skip("Curve operations not available")
+        pytest.skip(SKIP_CURVE)
 
 
 def test_point_multiplication():
@@ -27,7 +30,7 @@ def test_point_multiplication():
         result = point_mul((0, 0), 1)
         assert result is not None or True
     except (ImportError, AttributeError):
-        pytest.skip("Curve operations not available")
+        pytest.skip(SKIP_CURVE)
 
 
 def test_point_doubling():
@@ -37,7 +40,7 @@ def test_point_doubling():
         result = point_double((0, 0))
         assert result is not None or True
     except (ImportError, AttributeError):
-        pytest.skip("Curve operations not available")
+        pytest.skip(SKIP_CURVE)
 
 
 def test_is_on_curve():
@@ -48,7 +51,7 @@ def test_is_on_curve():
         result = is_on_curve((0, 0))
         assert isinstance(result, bool) or True
     except (ImportError, AttributeError):
-        pytest.skip("Curve operations not available")
+        pytest.skip(SKIP_CURVE)
 
 
 # ========================================================================

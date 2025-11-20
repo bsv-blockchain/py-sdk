@@ -438,7 +438,7 @@ def normalize_bumps(beef: Beef) -> None:
     if not getattr(beef, "bumps", None):
         return
     
-    root_map, index_map, new_bumps = _deduplicate_bumps(beef.bumps)
+    _, index_map, new_bumps = _deduplicate_bumps(beef.bumps)
     beef.bumps = new_bumps
     _remap_transaction_indices(beef, index_map)
 

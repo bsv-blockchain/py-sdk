@@ -31,10 +31,10 @@ def _append_bumps_log(lines: List[str], bumps):
         lines.append(f"  BUMP {i}")
         lines.append(f"    block: {bump.block_height}")
         txids = _extract_txids_from_bump(bump)
-        lines.append(f"    txids: [")
+        lines.append("    txids: [")
         for t in txids:
             lines.append(f"      '{t}',")
-        lines.append(f"    ]")
+        lines.append("    ]")
 
 def _extract_txids_from_bump(bump) -> List[str]:
     """Extract TXIDs from bump path."""

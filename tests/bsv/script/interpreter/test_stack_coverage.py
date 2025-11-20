@@ -15,7 +15,7 @@ def test_stack_init():
         from bsv.script.interpreter.config import BeforeGenesisConfig
         cfg = BeforeGenesisConfig()
         stack = Stack(cfg)
-        assert stack is not None
+        assert stack  # Verify object creation succeeds
     except ImportError:
         pytest.skip("Stack not available")
 
@@ -55,7 +55,7 @@ def test_stack_pop_empty():
         cfg = BeforeGenesisConfig()
         stack = Stack(cfg)
         try:
-            value = stack.pop()
+            _ = stack.pop()
             assert False, "Should raise error"
         except ValueError:
             assert True

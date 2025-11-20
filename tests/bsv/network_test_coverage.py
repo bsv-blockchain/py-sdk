@@ -3,6 +3,9 @@ Coverage tests for network/ modules - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_NETWORK_CONFIG = "get_network_config not available"
+
 
 # ========================================================================
 # Network module branches
@@ -39,7 +42,7 @@ def test_get_network_config_mainnet():
         config = get_network_config('mainnet')
         assert config is not None
     except (ImportError, AttributeError):
-        pytest.skip("get_network_config not available")
+        pytest.skip(SKIP_NETWORK_CONFIG)
 
 
 def test_get_network_config_testnet():
@@ -50,7 +53,7 @@ def test_get_network_config_testnet():
         config = get_network_config('testnet')
         assert config is not None
     except (ImportError, AttributeError):
-        pytest.skip("get_network_config not available")
+        pytest.skip(SKIP_NETWORK_CONFIG)
 
 
 # ========================================================================
@@ -69,7 +72,7 @@ def test_get_network_config_invalid():
             # Expected
             assert True
     except (ImportError, AttributeError):
-        pytest.skip("get_network_config not available")
+        pytest.skip(SKIP_NETWORK_CONFIG)
 
 
 # ========================================================================

@@ -3,6 +3,9 @@ Coverage tests for chaintrackers/ modules - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_WOC_TRACKER = "WhatsOnChainTracker not available"
+
 
 # ========================================================================
 # WhatsOnChain chaintracker branches
@@ -16,7 +19,7 @@ def test_woc_chaintracker_init():
         tracker = WhatsOnChainTracker()
         assert tracker is not None
     except (ImportError, AttributeError):
-        pytest.skip("WhatsOnChainTracker not available")
+        pytest.skip(SKIP_WOC_TRACKER)
 
 
 def test_woc_chaintracker_with_network():
@@ -45,7 +48,7 @@ def test_woc_chaintracker_get_height():
                 # Expected without network access
                 pytest.skip("Requires network access")
     except (ImportError, AttributeError):
-        pytest.skip("WhatsOnChainTracker not available")
+        pytest.skip(SKIP_WOC_TRACKER)
 
 
 def test_woc_chaintracker_get_header():
@@ -63,7 +66,7 @@ def test_woc_chaintracker_get_header():
                 # Expected without network access
                 pytest.skip("Requires network access")
     except (ImportError, AttributeError):
-        pytest.skip("WhatsOnChainTracker not available")
+        pytest.skip(SKIP_WOC_TRACKER)
 
 
 # ========================================================================
@@ -104,5 +107,5 @@ def test_chaintracker_invalid_height():
                 # Expected
                 assert True
     except (ImportError, AttributeError):
-        pytest.skip("WhatsOnChainTracker not available")
+        pytest.skip(SKIP_WOC_TRACKER)
 

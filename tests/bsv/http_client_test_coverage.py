@@ -13,7 +13,7 @@ def test_http_client_init():
     try:
         from bsv.http_client import HttpClient
         client = HttpClient()
-        assert client is not None
+        assert client  # Verify object creation succeeds
     except ImportError:
         pytest.skip("HttpClient not available")
 
@@ -51,7 +51,7 @@ def test_http_client_get():
         
         if hasattr(client, 'get'):
             try:
-                response = client.get('/test')
+                _ = client.get('/test')
                 assert True
             except Exception:
                 # Expected without real server
@@ -68,7 +68,7 @@ def test_http_client_post():
         
         if hasattr(client, 'post'):
             try:
-                response = client.post('/test', data={'key': 'value'})
+                _ = client.post('/test', data={'key': 'value'})
                 assert True
             except Exception:
                 # Expected without real server
@@ -85,7 +85,7 @@ def test_http_client_put():
         
         if hasattr(client, 'put'):
             try:
-                response = client.put('/test', data={'key': 'value'})
+                _ = client.put('/test', data={'key': 'value'})
                 assert True
             except Exception:
                 # Expected without real server
@@ -102,7 +102,7 @@ def test_http_client_delete():
         
         if hasattr(client, 'delete'):
             try:
-                response = client.delete('/test')
+                _ = client.delete('/test')
                 assert True
             except Exception:
                 # Expected without real server
@@ -133,7 +133,7 @@ def test_sync_http_client_request():
         
         if hasattr(client, 'get'):
             try:
-                response = client.get('https://httpbin.org/status/200')
+                _ = client.get('https://httpbin.org/status/200')
                 assert True
             except Exception:
                 # May fail without network
@@ -154,7 +154,7 @@ def test_http_client_timeout():
         
         if hasattr(client, 'get'):
             try:
-                response = client.get('https://httpbin.org/delay/10')
+                _ = client.get('https://httpbin.org/delay/10')
                 assert True
             except Exception:
                 # Expected to timeout
@@ -171,7 +171,7 @@ def test_http_client_connection_error():
         
         if hasattr(client, 'get'):
             try:
-                response = client.get('/test')
+                _ = client.get('/test')
                 assert False, "Should raise error"
             except Exception:
                 # Expected
@@ -192,7 +192,7 @@ def test_http_client_empty_url():
         
         if hasattr(client, 'get'):
             try:
-                response = client.get('')
+                _ = client.get('')
                 assert True
             except (ValueError, Exception):
                 # Expected

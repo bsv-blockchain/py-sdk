@@ -84,8 +84,8 @@ def test_live_policy_fee_model_cache():
         if hasattr(fee_model, 'compute_fee'):
             try:
                 # Multiple calls should use cache
-                fee1 = fee_model.compute_fee(250)
-                fee2 = fee_model.compute_fee(250)
+                _ = fee_model.compute_fee(250)
+                _ = fee_model.compute_fee(250)
                 # Fees should be same if cached
                 assert True
             except Exception:

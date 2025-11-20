@@ -57,9 +57,9 @@ class TestBSM:
 
         # Convert compact signature to DER for verification
         from bsv.utils import unstringify_ecdsa_recoverable
-        serialized_recoverable, compressed = unstringify_ecdsa_recoverable(signature_compact)
+        serialized_recoverable, _ = unstringify_ecdsa_recoverable(signature_compact)
         from bsv.utils import deserialize_ecdsa_recoverable
-        r, s, recovery_id = deserialize_ecdsa_recoverable(serialized_recoverable)
+        r, s, _ = deserialize_ecdsa_recoverable(serialized_recoverable)
         der_sig = serialize_ecdsa_der((r, s))
 
         result = verify(message, der_sig, public_key)

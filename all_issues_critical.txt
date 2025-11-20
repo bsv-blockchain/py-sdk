@@ -1,0 +1,1128 @@
+bsv/auth/clients/auth_fetch.py
+Line: L46
+Description: Refactor this function to reduce its Cognitive Complexity from 36 to the 15 allowed.
+Type: Code Smell
+Effort: 26min effort
+--------------------------------------------------------------------------------
+bsv/auth/peer.py
+Line: L41
+Description: Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+bsv/auth/peer.py
+Line: L1003
+Description: Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+bsv/constants.py
+Line: L50
+Description: Change this argument; Function "hex" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+bsv/identity/testable_client.py
+Line: L35
+Description: Add missing parameters override_with_contacts.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/identity/testable_client.py
+Line: L42
+Description: Add missing parameters override_with_contacts.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/keystore/local_kv_store.py
+Line: L149
+Description: Refactor this function to reduce its Cognitive Complexity from 56 to the 15 allowed.
+Type: Code Smell
+Effort: 46min effort
+--------------------------------------------------------------------------------
+bsv/keystore/local_kv_store.py
+Line: L232
+Description: Refactor this function to reduce its Cognitive Complexity from 67 to the 15 allowed.
+Type: Code Smell
+Effort: 57min effort
+--------------------------------------------------------------------------------
+bsv/keystore/local_kv_store.py
+Line: L665
+Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+Type: Code Smell
+Effort: 7min effort
+--------------------------------------------------------------------------------
+bsv/keystore/local_kv_store.py
+Line: L840
+Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+Type: Code Smell
+Effort: 7min effort
+--------------------------------------------------------------------------------
+bsv/keystore/local_kv_store.py
+Line: L963
+Description: Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
+Type: Code Smell
+Effort: 9min effort
+--------------------------------------------------------------------------------
+bsv/keystore/local_kv_store.py
+Line: L1010
+Description: Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+bsv/overlay_tools/ship_broadcaster.py
+Line: L154
+Description: Refactor this function to reduce its Cognitive Complexity from 25 to the 15 allowed.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/overlay_tools/ship_broadcaster.py
+Line: L293
+Description: Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.
+Type: Code Smell
+Effort: 16min effort
+--------------------------------------------------------------------------------
+bsv/primitives/aescbc.py
+Line: L27
+Description: Use secure mode and padding scheme.
+Type: Vulnerability
+Effort: 20min effort
+--------------------------------------------------------------------------------
+bsv/primitives/aescbc.py
+Line: L36
+Description: Use secure mode and padding scheme.
+Type: Vulnerability
+Effort: 20min effort
+--------------------------------------------------------------------------------
+bsv/registry/client.py
+Line: L240
+Description: Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.
+Type: Code Smell
+Effort: 16min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/number.py
+Line: L23
+Description: Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/op_parser.py
+Line: L44
+Description: Refactor this function to reduce its Cognitive Complexity from 22 to the 15 allowed.
+Type: Code Smell
+Effort: 12min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/operations.py
+Line: L70
+Description: Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.
+Type: Code Smell
+Effort: 16min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/stack.py
+Line: L48
+Description: Add a nested comment explaining why this method is empty, or complete the implementation.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/stack.py
+Line: L51
+Description: Add a nested comment explaining why this method is empty, or complete the implementation.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/stack.py
+Line: L54
+Description: Add a nested comment explaining why this method is empty, or complete the implementation.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/stack.py
+Line: L57
+Description: Add a nested comment explaining why this method is empty, or complete the implementation.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/stack.py
+Line: L67
+Description: Add a nested comment explaining why this method is empty, or complete the implementation.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/thread.py
+Line: L108
+Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+Type: Code Smell
+Effort: 7min effort
+--------------------------------------------------------------------------------
+bsv/storage/downloader.py
+Line: L74
+Description: Refactor this function to reduce its Cognitive Complexity from 27 to the 15 allowed.
+Type: Code Smell
+Effort: 17min effort
+--------------------------------------------------------------------------------
+bsv/storage/uploader.py
+Line: L45
+Description: Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef.py
+Line: L352
+Description: Refactor this function to reduce its Cognitive Complexity from 24 to the 15 allowed.
+Type: Code Smell
+Effort: 14min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef.py
+Line: L400
+Description: Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
+Type: Code Smell
+Effort: 9min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_builder.py
+Line: L25
+Description: Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.
+Type: Code Smell
+Effort: 13min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_serialize.py
+Line: L15
+Description: Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.
+Type: Code Smell
+Effort: 13min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_utils.py
+Line: L138
+Description: Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.
+Type: Code Smell
+Effort: 13min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_validate.py
+Line: L163
+Description: Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed.
+Type: Code Smell
+Effort: 23min effort
+--------------------------------------------------------------------------------
+bsv/transaction/pushdrop.py
+Line: L296
+Description: Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+bsv/utils/script_chunks.py
+Line: L11
+Description: Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed.
+Type: Code Smell
+Effort: 23min effort
+--------------------------------------------------------------------------------
+bsv/wallet/serializer/list_outputs.py
+Line: L6
+Description: Refactor this function to reduce its Cognitive Complexity from 21 to the 15 allowed.
+Type: Code Smell
+Effort: 11min effort
+--------------------------------------------------------------------------------
+bsv/wallet/substrates/serializer.py
+Line: L342
+Description: Refactor this function to reduce its Cognitive Complexity from 46 to the 15 allowed.
+Type: Code Smell
+Effort: 36min effort
+--------------------------------------------------------------------------------
+bsv/wallet/substrates/wallet_wire_transceiver.py
+Line: L471
+Description: Change this argument; Function "transmit" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+bsv/wallet/substrates/wallet_wire_transceiver.py
+Line: L484
+Description: Change this argument; Function "transmit" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L87
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L115
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L130
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L144
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L186
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L186
+Description: Refactor this function to reduce its Cognitive Complexity from 31 to the 15 allowed.
+Type: Code Smell
+Effort: 21min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L289
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L311
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L348
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L359
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L359
+Description: Refactor this function to reduce its Cognitive Complexity from 80 to the 15 allowed.
+Type: Code Smell
+Effort: 1h10min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L603
+Description: Refactor this function to reduce its Cognitive Complexity from 72 to the 15 allowed.
+Type: Code Smell
+Effort: 1h2min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L734
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L759
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L983
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L986
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1244
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1246
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1255
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1257
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1283
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1301
+Description: Remove parameter ctx or provide default value.
+Type: Code Smell
+Effort: 15min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1301
+Description: Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.
+Type: Code Smell
+Effort: 13min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1450
+Description: Refactor this function to reduce its Cognitive Complexity from 46 to the 15 allowed.
+Type: Code Smell
+Effort: 36min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1633
+Description: Refactor this function to reduce its Cognitive Complexity from 112 to the 15 allowed.
+Type: Code Smell
+Effort: 1h42min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L31
+Description: review-tests-manually.py
+Type: Code Smell
+Effort: 17min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L132
+Description: Define a constant instead of duplicating this literal 'py-sdk/tests/' 4 times.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L133
+Description: Define a constant instead of duplicating this literal 'tests/' 4 times.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L402
+Description: Refactor this function to reduce its Cognitive Complexity from 50 to the 15 allowed.
+Type: Code Smell
+Effort: 40min effort
+--------------------------------------------------------------------------------
+tests/bsv/address_test_coverage.py
+Line: L52
+Description: Define a constant instead of duplicating this literal "validate_address not available" 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/address_test_coverage.py
+Line: L143
+Description: Define a constant instead of duplicating this literal "decode_wif not available" 4 times.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+tests/bsv/address_test_coverage.py
+Line: L215
+Description: Define a constant instead of duplicating this literal "decode_address not available" 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/aes_cbc_test_coverage.py
+Line: L19
+Description: Define a constant instead of duplicating this literal "AES-CBC not available" 11 times.
+Type: Code Smell
+Effort: 22min effort
+--------------------------------------------------------------------------------
+tests/bsv/aes_gcm_test_coverage.py
+Line: L19
+Description: Define a constant instead of duplicating this literal "AES-GCM not available" 10 times.
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/clients/test_auth_fetch_full_e2e.py
+Line: L49
+Description: Enable server hostname verification on this SSL/TLS connection.
+Type: Vulnerability
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/clients/test_auth_fetch_full_e2e.py
+Line: L49
+Description: Use a stronger protocol, or upgrade to Python 3.10+ which uses secure defaults.
+Type: Vulnerability
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/clients/test_auth_fetch_full_e2e.py
+Line: L51
+Description: Enable server certificate validation on this SSL/TLS connection.
+Type: Vulnerability
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/clients/test_auth_fetch_integration.py
+Line: L494
+Description: Replace this expression; used as a condition it will always be constant.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_metanet_desktop_auth.py
+Line: L1320
+Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+Type: Code Smell
+Effort: 7min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_ssl_helper.py
+Line: L40
+Description: Use a stronger protocol, or upgrade to Python 3.10+ which uses secure defaults.
+Type: Vulnerability
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_ssl_helper.py
+Line: L40
+Description: Enable server hostname verification on this SSL/TLS connection.
+Type: Vulnerability
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_ssl_helper.py
+Line: L42
+Description: Enable server certificate validation on this SSL/TLS connection.
+Type: Vulnerability
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_ssl_helper.py
+Line: L49
+Description: Enable server hostname verification on this SSL/TLS connection.
+Type: Vulnerability
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_ssl_helper.py
+Line: L49
+Description: Use a stronger protocol, or upgrade to Python 3.10+ which uses secure defaults.
+Type: Vulnerability
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_ssl_helper.py
+Line: L80
+Description: Use a stronger protocol, or upgrade to Python 3.10+ which uses secure defaults.
+Type: Vulnerability
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/transports/test_auth_transport_http.py
+Line: L30
+Description: Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
+Type: Code Smell
+Effort: 9min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_builder_methods.py
+Line: L52
+Description: Change this argument; Function "merge_bump" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_builder_methods.py
+Line: L115
+Description: Change this argument; Function "merge_bump" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_builder_methods.py
+Line: L116
+Description: Change this argument; Function "merge_bump" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_comprehensive.py
+Line: L323
+Description: Add a nested comment explaining why this method is empty, or complete the implementation.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_comprehensive.py
+Line: L446
+Description: Change this argument; Function "merge_beef_tx" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_hardening.py
+Line: L126
+Description: Add a nested comment explaining why this method is empty, or complete the implementation.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L360
+Description: Change this argument; Function "verify" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L771
+Description: Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef_test_coverage.py
+Line: L17
+Description: Define a constant instead of duplicating this literal "BEEF module not available" 4 times.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef_test_coverage.py
+Line: L53
+Description: Define a constant instead of duplicating this literal "is_beef not available" 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/broadcaster_test_coverage.py
+Line: L16
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/broadcaster_test_coverage.py
+Line: L47
+Description: Define a constant instead of duplicating this literal "DefaultBroadcaster not available" 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/broadcasters_test_coverage.py
+Line: L21
+Description: Define a constant instead of duplicating this literal "WhatsOnChainBroadcaster not available" 6 times.
+Type: Code Smell
+Effort: 12min effort
+--------------------------------------------------------------------------------
+tests/bsv/chaintracker_test_coverage.py
+Line: L15
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/chaintracker_test_coverage.py
+Line: L17
+Description: Define a constant instead of duplicating this literal "ChainTracker not available" 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/chaintracker_test_coverage.py
+Line: L53
+Description: Define a constant instead of duplicating this literal "DefaultChainTracker not available" 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/chaintrackers_test_coverage.py
+Line: L19
+Description: Define a constant instead of duplicating this literal "WhatsOnChainTracker not available" 4 times.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+tests/bsv/curve_test_coverage.py
+Line: L19
+Description: Define a constant instead of duplicating this literal "Curve operations not available" 4 times.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+tests/bsv/ecdsa_test_coverage.py
+Line: L23
+Description: Define a constant instead of duplicating this literal "ECDSA module not available" 18 times.
+Type: Code Smell
+Effort: 36min effort
+--------------------------------------------------------------------------------
+tests/bsv/encrypted_message_test_coverage.py
+Line: L22
+Description: Define a constant instead of duplicating this literal "Encryption functions not available" 8 times.
+Type: Code Smell
+Effort: 16min effort
+--------------------------------------------------------------------------------
+tests/bsv/fee_model_test_coverage.py
+Line: L48
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/fee_models_test_coverage.py
+Line: L43
+Description: Define a constant instead of duplicating this literal "SatoshisPerKilobyte not available" 4 times.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+tests/bsv/hd/test_key_shares.py
+Line: L58
+Description: Change this argument; Function "to_key_shares" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/headers_client_test_coverage.py
+Line: L21
+Description: Define a constant instead of duplicating this literal "HeadersClient requires parameters" 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/headers_client_test_coverage.py
+Line: L23
+Description: Define a constant instead of duplicating this literal "HeadersClient not available" 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/headers_client_test_coverage.py
+Line: L76
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/headers_client_test_coverage.py
+Line: L78
+Description: Define a constant instead of duplicating this literal "GullibleHeadersClient not available" 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L16
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L18
+Description: Define a constant instead of duplicating this literal "HttpClient not available" 10 times.
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L26
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L37
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L54
+Description: Define a constant instead of duplicating this literal '/test' 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L123
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/keys_test_coverage.py
+Line: L15
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/keys_test_coverage.py
+Line: L29
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/keys_test_coverage.py
+Line: L37
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/keys_test_coverage.py
+Line: L70
+Description: Define a constant instead of duplicating this literal b'test message' 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/keys_test_coverage.py
+Line: L90
+Description: Define a constant instead of duplicating this literal "signature operations not available" 7 times.
+Type: Code Smell
+Effort: 14min effort
+--------------------------------------------------------------------------------
+tests/bsv/keys_test_coverage.py
+Line: L110
+Description: Define a constant instead of duplicating this literal b"test message" 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/keys_test_coverage.py
+Line: L168
+Description: Define a constant instead of duplicating this literal "key sharing operations not available" 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/keys_test_coverage.py
+Line: L323
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/keys_test_coverage.py
+Line: L335
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_keystore_local_kv_store.py
+Line: L42
+Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+Type: Code Smell
+Effort: 7min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore_test_coverage.py
+Line: L60
+Description: Define a constant instead of duplicating this literal "MemoryKeystore operations not available" 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore_test_coverage.py
+Line: L164
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore_test_coverage.py
+Line: L167
+Description: Define a constant instead of duplicating this literal "LocalKVStore not available" 7 times.
+Type: Code Smell
+Effort: 14min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore_test_coverage.py
+Line: L171
+Description: Define a constant instead of duplicating this literal "Skipped due to complex mocking requirements" 12 times.
+Type: Code Smell
+Effort: 24min effort
+--------------------------------------------------------------------------------
+tests/bsv/merkle_tree_parent_test_coverage.py
+Line: L23
+Description: Define a constant instead of duplicating this literal "merkle_tree_parent not available" 6 times.
+Type: Code Smell
+Effort: 12min effort
+--------------------------------------------------------------------------------
+tests/bsv/network_test_coverage.py
+Line: L42
+Description: Define a constant instead of duplicating this literal "get_network_config not available" 3 times.
+Type: Code Smell
+Effort: 6min effort
+--------------------------------------------------------------------------------
+tests/bsv/network_test_coverage.py
+Line: L111
+Description: Define a constant instead of duplicating this literal "WOCClient not available" 9 times.
+Type: Code Smell
+Effort: 18min effort
+--------------------------------------------------------------------------------
+tests/bsv/network_test_coverage.py
+Line: L148
+Description: Define a constant instead of duplicating this literal 'requests.get' 11 times.
+Type: Code Smell
+Effort: 22min effort
+--------------------------------------------------------------------------------
+tests/bsv/outpoint_test_coverage.py
+Line: L18
+Description: Define a constant instead of duplicating this literal "Outpoint not available" 9 times.
+Type: Code Smell
+Effort: 18min effort
+--------------------------------------------------------------------------------
+tests/bsv/overlay_tools/test_host_reputation_tracker.py
+Line: L34
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/polynomial_test_coverage.py
+Line: L16
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/polynomial_test_coverage.py
+Line: L18
+Description: Define a constant instead of duplicating this literal "Polynomial not available" 6 times.
+Type: Code Smell
+Effort: 12min effort
+--------------------------------------------------------------------------------
+tests/bsv/polynomial_test_coverage.py
+Line: L26
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/polynomial_test_coverage.py
+Line: L36
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/polynomial_test_coverage.py
+Line: L83
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/polynomial_test_coverage.py
+Line: L93
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_utils_encoding.py
+Line: L41
+Description: Change this argument; Function "from_base58" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives_test_coverage.py
+Line: L19
+Description: Define a constant instead of duplicating this literal "Primitives not available" 7 times.
+Type: Code Smell
+Effort: 14min effort
+--------------------------------------------------------------------------------
+tests/bsv/rpc_test_coverage.py
+Line: L18
+Description: Define a constant instead of duplicating this literal "RPC client not available" 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_operations_coverage.py
+Line: L136
+Description: Change this argument; Function "op_dup" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_operations_coverage.py
+Line: L144
+Description: Change this argument; Function "op_dup" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_operations_coverage.py
+Line: L159
+Description: Change this argument; Function "op_hash160" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_operations_coverage.py
+Line: L167
+Description: Change this argument; Function "op_hash160" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_operations_coverage.py
+Line: L182
+Description: Change this argument; Function "op_equal_verify" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_operations_coverage.py
+Line: L191
+Description: Change this argument; Function "op_equal_verify" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_operations_coverage.py
+Line: L199
+Description: Change this argument; Function "op_equal_verify" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_stack_coverage.py
+Line: L18
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_thread_coverage.py
+Line: L36
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_thread_coverage.py
+Line: L191
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/test_unlocking_template_coverage.py
+Line: L16
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/sighash_test_coverage.py
+Line: L30
+Description: Define a constant instead of duplicating this literal "Requires valid transaction" 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/sighash_test_coverage.py
+Line: L32
+Description: Define a constant instead of duplicating this literal "Sighash not available" 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/signature_test_coverage.py
+Line: L167
+Description: Define a constant instead of duplicating this literal b"test message" 8 times.
+Type: Code Smell
+Effort: 16min effort
+--------------------------------------------------------------------------------
+tests/bsv/signature_test_coverage.py
+Line: L218
+Description: Change this argument; Function "sign" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/signature_test_coverage.py
+Line: L345
+Description: Specify an exception class to catch or reraise the exception
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/signed_message_test_coverage.py
+Line: L24
+Description: Define a constant instead of duplicating this literal "sign_message not available" 8 times.
+Type: Code Smell
+Effort: 16min effort
+--------------------------------------------------------------------------------
+tests/bsv/spv_test_coverage.py
+Line: L17
+Description: Define a constant instead of duplicating this literal "SPV module not available" 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/storage_test_coverage.py
+Line: L47
+Description: Define a constant instead of duplicating this literal "MemoryStorage operations not available" 4 times.
+Type: Code Smell
+Effort: 8min effort
+--------------------------------------------------------------------------------
+tests/bsv/totp_test_coverage.py
+Line: L23
+Description: Define a constant instead of duplicating this literal "generate_totp not available" 5 times.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/totp_test_coverage.py
+Line: L25
+Description: Define a constant instead of duplicating this literal "TOTP module not available" 7 times.
+Type: Code Smell
+Effort: 14min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_coverage.py
+Line: L17
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_coverage.py
+Line: L32
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_party_coverage.py
+Line: L16
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_real.py
+Line: L15
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_tx_coverage.py
+Line: L18
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_tx_coverage.py
+Line: L31
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_tx_coverage.py
+Line: L46
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_validate_coverage.py
+Line: L39
+Description: Change this argument; Function "validate_transactions" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_json.py
+Line: L16
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_json.py
+Line: L58
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L20
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L134
+Description: Change this argument; Function "decode" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/serializer/test_relinquish_output.py
+Line: L227
+Description: Change this argument; Function "deserialize_relinquish_output_result" expects a different type
+Type: Code Smell
+Effort: 20min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_cached_key_deriver_coverage.py
+Line: L17
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_key_deriver_coverage.py
+Line: L17
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_wallet_impl.py
+Line: L539
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_wallet_impl_coverage.py
+Line: L38
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_wallet_impl_coverage.py
+Line: L47
+Description: Remove this identity check; it will always be True.
+Type: Code Smell
+Effort: 10min effort
+--------------------------------------------------------------------------------
+tests/vectors/generate_woc_vector.py
+Line: L10
+Description: Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
+Type: Code Smell
+Effort: 9min effort
+--------------------------------------------------------------------------------

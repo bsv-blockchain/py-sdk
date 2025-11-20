@@ -33,7 +33,7 @@ def thread(exec_opts):
 def test_thread_init_with_options(exec_opts):
     """Test Thread initialization with options."""
     t = Thread(exec_opts)
-    assert t is not None
+    assert t  # Verify object creation succeeds
     assert hasattr(t, 'opts')
     assert t.opts == exec_opts
 

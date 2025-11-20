@@ -3,6 +3,9 @@ Coverage tests for rpc.py - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_RPC = "RPC client not available"
+
 
 # ========================================================================
 # RPC client branches
@@ -15,7 +18,7 @@ def test_rpc_client_init():
         client = RPCClient(host='localhost', port=8332)
         assert client is not None
     except ImportError:
-        pytest.skip("RPC client not available")
+        pytest.skip(SKIP_RPC)
 
 
 def test_rpc_client_with_auth():
@@ -30,7 +33,7 @@ def test_rpc_client_with_auth():
         )
         assert client is not None
     except ImportError:
-        pytest.skip("RPC client not available")
+        pytest.skip(SKIP_RPC)
 
 
 def test_rpc_client_call():
@@ -47,7 +50,7 @@ def test_rpc_client_call():
             # Expected without RPC server
             assert True
     except ImportError:
-        pytest.skip("RPC client not available")
+        pytest.skip(SKIP_RPC)
 
 
 # ========================================================================
@@ -65,7 +68,7 @@ def test_rpc_client_empty_host():
             # May validate host
             assert True
     except ImportError:
-        pytest.skip("RPC client not available")
+        pytest.skip(SKIP_RPC)
 
 
 def test_rpc_client_invalid_port():
@@ -79,5 +82,5 @@ def test_rpc_client_invalid_port():
             # May validate port
             assert True
     except ImportError:
-        pytest.skip("RPC client not available")
+        pytest.skip(SKIP_RPC)
 

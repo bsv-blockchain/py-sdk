@@ -266,7 +266,7 @@ class TestVerifiableCertificateCoverage:
             # Test with object that doesn't have verify method
             cert_without_verify = Mock()
             del cert_without_verify.verify
-            verifiable_cert_no_verify = type('VerifiableCertificate', (), {
+            _ = type('VerifiableCertificate', (), {
                 'certificate': cert_without_verify
             })()
 

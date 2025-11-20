@@ -120,7 +120,7 @@ def test_save_contact_method_exists(manager):
 def test_save_contact_with_none(manager):
     """Test saving contact with None."""
     try:
-        result = manager.save_contact(None)
+        _ = manager.save_contact(None)
         # May handle or raise
         assert True
     except (TypeError, AttributeError):
@@ -131,7 +131,7 @@ def test_save_contact_with_none(manager):
 def test_save_contact_with_empty_dict(manager):
     """Test saving contact with empty dict."""
     try:
-        result = manager.save_contact({})
+        _ = manager.save_contact({})
         # May handle or raise
         assert True
     except (TypeError, ValueError, KeyError):
@@ -153,7 +153,7 @@ def test_delete_contact_existing(manager, mock_wallet):
     mock_wallet.create_action.return_value = {'txid': 'abc123'}
     
     try:
-        result = manager.delete_contact("test_key")
+        _ = manager.delete_contact("test_key")
         # Should call wallet methods
         assert True
     except Exception:
@@ -166,7 +166,7 @@ def test_delete_contact_not_found(manager, mock_wallet):
     mock_wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
     
     try:
-        result = manager.delete_contact("nonexistent_key")
+        _ = manager.delete_contact("nonexistent_key")
         # May handle gracefully
         assert True
     except (ValueError, KeyError, AttributeError):
@@ -177,7 +177,7 @@ def test_delete_contact_not_found(manager, mock_wallet):
 def test_delete_contact_with_none(manager):
     """Test deleting contact with None key."""
     try:
-        result = manager.delete_contact(None)
+        _ = manager.delete_contact(None)
         # May handle or raise
         assert True
     except (TypeError, AttributeError):
@@ -223,7 +223,7 @@ def test_manager_with_wallet_error(manager, mock_wallet):
     mock_wallet.list_outputs.side_effect = Exception("Wallet error")
     
     try:
-        result = manager.get_contacts()
+        _ = manager.get_contacts()
         # May handle error gracefully
         assert True
     except Exception:

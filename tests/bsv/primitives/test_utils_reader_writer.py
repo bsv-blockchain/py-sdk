@@ -78,7 +78,7 @@ class TestReaderPrimitives:
     def test_varint_roundtrip(self, num: int):
         w = Writer()
         w.write_var_int_num(num)
-        r = Reader(w.to_bytes())
+        _ = Reader(w.to_bytes())
         # Reader.read_var_int_num supports up to 64-bit per implementation
         # When Reader cannot parse, it may return None; only assert for supported range
         parsed = None

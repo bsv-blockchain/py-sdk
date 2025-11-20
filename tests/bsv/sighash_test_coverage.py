@@ -2,6 +2,9 @@
 Coverage tests for sighash.py - untested branches.
 """
 import pytest
+
+# Constants for skip messages
+SKIP_VALID_TX = "Requires valid transaction"
 from bsv.transaction import Transaction
 from bsv.transaction_input import TransactionInput
 from bsv.transaction_output import TransactionOutput
@@ -27,7 +30,7 @@ def test_sighash_all():
             assert isinstance(hash_value, bytes)
         except (IndexError, AttributeError):
             # May need valid inputs
-            pytest.skip("Requires valid transaction")
+            pytest.skip(SKIP_VALID_TX)
     except ImportError:
         pytest.skip("Sighash not available")
 
@@ -44,7 +47,7 @@ def test_sighash_none():
             hash_value = sighash(tx, 0, Script(b''), SIGHASH.NONE)
             assert isinstance(hash_value, bytes)
         except (IndexError, AttributeError):
-            pytest.skip("Requires valid transaction")
+            pytest.skip(SKIP_VALID_TX)
     except ImportError:
         pytest.skip("Sighash not available")
 
@@ -61,7 +64,7 @@ def test_sighash_single():
             hash_value = sighash(tx, 0, Script(b''), SIGHASH.SINGLE)
             assert isinstance(hash_value, bytes)
         except (IndexError, AttributeError):
-            pytest.skip("Requires valid transaction")
+            pytest.skip(SKIP_VALID_TX)
     except ImportError:
         pytest.skip("Sighash not available")
 
@@ -78,7 +81,7 @@ def test_sighash_anyonecanpay():
             hash_value = sighash(tx, 0, Script(b''), SIGHASH.ALL | SIGHASH.ANYONECANPAY)
             assert isinstance(hash_value, bytes)
         except (IndexError, AttributeError):
-            pytest.skip("Requires valid transaction")
+            pytest.skip(SKIP_VALID_TX)
     except ImportError:
         pytest.skip("Sighash not available")
 
@@ -128,7 +131,7 @@ def test_sighash_forkid():
             hash_value = sighash(tx, 0, Script(b''), SIGHASH.ALL | SIGHASH.FORKID)
             assert isinstance(hash_value, bytes)
         except (IndexError, AttributeError):
-            pytest.skip("Requires valid transaction")
+            pytest.skip(SKIP_VALID_TX)
     except ImportError:
         pytest.skip("Sighash not available")
 

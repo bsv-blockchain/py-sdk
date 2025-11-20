@@ -115,7 +115,7 @@ def test_relinquish_certificate(wallet):
         "serialNumber": b"TEMP001",
         "certifier": "temp_authority"
     }
-    result = wallet.relinquish_certificate(None, args, "test")
+    _ = wallet.relinquish_certificate(None, args, "test")
     
     # Certificate should be removed
     remaining = wallet.list_certificates(None, {}, "test")

@@ -86,7 +86,7 @@ def test_schnorr_sign_empty_message():
         priv = PrivateKey()
         
         try:
-            signature = schnorr_sign(b'', priv.key)
+            _ = schnorr_sign(b'', priv.key)
             assert True
         except (ValueError, AssertionError):
             # May require 32-byte message
@@ -104,7 +104,7 @@ def test_schnorr_sign_wrong_message_size():
         message = b'\x01' * 16  # Wrong size
         
         try:
-            signature = schnorr_sign(message, priv.key)
+            _ = schnorr_sign(message, priv.key)
             assert True
         except (ValueError, AssertionError):
             # Expected - Schnorr requires 32-byte message

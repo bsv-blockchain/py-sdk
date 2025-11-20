@@ -8,7 +8,7 @@ class HTTPWalletJSON:
         self.http_client = http_client or requests.Session()
         self.originator = originator
 
-    def api(self, ctx: Any, call: str, args: Any) -> bytes:
+    def api(self, _: Any = None, call: str = None, args: Any = None) -> bytes:
         url = f"{self.base_url}/{call}"
         headers = {
             "Accept": "application/json",

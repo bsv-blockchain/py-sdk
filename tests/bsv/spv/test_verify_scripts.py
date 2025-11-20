@@ -42,7 +42,7 @@ class TestVerifyScripts:
         
         # Create a simple P2PKH transaction
         priv_key = PrivateKey()
-        pub_key = priv_key.public_key()
+        _ = priv_key.public_key()
         address = priv_key.address()
         
         # Create source transaction

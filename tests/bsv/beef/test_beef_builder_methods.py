@@ -6,7 +6,7 @@ def test_merge_txid_only_and_make_txid_only():
     from bsv.transaction.beef_builder import merge_txid_only
     beef = Beef(version=BEEF_V2)
     txid = "aa" * 32
-    btx = merge_txid_only(beef, txid)
+    _ = merge_txid_only(beef, txid)
     assert txid in beef.txs and beef.txs[txid].data_format == 2
     # make_txid_only should return the same state for the same txid
     btx2 = beef.make_txid_only(txid)

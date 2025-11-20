@@ -65,9 +65,8 @@ def deserialize_verify_signature_args(data: bytes) -> Dict[str, Any]:
 def serialize_verify_signature_result(result: Any) -> bytes:
     if isinstance(result, (bytes, bytearray)):
         return bytes(result)
-    if isinstance(result, dict):
-        if "valid" in result:
-            return b"\x01" if bool(result.get("valid")) else b"\x00"
+    if isinstance(result, dict) and "valid" in result:
+        return b"\x01" if bool(result.get("valid")) else b"\x00"
     if isinstance(result, bool):
         return b"\x01" if result else b"\x00"
     return b"\x00"

@@ -304,24 +304,41 @@ def _extract_fields_from_chunks(chunks, start_idx: int, end_idx: int) -> List[by
         cop = _opcode_to_int(c.op)
         
         # Stop at DROP opcodes
-        if cop == drop or cop == twodrop:
+        if _is_drop_opcode(cop, drop, twodrop):
             break
         
-        # Handle empty data with special opcodes
-        if c.data is None or (isinstance(c.data, (bytes, bytearray)) and len(c.data) == 0):
-            if cop == 0x00:
-                fields.append(b"\x00")
-                continue
-            if cop == 0x4f:
-                fields.append(b"\x81")
-                continue
-            if 0x51 <= cop <= 0x60:
-                fields.append(bytes([cop - 0x50]))
-                continue
-        
-        fields.append(c.data or b"")
+        # Process chunk and extract field data
+        field_data = _process_chunk_for_field(c, cop)
+        if field_data is not None:
+            fields.append(field_data)
     
     return fields
+
+def _is_drop_opcode(opcode: int, drop: int, twodrop: int) -> bool:
+    """Check if opcode is a DROP or 2DROP."""
+    return opcode == drop or opcode == twodrop
+
+def _process_chunk_for_field(chunk, opcode: int) -> Optional[bytes]:
+    """Process a chunk and return the field data."""
+    # Handle empty data with special opcodes
+    if _is_empty_data(chunk.data):
+        return _get_special_opcode_value(opcode)
+    
+    return chunk.data or b""
+
+def _is_empty_data(data) -> bool:
+    """Check if data is None or empty."""
+    return data is None or (isinstance(data, (bytes, bytearray)) and len(data) == 0)
+
+def _get_special_opcode_value(opcode: int) -> Optional[bytes]:
+    """Get special value for empty data opcodes."""
+    if opcode == 0x00:
+        return b"\x00"
+    if opcode == 0x4f:
+        return b"\x81"
+    if 0x51 <= opcode <= 0x60:
+        return bytes([opcode - 0x50])
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -663,7 +680,7 @@ class PushDropUnlocker:
             decoded = PushDrop.decode(self.prev_locking_script)
             locking_pubkey = decoded.get("lockingPublicKey")
             if not locking_pubkey:
-                print(f"[WARN] PushDropUnlocker.sign: Could not extract public key from PushDrop script")
+                print("[WARN] PushDropUnlocker.sign: Could not extract public key from PushDrop script")
                 return None
             
             print(f"[DEBUG] PushDropUnlocker.sign: Using locking public key from PushDrop UTXO: {locking_pubkey.hex()}")
@@ -683,7 +700,7 @@ class PushDropUnlocker:
     
     def _create_fallback_signature(self, ctx, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> bytes:
         """Create signature using derived key (fallback method)."""
-        print(f"[DEBUG] PushDropUnlocker.sign: Fallback to derived public key")
+        print("[DEBUG] PushDropUnlocker.sign: Fallback to derived public key")
         create_args = {
             "encryption_args": {
                 "protocol_id": self.protocol_id,

@@ -13,7 +13,7 @@ def test_broadcaster_interface_exists():
     """Test that Broadcaster interface exists."""
     try:
         from bsv.broadcaster import Broadcaster
-        assert Broadcaster is not None
+        assert Broadcaster  # Verify import succeeds and class exists
     except ImportError:
         pytest.skip("Broadcaster not available")
 
@@ -67,7 +67,7 @@ def test_default_broadcaster_broadcast_tx():
         
         if hasattr(broadcaster, 'broadcast'):
             try:
-                result = broadcaster.broadcast(tx)
+                _ = broadcaster.broadcast(tx)
                 assert True
             except Exception:
                 # Expected without real endpoint
@@ -104,7 +104,7 @@ def test_broadcaster_broadcast_none():
         
         if hasattr(broadcaster, 'broadcast'):
             try:
-                result = broadcaster.broadcast(None)
+                _ = broadcaster.broadcast(None)
                 assert True
             except (TypeError, AttributeError):
                 # Expected

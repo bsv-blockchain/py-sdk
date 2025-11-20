@@ -2,6 +2,9 @@
 Coverage tests for encrypted_message.py - untested branches.
 """
 import pytest
+
+# Constants for skip messages
+SKIP_ENCRYPTION = "Encryption functions not available"
 from bsv.keys import PrivateKey
 
 
@@ -19,7 +22,7 @@ def test_encrypt_message_empty():
         encrypted = encrypt(b'', sender, recipient)
         assert isinstance(encrypted, bytes) or True
     except ImportError:
-        pytest.skip("Encryption functions not available")
+        pytest.skip(SKIP_ENCRYPTION)
 
 
 def test_encrypt_message_small():
@@ -33,7 +36,7 @@ def test_encrypt_message_small():
         assert isinstance(encrypted, bytes)
         assert len(encrypted) > 0
     except ImportError:
-        pytest.skip("Encryption functions not available")
+        pytest.skip(SKIP_ENCRYPTION)
 
 
 def test_encrypt_message_large():
@@ -48,7 +51,7 @@ def test_encrypt_message_large():
         assert isinstance(encrypted, bytes)
         assert len(encrypted) > len(message)
     except ImportError:
-        pytest.skip("Encryption functions not available")
+        pytest.skip(SKIP_ENCRYPTION)
 
 
 # ========================================================================
@@ -68,7 +71,7 @@ def test_decrypt_message_valid():
         
         assert decrypted == message
     except ImportError:
-        pytest.skip("Encryption functions not available")
+        pytest.skip(SKIP_ENCRYPTION)
 
 
 def test_decrypt_message_wrong_key():
@@ -90,7 +93,7 @@ def test_decrypt_message_wrong_key():
             # Expected to fail
             assert True
     except ImportError:
-        pytest.skip("Encryption functions not available")
+        pytest.skip(SKIP_ENCRYPTION)
 
 
 def test_decrypt_invalid_data():
@@ -107,7 +110,7 @@ def test_decrypt_invalid_data():
             # Expected to fail
             assert True
     except ImportError:
-        pytest.skip("Encryption functions not available")
+        pytest.skip(SKIP_ENCRYPTION)
 
 
 # ========================================================================
@@ -127,7 +130,7 @@ def test_encrypt_decrypt_roundtrip():
         
         assert decrypted == original
     except ImportError:
-        pytest.skip("Encryption functions not available")
+        pytest.skip(SKIP_ENCRYPTION)
 
 
 def test_encrypt_with_none_message():
@@ -144,5 +147,5 @@ def test_encrypt_with_none_message():
             # Expected
             assert True
     except ImportError:
-        pytest.skip("Encryption functions not available")
+        pytest.skip(SKIP_ENCRYPTION)
 

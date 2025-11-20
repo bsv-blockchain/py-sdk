@@ -412,7 +412,7 @@ def test_online_woc_sample_tx_verify_optional():
         if not hresp.ok:
             import pytest
             pytest.skip("WOC header endpoint not available")
-        header_root = hresp.json()["data"].get("merkleroot")
+        _ = hresp.json()["data"].get("merkleroot")
         # Expect env to provide TX/MerklePath; otherwise skip
         tx_hex = os.getenv("ONLINE_WOC_TX_HEX")
         mp_hex = os.getenv("ONLINE_WOC_MP_HEX")
@@ -463,7 +463,7 @@ def test_kvstore_set_transaction_verify_with_merkle_proof():
     from bsv.merkle_path import MerklePath
     priv = PrivateKey()
     wallet = WalletImpl(priv, permission_callback=lambda a: True)
-    kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=False, fee_rate=2))
+    _ = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=False, fee_rate=2))
     key = "push"
     value = "hello"
     field_bytes = value.encode()
@@ -854,7 +854,7 @@ def test_der_low_s_distribution_bounds_with_estimate():
         kv.set(None, f"k{i}", f"v{i}")
         kv.remove(None, f"k{i}")
         # sign_action stores last spends; collect unlocking script lengths
-        spends = wallet._actions and wallet._actions[-1]  # last action
+        _ = wallet._actions and wallet._actions[-1]  # last action
         # In mock, last_sign_spends contains the scripts
         if hasattr(wallet, "last_sign_spends") and isinstance(wallet.last_sign_spends, dict):
             for s in wallet.last_sign_spends.values():
@@ -958,7 +958,7 @@ def test_beef_mixed_versions_and_atomic_selection_logic():
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\x01" + b"\x02" + (b"\x11" * 32)
     # Wrap as Atomic
     atomic = int(ATOMIC_BEEF).to_bytes(4, 'little') + (b"\x11" * 32) + v2
-    beef, subject = new_beef_from_atomic_bytes(atomic)
+    _, subject = new_beef_from_atomic_bytes(atomic)
     assert subject == (b"\x11" * 32)[::-1].hex()
     # V1 with only version bytes should fail to parse (incomplete BEEF)
     import pytest
@@ -972,7 +972,7 @@ def test_parse_beef_ex_selection_priority():
     # Build V2 with TxIDOnly wrapped in Atomic; parse_beef_ex should return (beef, subject, last_tx)
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00" + b"\x01" + b"\x02" + (b"\x22" * 32)
     atomic = int(ATOMIC_BEEF).to_bytes(4, 'little') + (b"\x22" * 32) + v2
-    beef, subject, last_tx = parse_beef_ex(atomic)
+    _, subject, last_tx = parse_beef_ex(atomic)
     assert subject == (b"\x22" * 32)[::-1].hex()
     assert last_tx is None  # last_tx is for V1 only
 
@@ -1253,7 +1253,7 @@ def test_kvstore_cross_sdk_encryption_compat():
     }
     kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=True, default_ca=default_ca, fee_rate=2))
     # Set and get (py-sdk encrypts)
-    outp = kv.set(None, "enc_key", "secret")
+    _ = kv.set(None, "enc_key", "secret")
     got = kv.get(None, "enc_key", "")
     assert got.startswith("enc:")
     # Decrypt using wallet.decrypt
@@ -1291,10 +1291,10 @@ def test_kvstore_mixed_encrypted_and_plaintext_keys():
     }
     kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=True, default_ca=default_ca, fee_rate=2))
     # Set encrypted
-    outp1 = kv.set(None, "ekey", "eval")
+    _ = kv.set(None, "ekey", "eval")
     # Set plaintext (simulate by direct set with encrypt=False)
     kv2 = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=False, fee_rate=2))
-    outp2 = kv2.set(None, "pkey", "pval")
+    _ = kv2.set(None, "pkey", "pval")
     # Get both
     got1 = kv.get(None, "ekey", "")
     got2 = kv2.get(None, "pkey", "")
@@ -1346,7 +1346,7 @@ def test_kvstore_beef_edge_case_vectors():
     }
     kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=True, default_ca=default_ca, fee_rate=2))
     # Set and remove with normal flow
-    outp = kv.set(None, "edge", "case")
+    _ = kv.set(None, "edge", "case")
     txids = kv.remove(None, "edge")
     assert isinstance(txids, list)
     # Simulate edge-case BEEF: only TxIDOnly, deep nesting, etc. (for real test, inject via inputBEEF)

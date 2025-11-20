@@ -2,6 +2,9 @@
 Coverage tests for broadcasters/ modules (additional) - untested branches.
 """
 import pytest
+
+# Constants for skip messages
+SKIP_WOC_BROADCASTER = "WhatsOnChainBroadcaster not available"
 import asyncio
 from bsv.transaction import Transaction
 
@@ -18,7 +21,7 @@ def test_woc_broadcaster_init():
         broadcaster = WhatsOnChainBroadcaster()
         assert broadcaster is not None
     except (ImportError, AttributeError):
-        pytest.skip("WhatsOnChainBroadcaster not available")
+        pytest.skip(SKIP_WOC_BROADCASTER)
 
 
 def test_woc_broadcaster_with_network():
@@ -48,7 +51,7 @@ def test_woc_broadcaster_broadcast():
                 # Expected without valid tx or network
                 pytest.skip("Requires valid transaction and network")
     except (ImportError, AttributeError):
-        pytest.skip("WhatsOnChainBroadcaster not available")
+        pytest.skip(SKIP_WOC_BROADCASTER)
 
 
 # ========================================================================
@@ -138,7 +141,7 @@ def test_broadcaster_with_none_transaction():
                 # Expected
                 assert True
     except (ImportError, AttributeError):
-        pytest.skip("WhatsOnChainBroadcaster not available")
+        pytest.skip(SKIP_WOC_BROADCASTER)
 
 
 # ========================================================================
@@ -176,7 +179,7 @@ async def test_woc_broadcaster_network_failures():
         assert result.status == "error"
 
     except ImportError:
-        pytest.skip("WhatsOnChainBroadcaster not available")
+        pytest.skip(SKIP_WOC_BROADCASTER)
 
 
 @pytest.mark.asyncio
@@ -194,7 +197,7 @@ async def test_woc_broadcaster_invalid_network():
             WhatsOnChainBroadcaster(network="unknown")
 
     except ImportError:
-        pytest.skip("WhatsOnChainBroadcaster not available")
+        pytest.skip(SKIP_WOC_BROADCASTER)
 
 
 @pytest.mark.asyncio
@@ -235,7 +238,7 @@ async def test_woc_broadcaster_malformed_responses():
         assert isinstance(result, BroadcastFailure)
 
     except ImportError:
-        pytest.skip("WhatsOnChainBroadcaster not available")
+        pytest.skip(SKIP_WOC_BROADCASTER)
 
 
 def test_broadcast_response_creation():

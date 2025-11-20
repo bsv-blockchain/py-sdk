@@ -4,7 +4,7 @@ import pytest
 def test_beef_unknown_version_errors():
     """Unknown BEEF version should raise an error (Go/TS parity)."""
     from bsv.transaction.beef import parse_beef
-    # version=0xFFFFFFFF (unknown)
+    # Test with unknown version: 0xFFFFFFFF
     data = (0xFFFFFFFF).to_bytes(4, 'little') + b"\x00\x00\x00\x00"
     with pytest.raises(ValueError, match='unsupported BEEF version'):
         parse_beef(data)
@@ -50,8 +50,8 @@ def test_beef_v2_txidonly_then_raw_deduplicate():
     
     # Build BEEF V2 with TxIDOnly followed by RawTx for same txid
     v2 = int(BEEF_V2).to_bytes(4, 'little')
-    v2 += b"\x00"  # bumps=0
-    v2 += b"\x02"  # txs=2
+    v2 += b"\x00"  # No bumps (zero count)
+    v2 += b"\x02"  # Two transactions
     v2 += b"\x02" + txid_bytes  # TxIDOnly
     v2 += b"\x00" + tx.serialize()  # RawTx (same txid)
     
@@ -97,8 +97,8 @@ def test_beef_v2_mixed_txidonly_and_rawtx_linking():
     child.outputs = [TransactionOutput(Script(b"\x51"), 900)]
     child_id = child.txid()
     # Build BEEF V2 bytes: bumps=0, txs=3: TxIDOnly(parent), TxIDOnly(child), RawTx(parent), RawTx(child)
-    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"  # bumps=0
-    v2 += b"\x04"  # txs=4
+    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"  # No bumps (zero count)
+    v2 += b"\x04"  # Four transactions
     v2 += b"\x02" + bytes.fromhex(parent_id)[::-1]  # TxIDOnly(parent)
     v2 += b"\x02" + bytes.fromhex(child_id)[::-1]   # TxIDOnly(child)
     v2 += b"\x00" + parent.serialize()              # RawTx(parent)
@@ -149,7 +149,7 @@ def test_atomicbeef_nested_parsing():
     beef_bytes = t.to_beef()
     # Wrap as AtomicBEEF (subject=txid)
     atomic = int(ATOMIC_BEEF).to_bytes(4, 'little') + bytes.fromhex(t.txid())[::-1] + beef_bytes
-    beef, subject, last_tx = parse_beef_ex(atomic)
+    _, subject, last_tx = parse_beef_ex(atomic)
     assert subject == t.txid()
     assert last_tx is not None
     assert last_tx.txid() == t.txid()
@@ -168,7 +168,7 @@ def test_atomicbeef_deeply_nested():
     atomic1 = int(ATOMIC_BEEF).to_bytes(4, 'little') + bytes.fromhex(t.txid())[::-1] + beef_bytes
     atomic2 = int(ATOMIC_BEEF).to_bytes(4, 'little') + bytes.fromhex(t.txid())[::-1] + atomic1
     atomic3 = int(ATOMIC_BEEF).to_bytes(4, 'little') + bytes.fromhex(t.txid())[::-1] + atomic2
-    beef, subject, last_tx = parse_beef_ex(atomic3)
+    _, subject, last_tx = parse_beef_ex(atomic3)
     assert subject == t.txid()
     assert last_tx is not None
     assert last_tx.txid() == t.txid()
@@ -177,7 +177,7 @@ def test_atomicbeef_deeply_nested():
 def test_beef_v2_bump_index_out_of_range():
     """BEEF V2: bump index out of range should raise ValueError."""
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
-    # version, bumps=1, txs=1, kind=RawTxAndBumpIndex, bumpIndex=2 (invalid)
+    # Build BEEF: 1 bump, 1 tx with kind RawTxAndBumpIndex and invalid bumpIndex 2
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x01" + b"\x00" + b"\x01" + b"\x01" + b"\x02" + b"\x00"
     import pytest
     with pytest.raises((ValueError, TypeError)):
@@ -197,8 +197,8 @@ def test_beef_v2_txidonly_rawtx_duplicate_order():
     
     # Build BEEF V2: TxIDOnly, RawTx, TxIDOnly (all same txid) - tests deduplication in various orders
     v2 = int(BEEF_V2).to_bytes(4, 'little')
-    v2 += b"\x00"  # bumps=0
-    v2 += b"\x03"  # txs=3
+    v2 += b"\x00"  # No bumps (zero count)
+    v2 += b"\x03"  # Three transactions
     v2 += b"\x02" + txid_bytes  # TxIDOnly
     v2 += b"\x00" + tx.serialize()  # RawTx (same txid)
     v2 += b"\x02" + txid_bytes  # TxIDOnly again
@@ -250,7 +250,7 @@ def test_atomicbeef_subject_not_in_inner():
     subject = b"\xdd" * 32
     v2 = int(4022206466).to_bytes(4, 'little') + b"\x00" + b"\x00"
     atomic = int(ATOMIC_BEEF).to_bytes(4, 'little') + subject + v2
-    beef, subj, last_tx = parse_beef_ex(atomic)
+    _, subj, last_tx = parse_beef_ex(atomic)
     assert subj == subject[::-1].hex()
     assert last_tx is None
 

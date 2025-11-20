@@ -310,7 +310,7 @@ def test_beef_find_atomic_transaction():
 def test_beef_merge_bump():
     """Test merging bumps (GO: TestBeefMergeBump)"""
     beef1 = Beef(version=BEEF_V2)
-    beef2 = Beef(version=BEEF_V2)
+    _ = Beef(version=BEEF_V2)
     
     class DummyBump:
         def __init__(self, height, txid):

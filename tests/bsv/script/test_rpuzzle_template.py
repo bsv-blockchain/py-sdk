@@ -63,7 +63,7 @@ class TestRPuzzleTemplate:
         r_value = b'\x01' * 32
         
         rpuzzle = RPuzzle('raw')
-        locking_script = rpuzzle.lock(r_value)
+        _ = rpuzzle.lock(r_value)
         unlocker = rpuzzle.unlock(k_value, private_key)
         
         assert unlocker is not None

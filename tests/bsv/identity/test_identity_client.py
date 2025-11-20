@@ -200,7 +200,7 @@ class TestBuildOutputsForReveal:
         with patch('bsv.transaction.pushdrop.build_pushdrop_locking_script') as mock_build:
             mock_build.return_value = b"script"
             
-            labels, description, outputs = client._build_outputs_for_reveal(revealed)
+            labels, _, outputs = client._build_outputs_for_reveal(revealed)
             
             assert labels == ["identity", "reveal"]
             assert len(outputs) == 1

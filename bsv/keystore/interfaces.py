@@ -20,7 +20,7 @@ from typing import Any, List, Optional
 # encryption structures.  `WalletInterface` is only required for type hints.
 try:
     from bsv.wallet.WalletInterface import WalletInterface  # pragma: no cover
-except (ImportError, ModuleNotFoundError):  # pragma: no cover
+except ImportError:  # pragma: no cover
     WalletInterface = Any  # Fallback during early bootstrap
 
 

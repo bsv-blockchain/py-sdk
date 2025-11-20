@@ -14,7 +14,7 @@ def test_key_deriver_init():
     try:
         from bsv.wallet.key_deriver import KeyDeriver
         deriver = KeyDeriver(PrivateKey())
-        assert deriver is not None
+        assert deriver  # Verify object creation succeeds
     except ImportError:
         pytest.skip("KeyDeriver not available")
 

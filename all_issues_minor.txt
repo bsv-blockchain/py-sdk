@@ -1,0 +1,1884 @@
+bsv/auth/peer.py
+Line: L235
+Description: Rename this local variable "RequestedCertificateSet" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/identity/types.py
+Line: L25
+Description: Rename this field "IdentiCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/identity/types.py
+Line: L26
+Description: Rename this field "DiscordCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/identity/types.py
+Line: L27
+Description: Rename this field "PhoneCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/identity/types.py
+Line: L28
+Description: Rename this field "XCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/identity/types.py
+Line: L29
+Description: Rename this field "Registrant" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/identity/types.py
+Line: L30
+Description: Rename this field "EmailCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/identity/types.py
+Line: L31
+Description: Rename this field "Anyone" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/identity/types.py
+Line: L32
+Description: Rename this field "Self" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/identity/types.py
+Line: L33
+Description: Rename this field "CoolCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/keystore/interfaces.py
+Line: L23
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/overlay/lookup.py
+Line: L16
+Description: Rename this field "outputIndex" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/overlay/topic.py
+Line: L10
+Description: Rename this field "networkPreset" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/overlay_tools/ship_broadcaster.py
+Line: L114
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/overlay_tools/ship_broadcaster.py
+Line: L291
+Description: Add logic to this except clause or eliminate it and rethrow the exception automatically.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L28
+Description: Rename this parameter "A" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L29
+Description: Rename this parameter "B" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L30
+Description: Rename this parameter "S" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L52
+Description: Rename this local variable "S_prime" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L68
+Description: Rename this parameter "A" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L69
+Description: Rename this parameter "B" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L70
+Description: Rename this parameter "S" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L89
+Description: Rename this local variable "S_prime" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L99
+Description: Rename this local variable "zG" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L100
+Description: Rename this local variable "eA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L101
+Description: Rename this local variable "R_plus_eA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L107
+Description: Rename this local variable "zB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L108
+Description: Rename this local variable "eS" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L109
+Description: Rename this local variable "S_prime_plus_eS" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L118
+Description: Rename this parameter "A" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L119
+Description: Rename this parameter "B" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L120
+Description: Rename this parameter "S" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L121
+Description: Rename this parameter "S_prime" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L122
+Description: Rename this parameter "R" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L125
+Description: Rename this local variable "A_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L126
+Description: Rename this local variable "B_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L131
+Description: Rename this parameter "A" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L132
+Description: Rename this parameter "B" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L133
+Description: Rename this parameter "S" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L134
+Description: Rename this parameter "S_prime" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L135
+Description: Rename this parameter "R" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L142
+Description: Rename this local variable "A_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L143
+Description: Rename this local variable "B_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L144
+Description: Rename this local variable "S_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L145
+Description: Rename this local variable "S_prime_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/primitives/schnorr.py
+Line: L146
+Description: Rename this local variable "R_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/client.py
+Line: L156
+Description: Remove the unused local variable "protocol".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/registry/resolver.py
+Line: L74
+Description: Remove the unused local variable "rec".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L18
+Description: Rename this field "definitionType" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L19
+Description: Rename this field "basketID" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L21
+Description: Rename this field "iconURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L23
+Description: Rename this field "documentationURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L24
+Description: Rename this field "registryOperator" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L29
+Description: Rename this field "definitionType" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L30
+Description: Rename this field "protocolID" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L32
+Description: Rename this field "iconURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L34
+Description: Rename this field "documentationURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L35
+Description: Rename this field "registryOperator" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L40
+Description: Rename this field "definitionType" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L43
+Description: Rename this field "iconURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L45
+Description: Rename this field "documentationURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L47
+Description: Rename this field "registryOperator" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L60
+Description: Rename this field "outputIndex" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/registry/types.py
+Line: L62
+Description: Rename this field "lockingScript" to match the regular expression ^[_a-z][_a-z0-9]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/script/interpreter/operations.py
+Line: L88
+Description: Remove the unused local variable "sighash".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/transaction.py
+Line: L411
+Description: Remove the unused local variable "input_total".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef.py
+Line: L187
+Description: Replace this comprehension with passing the iterable to the dict constructor call
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef.py
+Line: L353
+Description: Remove this unnecessary `list()` call on an already iterable object.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef.py
+Line: L441
+Description: Replace the unused local variable "root_map" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_serialize.py
+Line: L76
+Description: Remove this unnecessary `list()` call on an already iterable object.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_tx.py
+Line: L12
+Description: Rename class "TX_DATA_FORMAT" to match the regular expression ^_?([A-Z_][a-zA-Z0-9]*|[a-z_][a-z0-9_]*)$.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_utils.py
+Line: L90
+Description: Rename this local variable "leafL" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_utils.py
+Line: L94
+Description: Rename this local variable "leafR" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_utils.py
+Line: L116
+Description: Rename this local variable "leafR" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_utils.py
+Line: L121
+Description: Rename this parameter "leafL" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/transaction/beef_utils.py
+Line: L121
+Description: Rename this parameter "leafR" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/utils/ecdsa.py
+Line: L54
+Description: Replace the unused local variable "s" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/utils/ecdsa.py
+Line: L54
+Description: Replace the unused local variable "r" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/utils/encoding.py
+Line: L8
+Description: Replace this comprehension with passing the iterable to the collection constructor call
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/utils/encoding.py
+Line: L59
+Description: Replace this comprehension with passing the iterable to the collection constructor call
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/utils/legacy.py
+Line: L205
+Description: Replace the unused local variable "r" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/utils/legacy.py
+Line: L205
+Description: Replace the unused local variable "s" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/serializer/list_outputs.py
+Line: L147
+Description: Rename this local variable "lockingScript" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/wallet/serializer/list_outputs.py
+Line: L148
+Description: Rename this local variable "customInstructions" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+bsv/wallet/substrates/serializer.py
+Line: L439
+Description: Remove the unused local variable "unlocking_len".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/substrates/wallet_wire_processor.py
+Line: L253
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L429
+Description: Remove the unused local variable "target".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L461
+Description: Remove the unused local variable "total_input".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1347
+Description: Remove the unused local variable "sighash_flag".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L1671
+Description: Remove the unused local variable "priv_address".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L42
+Description: generate-testlist.py
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L125
+Description: Remove the unused local variable "line_number".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L205
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L224
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L287
+Description: Remove the unused local variable "stripped".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L305
+Description: Replace the unused local variable "line_number" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/address_test_coverage.py
+Line: L138
+Description: Replace the unused local variable "network" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/address_test_coverage.py
+Line: L156
+Description: Replace the unused local variable "network" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/address_test_coverage.py
+Line: L173
+Description: Remove the unused local variable "testnet_prefix".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/address_test_coverage.py
+Line: L242
+Description: Remove this unneeded "pass".
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/aes_cbc_test_coverage.py
+Line: L102
+Description: Remove the unused local variable "decrypted".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/aes_cbc_test_coverage.py
+Line: L165
+Description: Remove the unused local variable "encrypted".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/aes_gcm_test_coverage.py
+Line: L76
+Description: Remove the unused local variable "decrypted".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/aes_gcm_test_coverage.py
+Line: L93
+Description: Remove the unused local variable "decrypted".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/aes_gcm_test_coverage.py
+Line: L135
+Description: Remove the unused local variable "encrypted".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/clients/test_auth_fetch_coverage.py
+Line: L205
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/clients/test_auth_fetch_coverage.py
+Line: L299
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/clients/test_auth_fetch_coverage.py
+Line: L328
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/clients/test_auth_fetch_integration.py
+Line: L149
+Description: Remove the unused local variable "nonce_b64".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_auth_peer_handshake.py
+Line: L81
+Description: Rename this local variable "tA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_auth_peer_handshake.py
+Line: L82
+Description: Rename this local variable "tB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_auth_peer_handshake.py
+Line: L86
+Description: Rename this local variable "wA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_auth_peer_handshake.py
+Line: L87
+Description: Rename this local variable "wB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_auth_peer_handshake.py
+Line: L90
+Description: Rename this local variable "pA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_auth_peer_handshake.py
+Line: L91
+Description: Rename this local variable "pB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_auth_server_full.py
+Line: L111
+Description: Remove the unused local variable "requested_certs".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_auth_server_full.py
+Line: L297
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_metanet_desktop_auth.py
+Line: L231
+Description: Remove the unused local variable "params".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_metanet_desktop_auth.py
+Line: L574
+Description: Remove the unused local variable "request_payload".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_metanet_desktop_auth.py
+Line: L625
+Description: Remove the unused local variable "auth_result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_metanet_desktop_auth.py
+Line: L689
+Description: Remove the unused local variable "args".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_metanet_desktop_auth.py
+Line: L1227
+Description: Remove the unused local variable "peer".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_metanet_desktop_auth.py
+Line: L1443
+Description: Remove this redundant return.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_metanet_desktop_auth.py
+Line: L1447
+Description: Remove this redundant return.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/auth/test_verifiable_certificate_coverage.py
+Line: L269
+Description: Remove the unused local variable "verifiable_cert_no_verify".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/base58_test_coverage.py
+Line: L87
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/base58_test_coverage.py
+Line: L90
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_builder_methods.py
+Line: L9
+Description: Remove the unused local variable "btx".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_comprehensive.py
+Line: L313
+Description: Remove the unused local variable "beef2".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_hardening.py
+Line: L152
+Description: Replace the unused local variable "beef" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_hardening.py
+Line: L171
+Description: Replace the unused local variable "beef" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_hardening.py
+Line: L253
+Description: Replace the unused local variable "beef" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_parity.py
+Line: L9
+Description: Replace the unused local variable "beef" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_parity.py
+Line: L9
+Description: Replace the unused local variable "subject" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_validate_methods.py
+Line: L139
+Description: Rename this local variable "tA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_validate_methods.py
+Line: L140
+Description: Rename this local variable "tB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_validate_methods.py
+Line: L141
+Description: Rename this local variable "tC" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_beef_validate_methods.py
+Line: L142
+Description: Rename this local variable "tD" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L167
+Description: Remove this unneeded "pass".
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L349
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L415
+Description: Remove the unused local variable "header_root".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L441
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L466
+Description: Remove the unused local variable "kv".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L487
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L525
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L556
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L584
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L618
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L639
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L857
+Description: Remove the unused local variable "spends".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L961
+Description: Replace the unused local variable "beef" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L975
+Description: Replace the unused local variable "beef" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L1256
+Description: Remove the unused local variable "outp".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L1294
+Description: Remove the unused local variable "outp1".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L1297
+Description: Remove the unused local variable "outp2".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Line: L1349
+Description: Remove the unused local variable "outp".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/broadcaster_test_coverage.py
+Line: L70
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/broadcaster_test_coverage.py
+Line: L107
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/broadcasters_test_coverage.py
+Line: L45
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/broadcasters_test_coverage.py
+Line: L79
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/broadcasters_test_coverage.py
+Line: L135
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/chaintracker_test_coverage.py
+Line: L105
+Description: Remove the unused local variable "header".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/chaintrackers_test_coverage.py
+Line: L101
+Description: Remove the unused local variable "header".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/chaintrackers_test_coverage.py
+Line: L103
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/compat/test_bsm.py
+Line: L60
+Description: Replace the unused local variable "compressed" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/compat/test_bsm.py
+Line: L62
+Description: Replace the unused local variable "recovery_id" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/encrypted_message_test_coverage.py
+Line: L104
+Description: Remove the unused local variable "decrypted".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/encrypted_message_test_coverage.py
+Line: L141
+Description: Remove the unused local variable "encrypted".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/fee_models/test_live_policy_coverage.py
+Line: L87
+Description: Remove the unused local variable "fee1".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/fee_models/test_live_policy_coverage.py
+Line: L88
+Description: Remove the unused local variable "fee2".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/hd/test_key_shares.py
+Line: L159
+Description: Consider using "assertGreater" instead.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/headers_client/test_headers_client.py
+Line: L24
+Description: Use asynchronous features in this function or remove the `async` keyword.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/headers_client_test_coverage.py
+Line: L108
+Description: Remove the unused local variable "header".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L54
+Description: Remove the unused local variable "response".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L71
+Description: Remove the unused local variable "response".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L88
+Description: Remove the unused local variable "response".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L105
+Description: Remove the unused local variable "response".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L136
+Description: Remove the unused local variable "response".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L157
+Description: Remove the unused local variable "response".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L174
+Description: Remove the unused local variable "response".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L195
+Description: Remove the unused local variable "response".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/http_client_test_coverage.py
+Line: L197
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/identity/test_contacts_manager.py
+Line: L59
+Description: Remove the unused local variable "contacts".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/identity/test_contacts_manager_coverage.py
+Line: L123
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/identity/test_contacts_manager_coverage.py
+Line: L134
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/identity/test_contacts_manager_coverage.py
+Line: L156
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/identity/test_contacts_manager_coverage.py
+Line: L169
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/identity/test_contacts_manager_coverage.py
+Line: L180
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/identity/test_contacts_manager_coverage.py
+Line: L226
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/identity/test_identity_client.py
+Line: L203
+Description: Replace the unused local variable "description" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Line: L54
+Description: Replace the unused local variable "beef_bytes" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Line: L64
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Line: L105
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Line: L150
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Line: L201
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Line: L238
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Line: L269
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Line: L346
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Line: L394
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore/test_local_kv_store_complete.py
+Line: L126
+Description: Rename this local variable "defaultValue" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore_test_coverage.py
+Line: L315
+Description: Remove the unused local variable "store".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/keystore_test_coverage.py
+Line: L318
+Description: Remove the unused local variable "valid_contexts".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/merkle_path_test_coverage.py
+Line: L76
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/merkle_tree_parent_test_coverage.py
+Line: L82
+Description: Remove the unused local variable "parent".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/merkle_tree_parent_test_coverage.py
+Line: L97
+Description: Remove the unused local variable "parent".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/network/test_woc_client_coverage.py
+Line: L42
+Description: Remove the unused local variable "tx".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/network/test_woc_client_coverage.py
+Line: L60
+Description: Remove the unused local variable "balance".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/network/test_woc_client_coverage.py
+Line: L78
+Description: Remove the unused local variable "utxos".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/network/test_woc_client_coverage.py
+Line: L96
+Description: Remove the unused local variable "history".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/network/test_woc_client_coverage.py
+Line: L118
+Description: Remove the unused local variable "tx".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/network/test_woc_client_coverage.py
+Line: L120
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/network/test_woc_client_coverage.py
+Line: L136
+Description: Remove the unused local variable "balance".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/network/test_woc_client_coverage.py
+Line: L138
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/overlay/test_lookup_coverage.py
+Line: L31
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/overlay/test_lookup_coverage.py
+Line: L68
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/overlay/test_lookup_coverage.py
+Line: L70
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/overlay_test_coverage.py
+Line: L73
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/overlay_test_coverage.py
+Line: L95
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/overlay_test_coverage.py
+Line: L97
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/overlay_tools/test_advanced_features.py
+Line: L362
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/overlay_tools/test_advanced_features.py
+Line: L418
+Description: Remove the unused local variable "broadcaster".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_drbg.py
+Line: L112
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L30
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L45
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L62
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L79
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L96
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L112
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L128
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L145
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L161
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr.py
+Line: L197
+Description: Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr_coverage.py
+Line: L89
+Description: Remove the unused local variable "signature".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_schnorr_coverage.py
+Line: L107
+Description: Remove the unused local variable "signature".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/primitives/test_utils_reader_writer.py
+Line: L81
+Description: Remove the unused local variable "r".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/registry/test_registry_client.py
+Line: L114
+Description: Consider using "assertIsInstance" instead.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/rpc_test_coverage.py
+Line: L44
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/rpc_test_coverage.py
+Line: L76
+Description: Remove the unused local variable "client".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_edge_cases.py
+Line: L26
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_edge_cases.py
+Line: L229
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_edge_cases.py
+Line: L320
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_engine.py
+Line: L57
+Description: Remove the unused local variable "opts".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_engine_comprehensive.py
+Line: L56
+Description: Remove the unused local variable "opts".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_number.py
+Line: L66
+Description: Remove the unused local variable "num".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_number.py
+Line: L68
+Description: Remove this unneeded "pass".
+Type: Code Smell
+Effort: 2min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_opcode_parser_coverage.py
+Line: L59
+Description: Replace the unused local variable "size" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_opcode_parser_coverage.py
+Line: L72
+Description: Replace the unused local variable "size" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_opcode_parser_coverage.py
+Line: L118
+Description: Replace the unused local variable "opcode" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_opcode_parser_coverage.py
+Line: L123
+Description: Replace the unused local variable "opcode2" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_opcode_parser_coverage.py
+Line: L123
+Description: Replace the unused local variable "size2" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_opcode_parser_coverage.py
+Line: L141
+Description: Replace the unused local variable "opcode" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_opcode_parser_coverage.py
+Line: L141
+Description: Replace the unused local variable "size" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_performance.py
+Line: L79
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_performance.py
+Line: L105
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_performance.py
+Line: L128
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_performance.py
+Line: L161
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_performance.py
+Line: L208
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_performance.py
+Line: L242
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/interpreter/test_stack_coverage.py
+Line: L58
+Description: Remove the unused local variable "value".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/test_bip276_coverage.py
+Line: L70
+Description: Remove the unused local variable "decoded".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/test_bip276_coverage.py
+Line: L84
+Description: Remove the unused local variable "decoded".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/test_bip276_coverage.py
+Line: L86
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/test_p2pkh_template.py
+Line: L53
+Description: Remove the unused local variable "locking_script".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/test_p2pkh_template.py
+Line: L64
+Description: Remove the unused local variable "address".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/test_rpuzzle_template.py
+Line: L66
+Description: Remove the unused local variable "locking_script".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/script/test_scripts.py
+Line: L272
+Description: Remove the unused local variable "public_key".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/signature_test_coverage.py
+Line: L333
+Description: Remove the unused local variable "signature".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/signature_test_coverage.py
+Line: L343
+Description: Remove the unused local variable "invalid_pub".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/signature_test_coverage.py
+Line: L371
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/spv/test_verify_scripts.py
+Line: L45
+Description: Remove the unused local variable "pub_key".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/storage/test_storage.py
+Line: L44
+Description: Remove the unused local variable "original_fetch".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/storage/test_storage.py
+Line: L84
+Description: Remove the unused local variable "original_fetch".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/storage/test_storage.py
+Line: L152
+Description: Remove the unused local variable "original_fetch".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/storage/test_storage_e2e.py
+Line: L103
+Description: Remove the unused local variable "uhrp_url".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/test_utils_address.py
+Line: L51
+Description: Rename method "test_decode_address_with_O" to match the regular expression ^[a-z_][a-z0-9_]*$.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/test_utils_address.py
+Line: L56
+Description: Rename method "test_decode_address_with_I" to match the regular expression ^[a-z_][a-z0-9_]*$.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/test_utils_conversions.py
+Line: L341
+Description: Rename method "test_from_base58_I_char_raises" to match the regular expression ^[a-z_][a-z0-9_]*$.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/test_utils_ecdsa.py
+Line: L118
+Description: Replace the unused local variable "s_decoded" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_coverage.py
+Line: L65
+Description: Remove the unused local variable "beef".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_real.py
+Line: L309
+Description: Remove the unused local variable "beef".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_real.py
+Line: L345
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_beef_serialize_coverage.py
+Line: L44
+Description: Remove the unused local variable "beef".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L55
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L69
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L83
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L98
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L116
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L136
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L152
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L167
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L182
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_coverage.py
+Line: L196
+Description: Remove this redundant Exception class; it derives from another which is already caught.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_parity.py
+Line: L26
+Description: Remove the unused local variable "pd".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_pushdrop_parity.py
+Line: L144
+Description: Remove the unused local variable "pubkey".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_signature_hash.py
+Line: L53
+Description: Remove the unused local variable "expected_preimage_hex".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction/test_transaction_coverage.py
+Line: L168
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/transaction_preimage_test_coverage.py
+Line: L125
+Description: Remove the unused local variable "preimage".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/utils/test_encoding_coverage.py
+Line: L76
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/utils/test_script_chunks_coverage.py
+Line: L96
+Description: Remove the unused local variable "chunk".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/utils/test_script_chunks_coverage.py
+Line: L112
+Description: Remove the unused local variable "chunk".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/utils/test_script_chunks_coverage.py
+Line: L132
+Description: Remove the unused local variable "chunks".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py
+Line: L88
+Description: Remove the unused local variable "tx".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/substrates/test_wallet_wire_integration.py
+Line: L28
+Description: Remove the unused local variable "protocol".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/substrates/test_wallet_wire_integration.py
+Line: L55
+Description: Remove the unused local variable "protocol".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/substrates/test_wallet_wire_integration.py
+Line: L78
+Description: Remove the unused local variable "protocol".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/substrates/test_wallet_wire_transceiver_coverage.py
+Line: L501
+Description: Replace the unused loop index "i" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/substrates/test_xdm.py
+Line: L36
+Description: Rename method "postMessage" to match the regular expression ^[a-z_][a-z0-9_]*$.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_wallet_certificates.py
+Line: L118
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_wallet_impl.py
+Line: L74
+Description: Remove the unused local variable "protocol".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_wallet_impl_coverage.py
+Line: L93
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_wallet_impl_coverage.py
+Line: L106
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/wallet/test_wallet_impl_coverage.py
+Line: L121
+Description: Remove the unused local variable "result".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/test_auth_verifiable_certificate.py
+Line: L54
+Description: Replace the unused local variable "keyring" with "_".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/vectors/auth/generate_auth_vectors.py
+Line: L44
+Description: Remove the unused local variable "cert_type_b64".
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------

@@ -41,14 +41,16 @@ class SIGHASH(int, Enum):
         if isinstance(other, SIGHASH):
             # Create a new SIGHASH instance with the OR'd value
             result = int.__or__(self.value, other.value)
+            # Ensure result is an int for hex conversion
+            result_int = int(result) if not isinstance(result, int) else result
             # Try to return an existing member, or create a pseudo-member
             try:
-                return SIGHASH(result)
+                return SIGHASH(result_int)
             except ValueError:
                 # If the result isn't a defined member, create a pseudo-member
-                obj = int.__new__(SIGHASH, result)
-                obj._name_ = f"SIGHASH_{hex(result)}"
-                obj._value_ = result
+                obj = int.__new__(SIGHASH, result_int)
+                obj._name_ = f"SIGHASH_{hex(result_int)}"
+                obj._value_ = result_int
                 return obj
         return NotImplemented
 

@@ -127,7 +127,7 @@ def _deserialize_seek(r: Reader):
     return None if b == 0xFF else (b == 1)
 
 
-def serialize_key_linkage_result(result: Dict[str, Any]) -> bytes:
+def serialize_key_linkage_result(_: Dict[str, Any] = None) -> bytes:
     # Minimal: no payload; use frame status for success/error
     return b""
 

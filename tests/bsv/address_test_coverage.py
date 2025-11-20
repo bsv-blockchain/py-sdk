@@ -4,6 +4,9 @@ Coverage tests for address.py - untested branches.
 import pytest
 from bsv.keys import PrivateKey
 
+# Constants for skip messages
+SKIP_VALIDATE_ADDRESS = "validate_address not available"
+
 
 # ========================================================================
 # Address generation branches
@@ -49,7 +52,7 @@ def test_address_validate_valid():
         is_valid = validate_address(address)
         assert is_valid == True
     except ImportError:
-        pytest.skip("validate_address not available")
+        pytest.skip(SKIP_VALIDATE_ADDRESS)
 
 
 def test_address_validate_invalid():
@@ -59,7 +62,7 @@ def test_address_validate_invalid():
         is_valid = validate_address("invalid")
         assert is_valid == False
     except ImportError:
-        pytest.skip("validate_address not available")
+        pytest.skip(SKIP_VALIDATE_ADDRESS)
 
 
 def test_address_validate_empty():
@@ -69,7 +72,7 @@ def test_address_validate_empty():
         is_valid = validate_address("")
         assert is_valid == False
     except ImportError:
-        pytest.skip("validate_address not available")
+        pytest.skip(SKIP_VALIDATE_ADDRESS)
 
 
 # ========================================================================
@@ -135,7 +138,7 @@ def test_decode_wif_compressed():
         priv = PrivateKey()
         priv.compressed = True
         wif = priv.wif()
-        private_key, compressed, network = decode_wif(wif)
+        private_key, compressed, _ = decode_wif(wif)
         assert isinstance(private_key, bytes)
         assert compressed is True
         assert len(private_key) == 32
@@ -153,7 +156,7 @@ def test_decode_wif_uncompressed():
         priv = PrivateKey()
         priv.compressed = False
         wif = priv.wif()
-        private_key, compressed, network = decode_wif(wif)
+        private_key, compressed, _ = decode_wif(wif)
         assert isinstance(private_key, bytes)
         assert compressed is False
         assert len(private_key) == 32
@@ -169,8 +172,7 @@ def test_decode_wif_invalid_prefix():
         from bsv.constants import WIF_PREFIX_NETWORK_DICT
 
         # Get a valid prefix and create data with invalid prefix
-        # Use testnet prefix but change it to an invalid one
-        testnet_prefix = b'\xef'  # Testnet WIF prefix
+        # Use invalid prefix (testnet would be b'\xef')
         invalid_prefix = b'\xff'  # Invalid prefix
 
         # Create WIF data with valid checksum but invalid prefix
@@ -259,7 +261,7 @@ def test_address_validate_with_network_match():
         # Should work regardless of network match (depends on key type)
         assert isinstance(is_valid, bool)
     except ImportError:
-        pytest.skip("validate_address not available")
+        pytest.skip(SKIP_VALIDATE_ADDRESS)
 
 
 def test_address_validate_with_network_mismatch():
@@ -273,5 +275,5 @@ def test_address_validate_with_network_mismatch():
         # Should work regardless of network mismatch (depends on key type)
         assert isinstance(is_valid, bool)
     except ImportError:
-        pytest.skip("validate_address not available")
+        pytest.skip(SKIP_VALIDATE_ADDRESS)
 

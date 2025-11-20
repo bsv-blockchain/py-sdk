@@ -467,7 +467,7 @@ class WalletWireTransceiver:
         )
         return deserialize_discover_certificates_result(resp)
 
-    def is_authenticated(self, ctx: Any, args: dict, originator: str) -> dict:
+    def is_authenticated(self, ctx: Any = None, originator: str = None) -> dict:
         resp = self.transmit(ctx, WalletWireCall.IS_AUTHENTICATED, originator, None)
         if not resp:
             return {}
@@ -480,7 +480,7 @@ class WalletWireTransceiver:
             return {}
         return {"authenticated": bool(resp[0] == 1)}
 
-    def wait_for_authentication(self, ctx: Any, args: dict, originator: str) -> dict:
+    def wait_for_authentication(self, ctx: Any = None, originator: str = None) -> dict:
         _ = self.transmit(ctx, WalletWireCall.WAIT_FOR_AUTHENTICATION, originator, None)
         return {"authenticated": True}
 

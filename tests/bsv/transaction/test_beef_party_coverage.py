@@ -13,7 +13,7 @@ def test_beef_party_init():
     try:
         from bsv.transaction.beef_party import BeefParty
         party = BeefParty()
-        assert party is not None
+        assert party  # Verify object creation succeeds
     except ImportError:
         pytest.skip("BeefParty not available")
 

@@ -3,6 +3,9 @@ Coverage tests for outpoint.py - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_OUTPOINT = "Outpoint not available"
+
 
 # ========================================================================
 # Outpoint initialization branches
@@ -15,7 +18,7 @@ def test_outpoint_init():
         op = Outpoint(txid='0' * 64, vout=0)
         assert op is not None
     except ImportError:
-        pytest.skip("Outpoint not available")
+        pytest.skip(SKIP_OUTPOINT)
 
 
 def test_outpoint_init_with_index():
@@ -25,7 +28,7 @@ def test_outpoint_init_with_index():
         op = Outpoint(txid='0' * 64, vout=5)
         assert op.vout == 5
     except ImportError:
-        pytest.skip("Outpoint not available")
+        pytest.skip(SKIP_OUTPOINT)
 
 
 def test_outpoint_init_zero_index():
@@ -35,7 +38,7 @@ def test_outpoint_init_zero_index():
         op = Outpoint(txid='0' * 64, vout=0)
         assert op.vout == 0
     except ImportError:
-        pytest.skip("Outpoint not available")
+        pytest.skip(SKIP_OUTPOINT)
 
 
 # ========================================================================
@@ -51,7 +54,7 @@ def test_outpoint_serialize():
         assert isinstance(serialized, bytes)
         assert len(serialized) == 36  # 32 bytes txid + 4 bytes vout
     except ImportError:
-        pytest.skip("Outpoint not available")
+        pytest.skip(SKIP_OUTPOINT)
 
 
 def test_outpoint_deserialize():
@@ -64,7 +67,7 @@ def test_outpoint_deserialize():
         op2 = Outpoint.deserialize(serialized)
         assert op2.vout == 1
     except ImportError:
-        pytest.skip("Outpoint not available")
+        pytest.skip(SKIP_OUTPOINT)
 
 
 # ========================================================================
@@ -79,7 +82,7 @@ def test_outpoint_equality():
         op2 = Outpoint(txid='0' * 64, vout=0)
         assert op1.txid == op2.txid and op1.vout == op2.vout
     except ImportError:
-        pytest.skip("Outpoint not available")
+        pytest.skip(SKIP_OUTPOINT)
 
 
 def test_outpoint_inequality():
@@ -90,7 +93,7 @@ def test_outpoint_inequality():
         op2 = Outpoint(txid='0' * 64, vout=1)
         assert op1.vout != op2.vout
     except ImportError:
-        pytest.skip("Outpoint not available")
+        pytest.skip(SKIP_OUTPOINT)
 
 
 # ========================================================================
@@ -105,7 +108,7 @@ def test_outpoint_str_representation():
         str_repr = str(op)
         assert isinstance(str_repr, str)
     except ImportError:
-        pytest.skip("Outpoint not available")
+        pytest.skip(SKIP_OUTPOINT)
 
 
 def test_outpoint_large_index():
@@ -115,5 +118,5 @@ def test_outpoint_large_index():
         op = Outpoint(txid='0' * 64, vout=0xFFFFFFFF)
         assert op.vout == 0xFFFFFFFF
     except ImportError:
-        pytest.skip("Outpoint not available")
+        pytest.skip(SKIP_OUTPOINT)
 

@@ -202,7 +202,7 @@ def stringify_ecdsa_recoverable(signature: bytes, compressed: bool = True) -> st
     Returns:
         Base64 encoded signature string
     """
-    r, s, recovery_id = deserialize_ecdsa_recoverable(signature)
+    _, _, recovery_id = deserialize_ecdsa_recoverable(signature)
     prefix: int = 27 + recovery_id + (4 if compressed else 0)
     signature_bytes: bytes = prefix.to_bytes(1, 'big') + signature[:-1]
     return b64encode(signature_bytes).decode('ascii')

@@ -115,7 +115,7 @@ class TestECDSADER:
         """Test DER encoding with various r,s values."""
         signature = (r, s)
         der = serialize_ecdsa_der(signature)
-        r_decoded, s_decoded = deserialize_ecdsa_der(der)
+        r_decoded, _ = deserialize_ecdsa_der(der)
         
         assert r_decoded == r
 

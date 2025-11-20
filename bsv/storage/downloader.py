@@ -83,30 +83,52 @@ class Downloader(StorageDownloaderInterface):
         download_urls = self.resolve(uhrp_url)
         if not isinstance(download_urls, list) or not download_urls:
             raise DownloadError("No one currently hosts this file!")
+        
         expected_hash = StorageUtils.get_hash_from_url(uhrp_url)
         last_err = None
+        
         for url in download_urls:
-            for attempt in range(1, self.max_retries + 1):
-                try:
-                    resp = requests.get(url, timeout=self.timeout)
-                except requests.RequestException as e:
-                    last_err = NetworkError(f"Network error during file download (attempt {attempt}/{self.max_retries}): {e}")
-                    if attempt < self.max_retries:
-                        time.sleep(self.retry_delay)
-                    continue
-                if not self._check_response_errors(resp):
-                    last_err = DownloadError(f"HTTP error during file download (attempt {attempt}/{self.max_retries}) from {url}")
-                    if attempt < self.max_retries:
-                        time.sleep(self.retry_delay)
-                    continue
-                data = resp.content
-                mime_type = resp.headers.get('Content-Type')
-                if not self._is_valid_hash(data, expected_hash):
-                    last_err = DownloadError(f"Hash mismatch for file from {url} (attempt {attempt}/{self.max_retries})")
-                    if attempt < self.max_retries:
-                        time.sleep(self.retry_delay)
-                    continue
-                return DownloadResult(data=data, mime_type=mime_type)
+            result, error = self._try_download_from_url(url, expected_hash)
+            if result:
+                return result
+            last_err = error
+        
         if last_err:
             raise last_err
         raise DownloadError(f"Unable to download content from {uhrp_url} after {self.max_retries} retries per host.")
+    
+    def _try_download_from_url(self, url: str, expected_hash: bytes):
+        """
+        Attempt to download file from a specific URL with retries.
+        Returns (DownloadResult, None) on success or (None, Error) on failure.
+        """
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                resp = requests.get(url, timeout=self.timeout)
+            except requests.RequestException as e:
+                error = NetworkError(f"Network error during file download (attempt {attempt}/{self.max_retries}): {e}")
+                if attempt < self.max_retries:
+                    time.sleep(self.retry_delay)
+                    continue
+                return None, error
+            
+            if not self._check_response_errors(resp):
+                error = DownloadError(f"HTTP error during file download (attempt {attempt}/{self.max_retries}) from {url}")
+                if attempt < self.max_retries:
+                    time.sleep(self.retry_delay)
+                    continue
+                return None, error
+            
+            data = resp.content
+            mime_type = resp.headers.get('Content-Type')
+            
+            if not self._is_valid_hash(data, expected_hash):
+                error = DownloadError(f"Hash mismatch for file from {url} (attempt {attempt}/{self.max_retries})")
+                if attempt < self.max_retries:
+                    time.sleep(self.retry_delay)
+                    continue
+                return None, error
+            
+            return DownloadResult(data=data, mime_type=mime_type), None
+        
+        return None, DownloadError(f"Failed to download from {url} after {self.max_retries} attempts")

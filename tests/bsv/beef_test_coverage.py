@@ -3,6 +3,9 @@ Coverage tests for beef/ modules - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_BEEF = "BEEF module not available"
+
 
 # ========================================================================
 # BEEF module branches
@@ -14,7 +17,7 @@ def test_beef_module_exists():
         import bsv.beef
         assert bsv.beef is not None
     except ImportError:
-        pytest.skip("BEEF module not available")
+        pytest.skip(SKIP_BEEF)
 
 
 def test_beef_version_constant():
@@ -52,7 +55,7 @@ def test_is_beef_data():
         except (NameError, AttributeError):
             pytest.skip("is_beef not available")
     except ImportError:
-        pytest.skip("BEEF module not available")
+        pytest.skip(SKIP_BEEF)
 
 
 def test_is_beef_invalid():
@@ -66,7 +69,7 @@ def test_is_beef_invalid():
         except (NameError, AttributeError):
             pytest.skip("is_beef not available")
     except ImportError:
-        pytest.skip("BEEF module not available")
+        pytest.skip(SKIP_BEEF)
 
 
 # ========================================================================
@@ -84,5 +87,5 @@ def test_is_beef_empty():
         except (NameError, AttributeError):
             pytest.skip("is_beef not available")
     except ImportError:
-        pytest.skip("BEEF module not available")
+        pytest.skip(SKIP_BEEF)
 

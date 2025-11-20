@@ -51,7 +51,7 @@ class TestKVStoreBEEFParsing:
     
     def test_get_parses_beef_from_list_outputs(self):
         """Test that get() correctly parses BEEF returned by list_outputs."""
-        wallet, beef_bytes = create_mock_wallet_with_beef()
+        wallet, _ = create_mock_wallet_with_beef()
         
         config = KVStoreConfig(
             wallet=wallet,
@@ -61,7 +61,7 @@ class TestKVStoreBEEFParsing:
         store = LocalKVStore(config)
         
         # This should parse the BEEF without errors
-        result = store.get(None, 'test-key', 'default')
+        _ = store.get(None, 'test-key', 'default')
         
         # Should have called list_outputs
         wallet.list_outputs.assert_called_once()
@@ -102,7 +102,7 @@ class TestKVStoreBEEFParsing:
         store = LocalKVStore(config)
         
         # Should handle AtomicBEEF without errors
-        result = store.get(None, 'test-key', 'default')
+        _ = store.get(None, 'test-key', 'default')
         
         wallet.list_outputs.assert_called_once()
     
@@ -147,7 +147,7 @@ class TestKVStoreBEEFParsing:
         store = LocalKVStore(config)
         
         # Set a value (should update existing)
-        result = store.set(None, 'test-key', 'new-value')
+        _ = store.set(None, 'test-key', 'new-value')
         
         # Verify create_action was called with inputBEEF
         wallet.create_action.assert_called_once()
@@ -198,7 +198,7 @@ class TestKVStoreBEEFParsing:
         store = LocalKVStore(config)
         
         # Should parse BEEF with multiple transactions
-        result = store.get(None, 'test-key', 'default')
+        _ = store.get(None, 'test-key', 'default')
         
         wallet.list_outputs.assert_called_once()
     
@@ -235,7 +235,7 @@ class TestKVStoreBEEFParsing:
             mock_woc.return_value = mock_woc_instance
             
             # Should attempt to build BEEF from WOC
-            result = store.get(None, 'test-key', 'default')
+            _ = store.get(None, 'test-key', 'default')
             
             # Verify WOC was used as fallback
             # (Implementation may vary, but should handle missing BEEF gracefully)
@@ -266,7 +266,7 @@ class TestKVStoreRetentionPeriod:
         store = LocalKVStore(config)
         
         # Set a value
-        result = store.set(None, 'test-key', 'test-value')
+        _ = store.set(None, 'test-key', 'test-value')
         
         # Verify create_action was called with retention period
         wallet.create_action.assert_called_once()
@@ -343,7 +343,7 @@ class TestKVStoreTransactionCreation:
         store = LocalKVStore(config)
         
         # Set a value
-        result = store.set(None, 'test-key', 'test-value')
+        _ = store.set(None, 'test-key', 'test-value')
         
         # Verify create_action was called
         wallet.create_action.assert_called_once()
@@ -391,7 +391,7 @@ class TestKVStoreTransactionCreation:
         store = LocalKVStore(config)
         
         # Remove the key
-        result = store.remove(None, 'test-key')
+        _ = store.remove(None, 'test-key')
         
         # Verify create_action was called with inputs but no outputs
         wallet.create_action.assert_called_once()

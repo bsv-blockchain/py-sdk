@@ -54,7 +54,7 @@ class TestEngine:
         
         # Missing scripts should return error
         from bsv.script.interpreter.options import ExecutionOptions
-        opts = ExecutionOptions()
+        _ = ExecutionOptions()
         
         # Empty options (no scripts) should be caught by validation
         err = engine.execute(lambda o: None)  # Empty options

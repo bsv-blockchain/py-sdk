@@ -87,7 +87,7 @@ class Thread:
         """Check if current branch is executing."""
         return len(self.cond_stack) == 0 or self.cond_stack[-1] == 1
 
-    def should_exec(self, pop: ParsedOpcode) -> bool:
+    def should_exec(self, _: ParsedOpcode = None) -> bool:
         """Check if opcode should be executed."""
         return self.is_branch_executing()
 

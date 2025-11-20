@@ -415,7 +415,7 @@ class TestErrorHandling:
 
         # Test broadcaster with invalid BEEF
         config = SHIPBroadcasterConfig()
-        broadcaster = SHIPBroadcaster(["tm_test"], config)
+        _ = SHIPBroadcaster(["tm_test"], config)
 
         invalid_beef = TaggedBEEF(beef=b"", topics=[])
         # Should handle gracefully

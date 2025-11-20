@@ -50,7 +50,7 @@ class TestP2PKHTemplate:
         address = public_key.address()
         
         p2pkh = P2PKH()
-        locking_script = p2pkh.lock(address)
+        _ = p2pkh.lock(address)
         unlocker = p2pkh.unlock(private_key)
         
         assert unlocker is not None
@@ -61,7 +61,7 @@ class TestP2PKHTemplate:
         """Test that unlocker estimates unlocking script length."""
         private_key = PrivateKey()
         public_key = private_key.public_key()
-        address = public_key.address()
+        _ = public_key.address()
         
         p2pkh = P2PKH()
         unlocker = p2pkh.unlock(private_key)

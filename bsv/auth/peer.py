@@ -64,7 +64,27 @@ class Peer:
             auto_persist_last_session: Whether to auto-persist sessions (default: True)
             logger: Optional logger instance
         """
-        # Support both PeerOptions object and direct parameters (ts-sdk style)
+        # Load configuration from PeerOptions or direct parameters
+        self._load_configuration(wallet, transport, certificates_to_request, session_manager, logger)
+        auto_persist_last_session = self._get_auto_persist_value(wallet, auto_persist_last_session)
+        
+        # Initialize callback registries and internal state
+        self._initialize_callbacks()
+        
+        # Apply defaults for optional parameters
+        self._apply_defaults(auto_persist_last_session)
+        
+        # Start the peer (register handlers, etc.)
+        self._initialize_peer()
+        
+        # Set protocol constants
+        self.FAIL_TO_GET_IDENTIFY_KEY = "failed to get identity key"
+        self.AUTH_MESSAGE_SIGNATURE = AUTH_PROTOCOL_ID
+        self.SESSION_NOT_FOUND = "Session not found"
+        self.FAILED_TO_GET_AUTHENTICATED_SESSION = "failed to get authenticated session"
+    
+    def _load_configuration(self, wallet, transport, certificates_to_request, session_manager, logger):
+        """Load configuration from either PeerOptions or direct parameters."""
         if isinstance(wallet, PeerOptions):
             # Legacy style: PeerOptions object
             cfg = wallet
@@ -73,7 +93,6 @@ class Peer:
             self.session_manager = cfg.session_manager
             self.certificates_to_request = cfg.certificates_to_request
             self.logger = cfg.logger or logging.getLogger("Auth Peer")
-            auto_persist_last_session = cfg.auto_persist_last_session
         else:
             # ts-sdk style: direct parameters
             if wallet is None:
@@ -85,59 +104,61 @@ class Peer:
             self.session_manager = session_manager
             self.certificates_to_request = certificates_to_request
             self.logger = logger or logging.getLogger("Auth Peer")
-        
-        # Initialize callback registries
+    
+    def _get_auto_persist_value(self, wallet, auto_persist_last_session):
+        """Extract auto_persist_last_session value from config or parameter."""
+        if isinstance(wallet, PeerOptions):
+            return wallet.auto_persist_last_session
+        return auto_persist_last_session
+    
+    def _initialize_callbacks(self):
+        """Initialize callback registries and internal state."""
         self.on_general_message_received_callbacks: Dict[int, Callable] = {}
         self.on_certificate_received_callbacks: Dict[int, Callable] = {}
         self.on_certificate_request_received_callbacks: Dict[int, Callable] = {}
         self.on_initial_response_received_callbacks: Dict[int, dict] = {}
         self.callback_id_counter = 0
-        self._callback_counter_lock = threading.Lock()  # Thread safety for callback counter
+        self._callback_counter_lock = threading.Lock()
         self.last_interacted_with_peer = None
-
-        # Nonce management for replay protection
-        self._used_nonces = set()  # type: Set[str]
-        # Event handler registry
+        self._used_nonces = set()
         self._event_handlers: Dict[str, Callable[..., Any]] = {}
-        # Transport readiness flag (set by start())
         self._transport_ready = False
-
-        # Apply defaults for optional parameters
+    
+    def _apply_defaults(self, auto_persist_last_session):
+        """Apply default values for optional parameters."""
         if self.session_manager is None:
-            try:
-                from .session_manager import DefaultSessionManager
-                self.session_manager = DefaultSessionManager()
-            except Exception:
-                self.session_manager = None
+            self.session_manager = self._create_default_session_manager()
         
-        # Set auto_persist_last_session (default True unless explicitly False)
-        if auto_persist_last_session is None or auto_persist_last_session:
-            self.auto_persist_last_session = True
-        else:
-            self.auto_persist_last_session = False
+        self.auto_persist_last_session = auto_persist_last_session is None or auto_persist_last_session
         
         if self.certificates_to_request is None:
-            try:
-                from .requested_certificate_set import RequestedCertificateSet, RequestedCertificateTypeIDAndFieldList
-                self.certificates_to_request = RequestedCertificateSet(
-                    certifiers=[],
-                    certificate_types=RequestedCertificateTypeIDAndFieldList(),
-                )
-            except Exception:
-                # Fallback to a minimal dict structure if imports are unavailable
-                self.certificates_to_request = {
-                    'certifiers': [],
-                    'certificate_types': {}
-                }
-        # Start the peer (register handlers, etc.)
+            self.certificates_to_request = self._create_default_certificate_request()
+    
+    def _create_default_session_manager(self):
+        """Create default session manager."""
+        try:
+            from .session_manager import DefaultSessionManager
+            return DefaultSessionManager()
+        except Exception:
+            return None
+    
+    def _create_default_certificate_request(self):
+        """Create default certificate request structure."""
+        try:
+            from .requested_certificate_set import RequestedCertificateSet, RequestedCertificateTypeIDAndFieldList
+            return RequestedCertificateSet(
+                certifiers=[],
+                certificate_types=RequestedCertificateTypeIDAndFieldList(),
+            )
+        except Exception:
+            return {'certifiers': [], 'certificate_types': {}}
+    
+    def _initialize_peer(self):
+        """Initialize peer by starting transport."""
         try:
             self.start()
         except Exception as e:
             self.logger.warning(f"Failed to start peer: {e}")
-        self.FAIL_TO_GET_IDENTIFY_KEY = "failed to get identity key"
-        self.AUTH_MESSAGE_SIGNATURE = AUTH_PROTOCOL_ID
-        self.SESSION_NOT_FOUND = "Session not found"
-        self.FAILED_TO_GET_AUTHENTICATED_SESSION = "failed to get authenticated session"
 
     def start(self):
         """

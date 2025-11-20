@@ -17,7 +17,7 @@ def test_pushdrop_init():
         
         wallet = Mock()
         pd = PushDrop(wallet)
-        assert pd is not None
+        assert pd  # Verify object creation succeeds
         assert pd.wallet == wallet
     except ImportError:
         pytest.skip("PushDrop not available")

@@ -67,7 +67,7 @@ def minimally_encode(num: int) -> bytes:
     return bytes(octets)
 
 
-def check_signature_encoding(octets: bytes, require_low_s: bool = True, require_der: bool = True, require_strict: bool = True) -> Optional[Error]:
+def check_signature_encoding(octets: bytes, require_low_s: bool = True, require_der: bool = True, _: bool = False) -> Optional[Error]:
     """
     Check signature encoding with detailed DER validation.
 
@@ -85,7 +85,7 @@ def check_signature_encoding(octets: bytes, require_low_s: bool = True, require_
     # Check sighash type only if DER validation is required
     if require_der:
         try:
-            sighash = SIGHASH(sighash_byte)
+            _ = SIGHASH(sighash_byte)  # Validate _ type
         except (ValueError, TypeError):
             return Error(ErrorCode.ERR_SIG_HASHTYPE, "invalid sighash type")
 

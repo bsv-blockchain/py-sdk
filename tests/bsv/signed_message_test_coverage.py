@@ -2,6 +2,9 @@
 Coverage tests for signed_message.py - untested branches.
 """
 import pytest
+
+# Constants for skip messages
+SKIP_SIGN_MESSAGE = "sign_message not available"
 from bsv.keys import PrivateKey
 
 
@@ -21,7 +24,7 @@ def test_sign_message_basic():
         assert signed is not None
         assert isinstance(signed, (str, bytes))
     except ImportError:
-        pytest.skip("sign_message not available")
+        pytest.skip(SKIP_SIGN_MESSAGE)
 
 
 def test_sign_message_empty():
@@ -33,7 +36,7 @@ def test_sign_message_empty():
         signed = sign_message("", priv)
         assert signed is not None
     except ImportError:
-        pytest.skip("sign_message not available")
+        pytest.skip(SKIP_SIGN_MESSAGE)
 
 
 def test_sign_message_long():
@@ -47,7 +50,7 @@ def test_sign_message_long():
         signed = sign_message(long_message, priv)
         assert signed is not None
     except ImportError:
-        pytest.skip("sign_message not available")
+        pytest.skip(SKIP_SIGN_MESSAGE)
 
 
 # ========================================================================
@@ -67,7 +70,7 @@ def test_verify_message_valid():
         
         assert is_valid == True
     except ImportError:
-        pytest.skip("sign_message not available")
+        pytest.skip(SKIP_SIGN_MESSAGE)
 
 
 def test_verify_message_invalid():
@@ -99,7 +102,7 @@ def test_verify_message_wrong_key():
         
         assert is_valid == False
     except ImportError:
-        pytest.skip("sign_message not available")
+        pytest.skip(SKIP_SIGN_MESSAGE)
 
 
 def test_verify_message_modified():
@@ -116,7 +119,7 @@ def test_verify_message_modified():
         
         assert is_valid == False
     except ImportError:
-        pytest.skip("sign_message not available")
+        pytest.skip(SKIP_SIGN_MESSAGE)
 
 
 # ========================================================================
@@ -134,7 +137,7 @@ def test_sign_message_unicode():
         signed = sign_message(unicode_msg, priv)
         assert signed is not None
     except ImportError:
-        pytest.skip("sign_message not available")
+        pytest.skip(SKIP_SIGN_MESSAGE)
 
 
 def test_sign_message_deterministic():
@@ -150,5 +153,5 @@ def test_sign_message_deterministic():
         
         assert sig1 == sig2
     except ImportError:
-        pytest.skip("sign_message not available")
+        pytest.skip(SKIP_SIGN_MESSAGE)
 

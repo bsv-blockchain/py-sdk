@@ -93,7 +93,7 @@ def test_chunk_op_detection():
         chunks = read_script_chunks(script)
 
         if len(chunks) > 0:
-            chunk = chunks[0]
+            _ = chunks[0]
             # Chunk should have some indicator of being an opcode
             assert True
     except ImportError:
@@ -109,7 +109,7 @@ def test_chunk_data_detection():
         chunks = read_script_chunks(script)
 
         if len(chunks) > 0:
-            chunk = chunks[0]
+            _ = chunks[0]
             # Chunk should contain the pushed data
             assert True
     except ImportError:
@@ -129,7 +129,7 @@ def test_read_script_chunks_truncated():
         script = b'\x0a\x01\x02'
 
         try:
-            chunks = read_script_chunks(script)
+            _ = read_script_chunks(script)
             assert True  # May handle gracefully
         except Exception:
             # Expected

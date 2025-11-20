@@ -26,7 +26,7 @@ def build_beef_v2_from_raw_hexes(tx_hex_list: List[str]) -> bytes:
         if len(h) % 2 != 0:
             continue
         try:
-            w.write_uint8(0)  # data_format = 0 (RawTx)
+            w.write_uint8(0)  # data_format: 0 indicates RawTx
             w.write(bytes.fromhex(h))
         except Exception:
             continue

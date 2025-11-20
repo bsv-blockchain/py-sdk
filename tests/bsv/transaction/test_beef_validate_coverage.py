@@ -36,7 +36,7 @@ def test_validate_transactions_with_missing_bumps_attr():
     beef.txs = {}
     # No bumps attribute
     try:
-        result = validate_transactions(beef)
+        result = validate_transactions(beef)  # type: ignore
         assert isinstance(result, ValidationResult)
     except AttributeError:
         # Expected if code doesn't handle missing attribute

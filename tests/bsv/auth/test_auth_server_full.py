@@ -108,7 +108,7 @@ class AuthServer:
     def handle_certificate_request(self, message: Dict) -> Dict:
         """Handle certificateRequest message type"""
         client_identity_key = message.get("identityKey")
-        requested_certs = message.get("requestedCertificates", {})
+        _ = message.get("requestedCertificates", {})
         
         session = self.sessions.get(client_identity_key)
         if not session or not session.is_authenticated:

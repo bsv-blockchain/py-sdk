@@ -53,7 +53,8 @@ async def auth_server():
     t0 = time.time()
     
     # Use centralized SSL helper for test certificate handling
-    ssl_context = get_client_ssl_context()
+    # SSL verification is disabled for local testing with self-signed certificates
+    ssl_context = get_client_ssl_context()  # noqa: S501  # NOSONAR - Test environment only
     
     while time.time() - t0 < 10.0:
         try:

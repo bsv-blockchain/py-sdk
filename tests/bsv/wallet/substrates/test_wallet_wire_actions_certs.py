@@ -85,7 +85,7 @@ def test_actions_flow_e2e(transceiver):
     }
     resp_create = transceiver.create_action(None, create_args, "origin")
     assert isinstance(resp_create, dict)
-    tx = resp_create.get("signableTransaction", {}).get("tx", b"")
+    _ = resp_create.get("signableTransaction", {}).get("_", b"")
     ref = resp_create.get("signableTransaction", {}).get("reference", b"")
     # error optional
     # Sign action

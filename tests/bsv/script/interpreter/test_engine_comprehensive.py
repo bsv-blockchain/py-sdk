@@ -53,7 +53,7 @@ class TestEngineComprehensive:
         engine = Engine()
         
         from bsv.script.interpreter.options import ExecutionOptions
-        opts = ExecutionOptions()
+        _ = ExecutionOptions()
         
         err = engine.execute(lambda o: None)  # Empty options
         assert err is not None

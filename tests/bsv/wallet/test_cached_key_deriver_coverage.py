@@ -14,7 +14,7 @@ def test_cached_key_deriver_init():
     try:
         from bsv.wallet.cached_key_deriver import CachedKeyDeriver
         deriver = CachedKeyDeriver(root_key=PrivateKey())
-        assert deriver is not None
+        assert deriver  # Verify object creation succeeds
     except ImportError:
         pytest.skip("CachedKeyDeriver not available")
 

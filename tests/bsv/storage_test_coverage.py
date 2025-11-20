@@ -3,6 +3,9 @@ Coverage tests for storage/ modules - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_MEMORY_STORAGE = "MemoryStorage operations not available"
+
 
 # ========================================================================
 # Storage interface branches
@@ -44,7 +47,7 @@ def test_storage_set_get():
             result = storage.get('key')
             assert result == 'value'
     except (ImportError, AttributeError):
-        pytest.skip("MemoryStorage operations not available")
+        pytest.skip(SKIP_MEMORY_STORAGE)
 
 
 def test_storage_delete():
@@ -66,7 +69,7 @@ def test_storage_delete():
                     # Expected
                     assert True
     except (ImportError, AttributeError):
-        pytest.skip("MemoryStorage operations not available")
+        pytest.skip(SKIP_MEMORY_STORAGE)
 
 
 def test_storage_exists():
@@ -81,7 +84,7 @@ def test_storage_exists():
             assert storage.exists('key') == True
             assert storage.exists('nonexistent') == False
     except (ImportError, AttributeError):
-        pytest.skip("MemoryStorage operations not available")
+        pytest.skip(SKIP_MEMORY_STORAGE)
 
 
 # ========================================================================
@@ -139,5 +142,5 @@ def test_storage_overwrite():
             result = storage.get('key')
             assert result == 'value2'
     except (ImportError, AttributeError):
-        pytest.skip("MemoryStorage operations not available")
+        pytest.skip(SKIP_MEMORY_STORAGE)
 

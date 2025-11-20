@@ -12,8 +12,8 @@ from bsv.keys import PrivateKey, PublicKey
 def test_private_key_init_none():
     """Test PrivateKey with None (generates random)."""
     key = PrivateKey()
-    assert key is not None
-    assert key.serialize() is not None
+    assert key  # Verify object creation succeeds
+    assert key.serialize()  # Verify serialization produces output
 
 
 def test_private_key_init_with_bytes():

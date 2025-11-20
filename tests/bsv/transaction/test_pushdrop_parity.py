@@ -23,7 +23,7 @@ def test_pushdrop_decode_restores_small_ints():
     from bsv.transaction.pushdrop import build_lock_before_pushdrop
     priv = PrivateKey()
     wallet = WalletImpl(priv, permission_callback=lambda a: True)
-    pd = PushDrop(wallet)
+    _ = PushDrop(wallet)
     # fields: 0, 1, 2, 0x81 (-1)
     fields = [b"\x00", b"\x01", b"\x02", b"\x81"]
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
@@ -141,7 +141,7 @@ def test_sign_action_sighash_bip143_acp_parity():
     pd = PushDrop(wallet)
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
     fields = [b"val"]
-    pubkey = priv.public_key().serialize()
+    _ = priv.public_key().serialize()
     script_before = pd.lock(None, fields, proto, "kid", {"type": 1}, lock_position="before")
     script_after = pd.lock(None, fields, proto, "kid", {"type": 1}, lock_position="after")
 

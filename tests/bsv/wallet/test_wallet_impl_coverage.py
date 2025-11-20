@@ -35,7 +35,7 @@ def test_wallet_init_with_env_loading_success():
     priv = PrivateKey()
     with patch('bsv.wallet.wallet_impl.WalletImpl._dotenv_loaded', False):
         wallet = WalletImpl(priv, load_env=True)
-        assert wallet is not None
+        assert wallet  # Verify object creation succeeds
 
 
 def test_wallet_init_with_env_loading_failure():
@@ -90,7 +90,7 @@ def test_get_public_key_with_debug_enabled(wallet, capsys):
     """Test get_public_key with BSV_DEBUG=1."""
     args = {"identityKey": True}
     with patch.dict(os.environ, {"BSV_DEBUG": "1"}):
-        result = wallet.get_public_key(None, args, "test_originator")
+        _ = wallet.get_public_key(None, args, "test_originator")
         captured = capsys.readouterr()
         assert "DEBUG WalletImpl.get_public_key" in captured.out
         assert "test_originator" in captured.out
@@ -103,7 +103,7 @@ def test_encrypt_with_debug_enabled(wallet, capsys):
         "plaintext": b"test"
     }
     with patch.dict(os.environ, {"BSV_DEBUG": "1"}):
-        result = wallet.encrypt(None, args, "test")
+        _ = wallet.encrypt(None, args, "test")
         captured = capsys.readouterr()
         assert "DEBUG WalletImpl.encrypt" in captured.out
 
@@ -118,7 +118,7 @@ def test_decrypt_with_debug_enabled(wallet, capsys):
         "ciphertext": enc_result["ciphertext"]
     }
     with patch.dict(os.environ, {"BSV_DEBUG": "1"}):
-        result = wallet.decrypt(None, args, "test")
+        _ = wallet.decrypt(None, args, "test")
         captured = capsys.readouterr()
         assert "DEBUG WalletImpl.decrypt" in captured.out
 

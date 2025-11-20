@@ -32,18 +32,18 @@ class TestableIdentityClient(IdentityClient):
         self._record("publicly_reveal_attributes_simple", ctx=ctx, certificate=certificate, fields_to_reveal=fields_to_reveal)
         return self._dummy_txid
 
-    def resolve_by_identity_key(self, ctx: Any, args: Dict) -> List[DisplayableIdentity]:
+    def resolve_by_identity_key(self, ctx: Any, args: Dict, override_with_contacts: bool = True) -> List[DisplayableIdentity]:
         """
         Simulate resolving identities by identity key. Returns a dummy identity list.
         """
-        self._record("resolve_by_identity_key", ctx=ctx, args=args)
+        self._record("resolve_by_identity_key", ctx=ctx, args=args, override_with_contacts=override_with_contacts)
         return self._dummy_identities
 
-    def resolve_by_attributes(self, ctx: Any, args: Dict) -> List[DisplayableIdentity]:
+    def resolve_by_attributes(self, ctx: Any, args: Dict, override_with_contacts: bool = True) -> List[DisplayableIdentity]:
         """
         Simulate resolving identities by attributes. Returns a dummy identity list.
         """
-        self._record("resolve_by_attributes", ctx=ctx, args=args)
+        self._record("resolve_by_attributes", ctx=ctx, args=args, override_with_contacts=override_with_contacts)
         return self._dummy_identities
 
     @staticmethod

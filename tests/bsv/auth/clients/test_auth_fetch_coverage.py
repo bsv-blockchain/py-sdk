@@ -202,7 +202,7 @@ class TestAuthFetchCoverage:
                         mock_handle.return_value = mock_response
 
                         try:
-                            result = self.auth_fetch.fetch(None, "https://example.com")
+                            _ = self.auth_fetch.fetch(None, "https://example.com")
                             # Should have called handle_fetch_and_validate
                             mock_handle.assert_called_once()
                         except Exception:
@@ -296,7 +296,7 @@ class TestAuthFetchCoverage:
                         # This test is complex to set up correctly, so we'll test the concept
                         # that errors in the response holder are properly handled
                         try:
-                            result = self.auth_fetch.fetch(None, "https://example.com")
+                            _ = self.auth_fetch.fetch(None, "https://example.com")
                         except Exception:
                             pass  # Expected for this complex test
 
@@ -325,7 +325,7 @@ class TestAuthFetchCoverage:
                         mock_response.status_code = 200
                         mock_handle.return_value = mock_response
 
-                        result = self.auth_fetch.fetch(None, "https://example.com")
+                        _ = self.auth_fetch.fetch(None, "https://example.com")
                         mock_handle.assert_called_once()
 
         except ImportError:

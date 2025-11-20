@@ -39,7 +39,7 @@ def test_woc_client_get_tx():
         
         if hasattr(client, 'get_tx'):
             try:
-                tx = client.get_tx('0' * 64)
+                _ = client.get_tx('0' * 64)
                 assert True
             except Exception:
                 # Expected without real txid
@@ -57,7 +57,7 @@ def test_woc_client_get_balance():
         
         if hasattr(client, 'get_balance'):
             try:
-                balance = client.get_balance('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')
+                _ = client.get_balance('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')
                 assert True
             except Exception:
                 # Expected without network
@@ -75,7 +75,7 @@ def test_woc_client_get_utxos():
         
         if hasattr(client, 'get_utxos'):
             try:
-                utxos = client.get_utxos('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')
+                _ = client.get_utxos('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')
                 assert True
             except Exception:
                 # Expected without network
@@ -93,7 +93,7 @@ def test_woc_client_get_history():
         
         if hasattr(client, 'get_history'):
             try:
-                history = client.get_history('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')
+                _ = client.get_history('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')
                 assert True
             except Exception:
                 # Expected without network
@@ -115,7 +115,7 @@ def test_woc_client_invalid_txid():
         
         if hasattr(client, 'get_tx'):
             try:
-                tx = client.get_tx('invalid')
+                _ = client.get_tx('invalid')
                 assert True
             except (ValueError, Exception):
                 # Expected
@@ -133,7 +133,7 @@ def test_woc_client_invalid_address():
         
         if hasattr(client, 'get_balance'):
             try:
-                balance = client.get_balance('invalid')
+                _ = client.get_balance('invalid')
                 assert True
             except (ValueError, Exception):
                 # Expected

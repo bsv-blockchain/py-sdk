@@ -2,6 +2,9 @@
 Coverage tests for fee_models/ modules - untested branches.
 """
 import pytest
+
+# Constants for skip messages
+SKIP_SATOSHIS_PER_KB = "SatoshisPerKilobyte not available"
 from bsv.transaction import Transaction
 from bsv.transaction_input import TransactionInput
 from bsv.transaction_output import TransactionOutput
@@ -40,7 +43,7 @@ def test_satoshis_per_kb_compute_with_transaction():
             assert isinstance(fee, int)
             assert fee > 0
     except ImportError:
-        pytest.skip("SatoshisPerKilobyte not available")
+        pytest.skip(SKIP_SATOSHIS_PER_KB)
 
 
 def test_satoshis_per_kb_zero_rate():
@@ -54,7 +57,7 @@ def test_satoshis_per_kb_zero_rate():
             fee = fee_model.compute_fee(250)  # 250 bytes
             assert fee == 0
     except ImportError:
-        pytest.skip("SatoshisPerKilobyte not available")
+        pytest.skip(SKIP_SATOSHIS_PER_KB)
 
 
 def test_satoshis_per_kb_very_high_rate():
@@ -68,7 +71,7 @@ def test_satoshis_per_kb_very_high_rate():
             fee = fee_model.compute_fee(250)
             assert fee > 0
     except ImportError:
-        pytest.skip("SatoshisPerKilobyte not available")
+        pytest.skip(SKIP_SATOSHIS_PER_KB)
 
 
 # ========================================================================
@@ -122,7 +125,7 @@ def test_fee_model_with_empty_transaction():
             fee = fee_model.compute_fee(tx)
             assert isinstance(fee, int)
     except ImportError:
-        pytest.skip("SatoshisPerKilobyte not available")
+        pytest.skip(SKIP_SATOSHIS_PER_KB)
 
 
 def test_fee_model_fractional_rate():

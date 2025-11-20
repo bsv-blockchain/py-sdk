@@ -13,7 +13,7 @@ def test_unlocking_template_interface_exists():
     """Test that UnlockingScriptTemplate interface exists."""
     try:
         from bsv.script.unlocking_template import UnlockingScriptTemplate
-        assert UnlockingScriptTemplate is not None
+        assert UnlockingScriptTemplate  # Verify import succeeds and class exists
     except ImportError:
         pytest.skip("UnlockingScriptTemplate not available")
 

@@ -312,10 +312,10 @@ def test_local_kv_store_context_validation():
         config.context = "test_context"
         config.retention_period = 0
         
-        store = LocalKVStore(config)
+        _ = LocalKVStore(config)
 
         # Valid contexts
-        valid_contexts = [
+        _ = [
             "context_1",
             "my_context",
             "context-with-dashes",

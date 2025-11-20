@@ -51,7 +51,7 @@ class TestVerifiableCertificate:
         assert decrypted["name"] == "Alice"
 
     def test_decrypt_fields_requires_keyring(self):
-        cert, keyring, wallet = make_certificate_with_encrypted_field("name", "Alice")
+        cert, _, wallet = make_certificate_with_encrypted_field("name", "Alice")
         vc = VerifiableCertificate(cert, {})
         with pytest.raises(ValueError):
             vc.decrypt_fields(None, wallet)

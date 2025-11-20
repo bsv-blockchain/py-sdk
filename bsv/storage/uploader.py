@@ -47,48 +47,74 @@ class Uploader(StorageUploaderInterface):
         Upload a file to the storage service with retry and timeout logic.
         """
         def do_publish():
-            url = f"{self.base_url}/upload"
-            body = {"fileSize": len(file_data), "retentionPeriod": retention_period}
-            options = SimplifiedFetchRequestOptions(
-                method="POST",
-                headers={"Content-Type": _JSON_MIME},
-                body=None
-            )
-            import json
-            options.body = json.dumps(body).encode()
-            try:
-                resp = self.auth_fetch.fetch(None, url, options)
-            except Exception as e:
-                raise NetworkError(f"Network error during upload info request: {e}")
-            if hasattr(resp, 'status_code') and resp.status_code == 402:
-                try:
-                    resp = self.auth_fetch.handle_payment_and_retry(None, url, options, resp)
-                except Exception as e:
-                    raise UploadError(f"Payment flow failed: {e}")
-            if not hasattr(resp, 'ok') or not resp.ok:
-                code = getattr(resp, 'status_code', 'unknown')
-                raise UploadError(f"Upload info request failed: HTTP {code}")
-            data = resp.json()
-            if data.get("status") == "error":
-                raise UploadError("Upload route returned an error.")
-            upload_url = data["uploadURL"]
-            required_headers = data.get("requiredHeaders", {})
-            put_headers = {"Content-Type": mime_type, **required_headers}
-            put_options = SimplifiedFetchRequestOptions(
-                method="PUT",
-                headers=put_headers,
-                body=file_data
-            )
-            try:
-                put_resp = self.auth_fetch.fetch(None, upload_url, put_options)
-            except Exception as e:
-                raise NetworkError(f"Network error during file upload: {e}")
-            if not hasattr(put_resp, 'ok') or not put_resp.ok:
-                code = getattr(put_resp, 'status_code', 'unknown')
-                raise UploadError(f"File upload failed: HTTP {code}")
+            # Get upload URL and headers from service
+            upload_url, required_headers = self._get_upload_info(file_data, retention_period)
+            
+            # Upload file data
+            self._upload_file_data(upload_url, file_data, mime_type, required_headers)
+            
+            # Generate UHRP URL
             uhrp_url = StorageUtils.get_url_for_file(file_data)
             return UploadFileResult(uhrp_url=uhrp_url, published=True)
+        
         return self._fetch_with_retry(do_publish)
+    
+    def _get_upload_info(self, file_data: bytes, retention_period: int):
+        """Request upload URL and required headers from service."""
+        url = f"{self.base_url}/upload"
+        body = {"fileSize": len(file_data), "retentionPeriod": retention_period}
+        
+        import json
+        options = SimplifiedFetchRequestOptions(
+            method="POST",
+            headers={"Content-Type": _JSON_MIME},
+            body=json.dumps(body).encode()
+        )
+        
+        try:
+            resp = self.auth_fetch.fetch(None, url, options)
+        except Exception as e:
+            raise NetworkError(f"Network error during upload info request: {e}")
+        
+        # Handle payment if required
+        if hasattr(resp, 'status_code') and resp.status_code == 402:
+            resp = self._handle_payment_required(url, options, resp)
+        
+        # Validate response
+        if not hasattr(resp, 'ok') or not resp.ok:
+            code = getattr(resp, 'status_code', 'unknown')
+            raise UploadError(f"Upload info request failed: HTTP {code}")
+        
+        data = resp.json()
+        if data.get("status") == "error":
+            raise UploadError("Upload route returned an error.")
+        
+        return data["uploadURL"], data.get("requiredHeaders", {})
+    
+    def _handle_payment_required(self, url, options, resp):
+        """Handle 402 payment required response."""
+        try:
+            return self.auth_fetch.handle_payment_and_retry(None, url, options, resp)
+        except Exception as e:
+            raise UploadError(f"Payment flow failed: {e}")
+    
+    def _upload_file_data(self, upload_url: str, file_data: bytes, mime_type: str, required_headers: dict):
+        """Upload file data to the provided URL."""
+        put_headers = {"Content-Type": mime_type, **required_headers}
+        put_options = SimplifiedFetchRequestOptions(
+            method="PUT",
+            headers=put_headers,
+            body=file_data
+        )
+        
+        try:
+            put_resp = self.auth_fetch.fetch(None, upload_url, put_options)
+        except Exception as e:
+            raise NetworkError(f"Network error during file upload: {e}")
+        
+        if not hasattr(put_resp, 'ok') or not put_resp.ok:
+            code = getattr(put_resp, 'status_code', 'unknown')
+            raise UploadError(f"File upload failed: HTTP {code}")
 
     def find_file(self, uhrp_url: str) -> FindFileData:
         """

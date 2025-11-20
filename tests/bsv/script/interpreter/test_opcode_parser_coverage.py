@@ -56,7 +56,7 @@ def test_parse_op_pushdata2():
         
         # OP_PUSHDATA2 with 256 bytes
         data = b'\x4d\x00\x01' + b'\x00' * 256
-        opcode, size = parse_opcode(data, 0)
+        opcode, _ = parse_opcode(data, 0)
         assert opcode is not None
     except (ImportError, AttributeError):
         pytest.skip("parse_opcode not available")
@@ -69,7 +69,7 @@ def test_parse_op_pushdata4():
         
         # OP_PUSHDATA4 with 1000 bytes
         data = b'\x4e\xe8\x03\x00\x00' + b'\x00' * 1000
-        opcode, size = parse_opcode(data, 0)
+        opcode, _ = parse_opcode(data, 0)
         assert opcode is not None
     except (ImportError, AttributeError):
         pytest.skip("parse_opcode not available")
@@ -115,12 +115,12 @@ def test_parse_op_at_end():
         from bsv.script.interpreter.op_parser import parse_opcode
         
         data = b'\x51'
-        opcode, size = parse_opcode(data, 0)
+        _, size = parse_opcode(data, 0)
         assert size == 1
         
         # Try to parse beyond end
         try:
-            opcode2, size2 = parse_opcode(data, 1)
+            _, _ = parse_opcode(data, 1)
             assert True  # May handle gracefully
         except IndexError:
             # Expected
@@ -130,7 +130,7 @@ def test_parse_op_at_end():
 
 
 def test_parse_op_truncated():
-    """Test parsing truncated opcode."""
+    """Test parsing truncated _."""
     try:
         from bsv.script.interpreter.op_parser import parse_opcode
         
@@ -138,7 +138,7 @@ def test_parse_op_truncated():
         data = b'\x4c'
         
         try:
-            opcode, size = parse_opcode(data, 0)
+            _, _ = parse_opcode(data, 0)
             assert True  # May handle gracefully
         except (IndexError, ValueError):
             # Expected
