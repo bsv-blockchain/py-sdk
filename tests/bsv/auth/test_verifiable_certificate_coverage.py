@@ -39,7 +39,7 @@ class TestVerifiableCertificateCoverage:
             from bsv.auth.verifiable_certificate import WalletInterface
 
             wallet = WalletInterface()
-            result = wallet.decrypt(None, {}, "")
+            result = wallet.decrypt()
             assert result == {}
 
         except ImportError:

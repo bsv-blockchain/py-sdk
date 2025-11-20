@@ -18,7 +18,7 @@ Usage:
     [Client]
     python3 -m pytest -v tests/test_auth_fetch_full_e2e.py::test_auth_fetch_full_protocol | cat
 
-The server will run on http://localhost:8084 by default.
+The server will run on https://localhost:8084 by default.
 """
 
 import asyncio
@@ -27,9 +27,17 @@ import base64
 import hashlib
 import os
 import time
+import sys
+from pathlib import Path
 from typing import Dict, List, Optional, Any
 from aiohttp import web
 import logging
+
+# Add parent directory to path for imports
+test_dir = Path(__file__).parent
+sys.path.insert(0, str(test_dir))
+
+from test_ssl_helper import get_server_ssl_context
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,7 +71,7 @@ class AuthServer:
         hash_obj = hashlib.sha256(message_data.encode())
         return base64.b64encode(hash_obj.digest()).decode()
     
-    async def handle_initial_request(self, message: Dict) -> Dict:
+    def handle_initial_request(self, message: Dict) -> Dict:
         """Handle initialRequest message type"""
         client_identity_key = message.get("identityKey")
         client_nonce = message.get("nonce")
@@ -97,7 +105,7 @@ class AuthServer:
         
         return response
     
-    async def handle_certificate_request(self, message: Dict) -> Dict:
+    def handle_certificate_request(self, message: Dict) -> Dict:
         """Handle certificateRequest message type"""
         client_identity_key = message.get("identityKey")
         requested_certs = message.get("requestedCertificates", {})
@@ -132,7 +140,7 @@ class AuthServer:
         
         return response
     
-    async def handle_general_message(self, message: Dict) -> Dict:
+    def handle_general_message(self, message: Dict) -> Dict:
         """Handle general message type"""
         client_identity_key = message.get("identityKey")
         payload = message.get("payload")
@@ -148,7 +156,7 @@ class AuthServer:
         if payload:
             try:
                 # Try to parse as binary HTTP request (from AuthFetch)
-                response_payload = await self.parse_binary_request(payload)
+                response_payload = self.parse_binary_request(payload)
             except Exception as e:
                 logger.warning(f"Failed to parse binary payload: {e}")
                 # Fallback to echo the payload
@@ -166,7 +174,7 @@ class AuthServer:
         
         return response
     
-    async def parse_binary_request(self, payload: bytes) -> bytes:
+    def parse_binary_request(self, payload: bytes) -> bytes:
         """Parse binary HTTP request payload and generate appropriate response"""
         try:
             # This would implement the binary protocol parsing
@@ -261,11 +269,11 @@ async def handle_auth_message(request):
         
         # Route to appropriate handler
         if message_type == "initialRequest":
-            response = await auth_server.handle_initial_request(message)
+            response = auth_server.handle_initial_request(message)
         elif message_type == "certificateRequest":
-            response = await auth_server.handle_certificate_request(message)
+            response = auth_server.handle_certificate_request(message)
         elif message_type == "general":
-            response = await auth_server.handle_general_message(message)
+            response = auth_server.handle_general_message(message)
         else:
             return web.Response(status=400, text=f"Unknown message type: {message_type}")
         
@@ -309,10 +317,13 @@ async def main():
     runner = web.AppRunner(app)
     await runner.setup()
     
-    site = web.TCPSite(runner, "localhost", 8084)
+    # Get SSL context for HTTPS
+    ssl_context = get_server_ssl_context()
+    
+    site = web.TCPSite(runner, "localhost", 8084, ssl_context=ssl_context)
     await site.start()
     
-    logger.info("BSV Authentication Server started on http://localhost:8084")
+    logger.info("BSV Authentication Server started on https://localhost:8084")
     logger.info("Endpoints:")
     logger.info("  POST /auth - Authentication protocol messages")
     logger.info("  GET /health - Health check")

@@ -47,7 +47,7 @@ class TestTeranode:
         tx.lock_time = 0
 
         # Use an invalid URL to force network error
-        broadcaster = Teranode("http://invalid.url.that.does.not.exist")
+        broadcaster = Teranode("https://invalid.url.that.does.not.exist")
 
         result = await broadcaster.broadcast(tx)
 

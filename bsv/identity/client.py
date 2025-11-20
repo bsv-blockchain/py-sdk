@@ -97,7 +97,7 @@ class IdentityClient:
         """
         Equivalent to the simple API in TypeScript/Go. Returns only the transaction ID.
         """
-        res = self.publicly_reveal_attributes(ctx, certificate, fields_to_reveal)
+        self.publicly_reveal_attributes(ctx, certificate, fields_to_reveal)
         # In the mock implementation, returns a zero TXID because actual txid cannot be obtained
         return "00" * 32
 
@@ -222,7 +222,7 @@ class IdentityClient:
 
     @staticmethod
     def _from_kv(fields: List[tuple]) -> DisplayableIdentity:
-        d = {k: v for k, v in (fields or [])}
+        d = dict(fields or [])
         name = d.get('name') or d.get('displayName') or 'Unknown'
         identity_key = d.get('identityKey') or ''
         abbreviated = f"{identity_key[:6]}…{identity_key[-4:]}" if isinstance(identity_key, str) and len(identity_key) >= 10 else ''

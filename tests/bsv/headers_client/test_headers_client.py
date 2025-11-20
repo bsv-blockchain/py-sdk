@@ -63,7 +63,7 @@ class TestHeadersClientGetMerkleRoots:
             )
         )
         
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
         roots = await client.get_merkle_roots(10)
         
         assert len(roots) == 2
@@ -97,7 +97,7 @@ class TestHeadersClientGetMerkleRoots:
             )
         )
         
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
         roots = await client.get_merkle_roots(10, last_key)
         
         assert len(roots) == 0
@@ -117,7 +117,7 @@ class TestHeadersClientGetMerkleRoots:
             )
         )
 
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
 
         with pytest.raises(Exception, match="Failed to get merkle roots: status=500"):
             await client.get_merkle_roots(10)
@@ -140,7 +140,7 @@ class TestHeadersClientGetMerkleRoots:
             )
         )
         
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
         roots = await client.get_merkle_roots(10)
         
         assert len(roots) == 0
@@ -158,7 +158,7 @@ class TestHeadersClientGetMerkleRoots:
             )
         )
         
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
         
         # Should handle gracefully - return empty list or raise
         roots = await client.get_merkle_roots(10)
@@ -190,7 +190,7 @@ class TestHeadersClientWebhooks:
             )
         )
         
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
         webhook = await client.register_webhook("https://example.com/webhook", "webhook-auth-token")
         
         assert webhook.url == expected_webhook["url"]
@@ -217,7 +217,7 @@ class TestHeadersClientWebhooks:
             )
         )
 
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
 
         with pytest.raises(Exception, match="failed to register webhook: status=400, body={'error': 'Invalid webhook URL'}"):
             await client.register_webhook("invalid-url", "token")
@@ -237,7 +237,7 @@ class TestHeadersClientWebhooks:
             )
         )
         
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
         await client.unregister_webhook(callback_url)
         
         assert len(mock_client.requests) == 1
@@ -258,7 +258,7 @@ class TestHeadersClientWebhooks:
             )
         )
 
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
 
         with pytest.raises(Exception, match="failed to unregister webhook: status=404, body={'error': 'Webhook not found'}"):
             await client.unregister_webhook("https://example.com/webhook")
@@ -285,7 +285,7 @@ class TestHeadersClientWebhooks:
             )
         )
         
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
         webhook = await client.get_webhook(expected_webhook["url"])
         
         assert webhook.url == expected_webhook["url"]
@@ -305,7 +305,7 @@ class TestHeadersClientWebhooks:
             )
         )
 
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
 
         with pytest.raises(Exception, match="failed to get webhook: status=404, body={'error': 'Webhook not found'}"):
             await client.get_webhook("https://example.com/webhook")
@@ -337,7 +337,7 @@ class TestHeadersClientWebhooks:
                 )
             )
             
-            client = HeadersClient("http://test.com", "test-api-key", mock_client)
+            client = HeadersClient("https://test.com", "test-api-key", mock_client)
             webhook = await client.get_webhook(expected_webhook["url"])
             
             assert webhook.errors_count == tc["errorsCount"]
@@ -361,7 +361,7 @@ class TestHeadersClientChainTracker:
             )
         )
         
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
         is_valid = await client.is_valid_root_for_height("test_root", 100)
         
         assert is_valid is True
@@ -385,7 +385,7 @@ class TestHeadersClientChainTracker:
             )
         )
         
-        client = HeadersClient("http://test.com", "test-api-key", mock_client)
+        client = HeadersClient("https://test.com", "test-api-key", mock_client)
         height = await client.current_height()
         
         assert height == 850000
@@ -395,7 +395,7 @@ class TestHeadersClientChainTracker:
         """Test that HeadersClient implements ChainTracker interface."""
         from bsv.chaintracker import ChainTracker
         
-        client = HeadersClient("http://test.com", "test-api-key")
+        client = HeadersClient("https://test.com", "test-api-key")
         assert isinstance(client, ChainTracker)
         
         assert hasattr(client, 'is_valid_root_for_height')

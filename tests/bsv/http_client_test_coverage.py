@@ -167,7 +167,7 @@ def test_http_client_connection_error():
     """Test HTTP client connection error."""
     try:
         from bsv.http_client import HttpClient
-        client = HttpClient(base_url='http://invalid.invalid')
+        client = HttpClient(base_url='https://invalid.invalid')
         
         if hasattr(client, 'get'):
             try:

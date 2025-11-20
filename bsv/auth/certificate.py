@@ -68,7 +68,7 @@ class Certificate:
             w.write(self.signature)
         return w.to_bytes()
 
-    def verify(self, ctx: Any = None) -> bool:
+    def verify(self) -> bool:
         if not self.signature:
             raise ValueError("Certificate is not signed.")
         # Exclude signature for verification
@@ -76,7 +76,7 @@ class Certificate:
         # Use DER signature and certifier public key
         return self.certifier.verify(self.signature, data, hash256)
 
-    def sign(self, certifier_wallet: PrivateKey, ctx: Any = None) -> None:
+    def sign(self, certifier_wallet: PrivateKey) -> None:
         if self.signature:
             raise ValueError("Certificate already signed.")
         # Set certifier public key

@@ -13,6 +13,31 @@ from bsv.chaintracker import ChainTracker
 from .types import Header, State, MerkleRootInfo, Webhook, WebhookRequest, RequiredAuth
 
 
+class HeadersClientError(Exception):
+    """Base exception for HeadersClient errors."""
+    pass
+
+
+class MerkleRootVerificationError(HeadersClientError):
+    """Exception raised when merkle root verification fails."""
+    pass
+
+
+class HeaderRetrievalError(HeadersClientError):
+    """Exception raised when header retrieval fails."""
+    pass
+
+
+class WebhookError(HeadersClientError):
+    """Exception raised when webhook operations fail."""
+    pass
+
+
+class ChainTipError(HeadersClientError):
+    """Exception raised when chain tip retrieval fails."""
+    pass
+
+
 class HeadersClient(ChainTracker):
     """
     Client for interacting with Block Headers Service (BHS).
@@ -82,7 +107,7 @@ class HeadersClient(ChainTracker):
         response = await self._http_client.fetch(url, options)
         
         if not response.ok:
-            raise Exception(f"Failed to verify merkle root: status={response.status_code}")
+            raise MerkleRootVerificationError(f"Failed to verify merkle root: status={response.status_code}")
         
         data = response.json()
         # Handle both wrapped and unwrapped responses
@@ -130,13 +155,13 @@ class HeadersClient(ChainTracker):
         response = await self._http_client.fetch(url, options)
         
         if not response.ok:
-            raise Exception(f"Failed to get block by height: status={response.status_code}")
+            raise HeaderRetrievalError(f"Failed to get block by height: status={response.status_code}")
         
         data = response.json()
         headers_data = data.get('data', []) if 'data' in data else data
         
         if not headers_data:
-            raise Exception(f"no block headers found for height {height}")
+            raise HeaderRetrievalError(f"no block headers found for height {height}")
         
         # Try to find header with LONGEST_CHAIN state
         for header_data in headers_data:
@@ -193,7 +218,7 @@ class HeadersClient(ChainTracker):
         response = await self._http_client.fetch(url, options)
         
         if not response.ok:
-            raise Exception(f"Failed to get block state: status={response.status_code}")
+            raise HeaderRetrievalError(f"Failed to get block state: status={response.status_code}")
         
         data = response.json()
         state_data = data.get('data', {}) if 'data' in data else data
@@ -233,7 +258,7 @@ class HeadersClient(ChainTracker):
         response = await self._http_client.fetch(url, options)
         
         if not response.ok:
-            raise Exception(f"Failed to get chaintip: status={response.status_code}")
+            raise ChainTipError(f"Failed to get chaintip: status={response.status_code}")
         
         data = response.json()
         state_data = data.get('data', {}) if 'data' in data else data
@@ -284,7 +309,7 @@ class HeadersClient(ChainTracker):
         response = await self._http_client.fetch(url, options)
         
         if not response.ok:
-            raise Exception(f"Failed to get merkle roots: status={response.status_code}")
+            raise HeaderRetrievalError(f"Failed to get merkle roots: status={response.status_code}")
         
         data = response.json()
         response_data = data.get('data', {}) if 'data' in data else data
@@ -332,7 +357,7 @@ class HeadersClient(ChainTracker):
         
         if not response.ok:
             body_text = str(response.json())
-            raise Exception(f"failed to register webhook: status={response.status_code}, body={body_text}")
+            raise WebhookError(f"failed to register webhook: status={response.status_code}, body={body_text}")
         
         data = response.json()
         webhook_data = data.get('data', {}) if 'data' in data else data
@@ -366,7 +391,7 @@ class HeadersClient(ChainTracker):
         
         if not response.ok:
             body_text = str(response.json())
-            raise Exception(f"failed to unregister webhook: status={response.status_code}, body={body_text}")
+            raise WebhookError(f"failed to unregister webhook: status={response.status_code}, body={body_text}")
     
     async def get_webhook(self, callback_url: str) -> Webhook:
         """
@@ -391,7 +416,7 @@ class HeadersClient(ChainTracker):
         
         if not response.ok:
             body_text = str(response.json())
-            raise Exception(f"failed to get webhook: status={response.status_code}, body={body_text}")
+            raise WebhookError(f"failed to get webhook: status={response.status_code}, body={body_text}")
         
         data = response.json()
         webhook_data = data.get('data', {}) if 'data' in data else data

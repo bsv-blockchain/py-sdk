@@ -12,7 +12,7 @@ class DummyWallet:
 
 @pytest.fixture
 def uploader():
-    return Uploader(storage_url='http://dummy-storage', wallet=DummyWallet())
+    return Uploader(storage_url='https://dummy-storage', wallet=DummyWallet())
 
 @pytest.fixture
 def downloader():
@@ -31,7 +31,7 @@ def test_download_no_host(downloader, monkeypatch):
         downloader.download('uhrp://XUUGmtdnuC47vGCtZShMz1HMMHxwNa3j9e91VmYyhNmZpp8BGR2e')
 
 def test_download_network_error(downloader, monkeypatch):
-    monkeypatch.setattr(downloader, 'resolve', lambda u: ['http://dummy-url'])
+    monkeypatch.setattr(downloader, 'resolve', lambda u: ['https://dummy-url'])
     def fail_get(*a, **kw):
         import requests
         raise requests.RequestException('network fail')
@@ -127,7 +127,7 @@ def test_publish_file_402_payment(uploader, monkeypatch):
         status_code = 200
         headers = {}
         def json(self):
-            return {"status": "success", "uploadURL": "http://dummy-upload", "requiredHeaders": {}}
+            return {"status": "success", "uploadURL": "https://dummy-upload", "requiredHeaders": {}}
     called = {}
     def fake_post(url, *a, **kw):
         if not called.get('first'):
@@ -146,7 +146,7 @@ def test_publish_file_auth_error(monkeypatch):
     class BadWallet:
         def get_public_key(self, *a, **kw):
             raise Exception('fail')
-    uploader = Uploader(storage_url='http://dummy-storage', wallet=BadWallet())
+    uploader = Uploader(storage_url='https://dummy-storage', wallet=BadWallet())
     
     # Force AuthFetch to use HTTP fallback by patching the fetch method
     original_fetch = uploader.auth_fetch.fetch
@@ -268,7 +268,7 @@ def test_renew_file_error(uploader, monkeypatch):
 
 def test_downloader_hash_mismatch(downloader, monkeypatch):
     # Patch resolve to return a URL, and requests.get to return wrong data
-    monkeypatch.setattr(downloader, 'resolve', lambda u: ['http://dummy-url'])
+    monkeypatch.setattr(downloader, 'resolve', lambda u: ['https://dummy-url'])
     class DummyResp:
         status_code = 200
         ok = True
@@ -282,7 +282,7 @@ def test_downloader_hash_mismatch(downloader, monkeypatch):
 
 def test_downloader_download_error(downloader, monkeypatch):
     # Patch resolve to return a URL, and requests.get to return error
-    monkeypatch.setattr(downloader, 'resolve', lambda u: ['http://dummy-url'])
+    monkeypatch.setattr(downloader, 'resolve', lambda u: ['https://dummy-url'])
     class DummyResp:
         status_code = 500
         ok = False

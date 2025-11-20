@@ -25,7 +25,7 @@ def simple_tx():
 
 def test_arc_init_with_http_url():
     """Test initialization with http URL."""
-    arc = ARC("http://arc.example.com")
+    arc = ARC("https://arc.example.com")
     assert "arc.example.com" in arc.URL
 
 

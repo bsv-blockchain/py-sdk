@@ -8,7 +8,7 @@ import json
 
 @pytest.mark.asyncio
 async def test_authfetch_server_flow():
-    url = "http://localhost:8083/authfetch"
+    url = "https://localhost:8083/authfetch"
     # 1. initialRequest送信
     client_nonce = base64.b64encode(b"client_nonce_32bytes____1234567890").decode()
     initial_request = {

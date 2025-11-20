@@ -12,7 +12,7 @@ from .cert_encryption import get_certificate_encryption_details
 
 # Placeholder for WalletInterface (should be implemented or imported)
 class WalletInterface:
-    def decrypt(self, ctx: Any, decrypt_args: dict, extra: str = "") -> dict:
+    def decrypt(self) -> dict:
         return {}
 
 # Removed local stub; using shared module implementation
@@ -119,7 +119,7 @@ def _wrap_decrypt_fields_signature_compat(cls: Any) -> None:
         setattr(cls, 'decrypt_fields', compat)
 
 # Attempt to patch known Dummy class if present
-for module in list(sys.modules.values()):
+for module in sys.modules.values():
     try:
         dummy = getattr(module, 'DummyVerifiableCertificate', None)
         if dummy is not None and inspect.isclass(dummy):

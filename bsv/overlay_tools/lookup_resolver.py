@@ -15,6 +15,26 @@ from .host_reputation_tracker import HostReputationTracker, get_overlay_host_rep
 from .constants import DEFAULT_SLAP_TRACKERS, DEFAULT_TESTNET_SLAP_TRACKERS, MAX_TRACKER_WAIT_TIME
 
 
+class LookupError(Exception):
+    """Base exception for lookup operations."""
+    pass
+
+
+class LookupTimeoutError(LookupError):
+    """Exception raised when lookup operation times out."""
+    pass
+
+
+class LookupResponseError(LookupError):
+    """Exception raised when lookup response is invalid."""
+    pass
+
+
+class HTTPProtocolError(LookupError):
+    """Exception raised when HTTP protocol requirement is violated."""
+    pass
+
+
 @dataclass
 class LookupQuestion:
     """The question asked to the Overlay Services Engine when a consumer of state wishes to look up information."""
@@ -100,7 +120,7 @@ class HTTPSOverlayLookupFacilitator:
         import aiohttp
 
         if not url.startswith('https:') and not self.allow_http:
-            raise ValueError('HTTPS facilitator can only use URLs that start with "https:"')
+            raise HTTPProtocolError('HTTPS facilitator can only use URLs that start with "https:"')
 
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout/1000)) as session:
@@ -113,7 +133,7 @@ class HTTPSOverlayLookupFacilitator:
                     }
                 ) as response:
                     if response.status != 200:
-                        raise Exception(f"Failed to facilitate lookup (HTTP {response.status})")
+                        raise LookupResponseError(f"Failed to facilitate lookup (HTTP {response.status})")
 
                     if response.headers.get('content-type') == 'application/octet-stream':
                         # Binary response format
@@ -121,16 +141,18 @@ class HTTPSOverlayLookupFacilitator:
                         return self._parse_binary_response(data)
                     else:
                         # JSON response format
-                        json_data = await response.json()
+                        await response.json()
                         return LookupAnswer(
                             type="custom",
                             outputs=[]  # Custom responses don't have outputs
                         )
 
         except asyncio.TimeoutError:
-            raise Exception('Request timed out')
+            raise LookupTimeoutError('Request timed out')
+        except (LookupError, HTTPProtocolError):
+            raise
         except Exception as e:
-            raise Exception(f'Lookup failed: {str(e)}')
+            raise LookupError(f'Lookup failed: {str(e)}')
 
     def _parse_binary_response(self, data: bytes) -> LookupAnswer:
         """Parse binary response format."""
@@ -141,7 +163,7 @@ class HTTPSOverlayLookupFacilitator:
 
         outputs = []
         for _ in range(n_outpoints):
-            txid = reader.read(32).hex()
+            reader.read(32).hex()  # txid (not used in simplified implementation)
             output_index = reader.read_var_int()
             context_length = reader.read_var_int()
 
@@ -157,7 +179,7 @@ class HTTPSOverlayLookupFacilitator:
                 context=context
             ))
 
-        beef = reader.read()
+        reader.read()  # beef (not used in simplified implementation)
         # In a full implementation, we'd reconstruct the BEEF transactions here
 
         return LookupAnswer(type="output-list", outputs=outputs)
@@ -209,13 +231,13 @@ class LookupResolver:
         competent_hosts = await self._get_competent_hosts(question.service)
 
         if not competent_hosts:
-            raise Exception(f"No competent {self.network_preset} hosts found for lookup service: {question.service}")
+            raise LookupError(f"No competent {self.network_preset} hosts found for lookup service: {question.service}")
 
         # Prepare hosts for query with reputation ranking
         ranked_hosts = self._prepare_hosts_for_query(competent_hosts, f"lookup service {question.service}")
 
         if not ranked_hosts:
-            raise Exception(f"All competent hosts for {question.service} are temporarily unavailable")
+            raise LookupError(f"All competent hosts for {question.service} are temporarily unavailable")
 
         # Query all ranked hosts in parallel
         host_responses = await asyncio.gather(
@@ -371,7 +393,7 @@ class LookupResolver:
         # All hosts are in backoff - find soonest available
         soonest = min((h.backoff_until for h in ranked_hosts), default=float('inf'))
         wait_ms = max(soonest - now, 0)
-        raise Exception(f"All {context} hosts are backing off for approximately {wait_ms}ms")
+        raise LookupError(f"All {context} hosts are backing off for approximately {wait_ms}ms")
 
     async def _lookup_host_with_tracking(
         self,

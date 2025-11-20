@@ -381,7 +381,7 @@ class TestErrorHandling:
         mock_facilitator = AsyncMock()
         call_count = 0
 
-        async def failing_then_succeeding(*args, **kwargs):
+        def failing_then_succeeding(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:

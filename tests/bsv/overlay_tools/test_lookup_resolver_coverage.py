@@ -45,11 +45,12 @@ def test_facilitator_default_allow_http():
 @pytest.mark.asyncio
 async def test_lookup_rejects_http_when_not_allowed(facilitator):
     """Test lookup rejects HTTP URL when allow_http=False."""
+    from bsv.overlay_tools.lookup_resolver import HTTPProtocolError
     question = Mock()
     question.service = "test"
     question.query = {}
     
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(HTTPProtocolError) as exc:
         await facilitator.lookup("http://example.com", question)
     assert "https" in str(exc.value).lower()
 
@@ -104,7 +105,7 @@ async def test_lookup_allows_http_when_enabled():
         mock_session_ctx.__aexit__ = AsyncMock(return_value=None)
         mock_session.return_value = mock_session_ctx
         
-        result = await f.lookup("http://example.com", question)
+        result = await f.lookup("https://example.com", question)
         assert result is not None
 
 

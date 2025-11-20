@@ -11,7 +11,7 @@ from bsv.keys import PrivateKey
 @pytest.fixture
 def transport():
     """Create transport with default URL."""
-    return SimplifiedHTTPTransport("http://localhost:8080")
+    return SimplifiedHTTPTransport("https://localhost:8080")
 
 
 @pytest.fixture
@@ -37,8 +37,8 @@ def mock_message():
 
 def test_transport_init_with_http_url():
     """Test initialization with http URL."""
-    t = SimplifiedHTTPTransport("http://example.com")
-    assert t.base_url == "http://example.com"
+    t = SimplifiedHTTPTransport("https://example.com")
+    assert t.base_url == "https://example.com"
 
 
 def test_transport_init_with_https_url():
@@ -49,19 +49,19 @@ def test_transport_init_with_https_url():
 
 def test_transport_init_with_trailing_slash():
     """Test initialization with trailing slash."""
-    t = SimplifiedHTTPTransport("http://example.com/")
+    t = SimplifiedHTTPTransport("https://example.com/")
     assert "example.com" in t.base_url
 
 
 def test_transport_init_with_port():
     """Test initialization with explicit port."""
-    t = SimplifiedHTTPTransport("http://example.com:8080")
+    t = SimplifiedHTTPTransport("https://example.com:8080")
     assert ":8080" in t.base_url
 
 
 def test_transport_init_with_path():
     """Test initialization with path."""
-    t = SimplifiedHTTPTransport("http://example.com/api")
+    t = SimplifiedHTTPTransport("https://example.com/api")
     assert "/api" in t.base_url or "example.com" in t.base_url
 
 
@@ -240,7 +240,7 @@ def test_transport_str_representation(transport):
 
 def test_transport_with_special_chars_in_url():
     """Test URL with special characters."""
-    t = SimplifiedHTTPTransport("http://example.com/path?query=value&other=123")
+    t = SimplifiedHTTPTransport("https://example.com/path?query=value&other=123")
     assert "example.com" in t.base_url
 
 
@@ -248,12 +248,12 @@ def test_transport_with_custom_client():
     """Test transport with custom client."""
     import requests
     custom_client = requests.Session()
-    t = SimplifiedHTTPTransport("http://example.com", client=custom_client)
+    t = SimplifiedHTTPTransport("https://example.com", client=custom_client)
     assert t.client == custom_client
 
 
 def test_transport_with_none_client():
     """Test transport with None client creates default."""
-    t = SimplifiedHTTPTransport("http://example.com", client=None)
+    t = SimplifiedHTTPTransport("https://example.com", client=None)
     assert t.client is not None
 

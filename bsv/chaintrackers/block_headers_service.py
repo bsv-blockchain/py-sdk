@@ -11,6 +11,21 @@ from ..chaintracker import ChainTracker
 from ..http_client import HttpClient, default_http_client
 
 
+class BlockHeadersServiceError(Exception):
+    """Base exception for BlockHeadersService errors."""
+    pass
+
+
+class MerkleRootVerificationError(BlockHeadersServiceError):
+    """Exception raised when merkle root verification fails."""
+    pass
+
+
+class CurrentHeightError(BlockHeadersServiceError):
+    """Exception raised when current height retrieval fails."""
+    pass
+
+
 @dataclass
 class BlockHeadersServiceConfig:
     """Configuration options for the BlockHeadersService ChainTracker."""
@@ -69,12 +84,14 @@ class BlockHeadersService(ChainTracker):
                 response_data = response.json()
                 return response_data.get("confirmationState") == "CONFIRMED"
             else:
-                raise Exception(
+                raise MerkleRootVerificationError(
                     f"Failed to verify merkleroot for height {height} because of an error: {response.json()}"
                 )
 
+        except MerkleRootVerificationError:
+            raise
         except Exception as error:
-            raise Exception(
+            raise MerkleRootVerificationError(
                 f"Failed to verify merkleroot for height {height} because of an error: {str(error)}"
             )
 
@@ -103,15 +120,17 @@ class BlockHeadersService(ChainTracker):
                 if response_data and isinstance(response_data.get("data", {}).get("height"), int):
                     return response_data["data"]["height"]
                 else:
-                    raise Exception(
+                    raise CurrentHeightError(
                         f"Failed to get current height because of an error: {response_data}"
                     )
             else:
-                raise Exception(
+                raise CurrentHeightError(
                     f"Failed to get current height because of an error: {response.json()}"
                 )
 
+        except CurrentHeightError:
+            raise
         except Exception as error:
-            raise Exception(
+            raise CurrentHeightError(
                 f"Failed to get current height because of an error: {str(error)}"
             )

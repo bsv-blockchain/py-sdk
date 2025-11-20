@@ -331,125 +331,9 @@ class LocalKVStore(KVStoreInterface):
                 for _label, addr, pub_hex in candidates:
                     if not addr:
                         continue
-                    try:
-                        # Try multiple history endpoints (WOC variants) until one succeeds
-                        base = f"https://api.whatsonchain.com/v1/bsv/main/address/{addr}"
-                        # Per WOC docs: prefer confirmed/history, then history, then paginated txs/{page}
-                        hist_endpoints = [
-                            f"{base}/confirmed/history",
-                            f"{base}/history",
-                        ] + [f"{base}/txs/{p}" for p in range(0, 3)]
-                        txs = None
-                        last_err = None
-                        for hist_url in hist_endpoints:
-                            try:
-                                print(f"[KV WOC] try history endpoint: {hist_url}")
-                                r = requests.get(hist_url, headers=headers, timeout=timeout)
-                                if r.status_code == 404:
-                                    continue
-                                r.raise_for_status()
-                                resp = r.json() or []
-                                # Normalize various response shapes
-                                if isinstance(resp, dict):
-                                    if isinstance(resp.get("result"), list):
-                                        txs = resp.get("result")
-                                    elif isinstance(resp.get("transactions"), list):
-                                        txs = resp.get("transactions")
-                                    elif isinstance(resp.get("txs"), list):
-                                        txs = resp.get("txs")
-                                    elif isinstance(resp.get("history"), list):
-                                        txs = resp.get("history")
-                                    else:
-                                        txs = []
-                                else:
-                                    txs = resp
-                                break
-                            except Exception as e_req_hist:
-                                last_err = e_req_hist
-                                continue
-                        if txs is None:
-                            # As a last resort, use UTXO list to seed txids (limited)
-                            utxo_url = f"{base}/unspent"
-                            try:
-                                print(f"[KV WOC] fallback to UTXO endpoint: {utxo_url}")
-                                r = requests.get(utxo_url, headers=headers, timeout=timeout)
-                                r.raise_for_status()
-                                txs = r.json() or []
-                            except Exception as e_req_utxo:
-                                print(f"[KV WOC] history fetch failed for {addr}: {last_err or e_req_utxo}")
-                                continue
-                        txids: list[str] = []
-                        for t in txs:
-                            if isinstance(t, str):
-                                if len(t) == 64:
-                                    txids.append(t)
-                            elif isinstance(t, dict):
-                                txids.append(t.get("tx_hash") or t.get("txid") or t.get("hash") or "")
-                        for txid in [x for x in txids if x][:50]:
-                            if txid in seen_txids:
-                                continue
-                            seen_txids.add(txid)
-                            raw_url = f"https://api.whatsonchain.com/v1/bsv/main/tx/raw/{txid}"
-                            # Try multiple tx detail endpoints per WOC docs
-                            raw_candidates = [
-                                f"https://api.whatsonchain.com/v1/bsv/main/tx/{txid}/hex",
-                                f"https://api.whatsonchain.com/v1/bsv/main/tx/{txid}",
-                                f"https://api.whatsonchain.com/v1/bsv/main/tx/raw/{txid}",
-                            ]
-                            rawtx = None
-                            last_raw_err = None
-                            for raw_url in raw_candidates:
-                                try:
-                                    print(f"[KV WOC] try tx endpoint: {raw_url}")
-                                    rr = requests.get(raw_url, headers=headers, timeout=timeout)
-                                    if rr.status_code == 404:
-                                        continue
-                                    rr.raise_for_status()
-                                    # Some endpoints return plain text hex, others JSON
-                                    ctype = rr.headers.get("Content-Type", "")
-                                    if "application/json" in ctype:
-                                        jd = rr.json() or {}
-                                        rawtx = jd.get("hex") or jd.get("rawtx") or jd.get("data")
-                                    else:
-                                        rawtx = rr.text.strip()
-                                    if isinstance(rawtx, str) and len(rawtx) >= 2:
-                                        break
-                                except Exception as e_req_raw:
-                                    last_raw_err = e_req_raw
-                                    continue
-                            if not isinstance(rawtx, str):
-                                print(f"[KV WOC] raw fetch failed for {txid}: {last_raw_err}")
-                                continue
-                            if not isinstance(rawtx, str):
-                                continue
-                            try:
-                                tx = Transaction.from_reader(Reader(bytes.fromhex(rawtx)))
-                            except Exception as e_parse_tx:
-                                print(f"[KV WOC] tx parse failed for {txid}: {e_parse_tx}")
-                                continue
-                            for vout_idx, out in enumerate(tx.outputs):
-                                try:
-                                    ls_bytes = out.locking_script.to_bytes()  # Scriptオブジェクトからbytesを取得
-                                    if self._is_pushdrop_for_pub(ls_bytes, pub_hex):
-                                        matched_outputs.append({
-                                            "outputIndex": vout_idx,
-                                            "satoshis": out.satoshis,
-                                            "lockingScript": ls_bytes.hex(),
-                                            "spendable": True,
-                                            "outputDescription": "WOC scan (PushDrop)",
-                                            "basket": addr,
-                                            "tags": [],
-                                            "customInstructions": None,
-                                            "txid": tx.txid(),
-                                        })
-                                        matched_tx_hexes.append(rawtx)
-                                        break
-                                except Exception as e_scan_vout:
-                                    print(f"[KV WOC] vout scan error in {txid}@{vout_idx}: {e_scan_vout}")
-                                    continue
-                    except Exception as e_addr_loop:
-                        print(f"[KV WOC] address loop error for {addr}: {e_addr_loop}")
-                        continue
+                    self._scan_address_for_pushdrop_outputs(
+                        addr, pub_hex, headers, timeout, seen_txids, matched_outputs, matched_tx_hexes
+                    )
 
                 if matched_outputs and matched_tx_hexes:
                     # Deduplicate txs keeping order
@@ -459,6 +343,159 @@ class LocalKVStore(KVStoreInterface):
             except Exception as e_fallback2:
                 print(f"[KV WOC] fallback-2 scan failed: {e_fallback2}")
         return outputs, beef_bytes
+
+    def _scan_address_for_pushdrop_outputs(
+        self, addr: str, pub_hex: str, headers: dict, timeout: int,
+        seen_txids: set, matched_outputs: list, matched_tx_hexes: list
+    ) -> None:
+        """Scan a WOC address for PushDrop outputs matching the given public key."""
+        try:
+            txs = self._fetch_address_history(addr, headers, timeout)
+            if txs is None:
+                return
+            
+            txids = self._extract_txids_from_history(txs)
+            for txid in [x for x in txids if x][:50]:
+                if txid in seen_txids:
+                    continue
+                seen_txids.add(txid)
+                
+                rawtx = self._fetch_raw_transaction(txid, headers, timeout)
+                if not rawtx:
+                    continue
+                
+                self._process_transaction_for_pushdrop(
+                    txid, rawtx, pub_hex, addr, matched_outputs, matched_tx_hexes
+                )
+        except Exception as e_addr_loop:
+            print(f"[KV WOC] address loop error for {addr}: {e_addr_loop}")
+
+    def _fetch_address_history(self, addr: str, headers: dict, timeout: int):
+        """Fetch transaction history for an address from WOC."""
+        import requests
+        
+        base = f"https://api.whatsonchain.com/v1/bsv/main/address/{addr}"
+        hist_endpoints = [
+            f"{base}/confirmed/history",
+            f"{base}/history",
+        ] + [f"{base}/txs/{p}" for p in range(0, 3)]
+        
+        for hist_url in hist_endpoints:
+            try:
+                print(f"[KV WOC] try history endpoint: {hist_url}")
+                r = requests.get(hist_url, headers=headers, timeout=timeout)
+                if r.status_code == 404:
+                    continue
+                r.raise_for_status()
+                resp = r.json() or []
+                txs = self._normalize_history_response(resp)
+                if txs is not None:
+                    return txs
+            except Exception:
+                continue
+        
+        # Fallback to UTXO endpoint
+        return self._fetch_address_utxos(base, headers, timeout)
+
+    def _normalize_history_response(self, resp):
+        """Normalize various WOC history response shapes."""
+        if isinstance(resp, dict):
+            for key in ["result", "transactions", "txs", "history"]:
+                if isinstance(resp.get(key), list):
+                    return resp[key]
+            return []
+        return resp
+
+    def _fetch_address_utxos(self, base_url: str, headers: dict, timeout: int):
+        """Fetch UTXOs as a fallback for transaction history."""
+        import requests
+        
+        utxo_url = f"{base_url}/unspent"
+        try:
+            print(f"[KV WOC] fallback to UTXO endpoint: {utxo_url}")
+            r = requests.get(utxo_url, headers=headers, timeout=timeout)
+            r.raise_for_status()
+            return r.json() or []
+        except Exception as e:
+            print(f"[KV WOC] UTXO fetch failed: {e}")
+            return None
+
+    def _extract_txids_from_history(self, txs: list) -> list:
+        """Extract transaction IDs from history response."""
+        txids = []
+        for t in txs:
+            if isinstance(t, str) and len(t) == 64:
+                txids.append(t)
+            elif isinstance(t, dict):
+                txids.append(t.get("tx_hash") or t.get("txid") or t.get("hash") or "")
+        return txids
+
+    def _fetch_raw_transaction(self, txid: str, headers: dict, timeout: int):
+        """Fetch raw transaction hex from WOC."""
+        import requests
+        
+        raw_candidates = [
+            f"https://api.whatsonchain.com/v1/bsv/main/tx/{txid}/hex",
+            f"https://api.whatsonchain.com/v1/bsv/main/tx/{txid}",
+            f"https://api.whatsonchain.com/v1/bsv/main/tx/raw/{txid}",
+        ]
+        
+        for raw_url in raw_candidates:
+            try:
+                print(f"[KV WOC] try tx endpoint: {raw_url}")
+                rr = requests.get(raw_url, headers=headers, timeout=timeout)
+                if rr.status_code == 404:
+                    continue
+                rr.raise_for_status()
+                
+                ctype = rr.headers.get("Content-Type", "")
+                if "application/json" in ctype:
+                    jd = rr.json() or {}
+                    rawtx = jd.get("hex") or jd.get("rawtx") or jd.get("data")
+                else:
+                    rawtx = rr.text.strip()
+                
+                if isinstance(rawtx, str) and len(rawtx) >= 2:
+                    return rawtx
+            except Exception:
+                continue
+        
+        print(f"[KV WOC] raw fetch failed for {txid}")
+        return None
+
+    def _process_transaction_for_pushdrop(
+        self, txid: str, rawtx: str, pub_hex: str, addr: str,
+        matched_outputs: list, matched_tx_hexes: list
+    ) -> None:
+        """Process a transaction to find PushDrop outputs for the given public key."""
+        from bsv.transaction import Transaction
+        from bsv.utils import Reader
+        
+        try:
+            tx = Transaction.from_reader(Reader(bytes.fromhex(rawtx)))
+        except Exception as e:
+            print(f"[KV WOC] tx parse failed for {txid}: {e}")
+            return
+        
+        for vout_idx, out in enumerate(tx.outputs):
+            try:
+                ls_bytes = out.locking_script.to_bytes()
+                if self._is_pushdrop_for_pub(ls_bytes, pub_hex):
+                    matched_outputs.append({
+                        "outputIndex": vout_idx,
+                        "satoshis": out.satoshis,
+                        "lockingScript": ls_bytes.hex(),
+                        "spendable": True,
+                        "outputDescription": "WOC scan (PushDrop)",
+                        "basket": addr,
+                        "tags": [],
+                        "customInstructions": None,
+                        "txid": tx.txid(),
+                    })
+                    matched_tx_hexes.append(rawtx)
+                    break
+            except Exception as e:
+                print(f"[KV WOC] vout scan error in {txid}@{vout_idx}: {e}")
 
     def _looks_like_address(self, addr: str) -> bool:
         """Best-effort check if a string is a Base58Check address (no network assert)."""
@@ -518,56 +555,59 @@ class LocalKVStore(KVStoreInterface):
             raise ErrInvalidKey(KEY_EMPTY_MSG)
         if not value:
             raise ErrInvalidValue("Value cannot be empty")
+        
         self._acquire_key_lock(key)
         try:
-            ca_args = self._merge_default_ca(ca_args)
-            print(f"[TRACE] [set] ca_args: {ca_args}")
-            outs, input_beef = self._lookup_outputs_for_set(ctx, key, ca_args)
-            locking_script = self._build_locking_script(ctx, key, value, ca_args)
-            inputs_meta = self._prepare_inputs_meta(ctx, key, outs, ca_args)
-            print(f"[TRACE] [set] inputs_meta after _prepare_inputs_meta: {inputs_meta}")
-            create_args = self._build_create_action_args_set(key, value, locking_script, inputs_meta, input_beef, ca_args)
-            # Ensure 'inputs' is included for test compatibility
-            create_args["inputs"] = inputs_meta
-            # Pass use_woc from ca_args to create_action for test compatibility
-            if ca_args and "use_woc" in ca_args:
-                create_args["use_woc"] = ca_args["use_woc"]
-            ca = self._wallet.create_action(ctx, create_args, self._originator) or {}
-            signable = (ca.get("signableTransaction") or {}) if isinstance(ca, dict) else {}
-            signable_tx_bytes = signable.get("tx") or b""
-            signed_tx_bytes: bytes | None = None
-            if inputs_meta:
-                signed_tx_bytes = self._sign_and_relinquish_set(ctx, key, outs, inputs_meta, signable, signable_tx_bytes, input_beef)
-            # Build immediate BEEF from the (signed or signable) transaction to avoid WOC on immediate get
-            try:
-                tx_bytes = signed_tx_bytes or signable_tx_bytes
-                import binascii
-                from bsv.beef import build_beef_v2_from_raw_hexes
-                from bsv.transaction import Transaction, TransactionOutput
-                from bsv.script.script import Script
-                from bsv.utils import Reader
-                tx = None
-                tx_hex = None
-                if tx_bytes:
-                    try:
-                        tx = Transaction.from_reader(Reader(tx_bytes))
-                        tx_hex = binascii.hexlify(tx_bytes).decode()
-                    except Exception:
-                        tx = None
-                        tx_hex = None
-                # Fallback: synthesize a minimal transaction with the KV locking script if wallet didn't return bytes
-                if tx is None:
-                    try:
-                        ls_bytes = locking_script if isinstance(locking_script, (bytes, bytearray)) else bytes.fromhex(str(locking_script))
-                    except Exception:
-                        ls_bytes = b""
-                    t = Transaction()
-                    t.outputs = [TransactionOutput(Script(ls_bytes), 1)]
-                    tx = t
-                    tx_hex = t.serialize().hex()
-                # Minimal BEEF V2 (raw tx only) to avoid needing source transactions
-                beef_now = build_beef_v2_from_raw_hexes([tx_hex]) if isinstance(tx_hex, str) else b""
-                # Prepare minimal outputs descriptor for KV output (assumed vout 0)
+            return self._execute_set_operation(ctx, key, value, ca_args)
+        finally:
+            self._release_key_lock(key)
+
+    def _execute_set_operation(self, ctx: Any, key: str, value: str, ca_args: dict) -> str:
+        """Execute the set operation with all required steps."""
+        ca_args = self._merge_default_ca(ca_args)
+        print(f"[TRACE] [set] ca_args: {ca_args}")
+        
+        # Prepare transaction components
+        outs, input_beef = self._lookup_outputs_for_set(ctx, key, ca_args)
+        locking_script = self._build_locking_script(ctx, key, value, ca_args)
+        inputs_meta = self._prepare_inputs_meta(key, outs, ca_args)
+        print(f"[TRACE] [set] inputs_meta after _prepare_inputs_meta: {inputs_meta}")
+        
+        # Create and sign transaction
+        create_args = self._build_create_action_args_set(key, value, locking_script, inputs_meta, input_beef, ca_args)
+        create_args["inputs"] = inputs_meta
+        if ca_args and "use_woc" in ca_args:
+            create_args["use_woc"] = ca_args["use_woc"]
+        
+        ca = self._wallet.create_action(ctx, create_args, self._originator) or {}
+        signable = (ca.get("signableTransaction") or {}) if isinstance(ca, dict) else {}
+        signable_tx_bytes = signable.get("tx") or b""
+        
+        signed_tx_bytes = None
+        if inputs_meta:
+            signed_tx_bytes = self._sign_and_relinquish_set(ctx, key, outs, inputs_meta, signable, signable_tx_bytes, input_beef)
+        
+        # Cache BEEF for immediate retrieval
+        tx_bytes = signed_tx_bytes or signable_tx_bytes
+        self._build_and_cache_beef(key, locking_script, tx_bytes)
+        
+        # Broadcast and return result
+        self._wallet.internalize_action(ctx, {"tx": tx_bytes}, self._originator)
+        return self._extract_txid_from_bytes(tx_bytes, key)
+
+    def _build_and_cache_beef(self, key: str, locking_script: bytes, tx_bytes: bytes) -> None:
+        """Build BEEF from transaction and cache it for immediate retrieval."""
+        try:
+            import binascii
+            from bsv.beef import build_beef_v2_from_raw_hexes
+            from bsv.transaction import Transaction, TransactionOutput
+            from bsv.script.script import Script
+            from bsv.utils import Reader
+            
+            tx, tx_hex = self._parse_or_create_transaction(tx_bytes, locking_script)
+            beef_now = build_beef_v2_from_raw_hexes([tx_hex]) if tx_hex else b""
+            
+            if beef_now:
                 locking_script_hex = locking_script.hex() if isinstance(locking_script, (bytes, bytearray)) else str(locking_script)
                 recent_outs = [{
                     "outputIndex": 0,
@@ -580,26 +620,47 @@ class LocalKVStore(KVStoreInterface):
                     "customInstructions": None,
                     "txid": tx.txid() if hasattr(tx, "txid") else "",
                 }]
-                if beef_now:
-                    self._recent_beef_by_key[key] = (recent_outs, beef_now)
-            except Exception as e_beef:
-                print(f"[KV set] build immediate BEEF failed: {e_beef}")
-            # Broadcast
-            self._wallet.internalize_action(ctx, {"tx": signed_tx_bytes or signable_tx_bytes}, self._originator)
-            # Return outpoint using resulting txid when available (vout=0)
+                self._recent_beef_by_key[key] = (recent_outs, beef_now)
+        except Exception as e_beef:
+            print(f"[KV set] build immediate BEEF failed: {e_beef}")
+
+    def _parse_or_create_transaction(self, tx_bytes: bytes, locking_script: bytes):
+        """Parse transaction from bytes or create a minimal transaction."""
+        import binascii
+        from bsv.transaction import Transaction, TransactionOutput
+        from bsv.script.script import Script
+        from bsv.utils import Reader
+        
+        if tx_bytes:
             try:
-                from bsv.transaction import Transaction
-                from bsv.utils import Reader
-                tx_bytes_final = signed_tx_bytes or signable_tx_bytes
-                if tx_bytes_final:
-                    t = Transaction.from_reader(Reader(tx_bytes_final))
-                    return f"{t.txid()}.0"
+                tx = Transaction.from_reader(Reader(tx_bytes))
+                tx_hex = binascii.hexlify(tx_bytes).decode()
+                return tx, tx_hex
             except Exception:
                 pass
-            # Fallback
-            return f"{key}.0"
-        finally:
-            self._release_key_lock(key)
+        
+        # Fallback: synthesize a minimal transaction
+        try:
+            ls_bytes = locking_script if isinstance(locking_script, (bytes, bytearray)) else bytes.fromhex(str(locking_script))
+        except Exception:
+            ls_bytes = b""
+        
+        tx = Transaction()
+        tx.outputs = [TransactionOutput(Script(ls_bytes), 1)]
+        tx_hex = tx.serialize().hex()
+        return tx, tx_hex
+
+    def _extract_txid_from_bytes(self, tx_bytes: bytes, key: str) -> str:
+        """Extract txid from transaction bytes or return fallback."""
+        try:
+            from bsv.transaction import Transaction
+            from bsv.utils import Reader
+            if tx_bytes:
+                tx = Transaction.from_reader(Reader(tx_bytes))
+                return f"{tx.txid()}.0"
+        except Exception:
+            pass
+        return f"{key}.0"
 
     def _build_locking_script(self, ctx: Any, key: str, value: str, ca_args: dict = None) -> str:
         ca_args = self._merge_default_ca(ca_args)
@@ -795,7 +856,7 @@ class LocalKVStore(KVStoreInterface):
                 if last_count is not None and count >= last_count:
                     break
                 last_count = count
-                inputs_meta = self._prepare_inputs_meta(ctx, key, outs)
+                inputs_meta = self._prepare_inputs_meta(key, outs)
                 txid = self._onchain_remove_flow(ctx, key, inputs_meta, input_beef)
                 if isinstance(txid, str) and txid:
                     removed.append(txid)
@@ -899,7 +960,7 @@ class LocalKVStore(KVStoreInterface):
         """Return a *copy* of the list enumerating missing capabilities."""
         return list(cls._UNIMPLEMENTED)
 
-    def _prepare_inputs_meta(self, ctx: Any, key: str, outs: list, ca_args: dict = None) -> list:
+    def _prepare_inputs_meta(self, key: str, outs: list, ca_args: dict = None) -> list:
         """Prepare the inputs metadata for set/remove operation (Go/TS parity)."""
         ca_args = self._merge_default_ca(ca_args)
         pd_opts = ca_args.get("pushdrop") or {}

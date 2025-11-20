@@ -255,7 +255,7 @@ class TestSHIPBroadcaster:
         mock_session.__aexit__ = AsyncMock()
         
         with patch('aiohttp.ClientSession', return_value=mock_session):
-            result = await facilitator.send("http://example.com", tagged_beef)
+            result = await facilitator.send("https://example.com", tagged_beef)
             assert result is not None
     
     # Note: Off-chain values and failure paths tested implicitly through integration

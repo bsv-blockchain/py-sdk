@@ -30,7 +30,7 @@ def bitcore_encrypt(
     
     # With from_private_key, use shared secret derivation
     # This is a simplified version - full Bitcore ECIES would be more complex
-    shared_secret = to_public_key.derive_shared_secret(from_private_key)
+    to_public_key.derive_shared_secret(from_private_key)
     # Use Electrum ECIES with derived key (simplified)
     return to_public_key.encrypt(message_buf)
 

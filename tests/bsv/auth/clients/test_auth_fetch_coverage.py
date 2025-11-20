@@ -59,13 +59,13 @@ class TestAuthFetchCoverage:
             # Test retry counter = 0 (should raise RetryError)
             config = SimplifiedFetchRequestOptions(retry_counter=0)
             with pytest.raises(RetryError, match="request failed after maximum number of retries"):
-                self.auth_fetch.fetch(None, "http://example.com", config)
+                self.auth_fetch.fetch(None, "https://example.com", config)
 
             # Test retry counter = 1 (should decrement)
             config = SimplifiedFetchRequestOptions(retry_counter=1)
             # This will fail later but should decrement retry counter
             try:
-                self.auth_fetch.fetch(None, "http://example.com", config)
+                self.auth_fetch.fetch(None, "https://example.com", config)
             except Exception:
                 pass  # Expected to fail
             assert config.retry_counter == 0
@@ -105,7 +105,7 @@ class TestAuthFetchCoverage:
             mock_urlparse.side_effect = Exception("URL parsing failed")
 
             with pytest.raises(Exception):
-                self.auth_fetch.fetch(None, "http://example.com")
+                self.auth_fetch.fetch(None, "https://example.com")
 
         except ImportError:
             pytest.skip("AuthFetch not available")
@@ -119,7 +119,7 @@ class TestAuthFetchCoverage:
             mock_peer.side_effect = Exception("Peer creation failed")
 
             with pytest.raises(Exception):
-                self.auth_fetch.fetch(None, "http://example.com")
+                self.auth_fetch.fetch(None, "https://example.com")
 
         except ImportError:
             pytest.skip("AuthFetch not available")
@@ -135,7 +135,7 @@ class TestAuthFetchCoverage:
 
                 with patch('bsv.auth.clients.auth_fetch.SimplifiedHTTPTransport'):
                     with pytest.raises(Exception):
-                        self.auth_fetch.fetch(None, "http://example.com")
+                        self.auth_fetch.fetch(None, "https://example.com")
 
         except ImportError:
             pytest.skip("AuthFetch not available")
@@ -158,7 +158,7 @@ class TestAuthFetchCoverage:
                         # This should still work despite callback conflict
                         # (the callback is created with a new nonce)
                         try:
-                            result = self.auth_fetch.fetch(None, "http://example.com")
+                            result = self.auth_fetch.fetch(None, "https://example.com")
                             assert result is not None
                         except Exception:
                             pass  # May fail for other reasons
@@ -179,7 +179,7 @@ class TestAuthFetchCoverage:
 
                     # This should handle the session error gracefully
                     try:
-                        self.auth_fetch.fetch(None, "http://example.com")
+                        self.auth_fetch.fetch(None, "https://example.com")
                     except Exception:
                         pass  # Expected to fail
 
@@ -202,7 +202,7 @@ class TestAuthFetchCoverage:
                         mock_handle.return_value = mock_response
 
                         try:
-                            result = self.auth_fetch.fetch(None, "http://example.com")
+                            result = self.auth_fetch.fetch(None, "https://example.com")
                             # Should have called handle_fetch_and_validate
                             mock_handle.assert_called_once()
                         except Exception:
@@ -224,7 +224,7 @@ class TestAuthFetchCoverage:
                     # Mock threading.Event.wait to timeout
                     with patch('threading.Event.wait', return_value=False):  # Timeout
                         # Should return None when timeout occurs (no response received)
-                        result = self.auth_fetch.fetch(None, "http://example.com")
+                        result = self.auth_fetch.fetch(None, "https://example.com")
                         assert result is None
 
         except ImportError:
@@ -258,7 +258,7 @@ class TestAuthFetchCoverage:
                         # Mock the general message handler - exceptions should be caught
                         def on_general_message(sender_public_key, payload):
                             try:
-                                resp_obj = self.auth_fetch._parse_general_response(sender_public_key, payload, "test_nonce", "http://example.com", None)
+                                resp_obj = self.auth_fetch._parse_general_response(sender_public_key, payload, "test_nonce", "https://example.com", None)
                             except Exception:
                                 return  # Exception should be caught and handled
                             if resp_obj is None:
@@ -296,7 +296,7 @@ class TestAuthFetchCoverage:
                         # This test is complex to set up correctly, so we'll test the concept
                         # that errors in the response holder are properly handled
                         try:
-                            result = self.auth_fetch.fetch(None, "http://example.com")
+                            result = self.auth_fetch.fetch(None, "https://example.com")
                         except Exception:
                             pass  # Expected for this complex test
 
@@ -318,14 +318,14 @@ class TestAuthFetchCoverage:
                     auth_peer.peer = mock_peer_instance
                     auth_peer.supports_mutual_auth = False
 
-                    self.auth_fetch.peers["http://example.com"] = auth_peer
+                    self.auth_fetch.peers["https://example.com"] = auth_peer
 
                     with patch.object(self.auth_fetch, 'handle_fetch_and_validate') as mock_handle:
                         mock_response = Mock()
                         mock_response.status_code = 200
                         mock_handle.return_value = mock_response
 
-                        result = self.auth_fetch.fetch(None, "http://example.com")
+                        result = self.auth_fetch.fetch(None, "https://example.com")
                         mock_handle.assert_called_once()
 
         except ImportError:
@@ -346,7 +346,7 @@ class TestAuthFetchCoverage:
                     auth_peer.peer = mock_peer_instance
                     auth_peer.supports_mutual_auth = False
 
-                    self.auth_fetch.peers["http://example.com"] = auth_peer
+                    self.auth_fetch.peers["https://example.com"] = auth_peer
 
                     with patch.object(self.auth_fetch, 'handle_fetch_and_validate') as mock_handle:
                         mock_response = Mock()
@@ -356,7 +356,7 @@ class TestAuthFetchCoverage:
                         with patch.object(self.auth_fetch, 'handle_payment_and_retry') as mock_payment:
                             mock_payment.return_value = "payment_result"
 
-                            result = self.auth_fetch.fetch(None, "http://example.com")
+                            result = self.auth_fetch.fetch(None, "https://example.com")
                             mock_payment.assert_called_once()
                             assert result == "payment_result"
 
@@ -378,7 +378,7 @@ class TestAuthFetchCoverage:
 
                     # This should not crash even if certificate extension fails
                     try:
-                        self.auth_fetch.fetch(None, "http://example.com")
+                        self.auth_fetch.fetch(None, "https://example.com")
                     except Exception as e:
                         # Should not be the certificate extension error
                         assert "Certificate extension failed" not in str(e)
@@ -397,13 +397,13 @@ class TestAuthFetchCoverage:
                     mock_peer_class.return_value = mock_peer_instance
 
                     # Mock peer deletion to raise exception (lines 120-122)
-                    with patch.dict(self.auth_fetch.peers, {"http://example.com": Mock()}):
+                    with patch.dict(self.auth_fetch.peers, {"https://example.com": Mock()}):
                         with patch('builtins.delattr') as mock_del:
                             mock_del.side_effect = Exception("Delete failed")
 
                             # Should handle delete failure gracefully
                             try:
-                                self.auth_fetch.fetch(None, "http://example.com")
+                                self.auth_fetch.fetch(None, "https://example.com")
                             except Exception as e:
                                 assert "Delete failed" not in str(e)
 
@@ -429,7 +429,7 @@ class TestAuthFetchCoverage:
                             try:
                                 # Simulate the URL parsing that could fail
                                 import urllib.parse
-                                parsed_url = urllib.parse.urlparse("http://example.com")
+                                parsed_url = urllib.parse.urlparse("https://example.com")
                                 base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
                                 if base_url not in self.auth_fetch.peers:
                                     self.auth_fetch.peers[base_url] = Mock()
@@ -461,7 +461,7 @@ class TestAuthFetchCoverage:
             # Run multiple concurrent requests
             threads = []
             for i in range(5):
-                url = f"http://example{i}.com"
+                url = f"https://example{i}.com"
                 t = threading.Thread(target=make_request, args=(url,))
                 threads.append(t)
                 t.start()
@@ -489,7 +489,7 @@ class TestAuthFetchCoverage:
                         mock_serialize.side_effect = Exception("Serialization failed")
 
                         with pytest.raises(Exception):
-                            self.auth_fetch.fetch(None, "http://example.com")
+                            self.auth_fetch.fetch(None, "https://example.com")
 
         except ImportError:
             pytest.skip("AuthFetch not available")

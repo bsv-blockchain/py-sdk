@@ -14,6 +14,21 @@ from .lookup_resolver import LookupResolver, LookupResolverConfig, LookupQuestio
 from .overlay_admin_token_template import OverlayAdminTokenTemplate
 
 
+class BroadcastError(Exception):
+    """Base exception for SHIP broadcast operations."""
+    pass
+
+
+class HTTPProtocolError(BroadcastError):
+    """Exception raised when HTTP protocol requirement is violated."""
+    pass
+
+
+class BroadcastResponseError(BroadcastError):
+    """Exception raised when broadcast response is invalid."""
+    pass
+
+
 @dataclass
 class TaggedBEEF:
     """Tagged BEEF structure."""
@@ -94,10 +109,12 @@ class HTTPSOverlayBroadcastFacilitator:
                         return await response.json()
                     else:
                         error_text = await response.text()
-                        raise Exception(f"Broadcast failed: {error_text}")
+                        raise BroadcastResponseError(f"Broadcast failed: {error_text}")
 
+        except (BroadcastError, HTTPProtocolError):
+            raise
         except Exception as e:
-            raise Exception(f"Broadcast failed: {str(e)}")
+            raise BroadcastError(f"Broadcast failed: {str(e)}")
 
 
 class TopicBroadcaster:
@@ -244,7 +261,7 @@ class TopicBroadcaster:
             )
 
             if answer.type != 'output-list':
-                raise Exception('SHIP answer is not an output list.')
+                raise BroadcastResponseError('SHIP answer is not an output list.')
 
             for output in answer.outputs:
                 try:
@@ -259,7 +276,7 @@ class TopicBroadcaster:
                 except Exception:
                     continue
 
-        except Exception as e:
+        except Exception:
             # If lookup fails, no hosts are interested
             return {}
 

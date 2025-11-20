@@ -249,7 +249,7 @@ class Peer:
                 certifiers, types_b64 = [], {}
 
             # Sort outputs deterministically
-            sorted_types = {k: sorted(list(v or [])) for k, v in types_b64.items()}
+            sorted_types = {k: sorted(v or []) for k, v in types_b64.items()}
             return {"certifiers": sorted(certifiers), "certificateTypes": sorted_types}
         except Exception:
             return {"certifiers": [], "certificateTypes": {}}
@@ -1491,8 +1491,6 @@ class Peer:
         """
         Check nonce uniqueness and (optionally) expiry. Prevents replay attacks.
         """
-        import time
-        now = int(time.time())
         # Optionally, store (nonce, timestamp) for expiry logic
         if nonce in self._used_nonces:
             return False

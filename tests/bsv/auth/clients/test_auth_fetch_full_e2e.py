@@ -40,12 +40,20 @@ async def auth_server():
     
     # Wait for server to become ready by polling /health
     import aiohttp
-    base = "http://localhost:8084"
+    import ssl
+    base = "https://localhost:8084"
     ok = False
     t0 = time.time()
+    
+    # Create SSL context that accepts self-signed certificates
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    
     while time.time() - t0 < 10.0:
         try:
-            async with aiohttp.ClientSession() as session:
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(f"{base}/health", timeout=aiohttp.ClientTimeout(total=0.5)) as r:
                     if r.status == 200:
                         ok = True
@@ -71,6 +79,9 @@ async def auth_server():
 @pytest.mark.asyncio
 async def test_auth_fetch_full_protocol(auth_server):
     """Test AuthFetch with the full authentication protocol server"""
+    import requests
+    from unittest.mock import patch
+    
     try:
         wallet = DummyWallet()
         requested_certs = RequestedCertificateSet()
@@ -89,14 +100,22 @@ async def test_auth_fetch_full_protocol(auth_server):
         )
         
         # Pre-configure the peer to use HTTP fallback instead of mutual auth
-        base_url = "http://localhost:8084"
+        base_url = "https://localhost:8084"
         from bsv.auth.clients.auth_fetch import AuthPeer
         auth_peer = AuthPeer()
         auth_peer.supports_mutual_auth = False
         auth_fetch.peers[base_url] = auth_peer
         
-        # The AuthFetch should use HTTP fallback to communicate with the server
-        resp = auth_fetch.fetch(None, "http://localhost:8084/auth", config)
+        # Configure requests to accept self-signed certificates
+        original_request = requests.Session.request
+        def patched_request(self, method, url, **kwargs):
+            kwargs['verify'] = False
+            return original_request(self, method, url, **kwargs)
+        
+        with patch.object(requests.Session, 'request', patched_request):
+            with patch.object(requests.Session, 'post', lambda self, url, **kwargs: original_request(self, 'POST', url, **{**kwargs, 'verify': False})):
+                # The AuthFetch should use HTTP fallback to communicate with the server
+                resp = auth_fetch.fetch(None, "https://localhost:8084/auth", config)
         
         assert resp is not None
         assert resp.status_code == 200
@@ -129,7 +148,7 @@ async def test_auth_fetch_certificate_exchange(auth_server):
     auth_fetch = AuthFetch(wallet, requested_certs)
     
     # Test certificate request
-    base_url = "http://localhost:8084"
+    base_url = "https://localhost:8084"
     certificates_to_request = {
         "certifiers": ["03a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0123456789a"],
         "types": ["test-certificate"]
@@ -155,37 +174,48 @@ async def test_auth_fetch_certificate_exchange(auth_server):
 @pytest.mark.asyncio
 async def test_auth_fetch_session_management(auth_server):
     """Test session management and reuse"""
+    import requests
+    from unittest.mock import patch
+    
     try:
         wallet = DummyWallet()
         requested_certs = RequestedCertificateSet()
         auth_fetch = AuthFetch(wallet, requested_certs)
         
-        base_url = "http://localhost:8084"
+        base_url = "https://localhost:8084"
         # Force HTTP fallback (disable mutual auth for this base URL)
         from bsv.auth.clients.auth_fetch import AuthPeer
         _ap = AuthPeer()
         _ap.supports_mutual_auth = False
         auth_fetch.peers[base_url] = _ap
         
-        # First request - should establish session
-        config1 = SimplifiedFetchRequestOptions(
-            method="POST",
-            headers={"Content-Type": "application/json"},
-            body=b'{"request": 1}'
-        )
+        # Configure requests to accept self-signed certificates
+        original_request = requests.Session.request
+        def patched_request(self, method, url, **kwargs):
+            kwargs['verify'] = False
+            return original_request(self, method, url, **kwargs)
         
-        resp1 = auth_fetch.fetch(None, f"{base_url}/auth", config1)
-        assert resp1.status_code == 200
-        
-        # Second request - should reuse session
-        config2 = SimplifiedFetchRequestOptions(
-            method="POST", 
-            headers={"Content-Type": "application/json"},
-            body=b'{"request": 2}'
-        )
-        
-        resp2 = auth_fetch.fetch(None, f"{base_url}/auth", config2)
-        assert resp2.status_code == 200
+        with patch.object(requests.Session, 'request', patched_request):
+            with patch.object(requests.Session, 'post', lambda self, url, **kwargs: original_request(self, 'POST', url, **{**kwargs, 'verify': False})):
+                # First request - should establish session
+                config1 = SimplifiedFetchRequestOptions(
+                    method="POST",
+                    headers={"Content-Type": "application/json"},
+                    body=b'{"request": 1}'
+                )
+                
+                resp1 = auth_fetch.fetch(None, f"{base_url}/auth", config1)
+                assert resp1.status_code == 200
+                
+                # Second request - should reuse session
+                config2 = SimplifiedFetchRequestOptions(
+                    method="POST", 
+                    headers={"Content-Type": "application/json"},
+                    body=b'{"request": 2}'
+                )
+                
+                resp2 = auth_fetch.fetch(None, f"{base_url}/auth", config2)
+                assert resp2.status_code == 200
         
         # Verify both requests succeeded
         data1 = json.loads(resp1.text)
@@ -210,9 +240,18 @@ async def test_auth_fetch_error_handling(auth_server):
     
     The key is that the system doesn't crash and handles errors gracefully.
     """
+    import requests
+    from unittest.mock import patch
+    
     wallet = DummyWallet()
     requested_certs = RequestedCertificateSet()
     auth_fetch = AuthFetch(wallet, requested_certs)
+    
+    # Configure requests to accept self-signed certificates
+    original_request = requests.Session.request
+    def patched_request(self, method, url, **kwargs):
+        kwargs['verify'] = False
+        return original_request(self, method, url, **kwargs)
     
     # Test with invalid endpoint - should handle gracefully
     config = SimplifiedFetchRequestOptions(method="GET")
@@ -220,8 +259,10 @@ async def test_auth_fetch_error_handling(auth_server):
     response_received = False
     
     try:
-        resp = auth_fetch.fetch(None, "http://localhost:8084/nonexistent", config)
-        response_received = True
+        with patch.object(requests.Session, 'request', patched_request):
+            with patch.object(requests.Session, 'post', lambda self, url, **kwargs: original_request(self, 'POST', url, **{**kwargs, 'verify': False})):
+                resp = auth_fetch.fetch(None, "https://localhost:8084/nonexistent", config)
+                response_received = True
         
         # If response is returned, verify it's a valid HTTP response
         if resp:

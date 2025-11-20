@@ -59,7 +59,7 @@ class WalletOK:
                 "serialNumber": base64.b64encode(b"S" * 32).decode(),
                 "subject": args.get("subject"),
                 "certifier": args.get("certifiers", [self._pub.hex()])[0] if args.get("certifiers") else self._pub.hex(),
-                "fields": {f: "v" for f in args.get("fields", [])},
+                "fields": dict.fromkeys(args.get("fields", []), "v"),
             },
             "keyring": {},
             "signature": b"sig",

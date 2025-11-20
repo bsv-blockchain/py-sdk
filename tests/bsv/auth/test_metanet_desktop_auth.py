@@ -360,7 +360,7 @@ class MockHTTPServer:
     
     def get_server_url(self):
         """Get server URL"""
-        return f"http://{self.host}:{self.port}"
+        return f"https://{self.host}:{self.port}"
     
     def wait_for_server_ready(self, timeout=5.0):
         """
@@ -464,7 +464,7 @@ class PySDKAuthClient:
     This class demonstrates how to use py-sdk for authentication with go-wallet-toolbox
     """
     
-    def __init__(self, wallet, server_url: str = "http://localhost:8100", use_mocks: bool = True):
+    def __init__(self, wallet, server_url: str = "https://localhost:8100", use_mocks: bool = True):
         """
         py-sdkを使用した認証クライアントの初期化
         
@@ -700,7 +700,7 @@ class TestMetanetDesktopAuth(unittest.TestCase):
     def test_auth_client_creation(self):
         """Test that auth client is created correctly"""
         self.assertIsNotNone(self.auth_client)
-        self.assertEqual(self.auth_client.server_url, "http://localhost:8100")
+        self.assertEqual(self.auth_client.server_url, "https://localhost:8100")
         self.assertFalse(self.auth_client.is_authenticated)
         self.assertIsNone(self.auth_client.auth_session)
         self.assertTrue(self.auth_client.use_mocks)
@@ -710,14 +710,14 @@ class TestMetanetDesktopAuth(unittest.TestCase):
         status = self.auth_client.get_auth_status()
         self.assertFalse(status['is_authenticated'])
         self.assertIsNone(status['session_info'])
-        self.assertEqual(status['server_url'], "http://localhost:8100")
+        self.assertEqual(status['server_url'], "https://localhost:8100")
         self.assertTrue(status['using_mocks'])
     
     def test_mock_transport(self):
         """Test mock transport functionality"""
-        transport = MockTransport("http://localhost:8100")
+        transport = MockTransport("https://localhost:8100")
         self.assertIsNotNone(transport)
-        self.assertEqual(transport.base_url, "http://localhost:8100")
+        self.assertEqual(transport.base_url, "https://localhost:8100")
         
         # Test callback registration
         callback_called = False

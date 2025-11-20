@@ -63,10 +63,11 @@ class TestLookupResolver:
     @pytest.mark.asyncio
     async def test_https_facilitator_lookup_invalid_url(self):
         """Test HTTPS facilitator rejects non-HTTPS URLs."""
+        from bsv.overlay_tools.lookup_resolver import HTTPProtocolError
         facilitator = HTTPSOverlayLookupFacilitator(allow_http=False)
         question = LookupQuestion(service="test", query={})
 
-        with pytest.raises(ValueError, match="HTTPS facilitator can only use URLs"):
+        with pytest.raises(HTTPProtocolError, match="HTTPS facilitator can only use URLs"):
             await facilitator.lookup("http://example.com", question)
 
     def test_lookup_resolver_creation(self):

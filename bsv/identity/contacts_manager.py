@@ -93,7 +93,6 @@ class ContactsManager:
         }, None) or {}
 
         outputs = outputs_result.get('outputs') or []
-        beef = outputs_result.get('BEEF') or b''
 
         if not outputs:
             self._cache[CONTACTS_CACHE_KEY] = json.dumps([])
@@ -156,12 +155,6 @@ class ContactsManager:
         """
         # Get current contacts
         contacts = self.get_contacts()
-        
-        # Check if contact already exists
-        existing_index = next(
-            (i for i, c in enumerate(contacts) if c.get('identityKey') == contact.get('identityKey')),
-            None
-        )
 
         contact_to_store = {**contact, 'metadata': metadata}
 

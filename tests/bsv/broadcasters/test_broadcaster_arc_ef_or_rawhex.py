@@ -36,7 +36,7 @@ class TransactionBroadcaster:
     def request_headers(self):
         return {"Content-Type": "application/json"}
 
-    async def broadcast(self, tx: 'Transaction') -> Union[BroadcastResponse, BroadcastFailure]:
+    def broadcast(self, tx: 'Transaction') -> Union[BroadcastResponse, BroadcastFailure]:
         # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
         request_options = {
@@ -62,7 +62,7 @@ class TestTransactionBroadcaster(unittest.TestCase):
             Input(source_transaction="tx3")
         ]
         tx = Transaction(inputs=inputs)
-        result = asyncio.run(self.broadcaster.broadcast(tx))
+        result = self.broadcaster.broadcast(tx)
 
         # EFフォーマットが使われていることを確認
         self.assertEqual(result["data"]["rawTx"], "ef_formatted_hex_data")
@@ -76,7 +76,7 @@ class TestTransactionBroadcaster(unittest.TestCase):
         ]
         tx = Transaction(inputs=inputs)
         
-        result = asyncio.run(self.broadcaster.broadcast(tx))
+        result = self.broadcaster.broadcast(tx)
 
         # 通常のhexフォーマットが使われていることを確認
         self.assertEqual(result["data"]["rawTx"], "normal_hex_data")
@@ -90,7 +90,7 @@ class TestTransactionBroadcaster(unittest.TestCase):
         ]
         tx = Transaction(inputs=inputs)
 
-        result = asyncio.run(self.broadcaster.broadcast(tx))
+        result = self.broadcaster.broadcast(tx)
 
         # 通常のhexフォーマットが使われていることを確認
         self.assertEqual(result["data"]["rawTx"], "normal_hex_data")
