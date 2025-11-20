@@ -11,6 +11,10 @@ from ..chaintracker import ChainTracker
 from ..http_client import HttpClient, default_http_client
 
 
+# Constants
+CONTENT_TYPE_JSON = "application/json"
+
+
 class BlockHeadersServiceError(Exception):
     """Base exception for BlockHeadersService errors."""
     pass
@@ -62,8 +66,8 @@ class BlockHeadersService(ChainTracker):
         request_options = {
             "method": "POST",
             "headers": {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
+                "Content-Type": CONTENT_TYPE_JSON,
+                "Accept": CONTENT_TYPE_JSON,
                 "Authorization": f"Bearer {self.api_key}"
             },
             "data": [
@@ -104,7 +108,7 @@ class BlockHeadersService(ChainTracker):
         request_options = {
             "method": "GET",
             "headers": {
-                "Accept": "application/json",
+                "Accept": CONTENT_TYPE_JSON,
                 "Authorization": f"Bearer {self.api_key}"
             }
         }

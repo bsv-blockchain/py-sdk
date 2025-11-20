@@ -38,88 +38,126 @@ def validate_transactions(beef: Beef) -> ValidationResult:
     """
     result = ValidationResult()
     txids_in_bumps = _txids_in_bumps(beef)
+    
+    context = _ValidationContext(txids_in_bumps)
+    _classify_transactions(beef, context)
+    _validate_dependencies(context)
+    _collect_results(result, context)
+    return result
 
-    valid_txids: Set[str] = set()
-    missing_inputs: Set[str] = set()
-    has_proof: List[BeefTx] = []
-    txid_only: List[BeefTx] = []
-    needs_validation: List[BeefTx] = []
-    with_missing: List[BeefTx] = []
+class _ValidationContext:
+    """Context for transaction validation."""
+    def __init__(self, txids_in_bumps: Set[str]):
+        self.txids_in_bumps = txids_in_bumps
+        self.valid_txids: Set[str] = set()
+        self.missing_inputs: Set[str] = set()
+        self.has_proof: List[BeefTx] = []
+        self.txid_only: List[BeefTx] = []
+        self.needs_validation: List[BeefTx] = []
+        self.with_missing: List[BeefTx] = []
 
+def _classify_transactions(beef: Beef, ctx: _ValidationContext):
+    """Classify transactions by format and initial validity."""
     for txid, btx in getattr(beef, "txs", {}).items():
         if btx.data_format == 2:
-            txid_only.append(btx)
-            if txid in txids_in_bumps:
-                valid_txids.add(txid)
-            continue
-        if btx.data_format == 1:
-            # verify bump index and tx presence in that bump
-            ok = False
-            if btx.bump_index is not None and 0 <= btx.bump_index < len(beef.bumps):
-                bump = beef.bumps[btx.bump_index]
-                ok = any(leaf.get("hash_str") == txid for leaf in bump.path[0])
-            if ok:
-                valid_txids.add(txid)
-                has_proof.append(btx)
-            else:
-                needs_validation.append(btx)
-            continue
-        # data_format == 0
-        if txid in txids_in_bumps:
-            valid_txids.add(txid)
-            has_proof.append(btx)
-        elif btx.tx_obj is not None:
-            inputs = getattr(btx.tx_obj, "inputs", []) or []
-            has_missing = False
-            for txin in inputs:
-                src = getattr(txin, "source_txid", None)
-                if src and src not in beef.txs:
-                    missing_inputs.add(src)
-                    has_missing = True
-            if has_missing:
-                with_missing.append(btx)
-            else:
-                needs_validation.append(btx)
+            _handle_txid_only(btx, txid, ctx)
+        elif btx.data_format == 1:
+            _handle_format_1(btx, txid, beef, ctx)
+        else:
+            _handle_format_0(btx, txid, beef, ctx)
 
-    # iterative dependency validation
-    while needs_validation:
-        progress = False
+def _handle_txid_only(btx: BeefTx, txid: str, ctx: _ValidationContext):
+    """Handle txid-only format."""
+    ctx.txid_only.append(btx)
+    if txid in ctx.txids_in_bumps:
+        ctx.valid_txids.add(txid)
+
+def _handle_format_1(btx: BeefTx, txid: str, beef: Beef, ctx: _ValidationContext):
+    """Handle format 1 (with bump index)."""
+    ok = False
+    if btx.bump_index is not None and 0 <= btx.bump_index < len(beef.bumps):
+        bump = beef.bumps[btx.bump_index]
+        ok = any(leaf.get("hash_str") == txid for leaf in bump.path[0])
+    
+    if ok:
+        ctx.valid_txids.add(txid)
+        ctx.has_proof.append(btx)
+    else:
+        ctx.needs_validation.append(btx)
+
+def _handle_format_0(btx: BeefTx, txid: str, beef: Beef, ctx: _ValidationContext):
+    """Handle format 0 (full transaction)."""
+    if txid in ctx.txids_in_bumps:
+        ctx.valid_txids.add(txid)
+        ctx.has_proof.append(btx)
+    elif btx.tx_obj is not None:
+        if _check_missing_inputs(btx, beef, ctx):
+            ctx.with_missing.append(btx)
+        else:
+            ctx.needs_validation.append(btx)
+
+def _check_missing_inputs(btx: BeefTx, beef: Beef, ctx: _ValidationContext) -> bool:
+    """Check for missing inputs and update context."""
+    inputs = getattr(btx.tx_obj, "inputs", []) or []
+    has_missing = False
+    for txin in inputs:
+        src = getattr(txin, "source_txid", None)
+        if src and src not in beef.txs:
+            ctx.missing_inputs.add(src)
+            has_missing = True
+    return has_missing
+
+def _validate_dependencies(ctx: _ValidationContext):
+    """Iteratively validate transaction dependencies."""
+    while ctx.needs_validation:
         still: List[BeefTx] = []
-        for btx in needs_validation:
-            ok = True
-            if btx.tx_obj is not None:
-                for txin in btx.tx_obj.inputs:
-                    src = getattr(txin, "source_txid", None)
-                    if src and src not in valid_txids:
-                        ok = False
-                        break
-            if ok and btx.tx_obj is not None:
-                # Require at least one input to already be valid to anchor to a proven chain.
-                # Transactions with zero inputs must have a bump to be considered valid.
-                if any(getattr(txin, "source_txid", None) in valid_txids for txin in btx.tx_obj.inputs):
-                    valid_txids.add(btx.txid)
-                    has_proof.append(btx)
-                    progress = True
-                else:
-                    still.append(btx)
+        progress = False
+        
+        for btx in ctx.needs_validation:
+            if _can_validate_transaction(btx, ctx):
+                ctx.valid_txids.add(btx.txid)
+                ctx.has_proof.append(btx)
+                progress = True
             else:
                 still.append(btx)
+        
         if not progress:
-            # remaining cannot be validated
-            for btx in still:
-                if btx.tx_obj is not None:
-                    result.not_valid.append(btx.tx_obj.txid())
+            _mark_unvalidatable(still, ctx)
             break
-        needs_validation = still
+        
+        ctx.needs_validation = still
 
-    # collect outputs
-    for btx in with_missing:
+def _can_validate_transaction(btx: BeefTx, ctx: _ValidationContext) -> bool:
+    """Check if transaction can be validated."""
+    if btx.tx_obj is None:
+        return False
+    
+    for txin in btx.tx_obj.inputs:
+        src = getattr(txin, "source_txid", None)
+        if src and src not in ctx.valid_txids:
+            return False
+    
+    # Require at least one valid input to anchor to proven chain
+    return any(getattr(txin, "source_txid", None) in ctx.valid_txids for txin in btx.tx_obj.inputs)
+
+def _mark_unvalidatable(still: List[BeefTx], ctx: _ValidationContext):
+    """Mark remaining transactions as not valid."""
+    # These are added to result.not_valid in _collect_results
+    pass
+
+def _collect_results(result: ValidationResult, ctx: _ValidationContext):
+    """Collect validation results."""
+    for btx in ctx.with_missing:
         if btx.tx_obj is not None:
             result.with_missing_inputs.append(btx.tx_obj.txid())
-    result.txid_only = [b.txid for b in txid_only]
-    result.valid = list(valid_txids)
-    result.missing_inputs = list(missing_inputs)
-    return result
+    
+    for btx in ctx.needs_validation:
+        if btx.tx_obj is not None:
+            result.not_valid.append(btx.tx_obj.txid())
+    
+    result.txid_only = [b.txid for b in ctx.txid_only]
+    result.valid = list(ctx.valid_txids)
+    result.missing_inputs = list(ctx.missing_inputs)
 
 
 def verify_valid(beef: Beef, allow_txid_only: bool = False) -> Tuple[bool, Dict[int, str]]:

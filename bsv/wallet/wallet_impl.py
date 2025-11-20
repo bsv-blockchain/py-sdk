@@ -744,173 +744,208 @@ class WalletImpl(WalletInterface):
                     "decryptedFields": {},
                 })
         return {"totalCertificates": len(matches), "certificates": matches}
-    def discover_by_identity_key(self, ctx: Any, args: Dict, originator: str) -> Dict:
+    def discover_by_identity_key(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         # naive: no identity index, return empty
         return {"totalCertificates": 0, "certificates": []}
-    def get_header_for_height(self, ctx: Any, args: Dict, originator: str) -> Dict:
+    def get_header_for_height(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         # minimal: return empty header bytes
         return {"header": b""}
-    def get_height(self, ctx: Any, args: Dict, originator: str) -> Dict:
+    def get_height(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         return {"height": 0}
-    def get_network(self, ctx: Any, args: Dict, originator: str) -> Dict:
+    def get_network(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         return {"network": "mocknet"}
-    def get_version(self, ctx: Any, args: Dict, originator: str) -> Dict:
+    def get_version(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         return {"version": "0.0.0"}
     def internalize_action(self, ctx: Any, args: Dict, originator: str) -> Dict:
         """
         Broadcast the signed transaction to the network.
         - If outputs are empty, do not broadcast and return an error.
         """
-        import os, binascii
-        # ARC is the default broadcaster unless explicitly disabled
+        tx_bytes = args.get("tx")
+        if not tx_bytes:
+            return {"accepted": False, "error": "internalize_action: missing tx bytes"}
+        
+        # Parse and validate transaction
+        tx_result = self._parse_transaction_for_broadcast(tx_bytes)
+        if "error" in tx_result:
+            return tx_result
+        
+        tx_hex = tx_result["tx_hex"]
+        
+        # Determine broadcaster configuration
+        broadcaster_config = self._determine_broadcaster_config(args)
+        
+        # Route to appropriate broadcaster
+        return self._execute_broadcast(tx_bytes, tx_hex, args, broadcaster_config)
+
+    def _parse_transaction_for_broadcast(self, tx_bytes: bytes) -> Dict:
+        """Parse and validate transaction before broadcasting."""
+        import binascii
+        try:
+            from bsv.transaction import Transaction
+            from bsv.utils import Reader
+            tx = Transaction.from_reader(Reader(tx_bytes))
+            
+            # Guard: do not broadcast if outputs are empty
+            if not getattr(tx, "outputs", None) or len(tx.outputs) == 0:
+                return {
+                    "error": "Cannot broadcast transaction with no outputs",
+                    "tx_hex": binascii.hexlify(tx_bytes).decode()
+                }
+            
+            tx_hex = tx.to_hex() if hasattr(tx, "to_hex") else binascii.hexlify(tx_bytes).decode()
+            return {"tx_hex": tx_hex, "tx": tx}
+        except Exception as e:
+            return {"error": f"Failed to parse transaction: {e}"}
+
+    def _determine_broadcaster_config(self, args: Dict) -> Dict:
+        """Determine which broadcaster to use based on configuration."""
+        import os
         disable_arc = os.getenv("DISABLE_ARC", "0") == "1" or args.get("disable_arc")
         use_arc = not disable_arc  # ARC is enabled by default
         use_woc = os.getenv("USE_WOC", "0") == "1" or args.get("use_woc")
-        
-        # Priority logic: For broadcasting, ARC > WOC > others
-        # When both are enabled, ARC is used for broadcasting, WOC for other operations
         use_mapi = args.get("use_mapi")
         use_custom_node = args.get("use_custom_node")
-        tx_bytes = args.get("tx")
-        txid = None
-        tx_hex = None
-        result = {"accepted": False, "error": "internalize_action: missing tx bytes"}
-        if tx_bytes:
-            try:
-                from bsv.transaction import Transaction
-                from bsv.utils import Reader
-                tx = Transaction.from_reader(Reader(tx_bytes))
-                # Guard: do not broadcast if outputs are empty
-                if not getattr(tx, "outputs", None) or len(tx.outputs) == 0:
-                    return {"accepted": False, "error": "Cannot broadcast transaction with no outputs", "tx_hex": binascii.hexlify(tx_bytes).decode()}
-                tx_hex = tx.to_hex() if hasattr(tx, "to_hex") else binascii.hexlify(tx_bytes).decode()
-                ext_bc = args.get("broadcaster")
-                # Custom broadcaster (for test/mocks)
-                if ext_bc and hasattr(ext_bc, "broadcast"):
-                    res = ext_bc.broadcast(tx_hex)
-                    if isinstance(res, dict) and (res.get("accepted") or res.get("txid")):
-                        txid = res.get("txid")
-                        result = {"accepted": True, "txid": txid, "tx_hex": tx_hex}
-                    else:
-                        result = res
-                # ARC is the default broadcaster (highest priority)
-                elif use_arc:
-                    from bsv.broadcasters.arc import ARC, ARCConfig
-                    arc_url = args.get("arc_url") or os.getenv("ARC_URL", "https://arc.taal.com")
-                    arc_api_key = args.get("arc_api_key") or os.getenv("ARC_API_KEY")
-                    timeout = int(args.get("timeoutSeconds", int(os.getenv("ARC_TIMEOUT", "30"))))
-                    
-                    # Create ARC config with required headers
-                    headers = {
-                        "X-WaitFor": "SEEN_ON_NETWORK",
-                        "X-MaxTimeout": "1"
-                    }
-                    arc_config = ARCConfig(api_key=arc_api_key, headers=headers) if arc_api_key else ARCConfig(headers=headers)
-                    bc = ARC(arc_url, arc_config)
-                    
-                    print(f"[INFO] Broadcasting to ARC (default). URL: {arc_url}, tx_hex: {tx_hex}")
-                    
-                    try:
-                        # Use sync_broadcast for synchronous operation
-                        from bsv.transaction import Transaction
-                        from bsv.utils import Reader
-                        tx_obj = Transaction.from_reader(Reader(tx_bytes))
-                        arc_result = bc.sync_broadcast(tx_obj, timeout=timeout)
-                        
-                        if hasattr(arc_result, 'status') and arc_result.status == "success":
-                            txid = arc_result.txid
-                            result = {"accepted": True, "txid": txid, "tx_hex": tx_hex, "message": arc_result.message, "broadcaster": "ARC"}
-                        else:
-                            error_msg = getattr(arc_result, 'description', 'ARC broadcast failed')
-                            print(f"[WARN] ARC broadcast failed: {error_msg}, falling back to WOC if enabled")
-                            # If ARC fails and WOC is available, try WOC as fallback
-                            if use_woc:
-                                from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcasterSync
-                                api_key = self._resolve_woc_api_key(args)
-                                woc_timeout = int(args.get("timeoutSeconds", int(os.getenv("WOC_TIMEOUT", "10"))))
-                                
-                                # Determine network from private key
-                                network = "main"
-                                if hasattr(self, 'private_key') and hasattr(self.private_key, 'network'):
-                                    from bsv.constants import Network
-                                    if self.private_key.network == Network.TESTNET:
-                                        network = "test"
-                                
-                                bc_woc = WhatsOnChainBroadcasterSync(network=network, api_key=api_key)
-                                print(f"[INFO] Fallback broadcasting to WhatsOnChain. tx_hex: {tx_hex}")
-                                res = bc_woc.broadcast(tx_hex, api_key=api_key, timeout=woc_timeout)
-                                txid = res.get("txid")
-                                result = {**res, "tx_hex": tx_hex, "broadcaster": "WOC (fallback)"}
-                            else:
-                                result = {"accepted": False, "error": error_msg, "tx_hex": tx_hex, "broadcaster": "ARC"}
-                    except Exception as arc_error:
-                        print(f"[WARN] ARC broadcast error: {arc_error}, falling back to WOC if enabled")
-                        # If ARC throws exception and WOC is available, try WOC as fallback
-                        if use_woc:
-                            from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcasterSync
-                            api_key = self._resolve_woc_api_key(args)
-                            woc_timeout = int(args.get("timeoutSeconds", int(os.getenv("WOC_TIMEOUT", "10"))))
-                            
-                            # Determine network from private key
-                            network = "main"
-                            if hasattr(self, 'private_key') and hasattr(self.private_key, 'network'):
-                                from bsv.constants import Network
-                                if self.private_key.network == Network.TESTNET:
-                                    network = "test"
-                            
-                            bc_woc = WhatsOnChainBroadcasterSync(network=network, api_key=api_key)
-                            print(f"[INFO] Fallback broadcasting to WhatsOnChain. tx_hex: {tx_hex}")
-                            res = bc_woc.broadcast(tx_hex, api_key=api_key, timeout=woc_timeout)
-                            txid = res.get("txid")
-                            result = {**res, "tx_hex": tx_hex, "broadcaster": "WOC (fallback)"}
-                        else:
-                            result = {"accepted": False, "error": f"ARC error: {arc_error}", "tx_hex": tx_hex, "broadcaster": "ARC"}
-                elif use_woc:
-                    from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcasterSync
-                    api_key = self._resolve_woc_api_key(args)
-                    timeout = int(args.get("timeoutSeconds", int(os.getenv("WOC_TIMEOUT", "10"))) )
-                    
-                    # Determine network from private key
-                    network = "main"
-                    if hasattr(self, 'private_key') and hasattr(self.private_key, 'network'):
-                        from bsv.constants import Network
-                        if self.private_key.network == Network.TESTNET:
-                            network = "test"
-                    
-                    bc = WhatsOnChainBroadcasterSync(network=network, api_key=api_key)
-                    print(f"[INFO] Broadcasting to WhatsOnChain. tx_hex: {tx_hex}")
-                    res = bc.broadcast(tx_hex, api_key=api_key, timeout=timeout)
-                    txid = res.get("txid")
-                    result = {**res, "tx_hex": tx_hex}
-                elif use_mapi:
-                    from bsv.network.broadcaster import MAPIClientBroadcaster
-                    api_url = args.get("mapi_url") or os.getenv("MAPI_URL")
-                    api_key = args.get("mapi_api_key") or os.getenv("MAPI_API_KEY")
-                    if not api_url:
-                        return {"accepted": False, "error": "internalize_action: mAPI url missing", "tx_hex": tx_hex}
-                    bc = MAPIClientBroadcaster(api_url=api_url, api_key=api_key)
-                    res = bc.broadcast(tx_hex)
-                    txid = res.get("txid")
-                    result = {**res, "tx_hex": tx_hex}
-                elif use_custom_node:
-                    from bsv.network.broadcaster import CustomNodeBroadcaster
-                    api_url = args.get("custom_node_url") or os.getenv("CUSTOM_NODE_URL")
-                    api_key = args.get("custom_node_api_key") or os.getenv("CUSTOM_NODE_API_KEY")
-                    if not api_url:
-                        return {"accepted": False, "error": "internalize_action: custom node url missing", "tx_hex": tx_hex}
-                    bc = CustomNodeBroadcaster(api_url=api_url, api_key=api_key)
-                    res = bc.broadcast(tx_hex)
-                    txid = res.get("txid")
-                    result = {**res, "tx_hex": tx_hex}
-                else:
-                    # Fallback to mock logic
-                    txid = tx.txid() if hasattr(tx, "txid") else None
-                    result = {"accepted": True, "txid": txid, "tx_hex": tx_hex, "mock": True}
-            except Exception as e:
-                import traceback
-                tb = traceback.format_exc()
-                result = {"accepted": False, "error": f"internalize_action: {e}", "traceback": tb, "tx_hex": tx_hex}
-        return result
+        ext_bc = args.get("broadcaster")
+        
+        return {
+            "use_arc": use_arc,
+            "use_woc": use_woc,
+            "use_mapi": use_mapi,
+            "use_custom_node": use_custom_node,
+            "custom_broadcaster": ext_bc
+        }
+
+    def _execute_broadcast(self, tx_bytes: bytes, tx_hex: str, args: Dict, config: Dict) -> Dict:
+        """Execute broadcast using the determined broadcaster."""
+        # Priority: Custom > ARC > WOC > MAPI > Custom Node
+        if config["custom_broadcaster"] and hasattr(config["custom_broadcaster"], "broadcast"):
+            return self._broadcast_with_custom(config["custom_broadcaster"], tx_hex)
+        elif config["use_arc"]:
+            return self._broadcast_with_arc(tx_bytes, tx_hex, args, config["use_woc"])
+        elif config["use_woc"]:
+            return self._broadcast_with_woc(tx_hex, args)
+        elif config["use_mapi"]:
+            return self._broadcast_with_mapi(tx_hex, args)
+        elif config["use_custom_node"]:
+            return self._broadcast_with_custom_node(tx_hex, args)
+        else:
+            return self._broadcast_with_mock(tx_bytes, tx_hex)
+
+    def _broadcast_with_custom(self, broadcaster, tx_hex: str) -> Dict:
+        """Broadcast using custom broadcaster."""
+        res = broadcaster.broadcast(tx_hex)
+        if isinstance(res, dict) and (res.get("accepted") or res.get("txid")):
+            return {"accepted": True, "txid": res.get("txid"), "tx_hex": tx_hex}
+        return res
+
+    def _broadcast_with_arc(self, tx_bytes: bytes, tx_hex: str, args: Dict, use_woc_fallback: bool) -> Dict:
+        """Broadcast using ARC with optional WOC fallback."""
+        import os
+        from bsv.broadcasters.arc import ARC, ARCConfig
+        
+        arc_url = args.get("arc_url") or os.getenv("ARC_URL", "https://arc.taal.com")
+        arc_api_key = args.get("arc_api_key") or os.getenv("ARC_API_KEY")
+        timeout = int(args.get("timeoutSeconds", int(os.getenv("ARC_TIMEOUT", "30"))))
+        
+        # Create ARC config with required headers
+        headers = {"X-WaitFor": "SEEN_ON_NETWORK", "X-MaxTimeout": "1"}
+        arc_config = ARCConfig(api_key=arc_api_key, headers=headers) if arc_api_key else ARCConfig(headers=headers)
+        bc = ARC(arc_url, arc_config)
+        
+        print(f"[INFO] Broadcasting to ARC (default). URL: {arc_url}, tx_hex: {tx_hex}")
+        
+        try:
+            from bsv.transaction import Transaction
+            from bsv.utils import Reader
+            tx_obj = Transaction.from_reader(Reader(tx_bytes))
+            arc_result = bc.sync_broadcast(tx_obj, timeout=timeout)
+            
+            if hasattr(arc_result, 'status') and arc_result.status == "success":
+                return {
+                    "accepted": True,
+                    "txid": arc_result.txid,
+                    "tx_hex": tx_hex,
+                    "message": arc_result.message,
+                    "broadcaster": "ARC"
+                }
+            else:
+                error_msg = getattr(arc_result, 'description', 'ARC broadcast failed')
+                print(f"[WARN] ARC broadcast failed: {error_msg}, falling back to WOC if enabled")
+                
+                if use_woc_fallback:
+                    return self._broadcast_with_woc(tx_hex, args, is_fallback=True)
+                return {"accepted": False, "error": error_msg, "tx_hex": tx_hex, "broadcaster": "ARC"}
+                
+        except Exception as arc_error:
+            print(f"[WARN] ARC broadcast error: {arc_error}, falling back to WOC if enabled")
+            
+            if use_woc_fallback:
+                return self._broadcast_with_woc(tx_hex, args, is_fallback=True)
+            return {"accepted": False, "error": f"ARC error: {arc_error}", "tx_hex": tx_hex, "broadcaster": "ARC"}
+
+    def _broadcast_with_woc(self, tx_hex: str, args: Dict, is_fallback: bool = False) -> Dict:
+        """Broadcast using WhatsOnChain."""
+        import os
+        from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcasterSync
+        
+        api_key = self._resolve_woc_api_key(args)
+        timeout = int(args.get("timeoutSeconds", int(os.getenv("WOC_TIMEOUT", "10"))))
+        network = self._get_network_for_broadcast()
+        
+        bc = WhatsOnChainBroadcasterSync(network=network, api_key=api_key)
+        label = "Fallback broadcasting" if is_fallback else "Broadcasting"
+        print(f"[INFO] {label} to WhatsOnChain. tx_hex: {tx_hex}")
+        
+        res = bc.broadcast(tx_hex, api_key=api_key, timeout=timeout)
+        broadcaster_label = "WOC (fallback)" if is_fallback else "WOC"
+        return {**res, "tx_hex": tx_hex, "broadcaster": broadcaster_label}
+
+    def _broadcast_with_mapi(self, tx_hex: str, args: Dict) -> Dict:
+        """Broadcast using MAPI."""
+        import os
+        from bsv.network.broadcaster import MAPIClientBroadcaster
+        
+        api_url = args.get("mapi_url") or os.getenv("MAPI_URL")
+        api_key = args.get("mapi_api_key") or os.getenv("MAPI_API_KEY")
+        
+        if not api_url:
+            return {"accepted": False, "error": "internalize_action: mAPI url missing", "tx_hex": tx_hex}
+        
+        bc = MAPIClientBroadcaster(api_url=api_url, api_key=api_key)
+        res = bc.broadcast(tx_hex)
+        return {**res, "tx_hex": tx_hex}
+
+    def _broadcast_with_custom_node(self, tx_hex: str, args: Dict) -> Dict:
+        """Broadcast using custom node."""
+        import os
+        from bsv.network.broadcaster import CustomNodeBroadcaster
+        
+        api_url = args.get("custom_node_url") or os.getenv("CUSTOM_NODE_URL")
+        api_key = args.get("custom_node_api_key") or os.getenv("CUSTOM_NODE_API_KEY")
+        
+        if not api_url:
+            return {"accepted": False, "error": "internalize_action: custom node url missing", "tx_hex": tx_hex}
+        
+        bc = CustomNodeBroadcaster(api_url=api_url, api_key=api_key)
+        res = bc.broadcast(tx_hex)
+        return {**res, "tx_hex": tx_hex}
+
+    def _broadcast_with_mock(self, tx_bytes: bytes, tx_hex: str) -> Dict:
+        """Broadcast using mock logic (for testing)."""
+        from bsv.transaction import Transaction
+        from bsv.utils import Reader
+        tx = Transaction.from_reader(Reader(tx_bytes))
+        txid = tx.txid() if hasattr(tx, "txid") else None
+        return {"accepted": True, "txid": txid, "tx_hex": tx_hex, "mock": True}
+
+    def _get_network_for_broadcast(self) -> str:
+        """Determine network (main/test) from private key."""
+        if hasattr(self, 'private_key') and hasattr(self.private_key, 'network'):
+            from bsv.constants import Network
+            if self.private_key.network == Network.TESTNET:
+                return "test"
+        return "main"
 
     # --- Optional: simple query helpers for mempool/confirm ---
     def query_tx_mempool(self, txid: str, *, network: str = "main", api_key: Optional[str] = None, timeout: int = 10) -> Dict[str, Any]:
@@ -930,9 +965,9 @@ class WalletImpl(WalletInterface):
             return ct.query_tx(txid, timeout=timeout)
         except Exception as e:  # noqa: PERF203
             return {"known": False, "error": str(e)}
-    def is_authenticated(self, ctx: Any, args: Dict, originator: str) -> Dict:
+    def is_authenticated(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         return {"authenticated": True}
-    def list_actions(self, ctx: Any, args: Dict, originator: str) -> Dict:
+    def list_actions(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         labels = args.get("labels") or []
         mode = args.get("labelQueryMode", "")
         def match(act):
@@ -953,79 +988,122 @@ class WalletImpl(WalletInterface):
         Fetch UTXOs. Priority: WOC > Mock logic
         When both WOC and ARC are enabled, WOC is preferred for UTXO fetching.
         """
+        # Allow cooperative cancel
+        if args.get("cancel"):
+            return {"outputs": []}
+        
         include = (args.get("include") or "").lower()
-        # If caller requests entire transactions (BEEF), bypass WOC path (WOC cannot return BEEF)
-        # Check args first - if use_woc is explicitly set (True or False), respect it
-        # Otherwise fall back to environment variable
-        if "use_woc" in args:
-            use_woc = args.get("use_woc") and not ("entire" in include or "transaction" in include)
-        else:
-            use_woc = (os.getenv("USE_WOC", "0") == "1") and not ("entire" in include or "transaction" in include)
+        use_woc = self._should_use_woc(args, include)
+        
         try:
             print(f"[TRACE] [list_outputs] include='{include}' use_woc={use_woc} basket={args.get('basket')} tags={args.get('tags')}")
         except Exception:
             pass
-        # Note: For UTXO fetching, WOC takes priority over ARC when both are enabled
-        # Allow cooperative cancel (best-effort)
-        if args.get("cancel"):
-            return {"outputs": []}
+        
         if use_woc:
-            # Determine address priority: derived (protocolID/keyID) > basket > tags > self.public_key
-            address = None
-            try:
-                protocol_id = args.get("protocolID") or args.get("protocol_id")
-                key_id = args.get("keyID") or args.get("key_id")
-                counterparty = args.get("counterparty")
-                # Fallback: read from nested pushdrop bag (TS/GO style)
-                if protocol_id is None or key_id is None:
-                    pd = args.get("pushdrop") or {}
-                    protocol_id = protocol_id or pd.get("protocolID") or pd.get("protocol_id")
-                    key_id = key_id or pd.get("keyID") or pd.get("key_id")
-                    if counterparty is None:
-                        counterparty = pd.get("counterparty")
-                if protocol_id and key_id is not None:
-                    if isinstance(protocol_id, dict):
-                        protocol = SimpleNamespace(security_level=int(protocol_id.get("securityLevel", 0)), protocol=str(protocol_id.get("protocol", "")))
-                    else:
-                        protocol = protocol_id
-                    cp = self._normalize_counterparty(counterparty)
-                    derived_pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self=False)
-                    address = derived_pub.address()
-            except Exception:
-                address = None
-            if not address:
-                address = args.get("basket") or (args.get("tags") or [None])[0]
-            # Validate that address looks like a Base58 address; otherwise skip WOC
-            if not address or not isinstance(address, str) or not validate_address(address):
-                # Fallback: derive address from self.public_key
-                try:
-                    from bsv.keys import PublicKey
-                    pubkey = self.public_key if hasattr(self, "public_key") else None
-                    if pubkey and hasattr(pubkey, "to_address"):
-                        address = pubkey.to_address("mainnet")
-                    else:
-                        return {"error": "No address available for WOC UTXO lookup"}
-                except Exception as e:
-                    return {"error": f"Failed to derive address: {e}"}
-            timeout = int(args.get("timeoutSeconds", int(os.getenv("WOC_TIMEOUT", "10"))))
-            utxos = self._get_utxos_from_woc(address, timeout=timeout)
-            return {"outputs": utxos}
-        # Fallback to existing mock logic
-        include = (args.get("include") or "").lower()
+            return self._get_outputs_from_woc(args)
+        
+        return self._get_outputs_from_mock(args, include)
+
+    def _should_use_woc(self, args: Dict, include: str) -> bool:
+        """Determine if WOC should be used for UTXO fetching."""
+        # WOC cannot return BEEF, so skip if entire transactions requested
+        if "entire" in include or "transaction" in include:
+            return False
+        
+        # Check explicit arg first, then environment variable
+        if "use_woc" in args:
+            return args.get("use_woc", False)
+        
+        return os.getenv("USE_WOC", "0") == "1"
+
+    def _get_outputs_from_woc(self, args: Dict) -> Dict:
+        """Fetch outputs from WOC service."""
+        address = self._derive_query_address(args)
+        
+        if not address or not isinstance(address, str) or not validate_address(address):
+            address = self._get_fallback_address()
+            if isinstance(address, dict):  # Error response
+                return address
+        
+        timeout = int(args.get("timeoutSeconds", int(os.getenv("WOC_TIMEOUT", "10"))))
+        utxos = self._get_utxos_from_woc(address, timeout=timeout)
+        return {"outputs": utxos}
+
+    def _derive_query_address(self, args: Dict) -> Optional[str]:
+        """Derive address for UTXO query from various sources."""
+        try:
+            # Try protocol/key derivation first
+            protocol_id, key_id, counterparty = self._extract_protocol_params(args)
+            
+            if protocol_id and key_id is not None:
+                protocol = self._normalize_protocol_id(protocol_id)
+                cp = self._normalize_counterparty(counterparty)
+                derived_pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self=False)
+                return derived_pub.address()
+        except Exception:
+            pass
+        
+        # Fallback to basket or tags
+        return args.get("basket") or (args.get("tags") or [None])[0]
+
+    def _extract_protocol_params(self, args: Dict) -> tuple:
+        """Extract protocol parameters from args."""
+        protocol_id = args.get("protocolID") or args.get("protocol_id")
+        key_id = args.get("keyID") or args.get("key_id")
+        counterparty = args.get("counterparty")
+        
+        # Fallback: read from nested pushdrop bag
+        if protocol_id is None or key_id is None:
+            pd = args.get("pushdrop") or {}
+            protocol_id = protocol_id or pd.get("protocolID") or pd.get("protocol_id")
+            key_id = key_id or pd.get("keyID") or pd.get("key_id")
+            if counterparty is None:
+                counterparty = pd.get("counterparty")
+        
+        return protocol_id, key_id, counterparty
+
+    def _normalize_protocol_id(self, protocol_id):
+        """Normalize protocol_id to SimpleNamespace."""
+        if isinstance(protocol_id, dict):
+            return SimpleNamespace(
+                security_level=int(protocol_id.get("securityLevel", 0)),
+                protocol=str(protocol_id.get("protocol", ""))
+            )
+        return protocol_id
+
+    def _get_fallback_address(self):
+        """Get fallback address from wallet's public key."""
+        try:
+            from bsv.keys import PublicKey
+            pubkey = self.public_key if hasattr(self, "public_key") else None
+            if pubkey and hasattr(pubkey, "to_address"):
+                return pubkey.to_address("mainnet")
+            return {"error": "No address available for WOC UTXO lookup"}
+        except Exception as e:
+            return {"error": f"Failed to derive address: {e}"}
+
+    def _get_outputs_from_mock(self, args: Dict, include: str) -> Dict:
+        """Get outputs from mock/local logic."""
         basket = args.get("basket", "")
         outputs_desc = self._find_outputs_for_basket(basket, args)
+        
         try:
             print(f"[TRACE] [list_outputs] outputs_desc_len={len(outputs_desc)} sample={outputs_desc[0] if outputs_desc else None}")
         except Exception:
             pass
-        # Retention filter: drop expired outputs when requested
+        
+        # Filter expired outputs if requested
         if args.get("excludeExpired"):
             now_epoch = int(args.get("nowEpoch", time.time()))
             outputs_desc = [o for o in outputs_desc if not self._is_output_expired(o, now_epoch)]
+        
         if os.getenv("REGISTRY_DEBUG") == "1":
             print("[DEBUG list_outputs] basket", basket, "outputs_desc", outputs_desc)
+        
         beef_bytes = self._build_beef_for_outputs(outputs_desc)
         res = {"outputs": self._format_outputs_result(outputs_desc, basket)}
+        
         if "entire" in include or "transaction" in include:
             res["BEEF"] = beef_bytes
             try:
@@ -1287,7 +1365,7 @@ class WalletImpl(WalletInterface):
             import traceback
             tb = traceback.format_exc()
             return {"tx": b"\x00", "txid": "00" * 32, "error": f"sign_action: {e}", "traceback": tb}
-    def wait_for_authentication(self, ctx: Any, args: Dict, originator: str) -> Dict:
+    def wait_for_authentication(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         return {"authenticated": True}
 
     def _get_utxos_from_woc(self, address: str, api_key: Optional[str] = None, timeout: int = 10) -> list:

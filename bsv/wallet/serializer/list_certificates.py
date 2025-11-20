@@ -59,52 +59,54 @@ def serialize_list_certificates_result(result: Dict[str, Any]) -> bytes:
     certificates: List[Dict[str, Any]] = result.get("certificates", [])
     total = int(result.get("totalCertificates", len(certificates)))
     if total != len(certificates):
-        # keep consistent
         total = len(certificates)
     w.write_varint(total)
     for cert in certificates:
-        # certificateBytes required for now
-        cert_bytes: bytes = cert.get("certificateBytes", b"")
-        w.write_int_bytes(cert_bytes)
-        # keyring optional
-        keyring: Optional[Dict[str, str]] = cert.get("keyring")
-        if keyring:
-            w.write_byte(1)
-            w.write_varint(len(keyring))
-            for k, v in keyring.items():
-                w.write_string(k)
-                w.write_string(v)
-        else:
-            w.write_byte(0)
-        # verifier optional bytes
-        verifier: bytes = cert.get("verifier", b"")
-        if verifier:
-            w.write_byte(1)
-            w.write_int_bytes(verifier)
-        else:
-            w.write_byte(0)
+        _serialize_certificate(w, cert)
     return w.to_bytes()
+
+def _serialize_certificate(w: Writer, cert: Dict[str, Any]):
+    """Serialize a single certificate."""
+    w.write_int_bytes(cert.get("certificateBytes", b""))
+    _serialize_keyring(w, cert.get("keyring"))
+    _serialize_verifier(w, cert.get("verifier", b""))
+
+def _serialize_keyring(w: Writer, keyring: Optional[Dict[str, str]]):
+    """Serialize certificate keyring."""
+    if keyring:
+        w.write_byte(1)
+        w.write_varint(len(keyring))
+        for k, v in keyring.items():
+            w.write_string(k)
+            w.write_string(v)
+    else:
+        w.write_byte(0)
+
+def _serialize_verifier(w: Writer, verifier: bytes):
+    """Serialize certificate verifier."""
+    if verifier:
+        w.write_byte(1)
+        w.write_int_bytes(verifier)
+    else:
+        w.write_byte(0)
 
 
 def deserialize_list_certificates_result(data: bytes) -> Dict[str, Any]:
     r = Reader(data)
-    out: Dict[str, Any] = {"certificates": []}
     total = r.read_varint()
-    out["totalCertificates"] = int(total)
-    for _ in range(int(total)):
-        cert_bytes = r.read_int_bytes() or b""
-        item: Dict[str, Any] = {"certificateBytes": cert_bytes}
-        # keyring presence
-        if r.read_byte() == 1:
-            kcnt = r.read_varint()
-            keyring: Dict[str, str] = {}
-            for _i in range(int(kcnt)):
-                k = r.read_string()
-                v = r.read_string()
-                keyring[k] = v
-            item["keyring"] = keyring
-        # verifier presence
-        if r.read_byte() == 1:
-            item["verifier"] = r.read_int_bytes() or b""
-        out["certificates"].append(item)
-    return out
+    certificates = [_deserialize_certificate(r) for _ in range(int(total))]
+    return {"totalCertificates": int(total), "certificates": certificates}
+
+def _deserialize_certificate(r: Reader) -> Dict[str, Any]:
+    """Deserialize a single certificate."""
+    item = {"certificateBytes": r.read_int_bytes() or b""}
+    if r.read_byte() == 1:
+        item["keyring"] = _deserialize_keyring(r)
+    if r.read_byte() == 1:
+        item["verifier"] = r.read_int_bytes() or b""
+    return item
+
+def _deserialize_keyring(r: Reader) -> Dict[str, str]:
+    """Deserialize certificate keyring."""
+    kcnt = r.read_varint()
+    return {r.read_string(): r.read_string() for _ in range(int(kcnt))}

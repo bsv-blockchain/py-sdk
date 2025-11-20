@@ -29,48 +29,75 @@ def parse_pushdrop_locking_script(script: bytes) -> List[bytes]:
     items: List[bytes] = []
     i = 0
     n = len(script)
+    
     while i < n:
         op = script[i]
         i += 1
+        
         if op == 0x51:  # OP_TRUE / OP_1
             break
-        if op <= 75:
-            ln = op
-            if i + ln > n:
-                break
-            items.append(script[i:i+ln])
-            i += ln
-        elif op == 0x4c:  # OP_PUSHDATA1
-            if i >= n:
-                break
-            ln = script[i]
-            i += 1
-            if i + ln > n:
-                break
-            items.append(script[i:i+ln])
-            i += ln
-        elif op == 0x4d:  # OP_PUSHDATA2
-            if i + 1 >= n:
-                break
-            ln = int.from_bytes(script[i:i+2], 'little')
-            i += 2
-            if i + ln > n:
-                break
-            items.append(script[i:i+ln])
-            i += ln
-        elif op == 0x4e:  # OP_PUSHDATA4
-            if i + 3 >= n:
-                break
-            ln = int.from_bytes(script[i:i+4], 'little')
-            i += 4
-            if i + ln > n:
-                break
-            items.append(script[i:i+ln])
-            i += ln
-        else:
-            # Expect OP_DROP between pushes; ignore it
-            continue
+        
+        result = _parse_push_opcode(op, script, i, n)
+        if result is None:
+            continue  # OP_DROP or other non-push opcode
+        
+        data, new_i = result
+        if data is None:
+            break  # Invalid data, stop parsing
+        
+        items.append(data)
+        i = new_i
+    
     return items
+
+def _parse_push_opcode(op: int, script: bytes, i: int, n: int) -> Optional[tuple]:
+    """Parse a single push opcode and return (data, new_index) or None if not a push."""
+    if op <= 75:
+        return _parse_direct_push(op, script, i, n)
+    elif op == 0x4c:  # OP_PUSHDATA1
+        return _parse_pushdata1(script, i, n)
+    elif op == 0x4d:  # OP_PUSHDATA2
+        return _parse_pushdata2(script, i, n)
+    elif op == 0x4e:  # OP_PUSHDATA4
+        return _parse_pushdata4(script, i, n)
+    else:
+        return None  # Not a push opcode
+
+def _parse_direct_push(ln: int, script: bytes, i: int, n: int) -> Optional[tuple]:
+    """Parse a direct push (length encoded in opcode)."""
+    if i + ln > n:
+        return None, None
+    return script[i:i+ln], i + ln
+
+def _parse_pushdata1(script: bytes, i: int, n: int) -> Optional[tuple]:
+    """Parse OP_PUSHDATA1 (1-byte length)."""
+    if i >= n:
+        return None, None
+    ln = script[i]
+    i += 1
+    if i + ln > n:
+        return None, None
+    return script[i:i+ln], i + ln
+
+def _parse_pushdata2(script: bytes, i: int, n: int) -> Optional[tuple]:
+    """Parse OP_PUSHDATA2 (2-byte length)."""
+    if i + 1 >= n:
+        return None, None
+    ln = int.from_bytes(script[i:i+2], 'little')
+    i += 2
+    if i + ln > n:
+        return None, None
+    return script[i:i+ln], i + ln
+
+def _parse_pushdata4(script: bytes, i: int, n: int) -> Optional[tuple]:
+    """Parse OP_PUSHDATA4 (4-byte length)."""
+    if i + 3 >= n:
+        return None, None
+    ln = int.from_bytes(script[i:i+4], 'little')
+    i += 4
+    if i + ln > n:
+        return None, None
+    return script[i:i+ln], i + ln
 
 
 def parse_identity_reveal(items: List[bytes]) -> List[Tuple[str, str]]:
@@ -131,45 +158,63 @@ def build_lock_before_pushdrop(
     <pubkey> OP_CHECKSIG <fields...> OP_DROP/OP_2DROP...  (lock_position="before")
     <fields...> OP_DROP/OP_2DROP... <pubkey> OP_CHECKSIG  (lock_position="after")
     """
-    chunks: List[bytes] = []
-    lock_chunks: List[bytes] = []
-    pushdrop_chunks: List[bytes] = []
-    # Lock part (use minimally encoded chunk for pubkey)
-    lock_chunks.append(bytes.fromhex(create_minimally_encoded_script_chunk(public_key)))
-    lock_chunks.append(OpCode.OP_CHECKSIG)
-    # Fields/PushDrop part
+    lock_chunks = _create_lock_chunks(public_key)
+    pushdrop_chunks = _create_pushdrop_chunks(fields, include_signature, signature)
+    chunks = _arrange_chunks_by_position(lock_chunks, pushdrop_chunks, lock_position)
+    byte_chunks = _convert_chunks_to_bytes(chunks)
+    result = b"".join(byte_chunks)
+    print(f"[DEBUG] Final script bytes: {result.hex()}")
+    return result.hex()
+
+def _create_lock_chunks(public_key: bytes) -> List[bytes]:
+    """Create the locking chunks (pubkey + OP_CHECKSIG)."""
+    return [
+        bytes.fromhex(create_minimally_encoded_script_chunk(public_key)),
+        OpCode.OP_CHECKSIG
+    ]
+
+def _create_pushdrop_chunks(fields: List[bytes], include_signature: bool, signature: Optional[bytes]) -> List[bytes]:
+    """Create PushDrop data chunks with appropriate DROP operations."""
     data_fields = list(fields)
     if include_signature and signature is not None:
         data_fields.append(signature)
-    for field in data_fields:
-        pushdrop_chunks.append(bytes.fromhex(create_minimally_encoded_script_chunk(field)))
+    
+    pushdrop_chunks = [
+        bytes.fromhex(create_minimally_encoded_script_chunk(field))
+        for field in data_fields
+    ]
+    
     not_yet_dropped = len(data_fields)
     print(f"[DEBUG] data_fields count: {len(data_fields)}, not_yet_dropped: {not_yet_dropped}")
+    
     while not_yet_dropped > 1:
         pushdrop_chunks.append(OpCode.OP_2DROP)
         not_yet_dropped -= 2
         print(f"[DEBUG] Added OP_2DROP, not_yet_dropped now: {not_yet_dropped}")
+    
     if not_yet_dropped != 0:
         pushdrop_chunks.append(OpCode.OP_DROP)
         print(f"[DEBUG] Added OP_DROP, final not_yet_dropped: {not_yet_dropped}")
     else:
         print(f"[DEBUG] No OP_DROP added, not_yet_dropped: {not_yet_dropped}")
-    # lock_position
-    if lock_position == "before":
-        chunks = lock_chunks + pushdrop_chunks
-    else:
-        chunks = pushdrop_chunks + lock_chunks
     
-    # Debug: Print chunk types
+    return pushdrop_chunks
+
+def _arrange_chunks_by_position(lock_chunks: List[bytes], pushdrop_chunks: List[bytes], lock_position: str) -> List[bytes]:
+    """Arrange chunks based on lock position."""
+    if lock_position == "before":
+        return lock_chunks + pushdrop_chunks
+    return pushdrop_chunks + lock_chunks
+
+def _convert_chunks_to_bytes(chunks: List[bytes]) -> List[bytes]:
+    """Convert all chunks to bytes, handling OpCodes."""
     print(f"[DEBUG] chunks types: {[(type(c), c if isinstance(c, bytes) and len(c) <= 10 else f'bytes[{len(c)}]' if isinstance(c, bytes) else str(c)) for c in chunks]}")
     
-    # Ensure all chunks are bytes
     byte_chunks = []
     for chunk in chunks:
         if isinstance(chunk, bytes):
             byte_chunks.append(chunk)
         else:
-            # OpCode inherits from bytes, so this should work
             try:
                 if hasattr(chunk, '__bytes__'):
                     byte_chunks.append(bytes(chunk))
@@ -180,9 +225,7 @@ def build_lock_before_pushdrop(
                 print(f"[ERROR] Failed to convert {type(chunk)} to bytes: {e}")
                 byte_chunks.append(b'\x51')  # Fallback to OP_TRUE
     
-    result = b"".join(byte_chunks)
-    print(f"[DEBUG] Final script bytes: {result.hex()}")
-    return result.hex()
+    return byte_chunks
 
 
 def decode_lock_before_pushdrop(
@@ -196,94 +239,89 @@ def decode_lock_before_pushdrop(
     """
     chunks = read_script_chunks(script)
     print("[decode] chunks:", [(c.op, c.data.hex() if c.data else None) for c in chunks])
+    
     if len(chunks) < 2:
         print("[decode] not enough chunks")
         return None
-    # lock_position
+    
     if lock_position == "before":
-        first = chunks[0]
-        second = chunks[1]
-        print(f"[decode] first.op={first.op}, first.data={first.data.hex() if first.data else None}, second.op={second.op}")
-        print(f"[decode] second.op={second.op} ({type(second.op)}), OpCode.OP_CHECKSIG={OpCode.OP_CHECKSIG} ({type(OpCode.OP_CHECKSIG)})")
-        sop = second.op
-        opcs = OpCode.OP_CHECKSIG
-        if isinstance(sop, bytes):
-            sop = int.from_bytes(sop, 'little')
-        if isinstance(opcs, bytes):
-            opcs = int.from_bytes(opcs, 'little')
-        if sop != opcs or first.data is None or len(first.data) not in (33, 65):
-            print("[decode] header mismatch")
-            return None
-        pubkey = first.data
-        fields: List[bytes] = []
-        for i in range(2, len(chunks)):
-            c = chunks[i]
-            cop = c.op
-            if isinstance(cop, bytes):
-                cop = int.from_bytes(cop, 'little')
-            drop = OpCode.OP_DROP
-            twodrop = OpCode.OP_2DROP
-            if isinstance(drop, bytes):
-                drop = int.from_bytes(drop, 'little')
-            if isinstance(twodrop, bytes):
-                twodrop = int.from_bytes(twodrop, 'little')
-            if cop == drop or cop == twodrop:
-                break
-            if c.data is None or (isinstance(c.data, (bytes, bytearray)) and len(c.data) == 0):
-                if cop == 0x00:
-                    fields.append(b"\x00")
-                    continue
-                if cop == 0x4f:
-                    fields.append(b"\x81")
-                    continue
-                if 0x51 <= cop <= 0x60:
-                    fields.append(bytes([cop - 0x50]))
-                    continue
-            fields.append(c.data or b"")
-        return {"pubkey": pubkey, "fields": fields}
-    else:  # lock-after
-        # Find OP_CHECKSIG and pubkey at the end
-        last_op = chunks[-1].op
-        if isinstance(last_op, bytes):
-            last_op = int.from_bytes(last_op, 'little')
-        opcs = OpCode.OP_CHECKSIG
-        if isinstance(opcs, bytes):
-            opcs = int.from_bytes(opcs, 'little')
-        if last_op != opcs:
-            print("[decode] lock-after: no OP_CHECKSIG at end")
-            return None
-        pubkey_chunk = chunks[-2]
-        print(f"[decode] lock-after: pubkey_chunk.op={pubkey_chunk.op}, pubkey_chunk.data={pubkey_chunk.data.hex() if pubkey_chunk.data else None}")
-        if pubkey_chunk.data is None or len(pubkey_chunk.data) not in (33, 65):
-            print("[decode] lock-after: pubkey length mismatch")
-            return None
-        pubkey = pubkey_chunk.data
-        fields: List[bytes] = []
-        drop = OpCode.OP_DROP
-        twodrop = OpCode.OP_2DROP
-        if isinstance(drop, bytes):
-            drop = int.from_bytes(drop, 'little')
-        if isinstance(twodrop, bytes):
-            twodrop = int.from_bytes(twodrop, 'little')
-        for i in range(0, len(chunks) - 2):
-            c = chunks[i]
-            cop = c.op
-            if isinstance(cop, bytes):
-                cop = int.from_bytes(cop, 'little')
-            if cop == drop or cop == twodrop:
-                break
-            if c.data is None or (isinstance(c.data, (bytes, bytearray)) and len(c.data) == 0):
-                if cop == 0x00:
-                    fields.append(b"\x00")
-                    continue
-                if cop == 0x4f:
-                    fields.append(b"\x81")
-                    continue
-                if 0x51 <= cop <= 0x60:
-                    fields.append(bytes([cop - 0x50]))
-                    continue
-            fields.append(c.data or b"")
-        return {"pubkey": pubkey, "fields": fields}
+        return _decode_lock_before(chunks)
+    else:
+        return _decode_lock_after(chunks)
+
+def _opcode_to_int(op) -> int:
+    """Convert opcode to integer."""
+    if isinstance(op, bytes):
+        return int.from_bytes(op, 'little')
+    return op
+
+def _decode_lock_before(chunks) -> Optional[Dict[str, object]]:
+    """Decode lock-before pattern: <pubkey> OP_CHECKSIG <fields...> DROP..."""
+    first, second = chunks[0], chunks[1]
+    print(f"[decode] first.op={first.op}, first.data={first.data.hex() if first.data else None}, second.op={second.op}")
+    
+    # Validate header
+    sop = _opcode_to_int(second.op)
+    opcs = _opcode_to_int(OpCode.OP_CHECKSIG)
+    
+    if sop != opcs or first.data is None or len(first.data) not in (33, 65):
+        print("[decode] header mismatch")
+        return None
+    
+    pubkey = first.data
+    fields = _extract_fields_from_chunks(chunks, 2, len(chunks))
+    return {"pubkey": pubkey, "fields": fields}
+
+def _decode_lock_after(chunks) -> Optional[Dict[str, object]]:
+    """Decode lock-after pattern: <fields...> DROP... <pubkey> OP_CHECKSIG."""
+    # Validate footer
+    last_op = _opcode_to_int(chunks[-1].op)
+    opcs = _opcode_to_int(OpCode.OP_CHECKSIG)
+    
+    if last_op != opcs:
+        print("[decode] lock-after: no OP_CHECKSIG at end")
+        return None
+    
+    pubkey_chunk = chunks[-2]
+    print(f"[decode] lock-after: pubkey_chunk.op={pubkey_chunk.op}, pubkey_chunk.data={pubkey_chunk.data.hex() if pubkey_chunk.data else None}")
+    
+    if pubkey_chunk.data is None or len(pubkey_chunk.data) not in (33, 65):
+        print("[decode] lock-after: pubkey length mismatch")
+        return None
+    
+    pubkey = pubkey_chunk.data
+    fields = _extract_fields_from_chunks(chunks, 0, len(chunks) - 2)
+    return {"pubkey": pubkey, "fields": fields}
+
+def _extract_fields_from_chunks(chunks, start_idx: int, end_idx: int) -> List[bytes]:
+    """Extract data fields from chunks, stopping at DROP opcodes."""
+    fields: List[bytes] = []
+    drop = _opcode_to_int(OpCode.OP_DROP)
+    twodrop = _opcode_to_int(OpCode.OP_2DROP)
+    
+    for i in range(start_idx, end_idx):
+        c = chunks[i]
+        cop = _opcode_to_int(c.op)
+        
+        # Stop at DROP opcodes
+        if cop == drop or cop == twodrop:
+            break
+        
+        # Handle empty data with special opcodes
+        if c.data is None or (isinstance(c.data, (bytes, bytearray)) and len(c.data) == 0):
+            if cop == 0x00:
+                fields.append(b"\x00")
+                continue
+            if cop == 0x4f:
+                fields.append(b"\x81")
+                continue
+            if 0x51 <= cop <= 0x60:
+                fields.append(bytes([cop - 0x50]))
+                continue
+        
+        fields.append(c.data or b"")
+    
+    return fields
 
 
 # ---------------------------------------------------------------------------
@@ -315,7 +353,12 @@ class PushDrop:
         include_signature: bool = True,
         lock_position: str = "before",
     ) -> str:  # 返り値をhex stringに
-        # get public key
+        pubhex = self._get_public_key_hex(ctx, protocol_id, key_id, counterparty, for_self)
+        sig_bytes = self._create_signature_if_needed(ctx, fields, protocol_id, key_id, counterparty, include_signature)
+        return self._build_locking_script(fields, pubhex, sig_bytes, include_signature, lock_position)
+
+    def _get_public_key_hex(self, ctx, protocol_id, key_id, counterparty, for_self):
+        """Get the public key hex from wallet."""
         args = {
             "protocolID": protocol_id,
             "keyID": key_id,
@@ -327,37 +370,50 @@ class PushDrop:
         print(f"[DEBUG] PushDrop.lock() pub: {pub}")
         pubhex = pub.get("publicKey") or ""
         print(f"[DEBUG] PushDrop.lock() pubhex: {pubhex}")
-        sig_bytes: Optional[bytes] = None
-        if include_signature:
-            data_to_sign = b"".join(fields)
-            sargs = {
-                "encryption_args": {
-                    "protocol_id": protocol_id if isinstance(protocol_id, dict) else {"securityLevel": 0, "protocol": str(protocol_id)},
-                    "key_id": key_id,
-                    "counterparty": counterparty,
-                },
-                "data": data_to_sign,
-            }
-            try:
-                cres = self.wallet.create_signature(ctx, sargs, self.originator) or {}
-                sig = cres.get("signature")
-                if isinstance(sig, (bytes, bytearray)):
-                    sig_bytes = bytes(sig)
-                else:
-                    # ensure an extra field exists when requested
-                    sig_bytes = b"\x00"
-            except Exception:
-                sig_bytes = b"\x00"
-        if isinstance(pubhex, str) and len(pubhex) >= 66:
-            try:
-                result = build_lock_before_pushdrop(fields, bytes.fromhex(pubhex), include_signature=include_signature, signature=sig_bytes, lock_position=lock_position)
-                print(f"[DEBUG] PushDrop.lock() build_lock_before_pushdrop result: {result}")
-                return result  # already hex string
-            except Exception as e:
-                print(f"[DEBUG] PushDrop.lock() build_lock_before_pushdrop exception: {e}")
-                return b"\x51".hex()  # hex stringで返す
-        print(f"[DEBUG] PushDrop.lock() returning OP_TRUE because pubhex length {len(pubhex)} < 66 or not string")
-        return b"\x51".hex()  # hex stringで返す
+        return pubhex
+
+    def _create_signature_if_needed(self, ctx, fields, protocol_id, key_id, counterparty, include_signature):
+        """Create signature if requested."""
+        if not include_signature:
+            return None
+        
+        data_to_sign = b"".join(fields)
+        sargs = {
+            "encryption_args": {
+                "protocol_id": protocol_id if isinstance(protocol_id, dict) else {"securityLevel": 0, "protocol": str(protocol_id)},
+                "key_id": key_id,
+                "counterparty": counterparty,
+            },
+            "data": data_to_sign,
+        }
+        
+        try:
+            cres = self.wallet.create_signature(ctx, sargs, self.originator) or {}
+            sig = cres.get("signature")
+            if isinstance(sig, (bytes, bytearray)):
+                return bytes(sig)
+            return b"\x00"  # ensure an extra field exists when requested
+        except Exception:
+            return b"\x00"
+
+    def _build_locking_script(self, fields, pubhex, sig_bytes, include_signature, lock_position):
+        """Build the locking script from components."""
+        if not isinstance(pubhex, str) or len(pubhex) < 66:
+            print(f"[DEBUG] PushDrop.lock() returning OP_TRUE because pubhex length {len(pubhex)} < 66 or not string")
+            return b"\x51".hex()
+        
+        try:
+            result = build_lock_before_pushdrop(
+                fields, bytes.fromhex(pubhex),
+                include_signature=include_signature,
+                signature=sig_bytes,
+                lock_position=lock_position
+            )
+            print(f"[DEBUG] PushDrop.lock() build_lock_before_pushdrop result: {result}")
+            return result
+        except Exception as e:
+            print(f"[DEBUG] PushDrop.lock() build_lock_before_pushdrop exception: {e}")
+            return b"\x51".hex()
 
     def unlock(
         self,
@@ -470,10 +526,27 @@ class PushDropUnlocker:
         Flags: base (ALL/NONE/SINGLE) derived from sign_outputs_mode, always includes FORKID,
         and optionally ANYONECANPAY when anyone_can_pay is True.
         """
-        # Compute sighash flag
-        # Map sign_outputs_mode to base SIGHASH (TS/Go enum semantics)
+        sighash_flag = self._compute_sighash_flag()
+        hash_to_sign, used_preimage = self._compute_hash_to_sign(tx, input_index, sighash_flag)
+        
+        # Try script-specific signature methods first
+        if self.prev_locking_script:
+            sig = self._try_p2pkh_signature(ctx, hash_to_sign, sighash_flag)
+            if sig:
+                return sig
+            
+            sig = self._try_pushdrop_signature(ctx, hash_to_sign, sighash_flag, used_preimage)
+            if sig:
+                return sig
+        
+        # Fallback to derived key signature
+        return self._create_fallback_signature(ctx, hash_to_sign, sighash_flag, used_preimage)
+    
+    def _compute_sighash_flag(self) -> int:
+        """Compute SIGHASH flag from sign_outputs_mode and anyone_can_pay settings."""
         base = 0x01  # ALL
         mode = self.sign_outputs_mode
+        
         if isinstance(mode, SignOutputsMode):
             if mode is SignOutputsMode.ALL:
                 base = 0x01
@@ -487,111 +560,129 @@ class PushDropUnlocker:
                 base = 0x02
             elif mode in (3, 'single', 'SINGLE'):
                 base = 0x03
+        
         sighash_flag = base | 0x40  # include FORKID
         if self.anyone_can_pay:
             sighash_flag |= 0x80
-
-        # Prefer BIP143 preimage on Transaction objects with explicit flags
-        hash_to_sign: bytes
-        used_preimage = False
+        return sighash_flag
+    
+    def _compute_hash_to_sign(self, tx, input_index: int, sighash_flag: int) -> tuple[bytes, bool]:
+        """Compute the hash/preimage to sign. Returns (hash, used_preimage_flag)."""
         try:
             from bsv.transaction import Transaction as _Tx
-            from bsv.transaction_preimage import tx_preimage as _tx_preimage
             if isinstance(tx, _Tx):
-                # If caller provided precise prevout context, compute BIP143 preimage using it.
-                if (
-                    self.prev_txid is not None
-                    and self.prev_vout is not None
-                    and self.prev_satoshis is not None
-                    and self.prev_locking_script is not None
-                ):
-                    from bsv.transaction_input import TransactionInput
-                    from bsv.script.script import Script
-                    # Build a synthetic input list with correct sighash and prevout context
-                    synthetic = TransactionInput(
-                        source_txid=self.prev_txid,
-                        source_output_index=int(self.prev_vout),
-                    )
-                    synthetic.satoshis = int(self.prev_satoshis)
-                    synthetic.locking_script = Script(self.prev_locking_script)
-                    synthetic.sighash = sighash_flag
-                    hash_to_sign = _tx_preimage(0, [synthetic], tx.outputs, tx.version, tx.locktime)
-                    used_preimage = True
-                else:
-                    # Fallback to using tx.inputs context if present
-                    for i, _in in enumerate(getattr(tx, "inputs", []) or []):
-                        if not hasattr(_in, "sighash"):
-                            setattr(_in, "sighash", 0x41)
-                        if i == int(input_index):
-                            setattr(_in, "sighash", sighash_flag)
-                    hash_to_sign = _tx_preimage(input_index, tx.inputs, tx.outputs, tx.version, tx.locktime)
-                    used_preimage = True
-            else:
-                raise TypeError
+                return self._compute_bip143_preimage(tx, input_index, sighash_flag)
+            raise TypeError
         except Exception:
-            # Fallbacks: tx may expose .preimage(), otherwise treat as bytes
-            if hasattr(tx, "preimage") and callable(getattr(tx, "preimage")):
-                try:
-                    hash_to_sign = tx.preimage(input_index)
-                    used_preimage = True
-                except Exception:
-                    raw = tx.serialize() if hasattr(tx, "serialize") else (tx if isinstance(tx, (bytes, bytearray)) else b"")
-                    hash_to_sign = raw
-            else:
-                raw = tx if isinstance(tx, (bytes, bytearray)) else getattr(tx, "bytes", b"")
-                hash_to_sign = raw
-
-        # UTXOのロッキングスクリプトから公開鍵を抽出
-        if self.prev_locking_script:
-            # P2PKHスクリプトの場合: OP_DUP OP_HASH160 <hash160> OP_EQUALVERIFY OP_CHECKSIG
-            if (len(self.prev_locking_script) == 25 and 
+            return self._compute_fallback_hash(tx, input_index)
+    
+    def _compute_bip143_preimage(self, tx, input_index: int, sighash_flag: int) -> tuple[bytes, bool]:
+        """Compute BIP143 preimage for Transaction objects."""
+        from bsv.transaction_preimage import tx_preimage as _tx_preimage
+        
+        # If caller provided precise prevout context, use it
+        if (
+            self.prev_txid is not None
+            and self.prev_vout is not None
+            and self.prev_satoshis is not None
+            and self.prev_locking_script is not None
+        ):
+            return self._compute_synthetic_preimage(tx, sighash_flag, _tx_preimage), True
+        
+        # Otherwise use tx.inputs if available
+        return self._compute_inputs_preimage(tx, input_index, sighash_flag, _tx_preimage), True
+    
+    def _compute_synthetic_preimage(self, tx, sighash_flag: int, tx_preimage_fn) -> bytes:
+        """Compute BIP143 preimage using explicit prevout context."""
+        from bsv.transaction_input import TransactionInput
+        from bsv.script.script import Script
+        
+        synthetic = TransactionInput(
+            source_txid=self.prev_txid,
+            source_output_index=int(self.prev_vout),
+        )
+        synthetic.satoshis = int(self.prev_satoshis)
+        synthetic.locking_script = Script(self.prev_locking_script)
+        synthetic.sighash = sighash_flag
+        return tx_preimage_fn(0, [synthetic], tx.outputs, tx.version, tx.locktime)
+    
+    def _compute_inputs_preimage(self, tx, input_index: int, sighash_flag: int, tx_preimage_fn) -> bytes:
+        """Compute BIP143 preimage using tx.inputs context."""
+        for i, _in in enumerate(getattr(tx, "inputs", []) or []):
+            if not hasattr(_in, "sighash"):
+                setattr(_in, "sighash", 0x41)
+            if i == int(input_index):
+                setattr(_in, "sighash", sighash_flag)
+        return tx_preimage_fn(input_index, tx.inputs, tx.outputs, tx.version, tx.locktime)
+    
+    def _compute_fallback_hash(self, tx, input_index: int) -> tuple[bytes, bool]:
+        """Compute hash for non-Transaction objects using fallback methods."""
+        if hasattr(tx, "preimage") and callable(getattr(tx, "preimage")):
+            try:
+                return tx.preimage(input_index), True
+            except Exception:
+                pass
+        
+        # Final fallback: use raw bytes
+        if isinstance(tx, (bytes, bytearray)):
+            return tx, False
+        if hasattr(tx, "serialize"):
+            return tx.serialize(), False
+        return getattr(tx, "bytes", b""), False
+    
+    def _try_p2pkh_signature(self, ctx, hash_to_sign: bytes, sighash_flag: int) -> Optional[bytes]:
+        """Try to create signature for P2PKH script. Returns None if not P2PKH."""
+        # P2PKH: OP_DUP OP_HASH160 <hash160> OP_EQUALVERIFY OP_CHECKSIG
+        if not (len(self.prev_locking_script) == 25 and 
                 self.prev_locking_script[0:3] == b'v\xa9\x14' and 
                 self.prev_locking_script[-2:] == b'\x88\xac'):
-                # P2PKHスクリプトからhash160を抽出
-                hash160_bytes = self.prev_locking_script[3:23]
-                print(f"[DEBUG] PushDropUnlocker.sign: P2PKH UTXO detected, hash160: {hash160_bytes.hex()}")
-                
-                # このhash160に対応する秘密鍵で署名 (BRC-100 compliant with Python snake_case)
-                create_args = {
-                        "protocol_id": self.protocol_id,
-                        "key_id": self.key_id,
-                        "counterparty": self.counterparty,
-                        "hash160": hash160_bytes.hex(),
-                    "data": hash_to_sign,  # 署名対象のハッシュ
-                }
-                print(f"[DEBUG] PushDropUnlocker.sign: Calling wallet.create_signature with args: {create_args}")
-                res = self.wallet.create_signature(ctx, create_args, "") if hasattr(self.wallet, "create_signature") else {}
-                print(f"[DEBUG] PushDropUnlocker.sign: create_signature result: {res}")
-                sig = res.get("signature", b"")
-                print(f"[DEBUG] PushDropUnlocker.sign: Extracted signature: {sig.hex() if sig else 'None'}")
-                sig = bytes(sig) + bytes([sighash_flag])
-                print(f"[DEBUG] PushDropUnlocker.sign: Final signature with sighash: {sig.hex()}")
-                # Return only the signature push for PushDrop unlockers (TS/Go parity)
-                return encode_pushdata(sig)
-            else:
-                # PushDropスクリプトの場合: デコードして公開鍵を取得
-                try:
-                    decoded = PushDrop.decode(self.prev_locking_script)
-                    locking_pubkey = decoded.get("lockingPublicKey")
-                    if locking_pubkey:
-                        print(f"[DEBUG] PushDropUnlocker.sign: Using locking public key from PushDrop UTXO: {locking_pubkey.hex()}")
-                        # この公開鍵に対応する秘密鍵で署名
-                        create_args = {
-                            "encryption_args": {
-                                "publicKey": locking_pubkey.hex(),
-                            },
-                            ("hash_to_sign" if used_preimage else "data"): hash_to_sign,
-                        }
-                        res = self.wallet.create_signature(ctx, create_args, "") if hasattr(self.wallet, "create_signature") else {}
-                        sig = res.get("signature", b"")
-                        sig = bytes(sig) + bytes([sighash_flag])
-                        return encode_pushdata(sig)
-                    else:
-                        print(f"[WARN] PushDropUnlocker.sign: Could not extract public key from PushDrop script")
-                except Exception as e:
-                    print(f"[WARN] PushDropUnlocker.sign: Error decoding PushDrop script: {e}")
+            return None
         
-        # フォールバック: 従来の方法（KeyDeriverから派生した公開鍵）
+        hash160_bytes = self.prev_locking_script[3:23]
+        print(f"[DEBUG] PushDropUnlocker.sign: P2PKH UTXO detected, hash160: {hash160_bytes.hex()}")
+        
+        create_args = {
+            "protocol_id": self.protocol_id,
+            "key_id": self.key_id,
+            "counterparty": self.counterparty,
+            "hash160": hash160_bytes.hex(),
+            "data": hash_to_sign,
+        }
+        print(f"[DEBUG] PushDropUnlocker.sign: Calling wallet.create_signature with args: {create_args}")
+        res = self.wallet.create_signature(ctx, create_args, "") if hasattr(self.wallet, "create_signature") else {}
+        print(f"[DEBUG] PushDropUnlocker.sign: create_signature result: {res}")
+        sig = res.get("signature", b"")
+        print(f"[DEBUG] PushDropUnlocker.sign: Extracted signature: {sig.hex() if sig else 'None'}")
+        sig = bytes(sig) + bytes([sighash_flag])
+        print(f"[DEBUG] PushDropUnlocker.sign: Final signature with sighash: {sig.hex()}")
+        return encode_pushdata(sig)
+    
+    def _try_pushdrop_signature(self, ctx, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> Optional[bytes]:
+        """Try to create signature for PushDrop script. Returns None if not PushDrop or fails."""
+        try:
+            decoded = PushDrop.decode(self.prev_locking_script)
+            locking_pubkey = decoded.get("lockingPublicKey")
+            if not locking_pubkey:
+                print(f"[WARN] PushDropUnlocker.sign: Could not extract public key from PushDrop script")
+                return None
+            
+            print(f"[DEBUG] PushDropUnlocker.sign: Using locking public key from PushDrop UTXO: {locking_pubkey.hex()}")
+            create_args = {
+                "encryption_args": {
+                    "publicKey": locking_pubkey.hex(),
+                },
+                ("hash_to_sign" if used_preimage else "data"): hash_to_sign,
+            }
+            res = self.wallet.create_signature(ctx, create_args, "") if hasattr(self.wallet, "create_signature") else {}
+            sig = res.get("signature", b"")
+            sig = bytes(sig) + bytes([sighash_flag])
+            return encode_pushdata(sig)
+        except Exception as e:
+            print(f"[WARN] PushDropUnlocker.sign: Error decoding PushDrop script: {e}")
+            return None
+    
+    def _create_fallback_signature(self, ctx, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> bytes:
+        """Create signature using derived key (fallback method)."""
         print(f"[DEBUG] PushDropUnlocker.sign: Fallback to derived public key")
         create_args = {
             "encryption_args": {

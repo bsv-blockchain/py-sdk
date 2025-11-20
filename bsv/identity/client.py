@@ -156,37 +156,48 @@ class IdentityClient:
         override_with_contacts: If True, prioritize contacts over discovered identities
         """
         # Check contacts first if override_with_contacts is True
-        # Note: Contacts lookup by attributes would require scanning all contacts
-        # For now, we'll check contacts if identityKey is in attributes
         if override_with_contacts:
-            attributes = args.get('attributes', {})
-            identity_key = attributes.get('identityKey')
-            if identity_key:
-                contacts = self.contacts_manager.get_contacts(identity_key=identity_key)
-                if contacts:
-                    return contacts
+            contacts = self._check_contacts_by_attributes(args)
+            if contacts:
+                return contacts
         
         if self.wallet is None:
             return []
+        
         try:
-            if hasattr(self.wallet, 'discover_by_attributes'):
-                result = self.wallet.discover_by_attributes(ctx, args, self.originator)
-            else:
-                return []
-            certs = (result or {}).get('certificates', [])
-            identities: List[DisplayableIdentity] = []
-            from bsv.transaction.pushdrop import parse_pushdrop_locking_script, parse_identity_reveal
-            for item in certs:
-                locking = item.get('lockingScript') if isinstance(item, dict) else None
-                if isinstance(locking, (bytes, bytearray)):
-                    fields = parse_identity_reveal(parse_pushdrop_locking_script(locking))
-                    decrypted = self._maybe_decrypt_fields(ctx, fields)
-                    identities.append(self._from_kv(list(decrypted.items())))
-                else:
-                    identities.append(self.parse_identity(item))
-            return identities
+            certs = self._discover_certificates_by_attributes(ctx, args)
+            return self._parse_certificates_to_identities(ctx, certs)
         except Exception:
             return []
+
+    def _check_contacts_by_attributes(self, args: Dict) -> List[DisplayableIdentity]:
+        """Check contacts for matching attributes."""
+        attributes = args.get('attributes', {})
+        identity_key = attributes.get('identityKey')
+        if identity_key:
+            return self.contacts_manager.get_contacts(identity_key=identity_key)
+        return []
+
+    def _discover_certificates_by_attributes(self, ctx: Any, args: Dict) -> List[Dict]:
+        """Discover certificates by attributes using wallet."""
+        if hasattr(self.wallet, 'discover_by_attributes'):
+            result = self.wallet.discover_by_attributes(ctx, args, self.originator)
+            return (result or {}).get('certificates', [])
+        return []
+
+    def _parse_certificates_to_identities(self, ctx: Any, certs: List[Dict]) -> List[DisplayableIdentity]:
+        """Parse certificates into DisplayableIdentity list."""
+        from bsv.transaction.pushdrop import parse_pushdrop_locking_script, parse_identity_reveal
+        identities: List[DisplayableIdentity] = []
+        for item in certs:
+            locking = item.get('lockingScript') if isinstance(item, dict) else None
+            if isinstance(locking, (bytes, bytearray)):
+                fields = parse_identity_reveal(parse_pushdrop_locking_script(locking))
+                decrypted = self._maybe_decrypt_fields(ctx, fields)
+                identities.append(self._from_kv(list(decrypted.items())))
+            else:
+                identities.append(self.parse_identity(item))
+        return identities
 
     @staticmethod
     def parse_identity(identity: Any) -> DisplayableIdentity:

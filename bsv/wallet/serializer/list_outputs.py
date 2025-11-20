@@ -75,76 +75,86 @@ def deserialize_list_outputs_args(data: bytes) -> Dict[str, Any]:
 
 
 def serialize_list_outputs_result(result: Dict[str, Any]) -> bytes:
-    # Go互換: totalOutputs, optional BEEF, outputs[{outpoint,satoshis,lockingScript,optCustom, tags, labels}]
     w = Writer()
     outputs: List[Dict[str, Any]] = result.get("outputs", [])
     w.write_varint(len(outputs))
-    # BEEF（省略時は -1）
-    beef = result.get("beef")
+    _serialize_beef(w, result.get("beef"))
+    for out in outputs:
+        _serialize_output(w, out)
+    return w.to_bytes()
+
+def _serialize_beef(w: Writer, beef: Optional[bytes]):
+    """Serialize optional BEEF."""
     if beef is None:
         w.write_negative_one()
     else:
         w.write_int_bytes(beef)
+
+def _serialize_output(w: Writer, out: Dict[str, Any]):
+    """Serialize a single output."""
     from bsv.wallet.serializer.common import encode_outpoint
-    for out in outputs:
-        # outpoint
-        w.write_bytes(encode_outpoint(out.get("outpoint", {"txid": b"\x00"*32, "index": 0})))
-        # satoshis
-        w.write_varint(int(out.get("satoshis", 0)))
-        # lockingScript optional
-        ls = out.get("lockingScript")
-        if ls is None or ls == b"":
-            w.write_negative_one()
-        else:
-            w.write_int_bytes(ls)
-        # customInstructions optional string
-        ci = out.get("customInstructions")
-        if ci is None or ci == "":
-            w.write_negative_one()
-        else:
-            w.write_string(ci)
-        # tags, labels slices
-        tags = out.get("tags") or []
-        w.write_varint(len(tags))
-        for t in tags:
-            w.write_string(t)
-        labels = out.get("labels") or []
-        w.write_varint(len(labels))
-        for l in labels:
-            w.write_string(l)
-    return w.to_bytes()
+    w.write_bytes(encode_outpoint(out.get("outpoint", {"txid": b"\x00"*32, "index": 0})))
+    w.write_varint(int(out.get("satoshis", 0)))
+    _serialize_optional_locking_script(w, out.get("lockingScript"))
+    _serialize_optional_custom_instructions(w, out.get("customInstructions"))
+    _serialize_string_list(w, out.get("tags") or [])
+    _serialize_string_list(w, out.get("labels") or [])
+
+def _serialize_optional_locking_script(w: Writer, ls: Optional[bytes]):
+    """Serialize optional locking script."""
+    if ls is None or ls == b"":
+        w.write_negative_one()
+    else:
+        w.write_int_bytes(ls)
+
+def _serialize_optional_custom_instructions(w: Writer, ci: Optional[str]):
+    """Serialize optional custom instructions."""
+    if ci is None or ci == "":
+        w.write_negative_one()
+    else:
+        w.write_string(ci)
+
+def _serialize_string_list(w: Writer, items: List[str]):
+    """Serialize a list of strings."""
+    w.write_varint(len(items))
+    for item in items:
+        w.write_string(item)
 
 
 def deserialize_list_outputs_result(data: bytes) -> Dict[str, Any]:
     r = Reader(data)
     cnt = r.read_varint()
-    # BEEF optional
-    beef_len = r.read_varint()
-    beef = None
-    if beef_len != (1 << 64) - 1:
-        beef = r.read_bytes(int(beef_len)) if beef_len > 0 else b""
-    outputs: List[Dict[str, Any]] = []
-    for _ in range(int(cnt)):
-        out: Dict[str, Any] = {}
-        # outpoint
-        txid = r.read_bytes_reverse(32)
-        idx = r.read_varint()
-        out["outpoint"] = {"txid": txid, "index": int(idx)}
-        # amounts and scripts
-        out["satoshis"] = int(r.read_varint())
-        ls_len = r.read_varint()
-        if ls_len == (1 << 64) - 1:
-            out["lockingScript"] = b""
-        else:
-            out["lockingScript"] = r.read_bytes(int(ls_len))
-        out["customInstructions"] = r.read_string()
-        # tags and labels
-        tcnt = r.read_varint()
-        out["tags"] = [r.read_string() for _ in range(int(tcnt))]
-        lcnt = r.read_varint()
-        out["labels"] = [r.read_string() for _ in range(int(lcnt))]
-        outputs.append(out)
-    result: Dict[str, Any] = {"totalOutputs": int(cnt), "outputs": outputs}
+    beef = _deserialize_beef(r)
+    outputs = [_deserialize_output(r) for _ in range(int(cnt))]
+    result = {"totalOutputs": int(cnt), "outputs": outputs}
     if beef is not None:
         result["beef"] = beef
     return result
+
+def _deserialize_beef(r: Reader) -> Optional[bytes]:
+    """Deserialize optional BEEF."""
+    beef_len = r.read_varint()
+    if beef_len == (1 << 64) - 1:
+        return None
+    return r.read_bytes(int(beef_len)) if beef_len > 0 else b""
+
+def _deserialize_output(r: Reader) -> Dict[str, Any]:
+    """Deserialize a single output."""
+    txid = r.read_bytes_reverse(32)
+    idx = r.read_varint()
+    satoshis = int(r.read_varint())
+    ls_len = r.read_varint()
+    lockingScript = b"" if ls_len == (1 << 64) - 1 else r.read_bytes(int(ls_len))
+    customInstructions = r.read_string()
+    tcnt = r.read_varint()
+    tags = [r.read_string() for _ in range(int(tcnt))]
+    lcnt = r.read_varint()
+    labels = [r.read_string() for _ in range(int(lcnt))]
+    return {
+        "outpoint": {"txid": txid, "index": int(idx)},
+        "satoshis": satoshis,
+        "lockingScript": lockingScript,
+        "customInstructions": customInstructions,
+        "tags": tags,
+        "labels": labels,
+    }

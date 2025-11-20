@@ -180,15 +180,27 @@ class Transaction:
         :param model_or_fee: Fee model or fee amount. Defaults to `SatoshisPerKilobyte` with value 10 if not provided.
         :param change_distribution: Method of change distribution ('equal' or 'random'). Defaults to 'equal'.
         """
+        fee = self._calculate_fee(model_or_fee)
+        change = self._calculate_available_change(fee)
+        change_count = self._count_change_outputs()
         
+        if change <= change_count:
+            self.outputs = [out for out in self.outputs if not out.change]
+            return
+        
+        self._distribute_change(change, change_count, change_distribution)
+
+    def _calculate_fee(self, model_or_fee):
+        """Calculate the transaction fee."""
         if model_or_fee is None:
             model_or_fee = SatoshisPerKilobyte(int(TRANSACTION_FEE_RATE))
-
+        
         if isinstance(model_or_fee, int):
-            fee = model_or_fee
-        else:
-            fee = model_or_fee.compute_fee(self)
+            return model_or_fee
+        return model_or_fee.compute_fee(self)
 
+    def _calculate_available_change(self, fee):
+        """Calculate available change after fee and non-change outputs."""
         change = 0
         for tx_in in self.inputs:
             if not tx_in.source_transaction:
@@ -197,24 +209,21 @@ class Transaction:
         
         change -= fee
         
-        change_count = 0
         for out in self.outputs:
             if not out.change:
                 change -= out.satoshis
-            else:
-                change_count += 1
         
-        if change <= change_count:
-            # Not enough change to distribute among the change outputs.
-            # Remove all change outputs and leave the extra for the miners.
-            self.outputs = [out for out in self.outputs if not out.change]
-            return
-        
-        # Distribute change among change outputs
-        if change_distribution == 'random':
-            # TODO: Implement random distribution
+        return change
+
+    def _count_change_outputs(self):
+        """Count the number of change outputs."""
+        return sum(1 for out in self.outputs if out.change)
+
+    def _distribute_change(self, change, change_count, distribution='equal'):
+        """Distribute change among change outputs."""
+        if distribution == 'random':
             raise NotImplementedError('Random change distribution is not yet implemented')
-        elif change_distribution == 'equal':
+        elif distribution == 'equal':
             per_output = change // change_count
             for out in self.outputs:
                 if out.change:

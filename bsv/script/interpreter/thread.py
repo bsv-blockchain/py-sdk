@@ -150,38 +150,46 @@ class Thread:
 
     def step(self) -> tuple[bool, Optional[Error]]:
         """Execute one step."""
-        # Validate PC
         err = self.valid_pc()
         if err:
             return True, err
         
-        # Get opcode
         pop = self.scripts[self.script_idx][self.script_off]
-        
-        # Execute opcode
         err = self.execute_opcode(pop)
+        
         if err:
-            if is_error_code(err, ErrorCode.ERR_EARLY_RETURN):
-                # Move to next script
-                self.shift_script()
-                return self.script_idx >= len(self.scripts), None
-            return True, err
+            return self._handle_execution_error(err)
         
         self.script_off += 1
         
-        # Check stack overflow
+        err = self._check_stack_overflow()
+        if err:
+            return False, err
+        
+        return self._check_script_completion()
+    
+    def _handle_execution_error(self, err: Error) -> tuple[bool, Optional[Error]]:
+        """Handle opcode execution error."""
+        if is_error_code(err, ErrorCode.ERR_EARLY_RETURN):
+            self.shift_script()
+            return self.script_idx >= len(self.scripts), None
+        return True, err
+    
+    def _check_stack_overflow(self) -> Optional[Error]:
+        """Check if combined stack size exceeds maximum."""
         combined_size = self.dstack.depth() + self.astack.depth()
         if combined_size > self.cfg.max_stack_size():
-            return False, Error(
+            return Error(
                 ErrorCode.ERR_STACK_OVERFLOW,
                 f"combined stack size {combined_size} > max allowed {self.cfg.max_stack_size()}",
             )
-        
-        # Check if script finished
+        return None
+    
+    def _check_script_completion(self) -> tuple[bool, Optional[Error]]:
+        """Check if current script is complete and prepare for next."""
         if self.script_off < len(self.scripts[self.script_idx]):
             return False, None
         
-        # Prepare for next script
         if len(self.cond_stack) != 0:
             return False, Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, "end of script reached in conditional execution")
         

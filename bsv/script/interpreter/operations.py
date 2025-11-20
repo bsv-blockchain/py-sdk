@@ -863,7 +863,37 @@ def op_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     pub_key = t.dstack.pop_byte_array()
     sig = t.dstack.pop_byte_array()
     
-    # Check encoding with appropriate flags
+    # Validate encodings
+    err = _validate_signature_and_pubkey_encoding(t, sig, pub_key)
+    if err:
+        return err
+    
+    # Handle empty signature
+    if len(sig) < 1:
+        t.dstack.push_byte_array(encode_bool(False))
+        return None
+    
+    # Extract and validate sighash
+    sighash_flag, sig_bytes, err = _extract_sighash_from_signature(t, sig)
+    if err:
+        return err
+    
+    # Compute signature hash
+    sighash = _compute_signature_hash(t, sig, sighash_flag)
+    if sighash is None:
+        t.dstack.push_byte_array(encode_bool(False))
+        return None
+    
+    # Verify signature and check null fail
+    result = _verify_signature_with_nullfail(t, pub_key, sig_bytes, sighash)
+    if isinstance(result, Error):
+        return result
+    
+    t.dstack.push_byte_array(encode_bool(result))
+    return None
+
+def _validate_signature_and_pubkey_encoding(t: "Thread", sig: bytes, pub_key: bytes) -> Optional[Error]:
+    """Validate signature and public key encodings based on flags."""
     require_der = t.flags.has_flag(t.flags.VERIFY_DER_SIGNATURES) or t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
     require_low_s = t.flags.has_flag(t.flags.VERIFY_LOW_S)
     require_strict = t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
@@ -872,78 +902,63 @@ def op_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     if err:
         return err
     
-    # Only validate public key encoding if strict encoding is required
     if require_strict:
-        err = check_public_key_encoding(pub_key)
-        if err:
-            return err
-    
-    # Extract sighash type from signature
-    if len(sig) < 1:
-        # Empty signature is invalid for verification
-        t.dstack.push_byte_array(encode_bool(False))
-        return None
+        return check_public_key_encoding(pub_key)
+    return None
 
+def _extract_sighash_from_signature(t: "Thread", sig: bytes) -> tuple:
+    """Extract sighash type from signature."""
     sighash_type = sig[-1]
     sig_bytes = sig[:-1]
-
-    # Check sighash type encoding only if DER validation is required
+    
+    require_der = t.flags.has_flag(t.flags.VERIFY_DER_SIGNATURES) or t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
+    
     if require_der:
         try:
             sighash_flag = SIGHASH(sighash_type)
         except (ValueError, TypeError):
-            return Error(ErrorCode.ERR_SIG_HASHTYPE, "invalid sighash type")
+            return None, None, Error(ErrorCode.ERR_SIG_HASHTYPE, "invalid sighash type")
     else:
-        # Use default sighash type when not validating DER
         sighash_flag = SIGHASH.ALL
+    
+    return sighash_flag, sig_bytes, None
 
-    # Get script for sighash generation
+def _compute_signature_hash(t: "Thread", sig: bytes, sighash_flag) -> Optional[bytes]:
+    """Compute the signature hash for verification."""
     sub_script = t.sub_script()
-
-    # Remove signature from script if not using FORKID
+    
     if not (sighash_flag & SIGHASH.FORKID):
-        # Remove all occurrences of this signature from the script
         sub_script = remove_signature_from_script(sub_script, sig)
-
-    # Generate signature hash
+    
     try:
-        # Convert script opcodes back to bytes
-        script_bytes = b""
-        for opcode in sub_script:
-            # opcode.opcode is bytes (the opcode itself)
-            script_bytes += opcode.opcode
-            # If there's data, append it
-            if opcode.data:
-                script_bytes += opcode.data
-
-        # Set the computed script code as the locking script for preimage calculation
-        # This matches BIP-143 requirement and Go SDK implementation
+        script_bytes = b"".join(
+            opcode.opcode + (opcode.data if opcode.data else b"")
+            for opcode in sub_script
+        )
+        
         from bsv.script.script import Script
         original_locking_script = t.tx.inputs[t.input_idx].locking_script
         t.tx.inputs[t.input_idx].locking_script = Script.from_bytes(script_bytes)
         
-        # Calculate preimage with the computed script code
         sighash = t.tx.preimage(t.input_idx)
         
-        # Restore original locking script
         t.tx.inputs[t.input_idx].locking_script = original_locking_script
-    except Exception as e:
-        t.dstack.push_byte_array(encode_bool(False))
+        return sighash
+    except Exception:
         return None
 
-    # Verify signature
+def _verify_signature_with_nullfail(t: "Thread", pub_key: bytes, sig_bytes: bytes, sighash: bytes):
+    """Verify signature and check null fail condition."""
     try:
         pubkey_obj = PublicKey(pub_key)
         result = pubkey_obj.verify(sig_bytes, sighash)
     except Exception:
         result = False
-
-    # Check for null fail
+    
     if not result and len(sig_bytes) > 0 and t.flags.has_flag(t.flags.VERIFY_NULL_FAIL):
         return Error(ErrorCode.ERR_NULLFAIL, "signature not empty on failed checksig")
     
-    t.dstack.push_byte_array(encode_bool(result))
-    return None
+    return result
 
 
 def op_checksig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:

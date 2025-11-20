@@ -264,31 +264,61 @@ def _parse_beef_v2(mv: memoryview, version: int) -> Beef:
 def _parse_beef_v2_txs(reader, tx_cnt, beef, bumps):
     from bsv.transaction import Transaction
     for _ in range(tx_cnt):
-        data_format = reader.read_uint8()
-        if data_format not in (0, 1, 2):
-            raise ValueError("unsupported tx data format")
-        bump_index: Optional[int] = None
-        if data_format == 1:
-            bump_index = reader.read_var_int_num()
-        if data_format == 2:
-            txid_bytes = reader.read(32)
-            txid = txid_bytes[::-1].hex()
-            existing = beef.txs.get(txid)
-            if existing is None or existing.tx_obj is None:
-                beef.txs[txid] = BeefTx(txid=txid, tx_bytes=b"", tx_obj=None, data_format=2)
-            continue
-        tx = Transaction.from_reader(reader)
-        txid = tx.txid()
-        if bump_index is not None:
-            if bump_index < 0 or bump_index >= len(bumps):
-                raise ValueError("invalid bump index")
-            tx.merkle_path = bumps[bump_index]
-        btx = BeefTx(txid=txid, tx_bytes=tx.serialize(), tx_obj=tx, data_format=data_format, bump_index=bump_index)
-        existing = beef.txs.get(txid)
-        if existing is not None and existing.tx_obj is None:
-            if btx.bump_index is None:
-                btx.bump_index = existing.bump_index
-        beef.txs[txid] = btx
+        _parse_single_beef_tx(reader, beef, bumps)
+
+def _parse_single_beef_tx(reader, beef, bumps):
+    """Parse a single transaction from BEEF v2 format."""
+    from bsv.transaction import Transaction
+    
+    data_format = reader.read_uint8()
+    if data_format not in (0, 1, 2):
+        raise ValueError("unsupported tx data format")
+    
+    bump_index = _read_bump_index(reader, data_format)
+    
+    # Handle txid-only format
+    if data_format == 2:
+        _handle_txid_only_format(reader, beef)
+        return
+    
+    # Parse full transaction
+    tx = Transaction.from_reader(reader)
+    txid = tx.txid()
+    
+    if bump_index is not None:
+        _attach_merkle_path(tx, bump_index, bumps)
+    
+    btx = BeefTx(txid=txid, tx_bytes=tx.serialize(), tx_obj=tx, 
+                 data_format=data_format, bump_index=bump_index)
+    _update_beef_with_tx(beef, txid, btx)
+
+def _read_bump_index(reader, data_format):
+    """Read bump index if present in format."""
+    if data_format == 1:
+        return reader.read_var_int_num()
+    return None
+
+def _handle_txid_only_format(reader, beef):
+    """Handle txid-only transaction format."""
+    txid_bytes = reader.read(32)
+    txid = txid_bytes[::-1].hex()
+    existing = beef.txs.get(txid)
+    if existing is None or existing.tx_obj is None:
+        beef.txs[txid] = BeefTx(txid=txid, tx_bytes=b"", tx_obj=None, data_format=2)
+
+def _attach_merkle_path(tx, bump_index, bumps):
+    """Attach merkle path from bumps to transaction."""
+    if bump_index < 0 or bump_index >= len(bumps):
+        raise ValueError("invalid bump index")
+    tx.merkle_path = bumps[bump_index]
+
+def _update_beef_with_tx(beef, txid, btx):
+    """Update BEEF structure with parsed transaction."""
+    existing = beef.txs.get(txid)
+    if existing is not None and existing.tx_obj is None:
+        if btx.bump_index is None:
+            btx.bump_index = existing.bump_index
+    beef.txs[txid] = btx
 
 def _link_inputs_and_bumps(beef: Beef):
     changed = True
@@ -407,33 +437,56 @@ def normalize_bumps(beef: Beef) -> None:
     """
     if not getattr(beef, "bumps", None):
         return
+    
+    root_map, index_map, new_bumps = _deduplicate_bumps(beef.bumps)
+    beef.bumps = new_bumps
+    _remap_transaction_indices(beef, index_map)
+
+def _deduplicate_bumps(bumps: List) -> tuple[Dict[tuple, int], Dict[int, int], List]:
+    """Deduplicate bumps by merging those with same (height, root)."""
     root_map: Dict[tuple, int] = {}
     index_map: Dict[int, int] = {}
     new_bumps: List[object] = []
-    for old_index, bump in enumerate(beef.bumps):
-        try:
-            height = getattr(bump, "block_height", getattr(bump, "BlockHeight", None))
-            root = bump.compute_root() if hasattr(bump, "compute_root") else None
-            key = (height, root)
-        except Exception:
-            key = (old_index, None)
+    
+    for old_index, bump in enumerate(bumps):
+        key = _compute_bump_key(bump, old_index)
+        
         if key in root_map:
-            # Merge this bump into the canonical bump instance
-            idx = root_map[key]
-            try:
-                # Combine proofs and trim
-                new_bumps[idx].combine(bump)
-                new_bumps[idx].trim()
-            except Exception:
-                pass
+            idx = _merge_bump(new_bumps, bump, root_map[key])
             index_map[old_index] = idx
         else:
-            new_index = len(new_bumps)
-            root_map[key] = new_index
+            new_index = _add_new_bump(new_bumps, bump, key, root_map)
             index_map[old_index] = new_index
-            new_bumps.append(bump)
-    beef.bumps = new_bumps
-    # Remap tx bump indices
+    
+    return root_map, index_map, new_bumps
+
+def _compute_bump_key(bump, fallback_index: int) -> tuple:
+    """Compute deduplication key for a bump (height, root)."""
+    try:
+        height = getattr(bump, "block_height", getattr(bump, "BlockHeight", None))
+        root = bump.compute_root() if hasattr(bump, "compute_root") else None
+        return (height, root)
+    except Exception:
+        return (fallback_index, None)
+
+def _merge_bump(new_bumps: List, bump, target_idx: int) -> int:
+    """Merge a bump into an existing bump at target_idx."""
+    try:
+        new_bumps[target_idx].combine(bump)
+        new_bumps[target_idx].trim()
+    except Exception:
+        pass  # Best-effort merge
+    return target_idx
+
+def _add_new_bump(new_bumps: List, bump, key: tuple, root_map: Dict[tuple, int]) -> int:
+    """Add a new bump to the collection."""
+    new_index = len(new_bumps)
+    root_map[key] = new_index
+    new_bumps.append(bump)
+    return new_index
+
+def _remap_transaction_indices(beef: Beef, index_map: Dict[int, int]):
+    """Remap transaction bump indices to use new deduplicated indices."""
     for btx in beef.txs.values():
         if btx.bump_index is not None and btx.bump_index in index_map:
             btx.bump_index = index_map[btx.bump_index]

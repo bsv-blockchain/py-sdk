@@ -8,6 +8,10 @@ import struct
 from typing import Optional
 
 
+# Constants
+ERROR_NON_MINIMAL_ENCODING = "non-minimally encoded script number"
+
+
 class ScriptNumber:
     """ScriptNumber represents a number used in Bitcoin scripts."""
 
@@ -36,17 +40,17 @@ class ScriptNumber:
         if require_minimal:
             # Check for negative zero (0x80 by itself or 0x80 with all zeros before it)
             if data[-1] == 0x80 and all(b == 0 for b in data[:-1]):
-                raise ValueError("non-minimally encoded script number")
+                raise ValueError(ERROR_NON_MINIMAL_ENCODING)
             
             # Check if we have unnecessary leading zeros
             if len(data) > 1:
                 # If the last byte is 0x00 and the second-to-last doesn't have sign bit set
                 if data[-1] == 0x00 and (data[-2] & 0x80) == 0:
-                    raise ValueError("non-minimally encoded script number")
+                    raise ValueError(ERROR_NON_MINIMAL_ENCODING)
                 # If the last byte is 0x80 (negative) and second-to-last doesn't need it
                 # This would be something like [0x7f, 0x80] which could be just [0xff]
                 if len(data) > 1 and data[-1] == 0x80 and (data[-2] & 0x80) == 0:
-                    raise ValueError("non-minimally encoded script number")
+                    raise ValueError(ERROR_NON_MINIMAL_ENCODING)
         
         # Decode from little endian (including sign bit initially)
         result = 0

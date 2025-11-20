@@ -56,18 +56,30 @@ class Engine:
 
     def _validate_options(self, opts: ExecutionOptions) -> Optional[Error]:
         """Validate execution options."""
-        # Check input index
+        err = self._validate_input_index(opts)
+        if err:
+            return err
+        
+        err = self._validate_scripts(opts)
+        if err:
+            return err
+        
+        return self._validate_script_consistency(opts)
+
+    def _validate_input_index(self, opts: ExecutionOptions) -> Optional[Error]:
+        """Validate the input index."""
         if opts.input_idx < 0:
             return Error(ErrorCode.ERR_INVALID_INDEX, f"input index {opts.input_idx} is negative")
         
-        if opts.tx is not None:
-            if opts.input_idx >= len(opts.tx.inputs):
-                return Error(
-                    ErrorCode.ERR_INVALID_INDEX,
-                    f"input index {opts.input_idx} >= {len(opts.tx.inputs)}",
-                )
-        
-        # Check scripts
+        if opts.tx is not None and opts.input_idx >= len(opts.tx.inputs):
+            return Error(
+                ErrorCode.ERR_INVALID_INDEX,
+                f"input index {opts.input_idx} >= {len(opts.tx.inputs)}",
+            )
+        return None
+
+    def _validate_scripts(self, opts: ExecutionOptions) -> Optional[Error]:
+        """Validate that required scripts are provided."""
         output_has_locking_script = (
             opts.previous_tx_out is not None
             and opts.previous_tx_out.locking_script is not None
@@ -85,13 +97,28 @@ class Engine:
         if opts.unlocking_script is None and not tx_has_unlocking_script:
             return Error(ErrorCode.ERR_INVALID_PARAMS, "no unlocking script provided")
         
-        # Check script consistency
+        return None
+
+    def _validate_script_consistency(self, opts: ExecutionOptions) -> Optional[Error]:
+        """Validate that provided scripts are consistent with transaction scripts."""
+        output_has_locking_script = (
+            opts.previous_tx_out is not None
+            and opts.previous_tx_out.locking_script is not None
+        )
+        
         if opts.locking_script is not None and output_has_locking_script:
             if opts.locking_script.hex() != opts.previous_tx_out.locking_script.hex():
                 return Error(
                     ErrorCode.ERR_INVALID_PARAMS,
                     "locking script does not match previous output locking script",
                 )
+        
+        tx_has_unlocking_script = (
+            opts.tx is not None
+            and opts.tx.inputs
+            and len(opts.tx.inputs) > opts.input_idx
+            and opts.tx.inputs[opts.input_idx].unlocking_script is not None
+        )
         
         if opts.unlocking_script is not None and tx_has_unlocking_script:
             if opts.unlocking_script.hex() != opts.tx.inputs[opts.input_idx].unlocking_script.hex():

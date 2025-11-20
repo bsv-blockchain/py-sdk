@@ -48,18 +48,32 @@ class DefaultSessionManager(SessionManager):
             nonces = self.identity_key_to_nonces.get(identifier)
             if not nonces:
                 return None
-            best = None
-            for nonce in nonces:
-                s = self.session_nonce_to_session.get(nonce)
-                if s:
-                    if best is None:
-                        best = s
-                    elif s.last_update > best.last_update:
-                        if s.is_authenticated or not best.is_authenticated:
-                            best = s
-                    elif s.is_authenticated and not best.is_authenticated:
-                        best = s
-            return best
+            return self._find_best_session(nonces)
+
+    def _find_best_session(self, nonces: set) -> Optional[PeerSession]:
+        """Find the best session from a set of nonces, preferring authenticated and recent sessions."""
+        best = None
+        for nonce in nonces:
+            session = self.session_nonce_to_session.get(nonce)
+            if session:
+                best = self._compare_sessions(best, session)
+        return best
+
+    def _compare_sessions(self, current_best: Optional[PeerSession], candidate: PeerSession) -> PeerSession:
+        """Compare two sessions and return the better one."""
+        if current_best is None:
+            return candidate
+        
+        # Prefer more recent sessions if both have same auth status
+        if candidate.last_update > current_best.last_update:
+            if candidate.is_authenticated or not current_best.is_authenticated:
+                return candidate
+        
+        # Prefer authenticated sessions over non-authenticated even if older
+        if candidate.is_authenticated and not current_best.is_authenticated:
+            return candidate
+        
+        return current_best
 
     def remove_session(self, session: PeerSession) -> None:
         with self._lock:
