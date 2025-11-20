@@ -86,7 +86,8 @@ def test_file_keystore_init():
         from bsv.keystore import FileKeystore
         
         try:
-            keystore = FileKeystore(path='/tmp/test_keystore')
+            # noqa: S108 - Using /tmp for test purposes only, not production code
+            keystore = FileKeystore(path='/tmp/test_keystore')  # noqa: S108
             assert keystore is not None
         except (TypeError, OSError):
             # May require different parameters

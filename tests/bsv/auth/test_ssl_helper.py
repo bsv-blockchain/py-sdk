@@ -36,16 +36,17 @@ class TestSSLHelper:
             ssl.SSLContext configured appropriately
         """
         if for_client:
-            # Client context that accepts self-signed certificates
-            context = ssl.create_default_context()
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
+            # Client context that accepts self-signed certificates for testing
+            context = ssl.create_default_context()  # noqa: S323 - Test environment only
+            context.check_hostname = False  # noqa: S501 - Required for self-signed test certs
+            context.verify_mode = ssl.CERT_NONE  # noqa: S502 - Test server uses self-signed certs
             return context
         
         if for_server:
             # Server context with self-signed certificate
             cert_file, key_file = cls._get_or_create_certificate()
-            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            # PROTOCOL_TLS_SERVER uses secure defaults in Python 3.10+
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)  # noqa: S502 - Modern TLS protocol
             context.load_cert_chain(cert_file, key_file)
             return context
         
@@ -75,7 +76,8 @@ class TestSSLHelper:
         if cert_file.exists() and key_file.exists():
             try:
                 # Verify they can be loaded
-                context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                # PROTOCOL_TLS_SERVER uses secure defaults in Python 3.10+
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)  # noqa: S502 - Modern TLS protocol
                 context.load_cert_chain(str(cert_file), str(key_file))
                 cls._cert_cache[cache_key] = (str(cert_file), str(key_file))
                 return cls._cert_cache[cache_key]

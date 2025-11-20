@@ -60,7 +60,7 @@ def test_wallet_init_woc_api_key_explicit_overrides_env():
     """Test explicit WOC API key overrides environment."""
     priv = PrivateKey()
     with patch.dict(os.environ, {"WOC_API_KEY": "env_key"}):
-        wallet = WalletImpl(priv, woc_api_key="explicit_key")
+        wallet = WalletImpl(priv, woc_api_key="explicit_key")  # noqa: S106 - Mock API key for tests
         assert wallet._woc_api_key == "explicit_key"
 
 

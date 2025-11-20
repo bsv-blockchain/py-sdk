@@ -95,7 +95,7 @@ class TestWhatsOnChainTracker:
         # Test with API key
         tracker = WhatsOnChainTracker(
             network="main",
-            api_key="test_api_key",
+            api_key="test_api_key",  # noqa: S106 - Mock API key for tests
             http_client=self.mock_http_client
         )
         result = tracker.query_tx(

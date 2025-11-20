@@ -91,7 +91,7 @@ def test_woc_client_initialization():
         assert client.network == "test"
 
         # Test with custom API key
-        client = WOCClient(api_key="test_key")
+        client = WOCClient(api_key="test_key")  # noqa: S106 - Mock API key for tests  # noqa: S106 - Mock API key for tests
         assert client.api_key == "test_key"
 
         # Test with environment variable
@@ -216,7 +216,7 @@ def test_woc_client_get_tx_hex_with_api_key():
         from bsv.network.woc_client import WOCClient
         from unittest.mock import patch, Mock
 
-        client = WOCClient(api_key="test_key")
+        client = WOCClient(api_key="test_key")  # noqa: S106 - Mock API key for tests
 
         with patch('requests.get') as mock_get:
             mock_response = Mock()

@@ -45,10 +45,10 @@ async def auth_server():
     ok = False
     t0 = time.time()
     
-    # Create SSL context that accepts self-signed certificates
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    # Create SSL context that accepts self-signed certificates for testing
+    ssl_context = ssl.create_default_context()  # noqa: S323 - Test environment only
+    ssl_context.check_hostname = False  # noqa: S501 - Required for self-signed test certs
+    ssl_context.verify_mode = ssl.CERT_NONE  # noqa: S502 - Test server uses self-signed certs
     
     while time.time() - t0 < 10.0:
         try:

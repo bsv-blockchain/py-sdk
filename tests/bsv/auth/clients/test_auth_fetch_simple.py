@@ -199,7 +199,7 @@ class TestAuthFetchHelpers:
     def test_url_parsing_http(self):
         """Test URL parsing for HTTP."""
         import urllib.parse
-        url = "http://localhost:8080/test"
+        url = "http://localhost:8080/test"  # noqa: S113 - Testing URL parsing functionality with localhost
         parsed = urllib.parse.urlparse(url)
         assert parsed.scheme == "http"
         assert parsed.netloc == "localhost:8080"

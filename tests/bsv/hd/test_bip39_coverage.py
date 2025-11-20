@@ -3,6 +3,13 @@ Coverage tests for hd/bip39.py - untested branches.
 """
 import pytest
 
+# Test passphrase constants for BIP39 tests
+# SonarQube ignore:start - These are test values, not real credentials
+TEST_PASSPHRASE = "test"  # noqa: S105
+TEST_PASSPHRASE_1 = "pass1"  # noqa: S105
+TEST_PASSPHRASE_2 = "pass2"  # noqa: S105
+# SonarQube ignore:end
+
 
 # ========================================================================
 # Mnemonic generation branches
@@ -105,7 +112,7 @@ def test_mnemonic_to_seed_with_passphrase():
     try:
         from bsv.hd.bip39 import generate_mnemonic, mnemonic_to_seed
         mnemonic = generate_mnemonic()
-        seed = mnemonic_to_seed(mnemonic, passphrase="test")
+        seed = mnemonic_to_seed(mnemonic, passphrase=TEST_PASSPHRASE)
         assert isinstance(seed, bytes)
         assert len(seed) == 64
     except ImportError:
@@ -146,8 +153,8 @@ def test_different_passphrases_different_seeds():
     try:
         from bsv.hd.bip39 import generate_mnemonic, mnemonic_to_seed
         mnemonic = generate_mnemonic()
-        seed1 = mnemonic_to_seed(mnemonic, passphrase="pass1")
-        seed2 = mnemonic_to_seed(mnemonic, passphrase="pass2")
+        seed1 = mnemonic_to_seed(mnemonic, passphrase=TEST_PASSPHRASE_1)
+        seed2 = mnemonic_to_seed(mnemonic, passphrase=TEST_PASSPHRASE_2)
         assert seed1 != seed2
     except ImportError:
         pytest.skip("BIP39 not available")

@@ -33,7 +33,7 @@ class TestDefaultBroadcaster:
         """Test default_broadcaster with custom config."""
         from bsv.broadcasters.arc import ARCConfig
 
-        config = ARCConfig(api_key="test-key")
+        config = ARCConfig(api_key="test-key")  # noqa: S106 - Mock API key for tests
         broadcaster = default_broadcaster(is_testnet=False, config=config)
 
         # Should create an ARC broadcaster with config
@@ -45,7 +45,7 @@ class TestDefaultBroadcaster:
         """Test default_broadcaster for testnet with custom config."""
         from bsv.broadcasters.arc import ARCConfig
 
-        config = ARCConfig(api_key="test-key")
+        config = ARCConfig(api_key="test-key")  # noqa: S106 - Mock API key for tests
         broadcaster = default_broadcaster(is_testnet=True, config=config)
 
         # Should create an ARC broadcaster with testnet URL and config

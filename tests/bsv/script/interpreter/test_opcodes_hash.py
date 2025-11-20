@@ -77,7 +77,8 @@ class TestHashOpcodes:
         assert err is None
         assert self.thread.dstack.depth() == 1
         result = self.thread.dstack.pop_byte_array()
-        expected = hashlib.sha1(test_data).digest()
+        # noqa: S324 - SHA1 is required by Bitcoin Script OP_SHA1 opcode, not for security
+        expected = hashlib.sha1(test_data).digest()  # noqa: S324
         assert result == expected
 
     def test_op_sha256_success(self):

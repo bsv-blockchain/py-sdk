@@ -1,7 +1,31 @@
+import os
+from pathlib import Path
+
 import pytest
 from bsv.keys import PrivateKey, PublicKey
 from bsv.wallet.wallet_impl import WalletImpl
 from bsv.wallet.key_deriver import Protocol
+
+
+# Load environment variables from .env.local
+def load_env_file():
+    """Load environment variables from .env.local file if it exists."""
+    env_file = Path(__file__).parent.parent.parent / '.env.local'
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+
+
+load_env_file()
+
+# Test credentials - these are only for testing purposes
+# SonarQube ignore:start - These are test values, not real credentials
+TEST_PASSPHRASE = "test"  # noqa: S105 - This is a test passphrase for unit tests
+# SonarQube ignore:end
 
 @pytest.fixture
 def wallet():
@@ -19,15 +43,15 @@ def test_encrypt_decrypt_identity(wallet, plain):
         "encryption_args": {},
         "plaintext": plain
     }
-    enc = wallet.encrypt(None, args, "test")
-    dec = wallet.decrypt(None, {"encryption_args": {}, "ciphertext": enc["ciphertext"]}, "test")
+    enc = wallet.encrypt(None, args, TEST_PASSPHRASE)
+    dec = wallet.decrypt(None, {"encryption_args": {}, "ciphertext": enc["ciphertext"]}, TEST_PASSPHRASE)
     assert dec["plaintext"] == plain
 
 
 def test_get_public_key_identity(wallet):
     """Test retrieving identity public key from wallet with format validation."""
     args = {"identityKey": True}
-    pub = wallet.get_public_key(None, args, "test")
+    pub = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     
     # Verify response structure
     assert "publicKey" in pub, "Response should contain 'publicKey' field"
@@ -39,7 +63,7 @@ def test_get_public_key_identity(wallet):
     assert all(c in '0123456789abcdefABCDEF' for c in pk_hex), "Public key should be valid hex"
     
     # Verify key is deterministic (same args return same key)
-    pub2 = wallet.get_public_key(None, args, "test")
+    pub2 = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     assert pub2["publicKey"] == pub["publicKey"], "Same args should return same public key"
 
 
@@ -59,7 +83,7 @@ def test_encrypt_decrypt_with_protocol_two_parties():
         },
         "plaintext": plain,
     }
-    enc = alice.encrypt(None, enc_args, "test")
+    enc = alice.encrypt(None, enc_args, TEST_PASSPHRASE)
 
     dec_args = {
         "encryption_args": {
@@ -69,7 +93,7 @@ def test_encrypt_decrypt_with_protocol_two_parties():
         },
         "ciphertext": enc["ciphertext"],
     }
-    dec = bob.decrypt(None, dec_args, "test")
+    dec = bob.decrypt(None, dec_args, TEST_PASSPHRASE)
     assert dec["plaintext"] == plain
 
 
@@ -86,7 +110,7 @@ def test_seek_permission_prompt(monkeypatch):
     
     monkeypatch.setattr("builtins.input", fake_input)
     args = {"seekPermission": True, "identityKey": True}
-    pub = wallet.get_public_key(None, args, "test")
+    pub = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     
     # Verify operation succeeded
     assert "publicKey" in pub, "Should return public key when permission granted"
@@ -104,7 +128,7 @@ def test_seek_permission_prompt(monkeypatch):
         return "n"  # User denies
     monkeypatch.setattr("builtins.input", fake_input_deny)
     
-    pub_denied = wallet.get_public_key(None, args, "test")
+    pub_denied = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     assert "error" in pub_denied, "Should return error when permission denied via input"
 
 
@@ -114,7 +138,7 @@ def test_seek_permission_denied_returns_error_dict():
     wallet = WalletImpl(priv, permission_callback=lambda action: False)
     
     args = {"seekPermission": True, "identityKey": True}
-    res = wallet.get_public_key(None, args, "test")
+    res = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     
     # Verify error response structure
     assert "error" in res, "Should return error dict when permission denied"
@@ -132,7 +156,7 @@ def test_seek_permission_denied_returns_error_dict():
         },
         "plaintext": "test"
     }
-    res2 = wallet.encrypt(None, enc_args, "test")
+    res2 = wallet.encrypt(None, enc_args, TEST_PASSPHRASE)
     assert "error" in res2, "Encrypt should also be denied"
 
 
@@ -142,7 +166,7 @@ def test_get_public_key_with_protocol_and_keyid(wallet):
         "protocolID": {"securityLevel": 1, "protocol": "test"},  # Fixed: removed " protocol" suffix
         "keyID": "test key 1"
     }
-    result = wallet.get_public_key(None, args, "test")
+    result = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     
     # Should return a public key
     assert "publicKey" in result
@@ -154,12 +178,12 @@ def test_get_public_key_missing_required_args(wallet):
     """Test get_public_key with missing required arguments."""
     # Missing keyID
     args = {"protocolID": [1, "test"]}
-    result = wallet.get_public_key(None, args, "test")
+    result = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     assert "error" in result
     
     # Missing protocolID
     args = {"keyID": "test_key"}
-    result = wallet.get_public_key(None, args, "test")
+    result = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     assert "error" in result
 
 
@@ -171,7 +195,7 @@ def test_get_public_key_with_counterparty(wallet, counterparty):
         "keyID": "key1",
         "counterparty": counterparty.hex()
     }
-    result = wallet.get_public_key(None, args, "test")
+    result = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     assert "publicKey" in result
     
     # Test with dict counterparty
@@ -180,7 +204,7 @@ def test_get_public_key_with_counterparty(wallet, counterparty):
         "keyID": "key1",
         "counterparty": {"type": "other", "counterparty": counterparty.hex()}
     }
-    result = wallet.get_public_key(None, args, "test")
+    result = wallet.get_public_key(None, args, TEST_PASSPHRASE)
     assert "publicKey" in result
 
 
@@ -192,7 +216,7 @@ def test_create_signature_basic(wallet):
         "key_id": "key1",
         "data": data
     }
-    result = wallet.create_signature(None, args, "test")
+    result = wallet.create_signature(None, args, TEST_PASSPHRASE)
     
     assert "signature" in result
     assert "error" not in result
@@ -204,12 +228,12 @@ def test_create_signature_missing_args(wallet):
     """Test create_signature with missing arguments."""
     # Missing protocol_id
     args = {"key_id": "key1", "data": b"test"}
-    result = wallet.create_signature(None, args, "test")
+    result = wallet.create_signature(None, args, TEST_PASSPHRASE)
     assert "error" in result
     
     # Missing key_id
     args = {"protocol_id": {"securityLevel": 1, "protocol": "test"}, "data": b"test"}
-    result = wallet.create_signature(None, args, "test")
+    result = wallet.create_signature(None, args, TEST_PASSPHRASE)
     assert "error" in result
 
 
@@ -225,7 +249,7 @@ def test_create_and_verify_signature(wallet):
         "key_id": key_id,
         "data": data
     }
-    sign_result = wallet.create_signature(None, sign_args, "test")
+    sign_result = wallet.create_signature(None, sign_args, TEST_PASSPHRASE)
     assert "signature" in sign_result
     
     # Verify signature
@@ -235,7 +259,7 @@ def test_create_and_verify_signature(wallet):
         "data": data,
         "signature": sign_result["signature"]
     }
-    verify_result = wallet.verify_signature(None, verify_args, "test")
+    verify_result = wallet.verify_signature(None, verify_args, TEST_PASSPHRASE)
     assert "valid" in verify_result
     assert verify_result["valid"] is True
 
@@ -251,7 +275,7 @@ def test_verify_signature_with_invalid_data(wallet):
         "key_id": "key1",
         "data": data
     }
-    sign_result = wallet.create_signature(None, sign_args, "test")
+    sign_result = wallet.create_signature(None, sign_args, TEST_PASSPHRASE)
     
     # Try to verify with different data
     verify_args = {
@@ -260,7 +284,7 @@ def test_verify_signature_with_invalid_data(wallet):
         "data": tampered_data,
         "signature": sign_result["signature"]
     }
-    verify_result = wallet.verify_signature(None, verify_args, "test")
+    verify_result = wallet.verify_signature(None, verify_args, TEST_PASSPHRASE)
     assert verify_result["valid"] is False
 
 
@@ -272,12 +296,12 @@ def test_verify_signature_missing_args(wallet):
         "key_id": "key1",
         "data": b"test"
     }
-    result = wallet.verify_signature(None, args, "test")
+    result = wallet.verify_signature(None, args, TEST_PASSPHRASE)
     assert "error" in result
     
     # Missing protocol_id
     args = {"key_id": "key1", "data": b"test", "signature": b"fake"}
-    result = wallet.verify_signature(None, args, "test")
+    result = wallet.verify_signature(None, args, TEST_PASSPHRASE)
     assert "error" in result
 
 
@@ -291,7 +315,7 @@ def test_create_and_verify_hmac(wallet):
     
     # Create HMAC
     create_args = {"encryption_args": enc_args, "data": data}
-    hmac_result = wallet.create_hmac(None, create_args, "test")
+    hmac_result = wallet.create_hmac(None, create_args, TEST_PASSPHRASE)
     assert "hmac" in hmac_result
     assert "error" not in hmac_result
     
@@ -301,7 +325,7 @@ def test_create_and_verify_hmac(wallet):
         "data": data,
         "hmac": hmac_result["hmac"]
     }
-    verify_result = wallet.verify_hmac(None, verify_args, "test")
+    verify_result = wallet.verify_hmac(None, verify_args, TEST_PASSPHRASE)
     assert "valid" in verify_result
     assert verify_result["valid"] is True
 
@@ -317,7 +341,7 @@ def test_verify_hmac_with_tampered_data(wallet):
     
     # Create HMAC
     create_args = {"encryption_args": enc_args, "data": original_data}
-    hmac_result = wallet.create_hmac(None, create_args, "test")
+    hmac_result = wallet.create_hmac(None, create_args, TEST_PASSPHRASE)
     
     # Try to verify with different data
     verify_args = {
@@ -325,7 +349,7 @@ def test_verify_hmac_with_tampered_data(wallet):
         "data": tampered_data,
         "hmac": hmac_result["hmac"]
     }
-    verify_result = wallet.verify_hmac(None, verify_args, "test")
+    verify_result = wallet.verify_hmac(None, verify_args, TEST_PASSPHRASE)
     assert verify_result["valid"] is False
 
 
@@ -336,7 +360,7 @@ def test_create_hmac_missing_args(wallet):
         "encryption_args": {"protocol_id": {"securityLevel": 1, "protocol": "test"}},
         "data": b"test"
     }
-    result = wallet.create_hmac(None, args, "test")
+    result = wallet.create_hmac(None, args, TEST_PASSPHRASE)
     assert "error" in result
 
 
@@ -350,7 +374,7 @@ def test_verify_hmac_missing_args(wallet):
         },
         "data": b"test"
     }
-    result = wallet.verify_hmac(None, args, "test")
+    result = wallet.verify_hmac(None, args, TEST_PASSPHRASE)
     assert "error" in result
 
 
@@ -409,7 +433,7 @@ def test_acquire_certificate(wallet):
         "keyringForSubject": {"test": "data"},
         "fields": {"field1": "value1"}
     }
-    result = wallet.acquire_certificate(None, args, "test")
+    result = wallet.acquire_certificate(None, args, TEST_PASSPHRASE)
     
     # Should return empty dict on success
     assert result == {}
@@ -430,24 +454,24 @@ def test_list_certificates(wallet):
         "serialNumber": b"123",
         "certifier": "cert1",
         "fields": {"name": "cert1"}
-    }, "test")
+    }, TEST_PASSPHRASE)
     
     wallet.acquire_certificate(None, {
         "type": b"type2",
         "serialNumber": b"456",
         "certifier": "cert2",
         "fields": {"name": "cert2"}
-    }, "test")
+    }, TEST_PASSPHRASE)
     
     # List all certificates
-    result = wallet.list_certificates(None, {}, "test")
+    result = wallet.list_certificates(None, {}, TEST_PASSPHRASE)
     assert "certificates" in result
     assert len(result["certificates"]) == 2
 
 
 def test_get_network(wallet):
     """Test get_network returns mocknet by default."""
-    result = wallet.get_network(None, {}, "test")
+    result = wallet.get_network(None, {}, TEST_PASSPHRASE)
     assert "network" in result
     # WalletImpl returns "mocknet" by default
     assert result["network"] in ["mocknet", "mainnet"]
@@ -455,14 +479,14 @@ def test_get_network(wallet):
 
 def test_get_version(wallet):
     """Test get_version returns version string."""
-    result = wallet.get_version(None, {}, "test")
+    result = wallet.get_version(None, {}, TEST_PASSPHRASE)
     assert "version" in result
     assert isinstance(result["version"], str)
 
 
 def test_is_authenticated(wallet):
     """Test is_authenticated returns True."""
-    result = wallet.is_authenticated(None, {}, "test")
+    result = wallet.is_authenticated(None, {}, TEST_PASSPHRASE)
     assert "authenticated" in result
     assert result["authenticated"] is True
 
@@ -470,7 +494,7 @@ def test_is_authenticated(wallet):
 def test_abort_action(wallet):
     """Test abort_action doesn't raise errors."""
     # Should be a no-op and not raise
-    wallet.abort_action(None, {}, "test")
+    wallet.abort_action(None, {}, TEST_PASSPHRASE)
 
 
 def test_encrypt_decrypt_with_forself(wallet):
@@ -484,7 +508,7 @@ def test_encrypt_decrypt_with_forself(wallet):
         },
         "plaintext": plain
     }
-    encrypted = wallet.encrypt(None, enc_args, "test")
+    encrypted = wallet.encrypt(None, enc_args, TEST_PASSPHRASE)
     assert "ciphertext" in encrypted
     
     dec_args = {
@@ -495,14 +519,14 @@ def test_encrypt_decrypt_with_forself(wallet):
         },
         "ciphertext": encrypted["ciphertext"]
     }
-    decrypted = wallet.decrypt(None, dec_args, "test")
+    decrypted = wallet.decrypt(None, dec_args, TEST_PASSPHRASE)
     assert decrypted["plaintext"] == plain
 
 
 def test_wallet_initialization_with_woc_api_key():
     """Test wallet initialization with WhatsOnChain API key."""
     priv = PrivateKey()
-    api_key = "test_api_key_12345"
+    api_key = os.getenv('WOC_API_KEY', 'test_woc_api_key_fallback')  # noqa: S105
     wallet = WalletImpl(priv, woc_api_key=api_key)
     assert wallet._woc_api_key == api_key
 

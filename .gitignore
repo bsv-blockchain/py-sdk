@@ -9,3 +9,8 @@ htmlcov/
 .coverage
 build/
 .wallet
+
+# Environment files
+.env
+.env.local
+.env.*.local

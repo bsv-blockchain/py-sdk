@@ -45,7 +45,7 @@ def test_arc_init_with_string_api_key():
 
 def test_arc_init_with_arc_config():
     """Test initialization with ARCConfig object."""
-    config = ARCConfig(api_key="test_key")
+    config = ARCConfig(api_key="test_key")  # noqa: S106 - Mock API key for tests
     arc = ARC("https://arc.example.com", config=config)
     assert arc.api_key == "test_key"
 
@@ -68,7 +68,7 @@ def test_arc_init_with_none_config():
 def test_arcconfig_with_all_params():
     """Test ARCConfig with all parameters."""
     config = ARCConfig(
-        api_key="key",
+        api_key="key",  # noqa: S106 - Mock API key for tests
         http_client=None,
         sync_http_client=None,
         deployment_id="deploy_123",
@@ -145,7 +145,7 @@ async def test_broadcast_checks_all_inputs_have_source_tx(arc):
 
 def test_arc_request_headers_with_api_key(arc):
     """Test request_headers includes API key."""
-    arc.api_key = "test_key"
+    arc.api_key = "test_key"  # noqa: S105 - Mock API key for tests
     headers = arc.request_headers()
     assert "Authorization" in headers or "X-API-Key" in headers
 

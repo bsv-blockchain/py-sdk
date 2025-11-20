@@ -1,4 +1,6 @@
+import os
 import unittest
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 from bsv.broadcaster import BroadcastResponse, BroadcastFailure
@@ -7,11 +9,27 @@ from bsv.http_client import HttpClient, HttpResponse, SyncHttpClient
 from bsv.transaction import Transaction
 
 
+# Load environment variables from .env.local
+def load_env_file():
+    """Load environment variables from .env.local file if it exists."""
+    env_file = Path(__file__).parent.parent.parent.parent / '.env.local'
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+
+
+load_env_file()
+
+
 class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.URL = "https://api.taal.com/arc"
-        self.api_key = "apikey_85678993923y454i4jhd803wsd02"
+        self.api_key = os.getenv('ARC_API_KEY', 'test_api_key_fallback')
         self.tx = Transaction(tx_data="Hello sCrypt")
 
         # Mocking the Transaction methods
