@@ -51,8 +51,8 @@ async def test_lookup_rejects_http_when_not_allowed(facilitator):
     question.query = {}
     
     with pytest.raises(HTTPProtocolError) as exc:
-        # noqa: S113 - Using HTTP intentionally to test security feature that rejects insecure URLs
-        await facilitator.lookup("http://example.com", question)  # noqa: S113
+        # Using HTTP intentionally to test security feature that rejects insecure URLs
+        await facilitator.lookup("http://example.com", question)  # noqa: S113  # NOSONAR
     assert "https" in str(exc.value).lower()
 
 

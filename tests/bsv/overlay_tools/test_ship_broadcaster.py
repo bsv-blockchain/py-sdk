@@ -233,8 +233,8 @@ class TestSHIPBroadcaster:
         tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
         
         with pytest.raises(ValueError, match='HTTPS facilitator can only use URLs that start with "https:"'):
-            # noqa: S113 - Using HTTP intentionally to test security feature that rejects insecure URLs
-            await facilitator.send("http://example.com", tagged_beef)  # noqa: S113
+            # Using HTTP intentionally to test security feature that rejects insecure URLs
+            await facilitator.send("http://example.com", tagged_beef)  # noqa: S113  # NOSONAR
     
     @pytest.mark.asyncio
     async def test_https_facilitator_send_with_http_allowed(self):

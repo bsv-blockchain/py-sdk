@@ -21,7 +21,7 @@ class MockHttpClient:
         """Set a response for a URL pattern."""
         self.responses[url_pattern] = response
     
-    async def fetch(self, url: str, options: dict) -> HttpResponse:
+    async def fetch(self, url: str, options: dict) -> HttpResponse:  # NOSONAR
         """Mock fetch method."""
         self.requests.append({'url': url, 'options': options})
         

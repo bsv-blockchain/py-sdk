@@ -130,8 +130,8 @@ def test_roundtrip_large_data():
 def test_roundtrip_random_data():
     """Test roundtrip with various byte values."""
     import random
-    random.seed(42)  # noqa: S311 - Using random for reproducible test data, not cryptographic purposes
-    original = bytes([random.randint(0, 255) for _ in range(32)])  # noqa: S311
+    random.seed(42)  # noqa: S311  # NOSONAR - Using random for reproducible test data, not cryptographic purposes
+    original = bytes([random.randint(0, 255) for _ in range(32)])  # noqa: S311  # NOSONAR
     encoded = encode(original)
     decoded = decode(encoded)
     assert decoded == original

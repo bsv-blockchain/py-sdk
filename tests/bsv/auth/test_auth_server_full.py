@@ -294,7 +294,7 @@ async def handle_auth_message(request):
         logger.error(f"Server error: {e}")
         return web.Response(status=500, text="Internal server error")
 
-async def handle_health_check(request):
+async def handle_health_check(request):  # NOSONAR
     """Health check endpoint"""
     return web.Response(text="BSV Auth Server is running", status=200)
 

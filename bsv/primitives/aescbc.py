@@ -24,7 +24,7 @@ def AESCBCEncrypt(data: bytes, key: bytes, iv: bytes, concat_iv: bool) -> bytes:
     block_size = AES.block_size
     padded = PKCS7Padd(data, block_size)
     # AES-CBC is used with HMAC-SHA256 for authenticated encryption (see aes_cbc_encrypt_mac)
-    cipher = AES.new(key, AES.MODE_CBC, iv)  # noqa: S305 - CBC mode with HMAC provides authenticated encryption
+    cipher = AES.new(key, AES.MODE_CBC, iv)  # noqa: S305  # NOSONAR - CBC mode with HMAC provides authenticated encryption
     ciphertext = cipher.encrypt(padded)
     if concat_iv:
         return iv + ciphertext
@@ -33,7 +33,7 @@ def AESCBCEncrypt(data: bytes, key: bytes, iv: bytes, concat_iv: bool) -> bytes:
 def AESCBCDecrypt(data: bytes, key: bytes, iv: bytes) -> bytes:
     block_size = AES.block_size
     # AES-CBC is used with HMAC-SHA256 for authenticated encryption (see aes_cbc_decrypt_mac)
-    cipher = AES.new(key, AES.MODE_CBC, iv)  # noqa: S305 - CBC mode with HMAC provides authenticated encryption
+    cipher = AES.new(key, AES.MODE_CBC, iv)  # noqa: S305  # NOSONAR - CBC mode with HMAC provides authenticated encryption
     plaintext = cipher.decrypt(data)
     return PKCS7Unpad(plaintext, block_size)
 

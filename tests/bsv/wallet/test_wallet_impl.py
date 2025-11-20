@@ -22,10 +22,8 @@ def load_env_file():
 
 load_env_file()
 
-# Test credentials - these are only for testing purposes
-# SonarQube ignore:start - These are test values, not real credentials
-TEST_PASSPHRASE = "test"  # noqa: S105 - This is a test passphrase for unit tests
-# SonarQube ignore:end
+# Test credentials - these are only for testing purposes, not real credentials
+TEST_PASSPHRASE = "test"  # NOSONAR - Test passphrase for unit tests only
 
 @pytest.fixture
 def wallet():
@@ -526,7 +524,7 @@ def test_encrypt_decrypt_with_forself(wallet):
 def test_wallet_initialization_with_woc_api_key():
     """Test wallet initialization with WhatsOnChain API key."""
     priv = PrivateKey()
-    api_key = os.getenv('WOC_API_KEY', 'test_woc_api_key_fallback')  # noqa: S105
+    api_key = os.getenv('WOC_API_KEY', 'test_woc_api_key_fallback')  # noqa: S105  # NOSONAR
     wallet = WalletImpl(priv, woc_api_key=api_key)
     assert wallet._woc_api_key == api_key
 

@@ -26,7 +26,7 @@ def test_rpc_client_with_auth():
             host='localhost',
             port=8332,
             username='user',
-            password='pass'  # noqa: S106 - This is a test password for unit tests
+            password='pass'  # noqa: S106  # NOSONAR - This is a test password for unit tests
         )
         assert client is not None
     except ImportError:

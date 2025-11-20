@@ -6,7 +6,7 @@ from Cryptodome.Hash import RIPEMD160
 
 def sha1(payload: bytes) -> bytes:
     # SHA1 is required by Bitcoin Script OP_SHA1 opcode specification
-    return hashlib.sha1(payload).digest()  # noqa: S324
+    return hashlib.sha1(payload).digest()  # noqa: S324  # NOSONAR
 
 
 def sha256(payload: bytes) -> bytes:
@@ -39,4 +39,4 @@ def hmac_sha512(key: bytes, message: bytes) -> bytes:
 
 def hmac_sha1(key: bytes, message: bytes) -> bytes:
     # SHA1 is required by Bitcoin protocol specifications
-    return hmac.new(key, message, hashlib.sha1).digest()  # noqa: S324
+    return hmac.new(key, message, hashlib.sha1).digest()  # noqa: S324  # NOSONAR

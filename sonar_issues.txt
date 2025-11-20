@@ -1,0 +1,13344 @@
+bsv/auth/clients/auth_fetch.py
+Refactor this function to reduce its Cognitive Complexity from 36 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L46
+26min effort
+2 months ago
+Code Smell
+Critical
+bsv/auth/peer.py
+Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L41
+8min effort
+1 month ago
+Code Smell
+Critical
+Rename this local variable "RequestedCertificateSet" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L235
+2min effort
+3 months ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L1003
+10min effort
+15 days ago
+Code Smell
+Critical
+bsv/beef/builder.py
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L29
+5min effort
+2 months ago
+Code Smell
+Major
+bsv/compat/bsm.py
+Return a value of type "PublicKey" instead of "NoneType" or update function "recover_public_key" type hint.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+typing
+Open
+Not assigned
+L147
+5min effort
+3 days ago
+Code Smell
+Major
+bsv/constants.py
+Change this argument; Function "hex" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L50
+20min effort
+56 minutes ago
+Code Smell
+Critical
+bsv/headers_client/types.py
+Rename field "state"
+
+Consistency
+Maintainability
+
+
+2
+Medium
+brain-overload
+Open
+Not assigned
+L28
+10min effort
+3 days ago
+Code Smell
+Major
+bsv/identity/testable_client.py
+Add missing parameters override_with_contacts.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L35
+15min effort
+2 months ago
+Code Smell
+Critical
+Add missing parameters override_with_contacts.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L42
+15min effort
+2 months ago
+Code Smell
+Critical
+bsv/identity/types.py
+Rename this field "IdentiCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L25
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "DiscordCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L26
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "PhoneCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L27
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "XCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L28
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "Registrant" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L29
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "EmailCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L30
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "Anyone" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L31
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "Self" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L32
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "CoolCert" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L33
+2min effort
+2 months ago
+Code Smell
+Minor
+bsv/keystore/__init__.py
+Rename field "protocol"
+
+Consistency
+Maintainability
+
+
+2
+Medium
+brain-overload
+Open
+Not assigned
+L14
+10min effort
+2 months ago
+Code Smell
+Major
+Rename field "counterparty"
+
+Consistency
+Maintainability
+
+
+2
+Medium
+brain-overload
+Open
+Not assigned
+L26
+10min effort
+2 months ago
+Code Smell
+Major
+Complete the task associated to this "TODO" comment.
+
+Intentionality
+Maintainability
+
+
+
+Info
+cwe
+Open
+Not assigned
+L63
+0min effort
+2 months ago
+Code Smell
+Info
+Complete the task associated to this "TODO" comment.
+
+Intentionality
+Maintainability
+
+
+
+Info
+cwe
+Open
+Not assigned
+L67
+0min effort
+2 months ago
+Code Smell
+Info
+bsv/keystore/interfaces.py
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L23
+1min effort
+2 months ago
+Code Smell
+Minor
+bsv/keystore/local_kv_store.py
+Refactor this function to reduce its Cognitive Complexity from 56 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L149
+46min effort
+2 months ago
+Code Smell
+Critical
+Refactor this function to reduce its Cognitive Complexity from 67 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L232
+57min effort
+2 months ago
+Code Smell
+Critical
+Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L665
+7min effort
+2 days ago
+Code Smell
+Critical
+Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L840
+7min effort
+2 days ago
+Code Smell
+Critical
+Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L963
+9min effort
+3 hours ago
+Code Smell
+Critical
+Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L1010
+10min effort
+2 days ago
+Code Smell
+Critical
+Remove the unused function parameter "outs".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L1010
+5min effort
+2 months ago
+Code Smell
+Major
+Remove the unused function parameter "ctx".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L1010
+5min effort
+2 months ago
+Code Smell
+Major
+bsv/overlay/lookup.py
+Rename this field "outputIndex" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L16
+2min effort
+2 months ago
+Code Smell
+Minor
+bsv/overlay/topic.py
+Rename this field "networkPreset" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L10
+2min effort
+2 months ago
+Code Smell
+Minor
+bsv/overlay_tools/lookup_resolver.py
+Remove this "timeout" parameter and use a timeout context manager instead.
+
+Adaptability
+Maintainability
+
+
+2
+Medium
+anyio
+async
+...
+Open
+Not assigned
+L117
+5min effort
+3 days ago
+Code Smell
+Major
+Remove this "timeout" parameter and use a timeout context manager instead.
+
+Adaptability
+Maintainability
+
+
+2
+Medium
+anyio
+async
+...
+Open
+Not assigned
+L224
+5min effort
+2 days ago
+Code Smell
+Major
+Remove this "timeout" parameter and use a timeout context manager instead.
+
+Adaptability
+Maintainability
+
+
+2
+Medium
+anyio
+async
+...
+Open
+Not assigned
+L229
+5min effort
+3 days ago
+Code Smell
+Major
+Remove this "timeout" parameter and use a timeout context manager instead.
+
+Adaptability
+Maintainability
+
+
+2
+Medium
+anyio
+async
+...
+Open
+Not assigned
+L402
+5min effort
+3 days ago
+Code Smell
+Major
+bsv/overlay_tools/ship_broadcaster.py
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L114
+1min effort
+3 hours ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 25 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L154
+15min effort
+3 days ago
+Code Smell
+Critical
+Add logic to this except clause or eliminate it and rethrow the exception automatically.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+clumsy
+error-handling
+...
+Open
+Not assigned
+L291
+5min effort
+3 days ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L293
+16min effort
+3 days ago
+Code Smell
+Critical
+bsv/primitives/aescbc.py
+Rename function "PKCS7Padd" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+convention
+pep
+Open
+Not assigned
+L8
+10min effort
+3 months ago
+Code Smell
+Major
+Rename function "PKCS7Unpad" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+convention
+pep
+Open
+Not assigned
+L12
+10min effort
+3 months ago
+Code Smell
+Major
+Rename function "AESCBCEncrypt" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+convention
+pep
+Open
+Not assigned
+L23
+10min effort
+3 months ago
+Code Smell
+Major
+Use secure mode and padding scheme.
+
+Responsibility
+Security
+
+
+4
+High
+cwe
+privacy
+Open
+Not assigned
+L27
+20min effort
+18 minutes ago
+Vulnerability
+Critical
+Rename function "AESCBCDecrypt" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+convention
+pep
+Open
+Not assigned
+L33
+10min effort
+3 months ago
+Code Smell
+Major
+Use secure mode and padding scheme.
+
+Responsibility
+Security
+
+
+4
+High
+cwe
+privacy
+Open
+Not assigned
+L36
+20min effort
+18 minutes ago
+Vulnerability
+Critical
+bsv/primitives/drbg.py
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L77
+5min effort
+3 days ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L88
+5min effort
+3 days ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L104
+5min effort
+3 days ago
+Code Smell
+Major
+bsv/primitives/schnorr.py
+Rename this parameter "A" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L28
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "B" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L29
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "S" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L30
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_prime" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L52
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "A" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L68
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "B" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L69
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "S" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L70
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_prime" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L89
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "zG" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L99
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "eA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L100
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "R_plus_eA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L101
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "zB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L107
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "eS" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L108
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_prime_plus_eS" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L109
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "A" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L118
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "B" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L119
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "S" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L120
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "S_prime" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L121
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "R" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L122
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "A_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L125
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "B_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L126
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "A" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L131
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "B" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L132
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "S" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L133
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "S_prime" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L134
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this parameter "R" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L135
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "A_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L142
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "B_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L143
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L144
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_prime_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L145
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "R_encoded" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L146
+2min effort
+3 days ago
+Code Smell
+Minor
+bsv/registry/client.py
+Remove the unused local variable "protocol".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L156
+5min effort
+2 months ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L240
+16min effort
+2 months ago
+Code Smell
+Critical
+bsv/registry/resolver.py
+Remove the unused function parameter "query".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L49
+5min effort
+2 months ago
+Code Smell
+Major
+Remove the unused local variable "rec".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L74
+5min effort
+2 months ago
+Code Smell
+Minor
+bsv/registry/types.py
+Rename this field "definitionType" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L18
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "basketID" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L19
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "iconURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L21
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "documentationURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L23
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "registryOperator" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L24
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "definitionType" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L29
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "protocolID" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L30
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "iconURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L32
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "documentationURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L34
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "registryOperator" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L35
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "definitionType" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L40
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "iconURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L43
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "documentationURL" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L45
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "registryOperator" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L47
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "outputIndex" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L60
+2min effort
+2 months ago
+Code Smell
+Minor
+Rename this field "lockingScript" to match the regular expression ^[_a-z][_a-z0-9]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L62
+2min effort
+2 months ago
+Code Smell
+Minor
+bsv/script/interpreter/number.py
+Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L23
+8min effort
+1 day ago
+Code Smell
+Critical
+bsv/script/interpreter/op_parser.py
+Refactor this function to reduce its Cognitive Complexity from 22 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L44
+12min effort
+3 days ago
+Code Smell
+Critical
+bsv/script/interpreter/operations.py
+Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L70
+16min effort
+3 days ago
+Code Smell
+Critical
+Remove the unused function parameter "require_strict".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L70
+5min effort
+3 days ago
+Code Smell
+Major
+Remove the unused local variable "sighash".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L88
+5min effort
+3 days ago
+Code Smell
+Minor
+bsv/script/interpreter/stack.py
+Add a nested comment explaining why this method is empty, or complete the implementation.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L48
+5min effort
+3 days ago
+Code Smell
+Critical
+Add a nested comment explaining why this method is empty, or complete the implementation.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L51
+5min effort
+3 days ago
+Code Smell
+Critical
+Add a nested comment explaining why this method is empty, or complete the implementation.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L54
+5min effort
+3 days ago
+Code Smell
+Critical
+Add a nested comment explaining why this method is empty, or complete the implementation.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L57
+5min effort
+3 days ago
+Code Smell
+Critical
+Add a nested comment explaining why this method is empty, or complete the implementation.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L67
+5min effort
+3 days ago
+Code Smell
+Critical
+bsv/script/interpreter/thread.py
+Remove the unused function parameter "pop".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L90
+5min effort
+3 days ago
+Code Smell
+Major
+Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L108
+7min effort
+3 days ago
+Code Smell
+Critical
+Rename this variable; it shadows a builtin.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+bad-practice
+confusing
+...
+Open
+Not assigned
+L117
+5min effort
+3 days ago
+Code Smell
+Major
+Complete the task associated to this "TODO" comment.
+
+Intentionality
+Maintainability
+
+
+
+Info
+cwe
+Open
+Not assigned
+L201
+0min effort
+3 days ago
+Code Smell
+Info
+bsv/storage/downloader.py
+Refactor this function to reduce its Cognitive Complexity from 27 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L74
+17min effort
+2 months ago
+Code Smell
+Critical
+bsv/storage/uploader.py
+Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L45
+8min effort
+2 months ago
+Code Smell
+Critical
+bsv/transaction.py
+Rename function "Spend" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+convention
+pep
+Open
+Not assigned
+L24
+10min effort
+2 months ago
+Code Smell
+Major
+Remove the unused local variable "input_total".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L411
+5min effort
+1 year ago
+Code Smell
+Minor
+bsv/transaction/beef.py
+Replace this comprehension with passing the iterable to the dict constructor call
+
+Consistency
+Maintainability
+
+
+3
+Low
+No tags
+Open
+Not assigned
+L187
+5min effort
+8 days ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 24 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L352
+14min effort
+2 months ago
+Code Smell
+Critical
+Remove this unnecessary `list()` call on an already iterable object.
+
+Consistency
+Maintainability
+
+
+3
+Low
+No tags
+Open
+Not assigned
+L353
+5min effort
+2 months ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L400
+9min effort
+2 months ago
+Code Smell
+Critical
+Replace the unused local variable "root_map" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L441
+5min effort
+56 minutes ago
+Code Smell
+Minor
+bsv/transaction/beef_builder.py
+Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L25
+13min effort
+8 days ago
+Code Smell
+Critical
+bsv/transaction/beef_serialize.py
+Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L15
+13min effort
+8 days ago
+Code Smell
+Critical
+Remove this unnecessary `list()` call on an already iterable object.
+
+Consistency
+Maintainability
+
+
+3
+Low
+No tags
+Open
+Not assigned
+L76
+5min effort
+8 days ago
+Code Smell
+Minor
+bsv/transaction/beef_tx.py
+Rename class "TX_DATA_FORMAT" to match the regular expression ^_?([A-Z_][a-zA-Z0-9]*|[a-z_][a-z0-9_]*)$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L12
+5min effort
+3 days ago
+Code Smell
+Minor
+bsv/transaction/beef_utils.py
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L34
+1min effort
+8 days ago
+Code Smell
+Major
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L37
+1min effort
+8 days ago
+Code Smell
+Major
+Rename this local variable "leafL" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L90
+2min effort
+8 days ago
+Code Smell
+Minor
+Rename this local variable "leafR" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L94
+2min effort
+56 minutes ago
+Code Smell
+Minor
+Rename this local variable "leafR" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L116
+2min effort
+56 minutes ago
+Code Smell
+Minor
+Rename this parameter "leafL" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L121
+2min effort
+56 minutes ago
+Code Smell
+Minor
+Rename this parameter "leafR" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L121
+2min effort
+56 minutes ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L138
+13min effort
+8 days ago
+Code Smell
+Critical
+bsv/transaction/beef_validate.py
+Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L163
+23min effort
+8 days ago
+Code Smell
+Critical
+bsv/transaction/pushdrop.py
+Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L296
+8min effort
+56 minutes ago
+Code Smell
+Critical
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L666
+1min effort
+2 months ago
+Code Smell
+Major
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L686
+1min effort
+2 months ago
+Code Smell
+Major
+bsv/utils/ecdsa.py
+Replace the unused local variable "s" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L54
+5min effort
+2 months ago
+Code Smell
+Minor
+Replace the unused local variable "r" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L54
+5min effort
+2 months ago
+Code Smell
+Minor
+bsv/utils/encoding.py
+Replace this comprehension with passing the iterable to the collection constructor call
+
+Consistency
+Maintainability
+
+
+3
+Low
+No tags
+Open
+Not assigned
+L8
+5min effort
+2 months ago
+Code Smell
+Minor
+Replace this comprehension with passing the iterable to the collection constructor call
+
+Consistency
+Maintainability
+
+
+3
+Low
+No tags
+Open
+Not assigned
+L59
+5min effort
+2 months ago
+Code Smell
+Minor
+bsv/utils/legacy.py
+Replace the unused local variable "r" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L205
+5min effort
+3 months ago
+Code Smell
+Minor
+Replace the unused local variable "s" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L205
+5min effort
+3 months ago
+Code Smell
+Minor
+bsv/utils/script_chunks.py
+Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L11
+23min effort
+2 months ago
+Code Smell
+Critical
+bsv/wallet/cached_key_deriver.py
+Complete the task associated to this "TODO" comment.
+
+Intentionality
+Maintainability
+
+
+
+Info
+cwe
+Open
+Not assigned
+L74
+0min effort
+2 months ago
+Code Smell
+Info
+Complete the task associated to this "TODO" comment.
+
+Intentionality
+Maintainability
+
+
+
+Info
+cwe
+Open
+Not assigned
+L79
+0min effort
+2 months ago
+Code Smell
+Info
+bsv/wallet/key_deriver.py
+Rename field "protocol"
+
+Consistency
+Maintainability
+
+
+2
+Medium
+brain-overload
+Open
+Not assigned
+L21
+10min effort
+2 months ago
+Code Smell
+Major
+Rename field "protocol"
+
+Consistency
+Maintainability
+
+
+2
+Medium
+brain-overload
+Open
+Not assigned
+L29
+10min effort
+2 months ago
+Code Smell
+Major
+Rename field "counterparty"
+
+Consistency
+Maintainability
+
+
+2
+Medium
+brain-overload
+Open
+Not assigned
+L51
+10min effort
+2 months ago
+Code Smell
+Major
+Rename field "counterparty"
+
+Consistency
+Maintainability
+
+
+2
+Medium
+brain-overload
+Open
+Not assigned
+L59
+10min effort
+2 months ago
+Code Smell
+Major
+bsv/wallet/serializer/key_linkage.py
+Remove the unused function parameter "result".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L130
+5min effort
+2 months ago
+Code Smell
+Major
+bsv/wallet/serializer/list_outputs.py
+Refactor this function to reduce its Cognitive Complexity from 21 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L6
+11min effort
+2 months ago
+Code Smell
+Critical
+Extract this nested conditional expression into an independent statement.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L64
+5min effort
+2 months ago
+Code Smell
+Major
+Extract this nested conditional expression into an independent statement.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L66
+5min effort
+2 months ago
+Code Smell
+Major
+Rename this local variable "lockingScript" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L147
+2min effort
+56 minutes ago
+Code Smell
+Minor
+Rename this local variable "customInstructions" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L148
+2min effort
+56 minutes ago
+Code Smell
+Minor
+bsv/wallet/serializer/verify_hmac.py
+Merge this if statement with the enclosing one.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+clumsy
+Open
+Not assigned
+L47
+5min effort
+2 months ago
+Code Smell
+Major
+bsv/wallet/serializer/verify_signature.py
+Merge this if statement with the enclosing one.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+clumsy
+Open
+Not assigned
+L69
+5min effort
+2 months ago
+Code Smell
+Major
+bsv/wallet/substrates/http_wallet_json.py
+Remove the unused function parameter "ctx".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L11
+5min effort
+2 months ago
+Code Smell
+Major
+bsv/wallet/substrates/serializer.py
+Update this function so that its implementation is not identical to read_int_bytes on line 134.
+
+Adaptability
+Maintainability
+
+
+2
+Medium
+confusing
+duplicate
+...
+Open
+Not assigned
+L147
+15min effort
+2 months ago
+Code Smell
+Major
+Refactor this function to reduce its Cognitive Complexity from 46 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L342
+36min effort
+2 months ago
+Code Smell
+Critical
+Remove the unused local variable "unlocking_len".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L439
+5min effort
+2 months ago
+Code Smell
+Minor
+Complete the task associated to this "TODO" comment.
+
+Intentionality
+Maintainability
+
+
+
+Info
+cwe
+Open
+Not assigned
+L455
+0min effort
+2 months ago
+Code Smell
+Info
+bsv/wallet/substrates/wallet_wire_processor.py
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L253
+5min effort
+56 minutes ago
+Code Smell
+Minor
+bsv/wallet/substrates/wallet_wire_transceiver.py
+Remove the unused function parameter "args".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L470
+5min effort
+2 months ago
+Code Smell
+Major
+Change this argument; Function "transmit" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L471
+20min effort
+2 months ago
+Code Smell
+Critical
+Remove the unused function parameter "args".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L483
+5min effort
+2 months ago
+Code Smell
+Major
+Change this argument; Function "transmit" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L484
+20min effort
+2 months ago
+Code Smell
+Critical
+bsv/wallet/wallet_impl.py
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L87
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L115
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L130
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L144
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L186
+15min effort
+3 months ago
+Code Smell
+Critical
+Refactor this function to reduce its Cognitive Complexity from 31 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L186
+21min effort
+15 days ago
+Code Smell
+Critical
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L249
+1min effort
+1 month ago
+Code Smell
+Major
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L267
+1min effort
+1 month ago
+Code Smell
+Major
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L272
+1min effort
+1 month ago
+Code Smell
+Major
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L274
+1min effort
+1 month ago
+Code Smell
+Major
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L277
+1min effort
+1 month ago
+Code Smell
+Major
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L281
+1min effort
+1 month ago
+Code Smell
+Major
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L289
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L311
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L348
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L359
+15min effort
+3 months ago
+Code Smell
+Critical
+Refactor this function to reduce its Cognitive Complexity from 80 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L359
+1h10min effort
+2 months ago
+Code Smell
+Critical
+Remove the unused local variable "target".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L429
+5min effort
+2 months ago
+Code Smell
+Minor
+Remove the unused local variable "total_input".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L461
+5min effort
+2 months ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 72 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L603
+1h2min effort
+2 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L734
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L759
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L983
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L986
+15min effort
+3 months ago
+Code Smell
+Critical
+Extract this nested conditional expression into an independent statement.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L1151
+5min effort
+2 months ago
+Code Smell
+Major
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L1244
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L1246
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L1255
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L1257
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L1283
+15min effort
+3 months ago
+Code Smell
+Critical
+Remove parameter ctx or provide default value.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L1301
+15min effort
+3 months ago
+Code Smell
+Critical
+Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L1301
+13min effort
+2 months ago
+Code Smell
+Critical
+Remove the unused local variable "sighash_flag".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L1347
+5min effort
+2 months ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 46 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L1450
+36min effort
+1 month ago
+Code Smell
+Critical
+Refactor this function to reduce its Cognitive Complexity from 112 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L1633
+1h42min effort
+2 months ago
+Code Smell
+Critical
+Remove the unused local variable "priv_address".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L1671
+5min effort
+2 months ago
+Code Smell
+Minor
+generate-testlist.py
+Use concise character class syntax '\w' instead of '[a-zA-Z0-9_]'.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+regex
+Open
+Not assigned
+L42
+5min effort
+8 days ago
+Code Smell
+Minor
+review-tests-manually.py
+Refactor this function to reduce its Cognitive Complexity from 27 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L31
+17min effort
+8 days ago
+Code Smell
+Critical
+Remove the unused local variable "line_number".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L125
+5min effort
+8 days ago
+Code Smell
+Minor
+Define a constant instead of duplicating this literal 'py-sdk/tests/' 4 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L132
+8min effort
+8 days ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal 'tests/' 4 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L133
+8min effort
+8 days ago
+Code Smell
+Critical
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L205
+5min effort
+6 days ago
+Code Smell
+Minor
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L224
+1min effort
+8 days ago
+Code Smell
+Minor
+Remove the unused local variable "stripped".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L287
+5min effort
+6 days ago
+Code Smell
+Minor
+Replace the unused local variable "line_number" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L305
+5min effort
+6 days ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 50 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L402
+40min effort
+6 days ago
+Code Smell
+Critical
+tests/bsv/address_test_coverage.py
+Define a constant instead of duplicating this literal "validate_address not available" 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L52
+10min effort
+1 day ago
+Code Smell
+Critical
+Replace the unused local variable "network" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L138
+5min effort
+1 day ago
+Code Smell
+Minor
+Define a constant instead of duplicating this literal "decode_wif not available" 4 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L143
+8min effort
+1 day ago
+Code Smell
+Critical
+Replace the unused local variable "network" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L156
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove the unused local variable "testnet_prefix".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L173
+5min effort
+1 day ago
+Code Smell
+Minor
+Define a constant instead of duplicating this literal "decode_address not available" 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L215
+6min effort
+1 day ago
+Code Smell
+Critical
+Remove this unneeded "pass".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+confusing
+Open
+Not assigned
+L242
+2min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/aes_cbc_test_coverage.py
+Define a constant instead of duplicating this literal "AES-CBC not available" 11 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L19
+22min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "decrypted".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L102
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L103
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L106
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "encrypted".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L165
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L166
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L169
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/aes_gcm_test_coverage.py
+Define a constant instead of duplicating this literal "AES-GCM not available" 10 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L19
+20min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "decrypted".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L76
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L81
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "decrypted".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L93
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L94
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L97
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "encrypted".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L135
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L136
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L139
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/auth/clients/test_auth_fetch_coverage.py
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L205
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove this unused function declaration.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L289
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L299
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L328
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove this unused function declaration.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L370
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this generic exception class with a more specific one.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+error-handling
+Open
+Not assigned
+L371
+20min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/auth/clients/test_auth_fetch_full_e2e.py
+Enable server hostname verification on this SSL/TLS connection.
+
+Intentionality
+Security
+
+
+4
+High
+cwe
+privacy
+...
+Open
+Not assigned
+L49
+5min effort
+3 hours ago
+Vulnerability
+Critical
+Use a stronger protocol, or upgrade to Python 3.10+ which uses secure defaults.
+
+Responsibility
+Security
+
+
+4
+High
+cwe
+privacy
+Open
+Not assigned
+L49
+2min effort
+3 hours ago
+Vulnerability
+Critical
+Enable server certificate validation on this SSL/TLS connection.
+
+Responsibility
+Security
+
+
+4
+High
+cwe
+privacy
+...
+Open
+Not assigned
+L51
+5min effort
+3 hours ago
+Vulnerability
+Critical
+tests/bsv/auth/clients/test_auth_fetch_integration.py
+Remove the unused local variable "nonce_b64".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L149
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; used as a condition it will always be constant.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L494
+2min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/auth/test_auth_cryptononce.py
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L52
+5min effort
+1 month ago
+Code Smell
+Major
+tests/bsv/auth/test_auth_peer_handshake.py
+Rename this local variable "tA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L81
+2min effort
+1 month ago
+Code Smell
+Minor
+Rename this local variable "tB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L82
+2min effort
+1 month ago
+Code Smell
+Minor
+Rename this local variable "wA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L86
+2min effort
+1 month ago
+Code Smell
+Minor
+Rename this local variable "wB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L87
+2min effort
+1 month ago
+Code Smell
+Minor
+Rename this local variable "pA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L90
+2min effort
+1 month ago
+Code Smell
+Minor
+Rename this local variable "pB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L91
+2min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/auth/test_auth_server_full.py
+Remove the unused local variable "requested_certs".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L111
+5min effort
+1 month ago
+Code Smell
+Minor
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L297
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/auth/test_metanet_desktop_auth.py
+Remove the unused local variable "params".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L231
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L531
+5min effort
+1 month ago
+Code Smell
+Major
+Replace this generic exception class with a more specific one.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+error-handling
+Open
+Not assigned
+L549
+20min effort
+1 month ago
+Code Smell
+Major
+Replace this generic exception class with a more specific one.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+error-handling
+Open
+Not assigned
+L570
+20min effort
+1 month ago
+Code Smell
+Major
+Remove the unused local variable "request_payload".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L574
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L594
+5min effort
+1 month ago
+Code Smell
+Major
+Replace this generic exception class with a more specific one.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+error-handling
+Open
+Not assigned
+L607
+20min effort
+1 month ago
+Code Smell
+Major
+Remove the unused local variable "auth_result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L625
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove the unused local variable "args".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L689
+5min effort
+1 month ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L734
+5min effort
+1 month ago
+Code Smell
+Major
+Remove the unused local variable "peer".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L1227
+5min effort
+1 month ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L1320
+7min effort
+1 month ago
+Code Smell
+Critical
+Remove this redundant return.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+clumsy
+redundant
+Open
+Not assigned
+L1443
+1min effort
+1 month ago
+Code Smell
+Minor
+Remove this redundant return.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+clumsy
+redundant
+Open
+Not assigned
+L1447
+1min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/auth/test_ssl_helper.py
+Use a stronger protocol, or upgrade to Python 3.10+ which uses secure defaults.
+
+Responsibility
+Security
+
+
+4
+High
+cwe
+privacy
+Open
+Not assigned
+L40
+2min effort
+3 hours ago
+Vulnerability
+Critical
+Enable server hostname verification on this SSL/TLS connection.
+
+Intentionality
+Security
+
+
+4
+High
+cwe
+privacy
+...
+Open
+Not assigned
+L40
+5min effort
+3 hours ago
+Vulnerability
+Critical
+Enable server certificate validation on this SSL/TLS connection.
+
+Responsibility
+Security
+
+
+4
+High
+cwe
+privacy
+...
+Open
+Not assigned
+L42
+5min effort
+3 hours ago
+Vulnerability
+Critical
+Enable server hostname verification on this SSL/TLS connection.
+
+Intentionality
+Security
+
+
+4
+High
+cwe
+privacy
+...
+Open
+Not assigned
+L49
+5min effort
+18 minutes ago
+Vulnerability
+Critical
+Use a stronger protocol, or upgrade to Python 3.10+ which uses secure defaults.
+
+Responsibility
+Security
+
+
+4
+High
+cwe
+privacy
+Open
+Not assigned
+L49
+2min effort
+18 minutes ago
+Vulnerability
+Critical
+Use a stronger protocol, or upgrade to Python 3.10+ which uses secure defaults.
+
+Responsibility
+Security
+
+
+4
+High
+cwe
+privacy
+Open
+Not assigned
+L80
+2min effort
+18 minutes ago
+Vulnerability
+Critical
+tests/bsv/auth/test_verifiable_certificate_coverage.py
+Remove the unused local variable "verifiable_cert_no_verify".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L269
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/auth/transports/test_auth_transport_http.py
+Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L30
+9min effort
+8 days ago
+Code Smell
+Critical
+Remove this assignment to local variable 'request_id'; the value is never used.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+unused
+Open
+Not assigned
+L97
+1min effort
+8 days ago
+Code Smell
+Major
+tests/bsv/base58_test_coverage.py
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L87
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L89
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L90
+1min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L92
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L103
+5min effort
+1 day ago
+Code Smell
+Major
+Fix the syntax of this issue suppression comment.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+No tags
+Open
+Not assigned
+L133
+1min effort
+18 minutes ago
+Code Smell
+Major
+tests/bsv/beef/test_beef_builder_methods.py
+Remove the unused local variable "btx".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L9
+5min effort
+7 days ago
+Code Smell
+Minor
+Change this argument; Function "merge_bump" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L52
+20min effort
+7 days ago
+Code Smell
+Critical
+Change this argument; Function "merge_bump" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L115
+20min effort
+7 days ago
+Code Smell
+Critical
+Change this argument; Function "merge_bump" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L116
+20min effort
+7 days ago
+Code Smell
+Critical
+tests/bsv/beef/test_beef_comprehensive.py
+Remove this assignment to local variable 'txid3'; the value is never used.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+unused
+Open
+Not assigned
+L201
+1min effort
+7 days ago
+Code Smell
+Major
+Remove the unused local variable "beef2".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L313
+5min effort
+7 days ago
+Code Smell
+Minor
+Add a nested comment explaining why this method is empty, or complete the implementation.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L323
+5min effort
+7 days ago
+Code Smell
+Critical
+Change this argument; Function "merge_beef_tx" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L446
+20min effort
+7 days ago
+Code Smell
+Critical
+tests/bsv/beef/test_beef_hardening.py
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L7
+5min effort
+1 month ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L53
+5min effort
+2 days ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L54
+5min effort
+2 days ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L100
+5min effort
+1 month ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L101
+5min effort
+1 month ago
+Code Smell
+Major
+Add a nested comment explaining why this method is empty, or complete the implementation.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L126
+5min effort
+1 month ago
+Code Smell
+Critical
+Replace the unused local variable "beef" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L152
+5min effort
+1 month ago
+Code Smell
+Minor
+Replace the unused local variable "beef" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L171
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L180
+5min effort
+1 month ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L200
+5min effort
+2 days ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L201
+5min effort
+2 days ago
+Code Smell
+Major
+Replace the unused local variable "beef" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L253
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/beef/test_beef_parity.py
+Replace the unused local variable "beef" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L9
+5min effort
+1 month ago
+Code Smell
+Minor
+Replace the unused local variable "subject" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L9
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/beef/test_beef_validate_methods.py
+Rename this local variable "tA" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L139
+2min effort
+7 days ago
+Code Smell
+Minor
+Rename this local variable "tB" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L140
+2min effort
+7 days ago
+Code Smell
+Minor
+Rename this local variable "tC" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L141
+2min effort
+7 days ago
+Code Smell
+Minor
+Rename this local variable "tD" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L142
+2min effort
+7 days ago
+Code Smell
+Minor
+tests/bsv/beef/test_kvstore_beef_e2e.py
+Remove this unneeded "pass".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+confusing
+Open
+Not assigned
+L167
+2min effort
+6 days ago
+Code Smell
+Minor
+Extract this nested conditional expression into an independent statement.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L286
+5min effort
+1 month ago
+Code Smell
+Major
+Extract this nested conditional expression into an independent statement.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L321
+5min effort
+1 month ago
+Code Smell
+Major
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L349
+5min effort
+1 month ago
+Code Smell
+Minor
+Change this argument; Function "verify" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L360
+20min effort
+1 month ago
+Code Smell
+Critical
+Remove the unused local variable "header_root".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L415
+5min effort
+1 month ago
+Code Smell
+Minor
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L441
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove the unused local variable "kv".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L466
+5min effort
+1 month ago
+Code Smell
+Minor
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L487
+5min effort
+1 month ago
+Code Smell
+Minor
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L525
+5min effort
+1 month ago
+Code Smell
+Minor
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L556
+5min effort
+1 month ago
+Code Smell
+Minor
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L584
+5min effort
+1 month ago
+Code Smell
+Minor
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L618
+5min effort
+1 month ago
+Code Smell
+Minor
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L639
+5min effort
+1 month ago
+Code Smell
+Minor
+Refactor this function to reduce its Cognitive Complexity from 18 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L771
+8min effort
+2 days ago
+Code Smell
+Critical
+Remove the unused local variable "spends".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L857
+5min effort
+1 month ago
+Code Smell
+Minor
+Replace the unused local variable "beef" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L961
+5min effort
+1 month ago
+Code Smell
+Minor
+Replace the unused local variable "beef" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L975
+5min effort
+1 month ago
+Code Smell
+Minor
+Extract this nested conditional expression into an independent statement.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L987
+5min effort
+1 month ago
+Code Smell
+Major
+Extract this nested conditional expression into an independent statement.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L1040
+5min effort
+1 month ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L1088
+5min effort
+2 days ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L1089
+5min effort
+2 days ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L1146
+5min effort
+2 days ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L1147
+5min effort
+2 days ago
+Code Smell
+Major
+Remove the unused local variable "outp".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L1256
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove the unused local variable "outp1".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L1294
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove the unused local variable "outp2".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L1297
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove the unused local variable "outp".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L1349
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/beef_test_coverage.py
+Define a constant instead of duplicating this literal "BEEF module not available" 4 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L17
+8min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "is_beef not available" 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L53
+6min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/broadcaster_test_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L16
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "DefaultBroadcaster not available" 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L47
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L70
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L71
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L74
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L93
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L107
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L108
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L111
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/broadcasters/test_arc_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L120
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/broadcasters_test_coverage.py
+Define a constant instead of duplicating this literal "WhatsOnChainBroadcaster not available" 6 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L21
+12min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L45
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L46
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L79
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L80
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L135
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L136
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L139
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/chaintracker_test_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L15
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "ChainTracker not available" 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L17
+6min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "DefaultChainTracker not available" 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L53
+10min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L69
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L87
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "header".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L105
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L106
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L109
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L127
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/chaintrackers_test_coverage.py
+Define a constant instead of duplicating this literal "WhatsOnChainTracker not available" 4 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L19
+8min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "header".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L101
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L102
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L103
+1min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L105
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/compat/test_bsm.py
+Replace the unused local variable "compressed" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L60
+5min effort
+3 days ago
+Code Smell
+Minor
+Replace the unused local variable "recovery_id" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L62
+5min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/compat_test_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L96
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/curve_test_coverage.py
+Define a constant instead of duplicating this literal "Curve operations not available" 4 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L19
+8min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/ecdsa_test_coverage.py
+Define a constant instead of duplicating this literal "ECDSA module not available" 18 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L23
+36min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/encrypted_message_test_coverage.py
+Define a constant instead of duplicating this literal "Encryption functions not available" 8 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L22
+16min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L91
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "decrypted".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L104
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L105
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L108
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "encrypted".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L141
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L142
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L145
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/fee_model_test_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L48
+10min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L70
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/fee_models/test_live_policy_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L65
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "fee1".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L87
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove the unused local variable "fee2".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L88
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L90
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/fee_models_test_coverage.py
+Define a constant instead of duplicating this literal "SatoshisPerKilobyte not available" 4 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L43
+8min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/hd/test_bip39_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L75
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L89
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/hd/test_hd_bip.py
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L9
+5min effort
+8 months ago
+Code Smell
+Major
+tests/bsv/hd/test_key_shares.py
+Change this argument; Function "to_key_shares" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L58
+20min effort
+6 months ago
+Code Smell
+Critical
+Consider using "assertGreater" instead.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+tests
+unittest
+Open
+Not assigned
+L159
+1min effort
+6 months ago
+Code Smell
+Minor
+tests/bsv/headers_client/test_headers_client.py
+Use asynchronous features in this function or remove the `async` keyword.
+
+Consistency
+Reliability
+
+
+3
+Low
+Maintainability
+
+
+2
+Medium
+async
+Open
+Not assigned
+L24
+5min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/headers_client_test_coverage.py
+Define a constant instead of duplicating this literal "HeadersClient requires parameters" 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L21
+6min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "HeadersClient not available" 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L23
+6min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L76
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "GullibleHeadersClient not available" 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L78
+6min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "header".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L108
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L109
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L112
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/http_client_test_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L16
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "HttpClient not available" 10 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L18
+20min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L26
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L37
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal '/test' 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L54
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "response".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L54
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L55
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L58
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "response".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L71
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L72
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L75
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "response".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L88
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L89
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L92
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "response".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L105
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L106
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L109
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L123
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "response".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L136
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L137
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "response".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L157
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L158
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L161
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "response".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L174
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L178
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "response".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L195
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L196
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L197
+1min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L199
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/identity/test_contacts_manager.py
+Remove the unused local variable "contacts".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L59
+5min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/identity/test_contacts_manager_coverage.py
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L123
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L125
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L128
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L134
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L136
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L139
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L156
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L158
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L161
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L169
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L171
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L174
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L180
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L182
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L185
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L226
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L228
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L231
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/identity/test_identity_client.py
+Replace the unused local variable "description" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L203
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/keys_test_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L15
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L29
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L37
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal b'test message' 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L70
+6min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "signature operations not available" 7 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L90
+14min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal b"test message" 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L110
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "key sharing operations not available" 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L168
+6min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L323
+10min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L326
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L335
+10min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L338
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/keystore/test_keystore_local_kv_store.py
+Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L42
+7min effort
+2 days ago
+Code Smell
+Critical
+tests/bsv/keystore/test_kvstore_beef_parsing.py
+Replace the unused local variable "beef_bytes" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L54
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L64
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L105
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L150
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L201
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L238
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L269
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L346
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L394
+5min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/keystore/test_local_kv_store_complete.py
+Rename this local variable "defaultValue" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L126
+2min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/keystore_test_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L42
+5min effort
+1 day ago
+Code Smell
+Major
+Define a constant instead of duplicating this literal "MemoryKeystore operations not available" 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L60
+6min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L74
+5min effort
+1 day ago
+Code Smell
+Major
+Fix the syntax of this issue suppression comment.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+No tags
+Open
+Not assigned
+L89
+1min effort
+18 minutes ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L116
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L164
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "LocalKVStore not available" 7 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L167
+14min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "Skipped due to complex mocking requirements" 12 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L171
+24min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "store".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L315
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove the unused local variable "valid_contexts".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L318
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/merkle_path_test_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L67
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L76
+1min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L78
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L98
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L108
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/merkle_tree_parent_test_coverage.py
+Define a constant instead of duplicating this literal "merkle_tree_parent not available" 6 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L23
+12min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "parent".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L82
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L83
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L86
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "parent".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L97
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L98
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L101
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/network/test_woc_client_coverage.py
+Remove the unused local variable "tx".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L42
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L43
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "balance".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L60
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L61
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "utxos".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L78
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L79
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "history".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L96
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L97
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "tx".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L118
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L119
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L120
+1min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L122
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "balance".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L136
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L137
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L138
+1min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L140
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/network_test_coverage.py
+Define a constant instead of duplicating this literal "get_network_config not available" 3 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L42
+6min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L70
+5min effort
+1 day ago
+Code Smell
+Major
+Define a constant instead of duplicating this literal "WOCClient not available" 9 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L111
+18min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal 'requests.get' 11 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L148
+22min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/outpoint_test_coverage.py
+Define a constant instead of duplicating this literal "Outpoint not available" 9 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L18
+18min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/overlay/test_lookup_coverage.py
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L31
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L32
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L68
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L69
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L70
+1min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L72
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/overlay/test_topic_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L32
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L52
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L76
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/overlay_test_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L59
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L73
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L74
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L77
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L95
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L96
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L97
+1min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L99
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/overlay_tools/test_advanced_features.py
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L362
+5min effort
+2 days ago
+Code Smell
+Minor
+Replace this generic exception class with a more specific one.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+error-handling
+Open
+Not assigned
+L388
+20min effort
+2 days ago
+Code Smell
+Major
+Remove the unused local variable "broadcaster".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L418
+5min effort
+2 days ago
+Code Smell
+Minor
+tests/bsv/overlay_tools/test_host_reputation_tracker.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L34
+10min effort
+3 days ago
+Code Smell
+Critical
+tests/bsv/polynomial_test_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L16
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "Polynomial not available" 6 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L18
+12min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L26
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L36
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L83
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L93
+10min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/primitives/test_aes_gcm.py
+Rename this variable; it shadows a builtin.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+bad-practice
+confusing
+...
+Open
+Not assigned
+L33
+5min effort
+1 month ago
+Code Smell
+Major
+tests/bsv/primitives/test_drbg.py
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L112
+5min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/primitives/test_drbg_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L109
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/primitives/test_schnorr.py
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L30
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L45
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L62
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L79
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L96
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L112
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L128
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L145
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L161
+2min effort
+3 days ago
+Code Smell
+Minor
+Rename this local variable "S_point" to match the regular expression ^[_a-z][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L197
+2min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/primitives/test_schnorr_coverage.py
+Remove the unused local variable "signature".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L89
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L90
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L93
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "signature".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L107
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L108
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L111
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/primitives/test_utils_encoding.py
+Change this argument; Function "from_base58" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L41
+20min effort
+1 month ago
+Code Smell
+Critical
+tests/bsv/primitives/test_utils_reader_writer.py
+Remove the unused local variable "r".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L81
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/primitives_test_coverage.py
+Define a constant instead of duplicating this literal "Primitives not available" 7 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L19
+14min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/registry/test_registry_client.py
+Consider using "assertIsInstance" instead.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+tests
+unittest
+Open
+Not assigned
+L114
+1min effort
+6 days ago
+Code Smell
+Minor
+tests/bsv/registry/test_registry_overlay.py
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L1
+5min effort
+1 month ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L3
+5min effort
+1 month ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L10
+5min effort
+1 month ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L41
+5min effort
+1 month ago
+Code Smell
+Major
+tests/bsv/rpc_test_coverage.py
+Define a constant instead of duplicating this literal "RPC client not available" 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L18
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L44
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L45
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L48
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L66
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "client".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L76
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L77
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L80
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/script/interpreter/test_checksig.py
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L80
+1min effort
+3 days ago
+Code Smell
+Major
+tests/bsv/script/interpreter/test_edge_cases.py
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L26
+5min effort
+2 days ago
+Code Smell
+Minor
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L229
+5min effort
+2 days ago
+Code Smell
+Minor
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L320
+5min effort
+2 days ago
+Code Smell
+Minor
+tests/bsv/script/interpreter/test_engine.py
+Remove the unused local variable "opts".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L57
+5min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/script/interpreter/test_engine_comprehensive.py
+Remove the unused local variable "opts".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L56
+5min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/script/interpreter/test_number.py
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L59
+5min effort
+3 days ago
+Code Smell
+Major
+Remove the unused local variable "num".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L66
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove this unneeded "pass".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+confusing
+Open
+Not assigned
+L68
+2min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/script/interpreter/test_opcode_parser_coverage.py
+Replace the unused local variable "size" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L59
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace the unused local variable "size" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L72
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace the unused local variable "opcode" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L118
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace the unused local variable "opcode2" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L123
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace the unused local variable "size2" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L123
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L124
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L127
+5min effort
+1 day ago
+Code Smell
+Major
+Replace the unused local variable "opcode" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L141
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace the unused local variable "size" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L141
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L142
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L145
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/script/interpreter/test_opcodes_hash.py
+Fix the syntax of this issue suppression comment.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+No tags
+Open
+Not assigned
+L80
+1min effort
+19 minutes ago
+Code Smell
+Major
+tests/bsv/script/interpreter/test_operations_coverage.py
+Change this argument; Function "op_dup" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L136
+20min effort
+22 hours ago
+Code Smell
+Critical
+Change this argument; Function "op_dup" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L144
+20min effort
+22 hours ago
+Code Smell
+Critical
+Change this argument; Function "op_hash160" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L159
+20min effort
+22 hours ago
+Code Smell
+Critical
+Change this argument; Function "op_hash160" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L167
+20min effort
+22 hours ago
+Code Smell
+Critical
+Change this argument; Function "op_equal_verify" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L182
+20min effort
+22 hours ago
+Code Smell
+Critical
+Change this argument; Function "op_equal_verify" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L191
+20min effort
+22 hours ago
+Code Smell
+Critical
+Change this argument; Function "op_equal_verify" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L199
+20min effort
+22 hours ago
+Code Smell
+Critical
+tests/bsv/script/interpreter/test_operations_extended.py
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L84
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L108
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/script/interpreter/test_performance.py
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L79
+5min effort
+2 days ago
+Code Smell
+Minor
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L105
+5min effort
+2 days ago
+Code Smell
+Minor
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L128
+5min effort
+2 days ago
+Code Smell
+Minor
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L161
+5min effort
+2 days ago
+Code Smell
+Minor
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L208
+5min effort
+2 days ago
+Code Smell
+Minor
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L242
+5min effort
+2 days ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L258
+5min effort
+2 days ago
+Code Smell
+Major
+tests/bsv/script/interpreter/test_stack_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L18
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "value".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L58
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L61
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/script/interpreter/test_thread_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L36
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L191
+10min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/script/test_bip276_coverage.py
+Remove the unused local variable "decoded".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L70
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L73
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "decoded".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L84
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L85
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L86
+1min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L87
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/script/test_p2pkh_template.py
+Remove the unused local variable "locking_script".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L53
+5min effort
+3 days ago
+Code Smell
+Minor
+Remove the unused local variable "address".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L64
+5min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/script/test_rpuzzle_template.py
+Remove the unused local variable "locking_script".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L66
+5min effort
+3 days ago
+Code Smell
+Minor
+tests/bsv/script/test_scripts.py
+Remove the unused local variable "public_key".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L272
+5min effort
+1 year ago
+Code Smell
+Minor
+tests/bsv/script/test_type_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L124
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/script/test_unlocking_template_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L16
+10min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/sighash_test_coverage.py
+Define a constant instead of duplicating this literal "Requires valid transaction" 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L30
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "Sighash not available" 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L32
+10min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/signature_test_coverage.py
+Define a constant instead of duplicating this literal b"test message" 8 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L167
+16min effort
+1 day ago
+Code Smell
+Critical
+Change this argument; Function "sign" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L218
+20min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "signature".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L333
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove the unused local variable "invalid_pub".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L343
+5min effort
+1 day ago
+Code Smell
+Minor
+Specify an exception class to catch or reraise the exception
+
+Intentionality
+Maintainability
+
+
+4
+High
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L345
+5min effort
+1 day ago
+Code Smell
+Critical
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L371
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/signed_message_test_coverage.py
+Define a constant instead of duplicating this literal "sign_message not available" 8 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L24
+16min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/spv/test_verify_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L98
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L117
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/spv/test_verify_scripts.py
+Remove the unused local variable "pub_key".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L45
+5min effort
+2 days ago
+Code Smell
+Minor
+tests/bsv/spv_test_coverage.py
+Define a constant instead of duplicating this literal "SPV module not available" 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L17
+10min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/storage/test_storage.py
+Replace this generic exception class with a more specific one.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+error-handling
+Open
+Not assigned
+L23
+20min effort
+1 month ago
+Code Smell
+Major
+Remove the unused local variable "original_fetch".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L44
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove the unused local variable "original_fetch".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L84
+5min effort
+1 month ago
+Code Smell
+Minor
+Replace this generic exception class with a more specific one.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+error-handling
+Open
+Not assigned
+L148
+20min effort
+1 month ago
+Code Smell
+Major
+Remove the unused local variable "original_fetch".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L152
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/storage/test_storage_e2e.py
+Remove the unused local variable "uhrp_url".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L103
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/storage_test_coverage.py
+Define a constant instead of duplicating this literal "MemoryStorage operations not available" 4 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L47
+8min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L67
+5min effort
+1 day ago
+Code Smell
+Major
+Fix the syntax of this issue suppression comment.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+No tags
+Open
+Not assigned
+L97
+1min effort
+19 minutes ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L124
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/test_utils_address.py
+Rename method "test_decode_address_with_O" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L51
+5min effort
+1 day ago
+Code Smell
+Minor
+Rename method "test_decode_address_with_I" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L56
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/test_utils_conversions.py
+Rename method "test_from_base58_I_char_raises" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L341
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/test_utils_ecdsa.py
+Replace the unused local variable "s_decoded" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L118
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L197
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/totp_test_coverage.py
+Define a constant instead of duplicating this literal "generate_totp not available" 5 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L23
+10min effort
+1 day ago
+Code Smell
+Critical
+Define a constant instead of duplicating this literal "TOTP module not available" 7 times.
+
+Adaptability
+Maintainability
+
+
+4
+High
+design
+Open
+Not assigned
+L25
+14min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/transaction/test_beef_builder_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L39
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L56
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L126
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L142
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/transaction/test_beef_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L17
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L32
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "beef".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L65
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L66
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L69
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L102
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L124
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/transaction/test_beef_party_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L16
+10min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L32
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/transaction/test_beef_real.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L15
+10min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L139
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L202
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L215
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L239
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L269
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "beef".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L309
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L345
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L369
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/transaction/test_beef_serialize_coverage.py
+Remove the unused local variable "beef".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L44
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L45
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L48
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L67
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/transaction/test_beef_tx_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L18
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L31
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L46
+10min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/transaction/test_beef_utils_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L58
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/transaction/test_beef_validate_coverage.py
+Change this argument; Function "validate_transactions" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L39
+20min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L43
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/transaction/test_json.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L16
+10min effort
+7 days ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L58
+10min effort
+7 days ago
+Code Smell
+Critical
+tests/bsv/transaction/test_pushdrop_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L20
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L55
+1min effort
+1 day ago
+Code Smell
+Minor
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L69
+1min effort
+1 day ago
+Code Smell
+Minor
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L83
+1min effort
+1 day ago
+Code Smell
+Minor
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L98
+1min effort
+1 day ago
+Code Smell
+Minor
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L116
+1min effort
+1 day ago
+Code Smell
+Minor
+Change this argument; Function "decode" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L134
+20min effort
+1 day ago
+Code Smell
+Critical
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L136
+1min effort
+1 day ago
+Code Smell
+Minor
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L152
+1min effort
+1 day ago
+Code Smell
+Minor
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L167
+1min effort
+1 day ago
+Code Smell
+Minor
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L182
+1min effort
+1 day ago
+Code Smell
+Minor
+Remove this redundant Exception class; it derives from another which is already caught.
+
+Intentionality
+Maintainability
+
+
+3
+Low
+bad-practice
+error-handling
+...
+Open
+Not assigned
+L196
+1min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/transaction/test_pushdrop_parity.py
+Remove the unused local variable "pd".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L26
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove the unused local variable "pubkey".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L144
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/transaction/test_signature_hash.py
+Remove the unused local variable "expected_preimage_hex".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L53
+5min effort
+7 days ago
+Code Smell
+Minor
+tests/bsv/transaction/test_transaction.py
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L92
+1min effort
+2 days ago
+Code Smell
+Major
+Add replacement fields or use a normal string instead of an f-string.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+Open
+Not assigned
+L97
+1min effort
+2 days ago
+Code Smell
+Major
+Remove this assignment to local variable 'tx_in'; the value is never used.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+cwe
+unused
+Open
+Not assigned
+L717
+1min effort
+1 year ago
+Code Smell
+Major
+Complete the task associated to this "TODO" comment.
+
+Intentionality
+Maintainability
+
+
+
+Info
+cwe
+Open
+Not assigned
+L757
+0min effort
+1 year ago
+Code Smell
+Info
+tests/bsv/transaction/test_transaction_coverage.py
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L168
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/transaction_input_test_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L53
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L210
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/transaction_output_test_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L51
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/transaction_preimage_test_coverage.py
+Remove the unused local variable "preimage".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L125
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L128
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/utils/test_encoding_coverage.py
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L76
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L79
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/utils/test_misc_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L145
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/utils/test_reader_writer_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L93
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L107
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L121
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L159
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L177
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/utils/test_script_chunks_coverage.py
+Remove the unused local variable "chunk".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L96
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L98
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "chunk".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L112
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L114
+5min effort
+1 day ago
+Code Smell
+Major
+Remove the unused local variable "chunks".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L132
+5min effort
+1 day ago
+Code Smell
+Minor
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L133
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L136
+5min effort
+1 day ago
+Code Smell
+Major
+Remove this commented out code.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L374
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/wallet/keystores/test_keystore_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L58
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L75
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L97
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L115
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/wallet/serializer/test_certificate_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L235
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/wallet/serializer/test_relinquish_output.py
+Change this argument; Function "deserialize_relinquish_output_result" expects a different type
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+typing
+Open
+Not assigned
+L227
+20min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/wallet/serializer/test_verify_signature_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L50
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L72
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L174
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L191
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/wallet/substrates/test_wallet_wire_actions_certs.py
+Remove the unused local variable "tx".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L88
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/wallet/substrates/test_wallet_wire_integration.py
+Remove the unused local variable "protocol".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L28
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove the unused local variable "protocol".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L55
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove the unused local variable "protocol".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L78
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/bsv/wallet/substrates/test_wallet_wire_transceiver_coverage.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L47
+5min effort
+1 day ago
+Code Smell
+Major
+Replace the unused loop index "i" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L501
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/wallet/substrates/test_xdm.py
+Rename method "postMessage" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+3
+Low
+convention
+Open
+Not assigned
+L36
+5min effort
+1 month ago
+Code Smell
+Minor
+Rename function "test_xdm_constructor_throws_if_no_postMessage" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+convention
+pep
+Open
+Not assigned
+L44
+10min effort
+1 month ago
+Code Smell
+Major
+Rename function "test_xdm_invoke_calls_postMessage" to match the regular expression ^[a-z_][a-z0-9_]*$.
+
+Consistency
+Maintainability
+
+
+2
+Medium
+convention
+pep
+Open
+Not assigned
+L55
+10min effort
+1 month ago
+Code Smell
+Major
+tests/bsv/wallet/test_cached_key_deriver_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L17
+10min effort
+1 day ago
+Code Smell
+Critical
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L75
+5min effort
+1 day ago
+Code Smell
+Major
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L91
+5min effort
+1 day ago
+Code Smell
+Major
+tests/bsv/wallet/test_key_deriver_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L17
+10min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/wallet/test_wallet_certificates.py
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L118
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/wallet/test_wallet_impl.py
+Remove the unused local variable "protocol".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L74
+5min effort
+1 month ago
+Code Smell
+Minor
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L539
+10min effort
+1 day ago
+Code Smell
+Critical
+tests/bsv/wallet/test_wallet_impl_coverage.py
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L38
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove this identity check; it will always be True.
+
+Intentionality
+Maintainability
+
+
+4
+High
+suspicious
+Open
+Not assigned
+L47
+10min effort
+1 day ago
+Code Smell
+Critical
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L93
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L106
+5min effort
+1 day ago
+Code Smell
+Minor
+Remove the unused local variable "result".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L121
+5min effort
+1 day ago
+Code Smell
+Minor
+tests/bsv/wallet/test_wallet_outputs.py
+Replace this expression; its boolean value is constant.
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+confusing
+suspicious
+...
+Open
+Not assigned
+L130
+5min effort
+1 day ago
+Code Smell
+Major
+tests/test_auth_verifiable_certificate.py
+Replace the unused local variable "keyring" with "_".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L54
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/vectors/auth/generate_auth_vectors.py
+Remove the unused function parameter "msg".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L15
+5min effort
+1 month ago
+Code Smell
+Major
+Remove the unused function parameter "ctx".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L15
+5min effort
+1 month ago
+Code Smell
+Major
+Remove the unused function parameter "originator".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L24
+5min effort
+1 month ago
+Code Smell
+Major
+Remove the unused function parameter "ctx".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L24
+5min effort
+1 month ago
+Code Smell
+Major
+Remove the unused function parameter "args".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L24
+5min effort
+1 month ago
+Code Smell
+Major
+Remove the unused local variable "cert_type_b64".
+
+Intentionality
+Maintainability
+
+
+3
+Low
+unused
+Open
+Not assigned
+L44
+5min effort
+1 month ago
+Code Smell
+Minor
+tests/vectors/generate_woc_vector.py
+Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
+
+Adaptability
+Maintainability
+
+
+4
+High
+architecture
+brain-overload
+Open
+Not assigned
+L10
+9min effort
+1 month ago
+Code Smell
+Critical
+Remove the unused function parameter "api_key".
+
+Intentionality
+Maintainability
+
+
+2
+Medium
+unused
+Open
+Not assigned
+L10
+5min effort
+1 month ago
+Code Smell
+Major
+787 of 787 shown

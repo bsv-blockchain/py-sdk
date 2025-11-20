@@ -94,8 +94,8 @@ def test_file_storage_init():
         from bsv.storage import FileStorage
         
         try:
-            # noqa: S108 - Using /tmp for test purposes only, not production code
-            storage = FileStorage(path='/tmp/test_storage')  # noqa: S108
+            # Using /tmp for test purposes only, not production code
+            storage = FileStorage(path='/tmp/test_storage')  # noqa: S108  # NOSONAR
             assert storage is not None
         except (TypeError, OSError):
             # May require different parameters

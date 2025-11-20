@@ -4,10 +4,8 @@ from bsv.hd.bip32 import Xpub, Xprv, ckd, master_xprv_from_seed
 from bsv.hd.bip39 import WordList, mnemonic_from_entropy, seed_from_mnemonic, validate_mnemonic
 from bsv.hd.bip44 import derive_xprvs_from_mnemonic, derive_xkeys_from_xkey
 
-# Test passphrase for BIP39 HD wallet tests
-# SonarQube ignore:start - This is a test value, not a real credential
-TEST_PASSPHRASE_BITCOIN = 'bitcoin'  # noqa: S105
-# SonarQube ignore:end
+# Test passphrase for BIP39 HD wallet tests - not a real credential, only for unit testing
+TEST_PASSPHRASE_BITCOIN = 'bitcoin'  # NOSONAR - Test value for BIP39 HD wallet tests
 
 _mnemonic = 'slice simple ring fluid capital exhaust will illegal march annual shift hood'
 _seed = '4fc3bea5ae2df6c5a93602e87085de5a7c1e94bb7ab5e6122364753cc51aa5e210c32aec1c58ed570c83084ec3b60b4ad69075bc62c05edb8e538ae2843f4f59'

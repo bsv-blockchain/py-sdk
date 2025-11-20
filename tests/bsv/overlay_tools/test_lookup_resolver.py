@@ -68,8 +68,8 @@ class TestLookupResolver:
         question = LookupQuestion(service="test", query={})
 
         with pytest.raises(HTTPProtocolError, match="HTTPS facilitator can only use URLs"):
-            # noqa: S113 - Using HTTP intentionally to test security feature that rejects insecure URLs
-            await facilitator.lookup("http://example.com", question)  # noqa: S113
+            # Using HTTP intentionally to test security feature that rejects insecure URLs
+            await facilitator.lookup("http://example.com", question)  # noqa: S113  # NOSONAR
 
     def test_lookup_resolver_creation(self):
         """Test LookupResolver can be created."""

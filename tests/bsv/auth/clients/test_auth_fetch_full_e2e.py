@@ -7,8 +7,15 @@ import time
 import signal
 import os
 import sys
+from pathlib import Path
 from bsv.auth.clients.auth_fetch import AuthFetch, SimplifiedFetchRequestOptions
 from bsv.auth.requested_certificate_set import RequestedCertificateSet
+
+# Add parent directory to path for test helper imports
+test_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(test_dir))
+
+from test_ssl_helper import get_client_ssl_context
 
 class DummyWallet:
     """Mock wallet for testing"""
@@ -45,10 +52,8 @@ async def auth_server():
     ok = False
     t0 = time.time()
     
-    # Create SSL context that accepts self-signed certificates for testing
-    ssl_context = ssl.create_default_context()  # noqa: S323 - Test environment only
-    ssl_context.check_hostname = False  # noqa: S501 - Required for self-signed test certs
-    ssl_context.verify_mode = ssl.CERT_NONE  # noqa: S502 - Test server uses self-signed certs
+    # Use centralized SSL helper for test certificate handling
+    ssl_context = get_client_ssl_context()
     
     while time.time() - t0 < 10.0:
         try:

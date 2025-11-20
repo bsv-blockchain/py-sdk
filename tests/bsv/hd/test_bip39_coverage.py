@@ -3,12 +3,10 @@ Coverage tests for hd/bip39.py - untested branches.
 """
 import pytest
 
-# Test passphrase constants for BIP39 tests
-# SonarQube ignore:start - These are test values, not real credentials
-TEST_PASSPHRASE = "test"  # noqa: S105
-TEST_PASSPHRASE_1 = "pass1"  # noqa: S105
-TEST_PASSPHRASE_2 = "pass2"  # noqa: S105
-# SonarQube ignore:end
+# Test passphrase constants for BIP39 tests - not real credentials, only for unit testing
+TEST_PASSPHRASE = "test"  # NOSONAR - Test value for BIP39 unit tests
+TEST_PASSPHRASE_1 = "pass1"  # NOSONAR - Test value for BIP39 unit tests
+TEST_PASSPHRASE_2 = "pass2"  # NOSONAR - Test value for BIP39 unit tests
 
 
 # ========================================================================

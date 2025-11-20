@@ -346,7 +346,7 @@ def test_merklepath_verify_with_mock_chaintracker():
     import asyncio
     from bsv.merkle_path import MerklePath
     class MockChainTracker:
-        async def is_valid_root_for_height(self, root: str, height: int) -> bool:
+        async def is_valid_root_for_height(self, root: str, height: int) -> bool:  # NOSONAR
             # Accept any root for height 100
             return height == 100
     # Build a simple path with two leaves
@@ -438,7 +438,7 @@ def test_transaction_verify_with_merkle_proof_and_chaintracker():
     from bsv.script.script import Script
     from bsv.merkle_path import MerklePath
     class MockChainTracker:
-        async def is_valid_root_for_height(self, root: str, height: int) -> bool:
+        async def is_valid_root_for_height(self, root: str, height: int) -> bool:  # NOSONAR
             return height == 100
     t = Transaction()
     t.outputs = [TransactionOutput(Script(b"\x51"), 1)]
@@ -484,7 +484,7 @@ def test_kvstore_set_transaction_verify_with_merkle_proof():
     leaf1 = {"offset": 1, "hash_str": "22" * 32}
     t.merkle_path = MerklePath(100, [[leaf0, leaf1]])
     class MockChainTracker:
-        async def is_valid_root_for_height(self, root: str, height: int) -> bool:
+        async def is_valid_root_for_height(self, root: str, height: int) -> bool:  # NOSONAR
             return height == 100
     import asyncio
     loop = asyncio.new_event_loop()
@@ -522,7 +522,7 @@ def test_transaction_verify_with_real_vectors_or_online():
     tx.merkle_path = mp
     height = int(vec["block_height"]) if "block_height" in vec else 0
     class VectorTracker:
-        async def is_valid_root_for_height(self, root: str, h: int) -> bool:
+        async def is_valid_root_for_height(self, root: str, h: int) -> bool:  # NOSONAR
             # Prefer header_root from vector; otherwise accept any when height matches
             if "header_root" in vec:
                 return h == height and vec["header_root"] == root
@@ -553,7 +553,7 @@ def test_kv_vectors_set_verify_full():
     tx.merkle_path = MerklePath.from_hex(vec["merkle_path_binary_hex"])
     height = int(vec["block_height"])
     class VectorTracker:
-        async def is_valid_root_for_height(self, root: str, h: int) -> bool:
+        async def is_valid_root_for_height(self, root: str, h: int) -> bool:  # NOSONAR
             return h == height and (vec.get("header_root") is None or vec.get("header_root") == root)
     import asyncio
     loop = asyncio.new_event_loop()
@@ -581,7 +581,7 @@ def test_kv_vectors_remove_verify_full():
     tx.merkle_path = MerklePath.from_hex(vec["merkle_path_binary_hex"])
     height = int(vec["block_height"])
     class VectorTracker:
-        async def is_valid_root_for_height(self, root: str, h: int) -> bool:
+        async def is_valid_root_for_height(self, root: str, h: int) -> bool:  # NOSONAR
             return h == height and (vec.get("header_root") is None or vec.get("header_root") == root)
     import asyncio
     loop = asyncio.new_event_loop()
@@ -615,7 +615,7 @@ def test_kv_vectors_dir_verify_full():
             tx = Transaction.from_hex(tx_hex)
             tx.merkle_path = MerklePath.from_hex(mhex)
             class VectorTracker:
-                async def is_valid_root_for_height(self, root: str, h: int) -> bool:
+                async def is_valid_root_for_height(self, root: str, h: int) -> bool:  # NOSONAR
                     return int(h) == int(height) and (vec.get("header_root") is None or vec.get("header_root") == root)
             ok = loop.run_until_complete(tx.verify(VectorTracker()))
             assert ok is True
@@ -636,7 +636,7 @@ def test_vectors_dir_verify_full_generic():
     class VectorTracker:
         def __init__(self, root_map):
             self.root_map = root_map
-        async def is_valid_root_for_height(self, root: str, h: int) -> bool:
+        async def is_valid_root_for_height(self, root: str, h: int) -> bool:  # NOSONAR
             exp = self.root_map.get(int(h))
             return exp is None or exp == root
     loop = asyncio.new_event_loop()
