@@ -20,7 +20,7 @@ class Historian:
 
     def __init__(
         self,
-        interpreter: Callable[[Transaction, int, Optional[C]], T | None],
+        interpreter: Callable[[Transaction, int, Optional[C]], Optional[T]],
         options: Optional[Dict[str, Any]] = None
     ):
         """

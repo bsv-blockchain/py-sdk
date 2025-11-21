@@ -10,14 +10,13 @@ References:
 """
 
 import hashlib
-import pytest
 from bsv.script.interpreter.operations import (
     op_ripemd160, op_sha1, op_sha256, op_hash160, op_hash256
 )
 from bsv.script.interpreter.op_parser import ParsedOpcode
 from bsv.script.interpreter.stack import Stack
 from bsv.script.interpreter.config import BeforeGenesisConfig
-from bsv.script.interpreter.errs import Error, ErrorCode
+from bsv.script.interpreter.errs import ErrorCode
 from bsv.constants import OpCode
 
 

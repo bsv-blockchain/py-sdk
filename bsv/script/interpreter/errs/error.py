@@ -93,7 +93,7 @@ class ErrorCode(IntEnum):
     ERR_INVALID_NUMBER_RANGE = 45
     ERR_NUMBER_TOO_BIG = 46
     ERR_DIVIDE_BY_ZERO = 47
-    
+
     # Failures related to verification operations.
     ERR_VERIFY = 48
     ERR_EQUAL_VERIFY = 49
@@ -147,4 +147,3 @@ def is_error_code(err: Optional[Exception], code: ErrorCode) -> bool:
     if isinstance(err, Error):
         return err.code == code
     return False
-

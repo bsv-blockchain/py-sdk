@@ -9,18 +9,16 @@ References:
 - TypeScript SDK: ts-sdk/src/script/Spend.ts
 """
 
-import pytest
 from bsv.script.interpreter.operations import (
     op_drop, op_dup, op_nip, op_over,
     op_pick, op_roll, op_rot, op_swap,
-    op_tuck, op_2drop, op_2dup, op_3dup,
-    op_2over, op_2rot, op_2swap, op_ifdup,
+    op_tuck, op_2drop, op_2dup, op_ifdup,
     op_depth, op_size
 )
 from bsv.script.interpreter.op_parser import ParsedOpcode
 from bsv.script.interpreter.stack import Stack
 from bsv.script.interpreter.config import BeforeGenesisConfig
-from bsv.script.interpreter.errs import Error, ErrorCode
+from bsv.script.interpreter.errs import ErrorCode
 from bsv.constants import OpCode
 
 

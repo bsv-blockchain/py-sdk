@@ -4,7 +4,6 @@ Script number handling for interpreter.
 Ported from go-sdk/script/interpreter/number.go
 """
 
-import struct
 from typing import Optional
 
 

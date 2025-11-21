@@ -5,7 +5,6 @@ These tests target specific operations functions that are not well covered
 by existing tests.
 """
 
-import pytest
 from typing import cast
 from bsv.script.interpreter.operations import (
     cast_to_bool, encode_bool, bin2num, minimally_encode,

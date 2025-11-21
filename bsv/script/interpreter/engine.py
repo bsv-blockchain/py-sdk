@@ -126,6 +126,5 @@ class Engine:
                     ErrorCode.ERR_INVALID_PARAMS,
                     "unlocking script does not match transaction input unlocking script",
                 )
-        
-        return None
 
+        return None

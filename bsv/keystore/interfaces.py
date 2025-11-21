@@ -101,8 +101,8 @@ class KVStoreConfig:
     originator: str = ""     # Name/id of the app using the store (optional)
     encrypt: bool = False    # Whether to encrypt values before storage
     # Optional TS/GO-style defaults for call arguments
-    fee_rate: int | None = None
-    default_ca: dict | None = None
+    fee_rate: Optional[int] = None
+    default_ca: Optional[dict] = None
     # Optional options parity with TS
     accept_delayed_broadcast: bool = False
 

@@ -17,7 +17,7 @@ it programmatically.
 
 from dataclasses import dataclass, field
 from threading import Lock
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 import base64
 import re
 import json
@@ -89,13 +89,13 @@ class LocalKVStore(KVStoreInterface):
         self._originator = config.originator
         self._encrypt = bool(config.encrypt)
         # TS/GO-style defaults
-        self._default_fee_rate: int | None = getattr(config, "fee_rate", None)
-        self._default_ca: dict | None = getattr(config, "default_ca", None)
+        self._default_fee_rate: Optional[int] = getattr(config, "fee_rate", None)
+        self._default_ca: Optional[dict] = getattr(config, "default_ca", None)
         self._lock_position: str = getattr(config, "lock_position", "before") or "before"
         # Remove _use_local_store and _store except for test hooks
         self._lock = Lock()
         # Key-level locks (per-key serialization)
-        self._key_locks: dict[str, Lock] = {}
+        self._key_locks: Dict[str, Lock] = {}
         self._key_locks_guard: Lock = Lock()
         # Options
         self._accept_delayed_broadcast: bool = bool(
@@ -103,7 +103,7 @@ class LocalKVStore(KVStoreInterface):
             or getattr(config, "acceptDelayedBroadcast", False)
         )
         # Cache: recently created BEEF per key to avoid WOC on immediate get
-        self._recent_beef_by_key: dict[str, tuple[list, bytes]] = {}
+        self._recent_beef_by_key: Dict[str, Tuple[list, bytes]] = {}
 
     # ---------------------------------------------------------------------
     # Helper methods
@@ -146,7 +146,7 @@ class LocalKVStore(KVStoreInterface):
         finally:
             self._release_key_lock(key)
 
-    def _get_onchain_value(self, ctx: Any, key: str) -> str | None:  # NOSONAR - Complexity (56), requires refactoring
+    def _get_onchain_value(self, ctx: Any, key: str) -> Optional[str]:  # NOSONAR - Complexity (56), requires refactoring
         """Retrieve value from on-chain outputs (BEEF/PushDrop)."""
         outputs, beef_bytes = self._lookup_outputs_for_get(ctx, key)
         if not outputs:
@@ -229,7 +229,7 @@ class LocalKVStore(KVStoreInterface):
                 return None
         return None
 
-    def _lookup_outputs_for_get(self, ctx: Any, key: str) -> tuple[list, bytes]:  # NOSONAR - Complexity (67), requires refactoring
+    def _lookup_outputs_for_get(self, ctx: Any, key: str) -> Tuple[list, bytes]:  # NOSONAR - Complexity (67), requires refactoring
         # Fast-path: return locally cached BEEF right after set
         cached = self._recent_beef_by_key.get(key)
         if cached:
@@ -306,7 +306,7 @@ class LocalKVStore(KVStoreInterface):
                     master_addr = None
 
                 # Scan candidates in the order: master -> context(if address) -> derived
-                candidates: list[tuple[str, str, str | None]] = []
+                candidates: List[Tuple[str, str, Optional[str]]] = []
                 if master_addr:
                     candidates.append(("master", master_addr, derived_pub_hex))
                 # Optional: if LocalKVStore.context is an address distinct from above, include it
@@ -324,9 +324,9 @@ class LocalKVStore(KVStoreInterface):
                 woc_api = os.environ.get("WOC_API_KEY") or ""
                 headers = {"Authorization": woc_api, "woc-api-key": woc_api} if woc_api else {}
                 timeout = int(os.getenv("WOC_TIMEOUT", "10"))
-                matched_outputs: list[dict] = []
-                matched_tx_hexes: list[str] = []
-                seen_txids: set[str] = set()
+                matched_outputs: List[dict] = []
+                matched_tx_hexes: List[str] = []
+                seen_txids: set = set()
 
                 for _label, addr, pub_hex in candidates:
                     if not addr:
@@ -732,7 +732,7 @@ class LocalKVStore(KVStoreInterface):
             lock_position="before",
         )
 
-    def _lookup_outputs_for_set(self, ctx: Any, key: str, ca_args: dict | None = None) -> tuple[list, bytes]:
+    def _lookup_outputs_for_set(self, ctx: Any, key: str, ca_args: Optional[dict] = None) -> Tuple[list, bytes]:
         ca_args = self._merge_default_ca(ca_args)
         address = self._context
         # Preserve original behaviour (basket/tags) and pass-through ca_args for optional derived lookup
@@ -809,7 +809,7 @@ class LocalKVStore(KVStoreInterface):
             },
         }
 
-    def _sign_and_relinquish_set(self, ctx: Any, key: str, outs: list, inputs_meta: list, signable: dict, signable_tx_bytes: bytes, input_beef: bytes) -> bytes | None:
+    def _sign_and_relinquish_set(self, ctx: Any, key: str, outs: list, inputs_meta: list, signable: dict, signable_tx_bytes: bytes, input_beef: bytes) -> Optional[bytes]:
         spends = self._prepare_spends(key, inputs_meta, signable_tx_bytes, input_beef)
         try:
             spends_str_keys = {str(int(k)): v for k, v in (spends or {}).items()}
@@ -870,7 +870,7 @@ class LocalKVStore(KVStoreInterface):
         finally:
             self._release_key_lock(key)
 
-    def _lookup_outputs_for_remove(self, ctx: Any, key: str) -> tuple[list, bytes, int | None]:
+    def _lookup_outputs_for_remove(self, ctx: Any, key: str) -> Tuple[list, bytes, Optional[int]]:
         lo = self._wallet.list_outputs(ctx, {
             "basket": self._context,
             "tags": [key],
@@ -894,7 +894,7 @@ class LocalKVStore(KVStoreInterface):
                 input_beef = b""
         return outs, input_beef, total_outputs
 
-    def _onchain_remove_flow(self, ctx: Any, key: str, inputs_meta: list, input_beef: bytes) -> str | None:
+    def _onchain_remove_flow(self, ctx: Any, key: str, inputs_meta: list, input_beef: bytes) -> Optional[str]:
         ca_res = self._wallet.create_action(ctx, {
             "labels": ["kv", "remove"],
             "description": f"kvstore remove {key}",
@@ -1085,7 +1085,7 @@ class LocalKVStore(KVStoreInterface):
         from bsv.beef import build_beef_v2_from_raw_hexes
         from bsv.network.woc_client import WOCClient
         # Collect unique txids present in outputs
-        txids: list[str] = []
+        txids: List[str] = []
         for o in outputs:
             txid = o.get("txid")
             if isinstance(txid, str) and len(txid) == 64 and txid != ("00" * 32):
@@ -1094,7 +1094,7 @@ class LocalKVStore(KVStoreInterface):
         if not txids:
             return b""
         client = WOCClient()
-        tx_hex_list: list[str] = []
+        tx_hex_list: List[str] = []
         for txid in txids:
             try:
                 h = client.get_tx_hex(txid, timeout=timeout)
@@ -1104,7 +1104,7 @@ class LocalKVStore(KVStoreInterface):
                 continue
         return build_beef_v2_from_raw_hexes(tx_hex_list)
 
-    def _is_pushdrop_for_pub(self, locking_script_bytes: bytes, pubkey_hex: str | None) -> bool:
+    def _is_pushdrop_for_pub(self, locking_script_bytes: bytes, pubkey_hex: Optional[str]) -> bool:
         """Rudimentary PushDrop detector: OP_PUSH33 <pubkey33> OP_CHECKSIG then data pushes + DROP.
 
         This is a heuristic sufficient to filter subject txs for KV get flows.
@@ -1134,7 +1134,7 @@ class LocalKVStore(KVStoreInterface):
     # ------------------------------
     # Merge helpers
     # ------------------------------
-    def _merge_default_ca(self, ca_args: dict | None) -> dict:
+    def _merge_default_ca(self, ca_args: Optional[dict]) -> dict:
         """Deep-merge config.default_ca into per-call ca_args. ca_args wins.
         Supports nested 'pushdrop' bag similar to TS/GO.
         """

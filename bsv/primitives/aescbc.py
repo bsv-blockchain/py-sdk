@@ -1,4 +1,5 @@
 import hmac
+from typing import Optional
 from Cryptodome.Cipher import AES
 from Cryptodome.Hash import HMAC, SHA256
 
@@ -71,7 +72,7 @@ def aes_cbc_encrypt_mac(data: bytes, key_e: bytes, iv: bytes, mac_key: bytes, co
     return mac_input + mac
 
 
-def aes_cbc_decrypt_mac(blob: bytes, key_e: bytes, iv: bytes | None, mac_key: bytes, concat_iv: bool = True) -> bytes:
+def aes_cbc_decrypt_mac(blob: bytes, key_e: bytes, iv: Optional[bytes], mac_key: bytes, concat_iv: bool = True) -> bytes:
     """Verify HMAC then decrypt AES-CBC message produced by aes_cbc_encrypt_mac.
 
     Parameters

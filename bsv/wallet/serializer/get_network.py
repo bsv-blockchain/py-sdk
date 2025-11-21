@@ -1,9 +1,9 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
 
-def serialize_get_network_args(_: Dict[str, Any] | None = None) -> bytes:
+def serialize_get_network_args(_: Optional[Dict[str, Any]] = None) -> bytes:
     return b""
 
 
@@ -18,7 +18,7 @@ def serialize_get_network_result(result: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def serialize_get_version_args(_: Dict[str, Any] | None = None) -> bytes:
+def serialize_get_version_args(_: Optional[Dict[str, Any]] = None) -> bytes:
     return b""
 
 
@@ -32,7 +32,7 @@ def serialize_get_version_result(result: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def serialize_get_height_args(_: Dict[str, Any] | None = None) -> bytes:
+def serialize_get_height_args(_: Optional[Dict[str, Any]] = None) -> bytes:
     return b""
 
 

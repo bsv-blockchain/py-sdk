@@ -9,20 +9,18 @@ References:
 - TypeScript SDK: ts-sdk/src/script/Spend.ts
 """
 
-import pytest
 from bsv.script.interpreter.operations import (
     op_1add, op_1sub, op_negate, op_abs, op_not,
-    op_0notequal, op_add, op_sub, op_mul, op_div,
-    op_mod, op_booland, op_boolor, op_numequal,
-    op_numequal_verify, op_numnotequal, op_lessthan,
-    op_greaterthan, op_lessthanorequal, op_greaterthanorequal,
+    op_0notequal, op_add, op_sub,
+    op_booland, op_boolor, op_numequal,
+    op_lessthan, op_greaterthan,
     op_min, op_max, op_within
 )
 from bsv.script.interpreter.op_parser import ParsedOpcode
 from bsv.script.interpreter.stack import Stack
 from bsv.script.interpreter.config import BeforeGenesisConfig
 from bsv.script.interpreter.number import ScriptNumber
-from bsv.script.interpreter.errs import Error, ErrorCode
+from bsv.script.interpreter.errs import ErrorCode
 from bsv.constants import OpCode
 
 

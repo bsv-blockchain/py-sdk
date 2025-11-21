@@ -229,7 +229,7 @@ def _convert_chunks_to_bytes(chunks: List[bytes]) -> List[bytes]:
 
 
 def decode_lock_before_pushdrop(
-    script: bytes | str,
+    script: Union[bytes, str],
     *,
     lock_position: str = "before"
 ) -> Optional[Dict[str, object]]:
@@ -505,8 +505,8 @@ class PushDropUnlocker:
     """
 
     def __init__(self, wallet, protocol_id, key_id, counterparty, sign_outputs_mode=SignOutputsMode.ALL, anyone_can_pay: bool = False,
-                 prev_txid: str | None = None, prev_vout: int | None = None,
-                 prev_satoshis: int | None = None, prev_locking_script: bytes | None = None, outs: list | None = None):
+                 prev_txid: Optional[str] = None, prev_vout: Optional[int] = None,
+                 prev_satoshis: Optional[int] = None, prev_locking_script: Optional[bytes] = None, outs: Optional[list] = None):
         self.wallet = wallet
         self.protocol_id = protocol_id
         self.key_id = key_id
@@ -528,7 +528,7 @@ class PushDropUnlocker:
         """
         return 1 + 73 + 1
 
-    def estimate_length_bounds(self) -> tuple[int, int]:  # noqa: D401
+    def estimate_length_bounds(self) -> Tuple[int, int]:  # noqa: D401
         """Return (min_estimate, max_estimate) for unlocking script length.
 
         DER署名の長さは低S値などにより70〜73バイトの範囲で変動する。PUSHDATA長1＋DER長＋SIGHASH 1の範囲。
@@ -583,7 +583,7 @@ class PushDropUnlocker:
             sighash_flag |= 0x80
         return sighash_flag
     
-    def _compute_hash_to_sign(self, tx, input_index: int, sighash_flag: int) -> tuple[bytes, bool]:
+    def _compute_hash_to_sign(self, tx, input_index: int, sighash_flag: int) -> Tuple[bytes, bool]:
         """Compute the hash/preimage to sign. Returns (hash, used_preimage_flag)."""
         try:
             from bsv.transaction import Transaction as _Tx
@@ -593,7 +593,7 @@ class PushDropUnlocker:
         except Exception:
             return self._compute_fallback_hash(tx, input_index)
     
-    def _compute_bip143_preimage(self, tx, input_index: int, sighash_flag: int) -> tuple[bytes, bool]:
+    def _compute_bip143_preimage(self, tx, input_index: int, sighash_flag: int) -> Tuple[bytes, bool]:
         """Compute BIP143 preimage for Transaction objects."""
         from bsv.transaction_preimage import tx_preimage as _tx_preimage
         
@@ -632,7 +632,7 @@ class PushDropUnlocker:
                 setattr(_in, "sighash", sighash_flag)
         return tx_preimage_fn(input_index, tx.inputs, tx.outputs, tx.version, tx.locktime)
     
-    def _compute_fallback_hash(self, tx, input_index: int) -> tuple[bytes, bool]:
+    def _compute_fallback_hash(self, tx, input_index: int) -> Tuple[bytes, bool]:
         """Compute hash for non-Transaction objects using fallback methods."""
         if hasattr(tx, "preimage") and callable(getattr(tx, "preimage")):
             try:
@@ -716,8 +716,8 @@ class PushDropUnlocker:
 
 
 def make_pushdrop_unlocker(wallet, protocol_id, key_id, counterparty, sign_outputs_mode: SignOutputsMode = SignOutputsMode.ALL, anyone_can_pay: bool = False,
-                           prev_txid: str | None = None, prev_vout: int | None = None,
-                           prev_satoshis: int | None = None, prev_locking_script: bytes | None = None, outs: list | None = None) -> PushDropUnlocker:
+                           prev_txid: Optional[str] = None, prev_vout: Optional[int] = None,
+                           prev_satoshis: Optional[int] = None, prev_locking_script: Optional[bytes] = None, outs: Optional[list] = None) -> PushDropUnlocker:
     """Convenience factory mirroring Go/TS helper to construct an unlocker.
 
     Returns a `PushDropUnlocker` ready to `sign(ctx, tx_bytes, input_index)`.

@@ -5,8 +5,7 @@ Focuses on signature encoding, public key validation, and complex operations.
 """
 
 import pytest
-from unittest.mock import Mock, patch
-from bsv.constants import OpCode, SIGHASH
+from bsv.constants import SIGHASH
 from bsv.script.interpreter.operations import (
     check_signature_encoding,
     check_public_key_encoding,
