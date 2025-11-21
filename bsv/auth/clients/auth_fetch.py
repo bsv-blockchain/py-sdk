@@ -43,18 +43,15 @@ class AuthFetch:
         self.peers = {}  # type: Dict[str, AuthPeer]
         self.logger = logging.getLogger("AuthHTTP")
 
-    def fetch(self, ctx: Any, url_str: str, config: Optional[SimplifiedFetchRequestOptions] = None):
-        if config is None:
-            config = SimplifiedFetchRequestOptions()
-        # Handle retry counter
+    def _check_retry_limit(self, config: SimplifiedFetchRequestOptions) -> None:
+        """Check and decrement retry counter."""
         if config.retry_counter is not None:
             if config.retry_counter <= 0:
                 raise RetryError("request failed after maximum number of retries")
             config.retry_counter -= 1
-        # Extract base URL
-        parsed_url = urllib.parse.urlparse(url_str)
-        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-        # Create peer if needed
+
+    def _get_or_create_peer(self, base_url: str) -> AuthPeer:
+        """Get existing peer or create new one for base URL."""
         if base_url not in self.peers:
             transport = SimplifiedHTTPTransport(base_url)
             peer = Peer(PeerOptions(
@@ -66,40 +63,37 @@ class AuthFetch:
             auth_peer = AuthPeer()
             auth_peer.peer = peer
             self.peers[base_url] = auth_peer
-            # Set up certificate listeners similar to TS/Go implementations
+            
             def _on_certs_received(sender_public_key, certs):
                 try:
                     self.certificates_received.extend(certs or [])
                 except Exception:
                     pass
             self.peers[base_url].peer.listen_for_certificates_received(_on_certs_received)
-        peer_to_use = self.peers[base_url]
-        # If mutual auth explicitly unsupported for this base URL, fall back to normal HTTP
-        if peer_to_use.supports_mutual_auth is not None and peer_to_use.supports_mutual_auth is False:
-            resp = self.handle_fetch_and_validate(url_str, config, peer_to_use)
+        
+        return self.peers[base_url]
+
+    def _try_fallback_http(self, ctx: Any, url_str: str, config: SimplifiedFetchRequestOptions, peer: AuthPeer):
+        """Try HTTP fallback if mutual auth is not supported."""
+        if peer.supports_mutual_auth is not None and peer.supports_mutual_auth is False:
+            resp = self.handle_fetch_and_validate(url_str, config, peer)
             if getattr(resp, 'status_code', None) == 402:
                 return self.handle_payment_and_retry(ctx, url_str, config, resp)
             return resp
-        # Generate request nonce
-        request_nonce = os.urandom(32)
-        request_nonce_b64 = base64.b64encode(request_nonce).decode()
-        # Serialize request
-        request_data = self.serialize_request(
-            config.method,
-            config.headers,
-            config.body or b"",
-            parsed_url,
-            request_nonce
-        )
-        # コールバック用イベントと結果格納
+        return None
+
+    def _setup_callbacks(self, request_nonce_b64: str) -> tuple[threading.Event, dict]:
+        """Set up response callbacks and event."""
         response_event = threading.Event()
         response_holder = {'resp': None, 'err': None}
-        # コールバック登録
         self.callbacks[request_nonce_b64] = {
             'resolve': lambda resp: (response_holder.update({'resp': resp}), response_event.set()),
             'reject': lambda err: (response_holder.update({'err': err}), response_event.set()),
         }
-        # Peerのgeneral messageリスナー登録
+        return response_event, response_holder
+
+    def _create_message_listener(self, request_nonce_b64: str, url_str: str, config: SimplifiedFetchRequestOptions):
+        """Create listener for general messages."""
         def on_general_message(sender_public_key, payload):
             try:
                 resp_obj = self._parse_general_response(sender_public_key, payload, request_nonce_b64, url_str, config)
@@ -108,46 +102,87 @@ class AuthFetch:
             if resp_obj is None:
                 return
             self.callbacks[request_nonce_b64]['resolve'](resp_obj)
-        listener_id = peer_to_use.peer.listen_for_general_messages(on_general_message)
-        try:
-            # Peer経由で送信（ToPeer相当）
-            err = peer_to_use.peer.to_peer(ctx, request_data, None, 30000)
-            if err:
-                # Fallback handling similar to TS/Go
-                err_str = str(err)
-                if 'Session not found for nonce' in err_str:
-                    try:
-                        del self.peers[base_url]
-                    except Exception:
-                        pass
-                    if config.retry_counter is None:
-                        config.retry_counter = 3
-                    # Retry request afresh
-                    self.callbacks[request_nonce_b64]['resolve'](self.fetch(ctx, url_str, config))
-                elif 'HTTP server failed to authenticate' in err_str:
-                    try:
-                        resp = self.handle_fetch_and_validate(url_str, config, peer_to_use)
-                        self.callbacks[request_nonce_b64]['resolve'](resp)
-                    except Exception as e:
-                        self.callbacks[request_nonce_b64]['reject'](e)
-                else:
-                    self.callbacks[request_nonce_b64]['reject'](err)
-        except Exception as e:
-            self.callbacks[request_nonce_b64]['reject'](e)
-        # レスポンス待機（またはタイムアウト）
-        response_event.wait(timeout=30)  # 30秒タイムアウト
-        # コールバック解除
-        peer_to_use.peer.stop_listening_for_general_messages(listener_id)
+        return on_general_message
+
+    def _handle_peer_error(self, ctx: Any, err: Exception, base_url: str, url_str: str, config: SimplifiedFetchRequestOptions, request_nonce_b64: str, peer_to_use: AuthPeer) -> None:
+        """Handle errors from peer transmission."""
+        err_str = str(err)
+        if 'Session not found for nonce' in err_str:
+            try:
+                del self.peers[base_url]
+            except Exception:
+                pass
+            if config.retry_counter is None:
+                config.retry_counter = 3
+            self.callbacks[request_nonce_b64]['resolve'](self.fetch(ctx, url_str, config))
+        elif 'HTTP server failed to authenticate' in err_str:
+            try:
+                resp = self.handle_fetch_and_validate(url_str, config, peer_to_use)
+                self.callbacks[request_nonce_b64]['resolve'](resp)
+            except Exception as e:
+                self.callbacks[request_nonce_b64]['reject'](e)
+        else:
+            self.callbacks[request_nonce_b64]['reject'](err)
+
+    def _cleanup_and_get_response(self, peer: AuthPeer, listener_id: Any, request_nonce_b64: str, response_holder: dict) -> Any:
+        """Cleanup listeners and return response."""
+        peer.peer.stop_listening_for_general_messages(listener_id)
         self.callbacks.pop(request_nonce_b64, None)
-        # 結果返却 
+        
         if response_holder['err']:
             raise RuntimeError(response_holder['err'])
-        resp_obj = response_holder['resp']
+        return response_holder['resp']
+
+    def fetch(self, ctx: Any, url_str: str, config: Optional[SimplifiedFetchRequestOptions] = None):
+        if config is None:
+            config = SimplifiedFetchRequestOptions()
+        
+        # Check retry limit
+        self._check_retry_limit(config)
+        
+        # Parse URL and get/create peer
+        parsed_url = urllib.parse.urlparse(url_str)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        peer_to_use = self._get_or_create_peer(base_url)
+        
+        # Try fallback HTTP if auth not supported
+        fallback_resp = self._try_fallback_http(ctx, url_str, config, peer_to_use)
+        if fallback_resp is not None:
+            return fallback_resp
+        
+        # Generate request nonce and serialize request
+        request_nonce = os.urandom(32)
+        request_nonce_b64 = base64.b64encode(request_nonce).decode()
+        request_data = self.serialize_request(
+            config.method, config.headers, config.body or b"", parsed_url, request_nonce
+        )
+        
+        # Set up callbacks and listener
+        response_event, response_holder = self._setup_callbacks(request_nonce_b64)
+        on_general_message = self._create_message_listener(request_nonce_b64, url_str, config)
+        listener_id = peer_to_use.peer.listen_for_general_messages(on_general_message)
+        
+        # Send request via peer
+        try:
+            err = peer_to_use.peer.to_peer(ctx, request_data, None, 30000)
+            if err:
+                self._handle_peer_error(ctx, err, base_url, url_str, config, request_nonce_b64, peer_to_use)
+        except Exception as e:
+            self.callbacks[request_nonce_b64]['reject'](e)
+        
+        # Wait for response
+        response_event.wait(timeout=30)
+        
+        # Cleanup and get response
+        resp_obj = self._cleanup_and_get_response(peer_to_use, listener_id, request_nonce_b64, response_holder)
+        
+        # Handle payment if needed
         try:
             if getattr(resp_obj, 'status_code', None) == 402:
                 return self.handle_payment_and_retry(ctx, url_str, config, resp_obj)
         except Exception:
             pass
+        
         return resp_obj
 
     # --- Helpers to parse the general response payload and build a Response-like object ---

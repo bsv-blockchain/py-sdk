@@ -9,6 +9,12 @@ from bsv.keys import PrivateKey, PublicKey
 # PrivateKey initialization branches
 # ========================================================================
 
+# Constants for skip messages
+TEST_MESSAGE_BYTES = TEST_MESSAGE_BYTES
+TEST_MESSAGE_BYTES2 = TEST_MESSAGE_BYTES2
+SKIP_SIGNATURE_OPS = SKIP_SIGNATURE_OPS
+SKIP_KEY_SHARING = SKIP_KEY_SHARING
+
 def test_private_key_init_none():
     """Test PrivateKey with None (generates random)."""
     key = PrivateKey()
@@ -26,7 +32,7 @@ def test_private_key_init_with_bytes():
 def test_private_key_init_with_int():
     """Test PrivateKey with integer."""
     key = PrivateKey(1)
-    assert key is not None
+    assert hasattr(key, 'wif')
 
 
 def test_private_key_init_with_large_int():
@@ -34,7 +40,7 @@ def test_private_key_init_with_large_int():
     # Use a value within the secp256k1 curve order
     curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
     key = PrivateKey(curve_order - 1)  # Valid value just below curve order
-    assert key is not None
+    assert hasattr(key, 'wif')
 
 
 # ========================================================================
@@ -67,7 +73,7 @@ def test_private_key_from_wif():
 def test_private_key_sign():
     """Test private key signing."""
     priv = PrivateKey()
-    message = b'test message'
+    message = TEST_MESSAGE_BYTES
     signature = priv.sign(message)
     assert isinstance(signature, bytes)
     assert len(signature) > 0
@@ -87,7 +93,7 @@ def test_private_key_sign_with_empty_message():
         assert isinstance(signature, bytes)
         assert len(signature) > 0
     except ImportError:
-        pytest.skip("signature operations not available")
+        pytest.skip(SKIP_SIGNATURE_OPS)
 
 
 def test_private_key_sign_with_large_message():
@@ -100,14 +106,14 @@ def test_private_key_sign_with_large_message():
         assert isinstance(signature, bytes)
         assert len(signature) > 0
     except ImportError:
-        pytest.skip("signature operations not available")
+        pytest.skip(SKIP_SIGNATURE_OPS)
 
 
 def test_private_key_sign_canonical_low_s():
     """Test signing produces canonical low-S signatures."""
     try:
         priv = PrivateKey()
-        message = b"test message"
+        message = TEST_MESSAGE_BYTES2
         signature = priv.sign(message)
 
         # Parse DER signature to check S value
@@ -123,7 +129,7 @@ def test_private_key_sign_msb_prefix_r():
     """Test signing with MSB prefix for r value."""
     try:
         priv = PrivateKey()
-        message = b"test message"
+        message = TEST_MESSAGE_BYTES2
         signature = priv.sign(message)
 
         # Check if signature is properly formatted
@@ -134,21 +140,21 @@ def test_private_key_sign_msb_prefix_r():
         if len(signature) > 0:
             assert signature[0] == 0x30  # DER sequence
     except ImportError:
-        pytest.skip("signature operations not available")
+        pytest.skip(SKIP_SIGNATURE_OPS)
 
 
 def test_private_key_sign_msb_prefix_s():
     """Test signing with MSB prefix for s value."""
     try:
         priv = PrivateKey()
-        message = b"test message"
+        message = TEST_MESSAGE_BYTES2
         signature = priv.sign(message)
 
         # Check if signature is properly formatted
         assert isinstance(signature, bytes)
         assert len(signature) > 0
     except ImportError:
-        pytest.skip("signature operations not available")
+        pytest.skip(SKIP_SIGNATURE_OPS)
 
 
 def test_key_shares_generation_failure():
@@ -165,7 +171,7 @@ def test_key_shares_generation_failure():
                 with pytest.raises(ValueError, match="Failed to generate unique x coordinate"):
                     priv.to_key_shares(2, 3)  # 2-of-3 shares
     except ImportError:
-        pytest.skip("key sharing operations not available")
+        pytest.skip(SKIP_KEY_SHARING)
 
 
 def test_key_shares_invalid_threshold():
@@ -201,7 +207,7 @@ def test_key_shares_insufficient_points():
         with pytest.raises(ValueError, match="At least 3 shares are required"):
             PrivateKey.from_key_shares(key_shares)
     except ImportError:
-        pytest.skip("key sharing operations not available")
+        pytest.skip(SKIP_KEY_SHARING)
 
 
 def test_key_shares_integrity_mismatch():
@@ -223,7 +229,7 @@ def test_key_shares_integrity_mismatch():
             with pytest.raises(ValueError, match="Integrity hash mismatch"):
                 PrivateKey.from_key_shares(key_shares)
     except ImportError:
-        pytest.skip("key sharing operations not available")
+        pytest.skip(SKIP_KEY_SHARING)
 
 
 def test_private_key_invalid_initialization():
@@ -246,7 +252,7 @@ def test_public_key_verification_invalid_signature():
     try:
         priv = PrivateKey()
         pub = priv.public_key()
-        message = b"test message"
+        message = TEST_MESSAGE_BYTES2
 
         # Valid signature
         signature = priv.sign(message)
@@ -260,7 +266,7 @@ def test_public_key_verification_invalid_signature():
         with pytest.raises(ValueError):
             pub.verify(b"\x00" * 64, message)
     except ImportError:
-        pytest.skip("signature operations not available")
+        pytest.skip(SKIP_SIGNATURE_OPS)
 
 
 def test_public_key_verification_different_message():
@@ -277,7 +283,7 @@ def test_public_key_verification_different_message():
         assert pub.verify(signature, message1) == True
         assert pub.verify(signature, message2) == False
     except ImportError:
-        pytest.skip("signature operations not available")
+        pytest.skip(SKIP_SIGNATURE_OPS)
 
 
 def test_public_key_verification_wrong_key():
@@ -286,14 +292,14 @@ def test_public_key_verification_wrong_key():
         priv1 = PrivateKey()
         priv2 = PrivateKey()
         pub2 = priv2.public_key()
-        message = b"test message"
+        message = TEST_MESSAGE_BYTES2
 
         signature = priv1.sign(message)
 
         # Should not verify with wrong public key
         assert pub2.verify(signature, message) == False
     except ImportError:
-        pytest.skip("signature operations not available")
+        pytest.skip(SKIP_SIGNATURE_OPS)
 
 
 def test_private_key_serialize():
@@ -311,7 +317,7 @@ def test_public_key_from_private():
     """Test creating public key from private key."""
     priv = PrivateKey()
     pub = priv.public_key()
-    assert pub is not None
+    assert hasattr(pub, 'address')
 
 
 def test_public_key_from_bytes_compressed():
@@ -320,7 +326,7 @@ def test_public_key_from_bytes_compressed():
     pub_bytes = b'\x02' + b'\x00' * 32
     try:
         pub = PublicKey(pub_bytes)
-        assert pub is not None
+        assert hasattr(pub, 'address')
     except Exception:
         # May fail if invalid point
         assert True
@@ -332,7 +338,7 @@ def test_public_key_from_bytes_uncompressed():
     pub_bytes = b'\x04' + b'\x00' * 64
     try:
         pub = PublicKey(pub_bytes)
-        assert pub is not None
+        assert hasattr(pub, 'address')
     except Exception:
         # May fail if invalid point
         assert True
@@ -346,7 +352,7 @@ def test_public_key_verify_valid():
     """Test public key verify with valid signature."""
     priv = PrivateKey()
     pub = priv.public_key()
-    message = b'test message'
+    message = TEST_MESSAGE_BYTES
     signature = priv.sign(message)
     
     is_valid = pub.verify(signature, message)
@@ -357,7 +363,7 @@ def test_public_key_verify_invalid_signature():
     """Test public key verify with invalid signature."""
     priv = PrivateKey()
     pub = priv.public_key()
-    message = b'test message'
+    message = TEST_MESSAGE_BYTES
 
     with pytest.raises(ValueError):
         pub.verify(b'invalid_signature', message)

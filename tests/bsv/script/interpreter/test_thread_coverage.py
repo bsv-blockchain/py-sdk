@@ -131,8 +131,8 @@ def test_thread_create_with_after_genesis_flag():
 def test_thread_create_initializes_stacks(thread):
     """Test that create initializes stacks."""
     thread.create()
-    assert thread.dstack is not None
-    assert thread.astack is not None
+    assert hasattr(thread.dstack, 'depth')
+    assert hasattr(thread.astack, 'depth')
 
 
 # ========================================================================
@@ -188,7 +188,7 @@ def test_thread_create_with_empty_unlocking_script():
     
     t = Thread(opts)
     t.create()
-    assert t is not None
+    assert hasattr(t, 'dstack')
 
 
 def test_thread_create_with_prev_output_locking_script():
@@ -248,7 +248,7 @@ def test_thread_early_return_flag_initialization(thread):
     """Test early return flag initialization."""
     thread.create()
     # Thread may or may not have early_return attribute
-    assert thread is not None
+    assert hasattr(thread, 'execute')
 
 
 def test_thread_cfg_defaults_to_before_genesis(thread):

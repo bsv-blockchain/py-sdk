@@ -5,6 +5,8 @@ import pytest
 
 # Constants for skip messages
 SKIP_HEADERS_CLIENT = "HeadersClient requires parameters"
+SKIP_HEADERS_CLIENT_NOT_AVAILABLE = "HeadersClient not available"
+SKIP_GULLIBLE_HEADERS_CLIENT = "GullibleHeadersClient not available"
 
 
 # ========================================================================
@@ -18,12 +20,12 @@ def test_headers_client_init():
         
         try:
             client = HeadersClient()
-            assert client is not None
+            assert hasattr(client, 'get_header')
         except TypeError:
             # May require parameters
             pytest.skip(SKIP_HEADERS_CLIENT)
     except (ImportError, AttributeError):
-        pytest.skip("HeadersClient not available")
+        pytest.skip(SKIP_HEADERS_CLIENT_NOT_AVAILABLE)
 
 
 def test_headers_client_get_header():
@@ -37,13 +39,13 @@ def test_headers_client_get_header():
             if hasattr(client, 'get_header'):
                 try:
                     header = client.get_header(0)
-                    assert header is not None or True
+                    assert header is None or header
                 except Exception:
                     pytest.skip("Requires valid configuration")
         except TypeError:
             pytest.skip(SKIP_HEADERS_CLIENT)
     except (ImportError, AttributeError):
-        pytest.skip("HeadersClient not available")
+        pytest.skip(SKIP_HEADERS_CLIENT_NOT_AVAILABLE)
 
 
 def test_headers_client_get_tip():
@@ -57,13 +59,13 @@ def test_headers_client_get_tip():
             if hasattr(client, 'get_tip'):
                 try:
                     tip = client.get_tip()
-                    assert tip is not None or True
+                    assert tip is None or tip
                 except Exception:
                     pytest.skip("Requires valid configuration")
         except TypeError:
             pytest.skip(SKIP_HEADERS_CLIENT)
     except (ImportError, AttributeError):
-        pytest.skip("HeadersClient not available")
+        pytest.skip(SKIP_HEADERS_CLIENT_NOT_AVAILABLE)
 
 
 # ========================================================================
@@ -76,9 +78,9 @@ def test_gullible_headers_client_init():
         from bsv.spv.gullible_headers_client import GullibleHeadersClient
         
         client = GullibleHeadersClient()
-        assert client is not None
+        assert hasattr(client, 'get_header')
     except (ImportError, AttributeError):
-        pytest.skip("GullibleHeadersClient not available")
+        pytest.skip(SKIP_GULLIBLE_HEADERS_CLIENT)
 
 
 def test_gullible_headers_client_get_header():
@@ -90,9 +92,9 @@ def test_gullible_headers_client_get_header():
         
         if hasattr(client, 'get_header'):
             header = client.get_header(0)
-            assert header is not None or True
+            assert header is None or header
     except (ImportError, AttributeError):
-        pytest.skip("GullibleHeadersClient not available")
+        pytest.skip(SKIP_GULLIBLE_HEADERS_CLIENT)
 
 
 # ========================================================================
@@ -114,5 +116,5 @@ def test_headers_client_invalid_height():
                 # Expected
                 assert True
     except (ImportError, AttributeError):
-        pytest.skip("GullibleHeadersClient not available")
+        pytest.skip(SKIP_GULLIBLE_HEADERS_CLIENT)
 

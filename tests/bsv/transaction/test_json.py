@@ -42,12 +42,12 @@ def test_tx_json_standard():
     
     # Test JSON serialization
     json_str = tx.to_json()
-    assert json_str is not None
+    assert isinstance(json_str, str)
     assert len(json_str) > 0
     
     # Test JSON deserialization
     tx_from_json = Transaction.from_json(json_str)
-    assert tx_from_json is not None
+    assert hasattr(tx_from_json, 'txid')
     assert tx_from_json.txid() == tx.txid()
     assert tx_from_json.hex() == tx.hex()
 
@@ -55,7 +55,7 @@ def test_tx_json_standard():
 def test_tx_json_data_tx():
     """Test data tx should marshall correctly (GO: TestTx_JSON)"""
     priv = PrivateKey("KznvCNc6Yf4iztSThoMH6oHWzH9EgjfodKxmeuUGPq5DEX5maspS")
-    assert priv is not None
+    assert hasattr(priv, 'wif')
     
     unlocker = P2PKH().unlock(priv)
     tx = Transaction()
@@ -84,11 +84,11 @@ def test_tx_json_data_tx():
     
     # Test JSON serialization
     json_str = tx.to_json()
-    assert json_str is not None
+    assert isinstance(json_str, str)
     
     # Test JSON deserialization
     tx_from_json = Transaction.from_json(json_str)
-    assert tx_from_json is not None
+    assert hasattr(tx_from_json, 'txid')
     assert tx_from_json.txid() == tx.txid()
 
 
@@ -96,7 +96,7 @@ def test_tx_marshal_json():
     """Test transaction with 1 input 1 p2pksh output 1 data output should create valid json (GO: TestTx_MarshallJSON)"""
     tx_hex = "0100000001abad53d72f342dd3f338e5e3346b492440f8ea821f8b8800e318f461cc5ea5a2010000006a4730440220042edc1302c5463e8397120a56b28ea381c8f7f6d9bdc1fee5ebca00c84a76e2022077069bbdb7ed701c4977b7db0aba80d41d4e693112256660bb5d674599e390cf41210294639d6e4249ea381c2e077e95c78fc97afe47a52eb24e1b1595cd3fdd0afdf8ffffffff02000000000000000008006a0548656c6c6f7f030000000000001976a914b85524abf8202a961b847a3bd0bc89d3d4d41cc588ac00000000"
     tx = Transaction.from_hex(tx_hex)
-    assert tx is not None
+    assert hasattr(tx, 'inputs')
     
     json_str = tx.to_json()
     json_dict = json.loads(json_str)
@@ -149,7 +149,7 @@ def test_tx_unmarshal_json():
     }"""
     
     tx = Transaction.from_json(json_str)
-    assert tx is not None
+    assert hasattr(tx, 'inputs')
     
     expected_tx_hex = "0100000001abad53d72f342dd3f338e5e3346b492440f8ea821f8b8800e318f461cc5ea5a2010000006a4730440220042edc1302c5463e8397120a56b28ea381c8f7f6d9bdc1fee5ebca00c84a76e2022077069bbdb7ed701c4977b7db0aba80d41d4e693112256660bb5d674599e390cf41210294639d6e4249ea381c2e077e95c78fc97afe47a52eb24e1b1595cd3fdd0afdf8ffffffff02000000000000000008006a0548656c6c6f7f030000000000001976a914b85524abf8202a961b847a3bd0bc89d3d4d41cc588ac00000000"
     assert tx.hex() == expected_tx_hex

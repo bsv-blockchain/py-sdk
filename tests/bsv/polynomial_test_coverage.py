@@ -8,6 +8,9 @@ import pytest
 # Polynomial operations branches
 # ========================================================================
 
+# Constants for skip messages
+SKIP_POLYNOMIAL = SKIP_POLYNOMIAL
+
 def test_polynomial_creation():
     """Test creating polynomial."""
     try:
@@ -15,7 +18,7 @@ def test_polynomial_creation():
         p = Polynomial([1, 2, 3])
         assert p  # Verify object creation succeeds
     except ImportError:
-        pytest.skip("Polynomial not available")
+        pytest.skip(SKIP_POLYNOMIAL)
 
 
 def test_polynomial_empty():
@@ -23,9 +26,9 @@ def test_polynomial_empty():
     try:
         from bsv.polynomial import Polynomial
         p = Polynomial([])
-        assert p is not None
+        assert hasattr(p, 'evaluate')
     except ImportError:
-        pytest.skip("Polynomial not available")
+        pytest.skip(SKIP_POLYNOMIAL)
 
 
 def test_polynomial_single_coefficient():
@@ -33,9 +36,9 @@ def test_polynomial_single_coefficient():
     try:
         from bsv.polynomial import Polynomial
         p = Polynomial([5])
-        assert p is not None
+        assert hasattr(p, 'evaluate')
     except ImportError:
-        pytest.skip("Polynomial not available")
+        pytest.skip(SKIP_POLYNOMIAL)
 
 
 def test_polynomial_evaluate_zero():
@@ -68,7 +71,7 @@ def test_polynomial_degree():
         if hasattr(p, 'degree'):
             assert p.degree() == 2
     except ImportError:
-        pytest.skip("Polynomial not available")
+        pytest.skip(SKIP_POLYNOMIAL)
 
 
 # ========================================================================
@@ -80,9 +83,9 @@ def test_polynomial_with_zeros():
     try:
         from bsv.polynomial import Polynomial
         p = Polynomial([0, 0, 1])
-        assert p is not None
+        assert hasattr(p, 'evaluate')
     except ImportError:
-        pytest.skip("Polynomial not available")
+        pytest.skip(SKIP_POLYNOMIAL)
 
 
 def test_polynomial_negative_coefficients():
@@ -90,7 +93,7 @@ def test_polynomial_negative_coefficients():
     try:
         from bsv.polynomial import Polynomial
         p = Polynomial([-1, -2, -3])
-        assert p is not None
+        assert hasattr(p, 'evaluate')
     except ImportError:
-        pytest.skip("Polynomial not available")
+        pytest.skip(SKIP_POLYNOMIAL)
 

@@ -9,11 +9,16 @@ from bsv.keys import PrivateKey
 # Keystore interface branches
 # ========================================================================
 
+# Constants for skip messages
+SKIP_MEMORY_KEYSTORE = SKIP_MEMORY_KEYSTORE
+SKIP_LOCAL_KVSTORE = SKIP_LOCAL_KVSTORE
+SKIP_COMPLEX_MOCKING = SKIP_COMPLEX_MOCKING
+
 def test_keystore_module_exists():
     """Test that keystore module exists."""
     try:
         import bsv.keystore
-        assert bsv.keystore is not None
+        assert hasattr(bsv, 'keystore')
     except ImportError:
         pytest.skip("Keystore module not available")
 
@@ -24,7 +29,7 @@ def test_memory_keystore_init():
         from bsv.keystore import MemoryKeystore
         
         keystore = MemoryKeystore()
-        assert keystore is not None
+        assert hasattr(keystore, 'reveal_counterparty_secret')
     except (ImportError, AttributeError):
         pytest.skip("MemoryKeystore not available")
 
@@ -55,9 +60,9 @@ def test_memory_keystore_retrieve_key():
         if hasattr(keystore, 'store') and hasattr(keystore, 'retrieve'):
             keystore.store('test_key', priv)
             retrieved = keystore.retrieve('test_key')
-            assert retrieved is not None
+            assert retrieved
     except (ImportError, AttributeError):
-        pytest.skip("MemoryKeystore operations not available")
+        pytest.skip(SKIP_MEMORY_KEYSTORE)
 
 
 def test_memory_keystore_delete_key():
@@ -73,7 +78,7 @@ def test_memory_keystore_delete_key():
             keystore.delete('test_key')
             assert True
     except (ImportError, AttributeError):
-        pytest.skip("MemoryKeystore operations not available")
+        pytest.skip(SKIP_MEMORY_KEYSTORE)
 
 
 # ========================================================================
@@ -88,7 +93,7 @@ def test_file_keystore_init():
         try:
             # Using /tmp for test purposes only, not production code
             keystore = FileKeystore(path='/tmp/test_keystore')  # noqa: S108  # NOSONAR
-            assert keystore is not None
+            assert hasattr(keystore, 'reveal_counterparty_secret')
         except (TypeError, OSError):
             # May require different parameters
             pytest.skip("FileKeystore initialization different")
@@ -134,7 +139,7 @@ def test_keystore_overwrite_key():
             # Should be the second key
             assert retrieved.key == priv2.key
     except (ImportError, AttributeError):
-        pytest.skip("MemoryKeystore operations not available")
+        pytest.skip(SKIP_MEMORY_KEYSTORE)
 
 
 # ========================================================================
@@ -161,16 +166,16 @@ def test_local_kv_store_initialization():
         config.retention_period = 0
 
         store = LocalKVStore(config)
-        assert store is not None
+        assert hasattr(store, 'get')
 
     except ImportError:
-        pytest.skip("LocalKVStore not available")
+        pytest.skip(SKIP_LOCAL_KVSTORE)
 
 
 def test_local_kv_store_basic_validation():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
 def test_local_kv_store_set_operation_errors():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
 def test_local_kv_store_get_operation():
     """Test LocalKVStore get operation."""
     try:
@@ -194,7 +199,7 @@ def test_local_kv_store_get_operation():
             pass
 
     except ImportError:
-        pytest.skip("LocalKVStore not available")
+        pytest.skip(SKIP_LOCAL_KVSTORE)
 
 
 def test_local_kv_store_remove_operation():
@@ -220,7 +225,7 @@ def test_local_kv_store_remove_operation():
             pass
 
     except ImportError:
-        pytest.skip("LocalKVStore not available")
+        pytest.skip(SKIP_LOCAL_KVSTORE)
 
 
 def test_local_kv_store_concurrent_access():
@@ -229,9 +234,9 @@ def test_local_kv_store_concurrent_access():
 
 
 def test_local_kv_store_json_serialization_errors():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
 def test_local_kv_store_base64_encoding_errors():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
     """Test LocalKVStore base64 encoding/decoding error handling."""
     try:
         from bsv.keystore.local_kv_store import LocalKVStore
@@ -261,11 +266,11 @@ def test_local_kv_store_base64_encoding_errors():
                 pass  # Expected
 
     except ImportError:
-        pytest.skip("LocalKVStore not available")
+        pytest.skip(SKIP_LOCAL_KVSTORE)
 
 
 def test_local_kv_store_regex_validation():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
 def test_local_kv_store_value_size_limits():
     """Test LocalKVStore value size limits."""
     try:
@@ -296,13 +301,13 @@ def test_local_kv_store_value_size_limits():
                 pass
 
     except ImportError:
-        pytest.skip("LocalKVStore not available")
+        pytest.skip(SKIP_LOCAL_KVSTORE)
 
 
 def test_local_kv_store_wallet_format_validation():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
 def test_local_kv_store_context_validation():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
     """Test LocalKVStore context validation."""
     try:
         from bsv.keystore.local_kv_store import LocalKVStore
@@ -328,11 +333,11 @@ def test_local_kv_store_context_validation():
         # Context validation is already tested in initialization tests
 
     except ImportError:
-        pytest.skip("LocalKVStore not available")
+        pytest.skip(SKIP_LOCAL_KVSTORE)
 
 
 def test_local_kv_store_storage_operations():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
 def test_local_kv_store_unimplemented_features():
     """Test LocalKVStore unimplemented features reporting."""
     try:
@@ -347,14 +352,14 @@ def test_local_kv_store_unimplemented_features():
             assert isinstance(feature, str)
 
     except ImportError:
-        pytest.skip("LocalKVStore not available")
+        pytest.skip(SKIP_LOCAL_KVSTORE)
 
 
 def test_local_kv_store_thread_safety():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
 def test_local_kv_store_edge_cases():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
 def test_local_kv_store_copy_operations():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)
 def test_local_kv_store_file_operations_placeholder():
-    pytest.skip("Skipped due to complex mocking requirements")
+    pytest.skip(SKIP_COMPLEX_MOCKING)

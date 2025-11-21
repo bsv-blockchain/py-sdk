@@ -257,7 +257,7 @@ def test_unlocker_input_output_scope_constraints_for_sighash_modes():
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.last_args = None
-        def create_signature(self, ctx, args, originator):
+        def create_signature(self, ctx=None, args=None, originator=None):
             self.last_args = args
             return super().create_signature(ctx, args, originator)
     priv = PrivateKey()
@@ -721,11 +721,11 @@ def test_kvstore_remove_stringifies_spends_and_uses_input_beef():
             super().__init__(pk, permission_callback=lambda a: True)
             self.last_sign_args = None
             self.last_create_args = None
-        def sign_action(self, ctx, args, originator):
+        def sign_action(self, ctx=None, args=None, originator=None):
             print(f"[DEBUG] SpyWallet.sign_action labels: {args.get('labels')}")
             self.last_sign_args = args
             return super().sign_action(ctx, args, originator)
-        def create_action(self, ctx, args, originator):
+        def create_action(self, ctx=None, args=None, originator=None):
             print(f"[DEBUG] SpyWallet.create_action args keys: {list(args.keys())}")
             print(f"[DEBUG] SpyWallet.create_action args['inputs']: {args.get('inputs')}")
             self.last_create_args = args
@@ -797,13 +797,13 @@ def test_unlocking_script_length_estimate_vs_actual_set_and_remove():
             super().__init__(pk, permission_callback=permission_callback)
             self.last_create_inputs_meta = None
             self.last_sign_spends = None
-        def create_action(self, ctx, args, originator):
+        def create_action(self, ctx=None, args=None, originator=None):
             self.last_create_inputs_meta = args.get("inputs")
             return super().create_action(ctx, args, originator)
-        def sign_action(self, ctx, args, originator):
+        def sign_action(self, ctx=None, args=None, originator=None):
             self.last_sign_spends = args.get("spends")
             return super().sign_action(ctx, args, originator)
-        def list_outputs(self, ctx, args, originator):
+        def list_outputs(self, ctx=None, args=None, originator=None):
             # Always provide test UTXOs for funding in test environment
             basket = args.get("basket", "")
             # Return mock UTXO for testing
@@ -911,7 +911,7 @@ def test_signature_hash_integrity_with_preimage():
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.last_args = None
-        def create_signature(self, ctx, args, originator):
+        def create_signature(self, ctx=None, args=None, originator=None):
             self.last_args = args
             return super().create_signature(ctx, args, originator)
     priv = PrivateKey()
@@ -1177,13 +1177,13 @@ def test_kvstore_set_get_remove_e2e_with_action_log():
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.action_log = []
-        def create_action(self, ctx, args, originator):
+        def create_action(self, ctx=None, args=None, originator=None):
             self.action_log.append(("create_action", args.copy()))
             return super().create_action(ctx, args, originator)
-        def sign_action(self, ctx, args, originator):
+        def sign_action(self, ctx=None, args=None, originator=None):
             self.action_log.append(("sign_action", args.copy()))
             return super().sign_action(ctx, args, originator)
-        def internalize_action(self, ctx, args, originator):
+        def internalize_action(self, ctx=None, args=None, originator=None):
             self.action_log.append(("internalize_action", args.copy()))
             return super().internalize_action(ctx, args, originator)
     

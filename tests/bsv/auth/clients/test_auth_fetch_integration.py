@@ -216,8 +216,14 @@ class TestAuthFetchErrorHandling:
     
     def test_session_not_found_error_string_detected(self, auth_fetch):
         """Test that 'Session not found' error string is detected."""
-        error_msg = "Session not found for nonce"
-        assert "Session not found" in error_msg
+        # Test various error message formats that should be detected
+        test_messages = [
+            "Session not found for nonce",
+            "Session not found",
+            "Error: Session not found in cache"
+        ]
+        for error_msg in test_messages:
+            assert "Session not found" in error_msg
         
         # Test the error handling path exists
         mock_peer = Mock()

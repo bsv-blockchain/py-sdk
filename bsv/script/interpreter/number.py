@@ -20,6 +20,37 @@ class ScriptNumber:
         self.value = value
 
     @classmethod
+    def _validate_minimal_encoding(cls, data: bytes) -> None:
+        """Validate that the byte encoding is minimal."""
+        # Check for negative zero (0x80 by itself or 0x80 with all zeros before it)
+        if data[-1] == 0x80 and all(b == 0 for b in data[:-1]):
+            raise ValueError(ERROR_NON_MINIMAL_ENCODING)
+        
+        # Check if we have unnecessary leading zeros
+        if len(data) > 1:
+            # If the last byte is 0x00 and the second-to-last doesn't have sign bit set
+            if data[-1] == 0x00 and (data[-2] & 0x80) == 0:
+                raise ValueError(ERROR_NON_MINIMAL_ENCODING)
+            # If the last byte is 0x80 (negative) and second-to-last doesn't need it
+            if data[-1] == 0x80 and (data[-2] & 0x80) == 0:
+                raise ValueError(ERROR_NON_MINIMAL_ENCODING)
+
+    @classmethod
+    def _decode_little_endian(cls, data: bytes) -> int:
+        """Decode bytes as little-endian integer with sign bit handling."""
+        result = 0
+        for i, byte_val in enumerate(data):
+            result |= byte_val << (i * 8)
+        
+        # Handle sign bit
+        if data[-1] & 0x80:
+            sign_bit_mask = 0x80 << (8 * (len(data) - 1))
+            result &= ~sign_bit_mask
+            result = -result
+        
+        return result
+
+    @classmethod
     def from_bytes(cls, data: bytes, max_num_len: int = 4, require_minimal: bool = True) -> "ScriptNumber":
         """
         Create a ScriptNumber from bytes using Bitcoin script number encoding.
@@ -38,33 +69,10 @@ class ScriptNumber:
         
         # Check for minimal encoding
         if require_minimal:
-            # Check for negative zero (0x80 by itself or 0x80 with all zeros before it)
-            if data[-1] == 0x80 and all(b == 0 for b in data[:-1]):
-                raise ValueError(ERROR_NON_MINIMAL_ENCODING)
-            
-            # Check if we have unnecessary leading zeros
-            if len(data) > 1:
-                # If the last byte is 0x00 and the second-to-last doesn't have sign bit set
-                if data[-1] == 0x00 and (data[-2] & 0x80) == 0:
-                    raise ValueError(ERROR_NON_MINIMAL_ENCODING)
-                # If the last byte is 0x80 (negative) and second-to-last doesn't need it
-                # This would be something like [0x7f, 0x80] which could be just [0xff]
-                if len(data) > 1 and data[-1] == 0x80 and (data[-2] & 0x80) == 0:
-                    raise ValueError(ERROR_NON_MINIMAL_ENCODING)
+            cls._validate_minimal_encoding(data)
         
-        # Decode from little endian (including sign bit initially)
-        result = 0
-        for i, byte_val in enumerate(data):
-            result |= byte_val << (i * 8)
-        
-        # When the most significant byte has the sign bit set, the result is negative.
-        # Remove the sign bit from the result and make it negative.
-        if data[-1] & 0x80:
-            # Clear the sign bit and negate
-            # Create mask to clear the sign bit: ~(0x80 << (8 * (len-1)))
-            sign_bit_mask = 0x80 << (8 * (len(data) - 1))
-            result &= ~sign_bit_mask
-            result = -result
+        # Decode from little endian with sign handling
+        result = cls._decode_little_endian(data)
         
         return cls(result)
 

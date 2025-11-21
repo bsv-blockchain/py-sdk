@@ -349,19 +349,24 @@ def _normalize_bump_for_tx(btx):  # NOSONAR - Complexity (24), requires refactor
         except Exception:
             btx.tx_obj.merkle_path = None
 
+def _find_transaction_in_child_inputs(beef: Beef, target_txid: str):
+    """Search for a transaction in child transaction inputs."""
+    for child in beef.txs.values():
+        if child.tx_obj is None:
+            continue
+        for txin in child.tx_obj.inputs:
+            if getattr(txin, "source_txid", None) == target_txid and txin.source_transaction is not None:
+                return txin.source_transaction
+    return None
+
 def _fill_txidonly_placeholders(beef: Beef):
+    """Fill txid-only placeholders with actual transactions from child inputs."""
     for txid, entry in list(beef.txs.items()):
         if entry.tx_obj is None:
-            for child in beef.txs.values():
-                if child.tx_obj is None:
-                    continue
-                for txin in child.tx_obj.inputs:
-                    if getattr(txin, "source_txid", None) == txid and txin.source_transaction is not None:
-                        entry.tx_obj = txin.source_transaction
-                        entry.tx_bytes = entry.tx_obj.serialize()
-                        break
-                if entry.tx_obj is not None:
-                    break
+            tx = _find_transaction_in_child_inputs(beef, txid)
+            if tx is not None:
+                entry.tx_obj = tx
+                entry.tx_bytes = tx.serialize()
 
 def _parse_beef_v1(data: bytes, version: int) -> Beef:
     from bsv.transaction import Transaction as _Tx
@@ -397,35 +402,48 @@ def parse_beef(data: bytes) -> Beef:  # NOSONAR - Complexity (19), requires refa
     return new_beef_from_bytes(data)
 
 
+def _find_subject_transaction(beef: Beef, subject: str, data: bytes) -> Optional[Transaction]:
+    """Find the subject transaction in the BEEF, checking nested BEEFs if needed."""
+    btx = beef.find_transaction(subject)
+    last_tx = getattr(btx, "tx_obj", None) if btx else None
+    
+    # If not found, try recursively in nested AtomicBEEF
+    if last_tx is None:
+        try:
+            _, _, nested_last_tx = parse_beef_ex(data[36:])
+            if nested_last_tx is not None:
+                last_tx = nested_last_tx
+        except Exception:
+            pass
+    
+    return last_tx
+
+def _parse_atomic_beef(data: bytes) -> tuple[Beef, Optional[str], Optional[Transaction]]:
+    """Parse an Atomic BEEF and find the subject transaction."""
+    beef, subject = new_beef_from_atomic_bytes(data)
+    last_tx = None
+    if subject:
+        last_tx = _find_subject_transaction(beef, subject, data)
+    return beef, subject, last_tx
+
+def _parse_v1_beef(data: bytes) -> tuple[Beef, Optional[str], Optional[Transaction]]:
+    """Parse a V1 BEEF format."""
+    from bsv.transaction import Transaction as _Tx
+    tx = _Tx.from_beef(data)
+    beef = new_beef_from_bytes(data)
+    return beef, None, tx
+
 def parse_beef_ex(data: bytes) -> tuple[Beef, Optional[str], Optional[Transaction]]:
     """Extended parser returning (beef, subject_txid_for_atomic, last_tx_for_v1 or subject)."""
     if len(data) < 4:
         raise ValueError("invalid beef bytes")
+    
     version = int.from_bytes(data[:4], "little")
+    
     if version == ATOMIC_BEEF:
-        beef, subject = new_beef_from_atomic_bytes(data)
-        # Recursively locate the subject tx in the inner BEEF (Go/TS parity)
-        last_tx = None
-        if subject:
-            btx = beef.find_transaction(subject)
-            last_tx = getattr(btx, "tx_obj", None) if btx else None
-            # If not found, try recursively in nested AtomicBEEF
-            if last_tx is None:
-                # Try to find the subject in the inner BEEF's raw bytes if available
-                # (Assume the inner BEEF is at data[36:])
-                try:
-                    _, _, nested_last_tx = parse_beef_ex(data[36:])
-                    if nested_last_tx is not None:
-                        last_tx = nested_last_tx
-                except Exception:
-                    pass
-        return beef, subject, last_tx
+        return _parse_atomic_beef(data)
     if version == BEEF_V1:
-        # Use legacy Transaction.from_beef to get last tx
-        from bsv.transaction import Transaction as _Tx
-        tx = _Tx.from_beef(data)
-        beef = new_beef_from_bytes(data)
-        return beef, None, tx
+        return _parse_v1_beef(data)
     return new_beef_from_bytes(data), None, None
 
 

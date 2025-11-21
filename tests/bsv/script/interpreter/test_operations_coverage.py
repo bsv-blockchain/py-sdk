@@ -6,6 +6,7 @@ by existing tests.
 """
 
 import pytest
+from typing import cast
 from bsv.script.interpreter.operations import (
     cast_to_bool, encode_bool, bin2num, minimally_encode,
     check_signature_encoding, check_public_key_encoding,
@@ -14,6 +15,7 @@ from bsv.script.interpreter.operations import (
 from bsv.script.interpreter.errs import Error, ErrorCode
 from bsv.script.interpreter.stack import Stack
 from bsv.script.interpreter.config import BeforeGenesisConfig
+from bsv.script.interpreter.op_parser import ParsedOpcode
 from unittest.mock import Mock
 
 
@@ -133,7 +135,7 @@ class TestOperationsOpcodes:
 
         # Test with empty stack
         stack.stk = []  # Clear the stack
-        result = op_dup(None, mock_thread)  # type: ignore
+        result = op_dup(cast(ParsedOpcode, None), mock_thread)
         assert isinstance(result, Error)
         assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
@@ -141,7 +143,7 @@ class TestOperationsOpcodes:
         stack.stk = []  # Clear the stack
         test_data = b"test_data"
         stack.push_byte_array(test_data)
-        result = op_dup(None, mock_thread)
+        result = op_dup(cast(ParsedOpcode, None), mock_thread)
         assert result is None
         assert stack.depth() == 2
         assert stack.peek_byte_array(0) == test_data
@@ -156,7 +158,7 @@ class TestOperationsOpcodes:
 
         # Test with empty stack
         stack.stk = []  # Clear the stack
-        result = op_hash160(None, mock_thread)
+        result = op_hash160(cast(ParsedOpcode, None), mock_thread)
         assert isinstance(result, Error)
         assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
@@ -164,7 +166,7 @@ class TestOperationsOpcodes:
         stack.stk = []  # Clear the stack
         test_data = b"Hello, World!"
         stack.push_byte_array(test_data)
-        result = op_hash160(None, mock_thread)
+        result = op_hash160(cast(ParsedOpcode, None), mock_thread)
         assert result is None
         assert stack.depth() == 1
         hash_result = stack.peek_byte_array(0)
@@ -179,7 +181,7 @@ class TestOperationsOpcodes:
 
         # Test with insufficient stack items
         stack.stk = []  # Clear the stack
-        result = op_equal_verify(None, mock_thread)
+        result = op_equal_verify(cast(ParsedOpcode, None), mock_thread)
         assert isinstance(result, Error)
         assert result.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
@@ -188,7 +190,7 @@ class TestOperationsOpcodes:
         test_data = b"test_data"
         stack.push_byte_array(test_data)
         stack.push_byte_array(test_data)
-        result = op_equal_verify(None, mock_thread)
+        result = op_equal_verify(cast(ParsedOpcode, None), mock_thread)
         assert result is None
         assert stack.depth() == 0  # Should pop both items
 
@@ -196,7 +198,7 @@ class TestOperationsOpcodes:
         stack.stk = []  # Clear the stack
         stack.push_byte_array(b"test1")
         stack.push_byte_array(b"test2")
-        result = op_equal_verify(None, mock_thread)
+        result = op_equal_verify(cast(ParsedOpcode, None), mock_thread)
         assert isinstance(result, Error)
         assert result.code == ErrorCode.ERR_EQUAL_VERIFY
 

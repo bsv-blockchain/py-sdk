@@ -960,49 +960,68 @@ class LocalKVStore(KVStoreInterface):
         """Return a *copy* of the list enumerating missing capabilities."""
         return list(cls._UNIMPLEMENTED)
 
-    def _prepare_inputs_meta(self, key: str, outs: list, ca_args: dict = None) -> list:
-        """Prepare the inputs metadata for set/remove operation (Go/TS parity)."""
-        ca_args = self._merge_default_ca(ca_args)
+    def _extract_protocol_params(self, ca_args: dict) -> tuple:
+        """Extract protocol, key_id, and counterparty from create_action args."""
         pd_opts = ca_args.get("pushdrop") or {}
         protocol = ca_args.get("protocol_id") or ca_args.get("protocolID") or pd_opts.get("protocol_id") or pd_opts.get("protocolID")
         key_id = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
         counterparty = ca_args.get("counterparty", pd_opts.get("counterparty"))
+        return protocol, key_id, counterparty
+
+    def _normalize_txid(self, txid_val: Any) -> str:
+        """Convert txid to hex string format."""
+        if isinstance(txid_val, str) and len(txid_val) == 64:
+            return txid_val
+        elif isinstance(txid_val, (bytes, bytearray)) and len(txid_val) == 32:
+            return txid_val.hex()
+        else:
+            return "00" * 32
+
+    def _create_input_meta(self, output: dict, unlocker: Any, protocol: Any, key_id: Any, counterparty: Any) -> dict:
+        """Create metadata for a single input."""
+        txid_hex = self._normalize_txid(output.get("txid", ""))
+        outpoint = {
+            "txid": txid_hex,
+            "index": int(output.get("outputIndex", 0)),
+        }
+        
+        try:
+            max_len = unlocker.estimate_length()
+        except Exception:
+            max_len = 73 + 2
+        
+        meta = {
+            "outpoint": outpoint,
+            "unlockingScriptLength": max_len,
+            "inputDescription": output.get("outputDescription", "Previous key-value token"),
+            "sequenceNumber": 0,
+        }
+        
+        # Add optional derived key parameters
+        if protocol is not None:
+            meta["protocol"] = protocol
+        if key_id is not None:
+            meta["key_id"] = key_id
+        if counterparty is not None:
+            meta["counterparty"] = counterparty
+        
+        return meta
+
+    def _prepare_inputs_meta(self, key: str, outs: list, ca_args: dict = None) -> list:
+        """Prepare the inputs metadata for set/remove operation (Go/TS parity)."""
+        ca_args = self._merge_default_ca(ca_args)
+        protocol, key_id, counterparty = self._extract_protocol_params(ca_args)
+        
         print(f"[TRACE] [_prepare_inputs_meta] ca_args: {ca_args}")
         print(f"[TRACE] [_prepare_inputs_meta] protocol: {protocol}, key_id: {key_id}, counterparty: {counterparty}")
+        
         pd = PushDrop(self._wallet, self._originator)
-        # Use protocol from ca_args if available, otherwise use default protocol
         unlock_protocol = protocol if protocol is not None else self._get_protocol(key)
         unlocker = pd.unlock(unlock_protocol, key, {"type": 0}, sign_outputs='all')
+        
         inputs_meta = []
         for o in outs:
-            txid_val = o.get("txid", "")
-            if isinstance(txid_val, str) and len(txid_val) == 64:
-                txid_hex = txid_val
-            elif isinstance(txid_val, (bytes, bytearray)) and len(txid_val) == 32:
-                txid_hex = txid_val.hex()
-            else:
-                txid_hex = "00" * 32
-            outpoint = {
-                "txid": txid_hex,
-                "index": int(o.get("outputIndex", 0)),
-            }
-            try:
-                max_len = unlocker.estimate_length()
-            except Exception:
-                max_len = 73 + 2
-            meta = {
-                "outpoint": outpoint,
-                "unlockingScriptLength": max_len,
-                "inputDescription": o.get("outputDescription", "Previous key-value token"),
-                "sequenceNumber": 0,
-            }
-            # Only add derived key parameters if they are not None
-            if protocol is not None:
-                meta["protocol"] = protocol
-            if key_id is not None:
-                meta["key_id"] = key_id
-            if counterparty is not None:
-                meta["counterparty"] = counterparty
+            meta = self._create_input_meta(o, unlocker, protocol, key_id, counterparty)
             print(f"[TRACE] [_prepare_inputs_meta] meta: {meta}")
             inputs_meta.append(meta)
         return inputs_meta

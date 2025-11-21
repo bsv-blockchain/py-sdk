@@ -8,6 +8,10 @@ import pytest
 # HTTP Client initialization branches
 # ========================================================================
 
+# Constants for skip messages
+SKIP_HTTP_CLIENT = SKIP_HTTP_CLIENT
+TEST_PATH = '/test'
+
 def test_http_client_init():
     """Test HTTP client initialization."""
     try:
@@ -15,7 +19,7 @@ def test_http_client_init():
         client = HttpClient()
         assert client  # Verify object creation succeeds
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 
 
 def test_http_client_with_base_url():
@@ -23,9 +27,9 @@ def test_http_client_with_base_url():
     try:
         from bsv.http_client import HttpClient
         client = HttpClient(base_url='https://api.example.com')
-        assert client is not None
+        assert isinstance(client, HttpClient)
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 
 
 def test_http_client_with_headers():
@@ -34,9 +38,9 @@ def test_http_client_with_headers():
         from bsv.http_client import HttpClient
         headers = {'Authorization': 'Bearer token'}
         client = HttpClient(headers=headers)
-        assert client is not None
+        assert isinstance(client, HttpClient)
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 
 
 # ========================================================================
@@ -51,13 +55,13 @@ def test_http_client_get():
         
         if hasattr(client, 'get'):
             try:
-                _ = client.get('/test')
+                _ = client.get(TEST_PATH)
                 assert True
             except Exception:
                 # Expected without real server
                 assert True
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 
 
 def test_http_client_post():
@@ -68,13 +72,13 @@ def test_http_client_post():
         
         if hasattr(client, 'post'):
             try:
-                _ = client.post('/test', data={'key': 'value'})
+                _ = client.post(TEST_PATH, data={'key': 'value'})
                 assert True
             except Exception:
                 # Expected without real server
                 assert True
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 
 
 def test_http_client_put():
@@ -85,13 +89,13 @@ def test_http_client_put():
         
         if hasattr(client, 'put'):
             try:
-                _ = client.put('/test', data={'key': 'value'})
+                _ = client.put(TEST_PATH, data={'key': 'value'})
                 assert True
             except Exception:
                 # Expected without real server
                 assert True
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 
 
 def test_http_client_delete():
@@ -102,13 +106,13 @@ def test_http_client_delete():
         
         if hasattr(client, 'delete'):
             try:
-                _ = client.delete('/test')
+                _ = client.delete(TEST_PATH)
                 assert True
             except Exception:
                 # Expected without real server
                 assert True
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 
 
 # ========================================================================
@@ -120,7 +124,7 @@ def test_sync_http_client_init():
     try:
         from bsv.http_client import SyncHttpClient
         client = SyncHttpClient()
-        assert client is not None
+        assert hasattr(client, 'request')
     except ImportError:
         pytest.skip("SyncHttpClient not available")
 
@@ -160,7 +164,7 @@ def test_http_client_timeout():
                 # Expected to timeout
                 assert True
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 
 
 def test_http_client_connection_error():
@@ -171,13 +175,13 @@ def test_http_client_connection_error():
         
         if hasattr(client, 'get'):
             try:
-                _ = client.get('/test')
+                _ = client.get(TEST_PATH)
                 assert False, "Should raise error"
             except Exception:
                 # Expected
                 assert True
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 
 
 # ========================================================================
@@ -198,5 +202,5 @@ def test_http_client_empty_url():
                 # Expected
                 assert True
     except ImportError:
-        pytest.skip("HttpClient not available")
+        pytest.skip(SKIP_HTTP_CLIENT)
 

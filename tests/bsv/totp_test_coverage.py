@@ -25,7 +25,7 @@ def test_totp_generate():
         except (NameError, AttributeError):
             pytest.skip(SKIP_TOTP)
     except ImportError:
-        pytest.skip("TOTP module not available")
+        pytest.skip(SKIP_TOTP)
 
 
 def test_totp_generate_with_timestamp():
@@ -45,7 +45,7 @@ def test_totp_generate_with_timestamp():
         except (NameError, AttributeError):
             pytest.skip(SKIP_TOTP)
     except ImportError:
-        pytest.skip("TOTP module not available")
+        pytest.skip(SKIP_TOTP)
 
 
 # ========================================================================
@@ -66,7 +66,7 @@ def test_totp_verify_valid():
         except (NameError, AttributeError):
             pytest.skip("TOTP functions not available")
     except ImportError:
-        pytest.skip("TOTP module not available")
+        pytest.skip(SKIP_TOTP)
 
 
 def test_totp_verify_invalid():
@@ -84,7 +84,7 @@ def test_totp_verify_invalid():
         except (NameError, AttributeError):
             pytest.skip("verify_totp not available")
     except ImportError:
-        pytest.skip("TOTP module not available")
+        pytest.skip(SKIP_TOTP)
 
 
 # ========================================================================
@@ -107,7 +107,7 @@ def test_totp_with_custom_period():
         except (NameError, AttributeError):
             pytest.skip(SKIP_TOTP)
     except ImportError:
-        pytest.skip("TOTP module not available")
+        pytest.skip(SKIP_TOTP)
 
 
 def test_totp_with_custom_digits():
@@ -126,7 +126,7 @@ def test_totp_with_custom_digits():
         except (NameError, AttributeError):
             pytest.skip(SKIP_TOTP)
     except ImportError:
-        pytest.skip("TOTP module not available")
+        pytest.skip(SKIP_TOTP)
 
 
 # ========================================================================
@@ -150,5 +150,5 @@ def test_totp_deterministic():
         except (NameError, AttributeError):
             pytest.skip(SKIP_TOTP)
     except ImportError:
-        pytest.skip("TOTP module not available")
+        pytest.skip(SKIP_TOTP)
 

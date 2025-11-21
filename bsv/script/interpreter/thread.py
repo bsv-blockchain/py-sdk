@@ -105,36 +105,64 @@ class Thread:
             )
         return None
 
-    def execute_opcode(self, pop: ParsedOpcode) -> Optional[Error]:
-        """Execute a single opcode."""
-        # Check element size
+    def _check_element_size(self, pop: ParsedOpcode) -> Optional[Error]:
+        """Check if element size exceeds maximum."""
         if pop.data and len(pop.data) > self.cfg.max_script_element_size():
             return Error(
                 ErrorCode.ERR_ELEMENT_TOO_BIG,
                 f"element size {len(pop.data)} exceeds max {self.cfg.max_script_element_size()}",
             )
-        
-        _exec = self.should_exec(pop)  # NOSONAR - renamed to avoid shadowing builtin
-        
-        # Check disabled opcodes
+        return None
+
+    def _check_disabled_opcode(self, pop: ParsedOpcode, _exec: bool) -> Optional[Error]:
+        """Check if opcode is disabled."""
         if pop.is_disabled() and (not self.after_genesis or _exec):
             return Error(ErrorCode.ERR_DISABLED_OPCODE, f"attempt to execute disabled opcode {pop.name()}")
-        
-        # Count operations
+        return None
+
+    def _check_operation_count(self, pop: ParsedOpcode) -> Optional[Error]:
+        """Check and update operation count."""
         if pop.opcode > OpCode.OP_16:
             self.num_ops += 1
             if self.num_ops > self.cfg.max_ops():
                 return Error(ErrorCode.ERR_TOO_MANY_OPERATIONS, f"exceeded max operation limit of {self.cfg.max_ops()}")
+        return None
+
+    def _check_minimal_data(self, pop: ParsedOpcode, _exec: bool) -> Optional[Error]:
+        """Check minimal data encoding."""
+        if self.dstack.verify_minimal_data and self.is_branch_executing() and pop.opcode <= OpCode.OP_PUSHDATA4 and _exec:
+            err_msg = pop.enforce_minimum_data_push()
+            if err_msg:
+                return Error(ErrorCode.ERR_MINIMAL_DATA, err_msg)
+        return None
+
+    def execute_opcode(self, pop: ParsedOpcode) -> Optional[Error]:
+        """Execute a single opcode."""
+        # Check element size
+        err = self._check_element_size(pop)
+        if err:
+            return err
+        
+        _exec = self.should_exec(pop)  # NOSONAR - renamed to avoid shadowing builtin
+        
+        # Check disabled opcodes
+        err = self._check_disabled_opcode(pop, _exec)
+        if err:
+            return err
+        
+        # Count operations
+        err = self._check_operation_count(pop)
+        if err:
+            return err
         
         # Skip if not executing branch and not conditional
         if not self.is_branch_executing() and not pop.is_conditional():
             return None
         
         # Check minimal data encoding
-        if self.dstack.verify_minimal_data and self.is_branch_executing() and pop.opcode <= OpCode.OP_PUSHDATA4 and _exec:
-            err_msg = pop.enforce_minimum_data_push()
-            if err_msg:
-                return Error(ErrorCode.ERR_MINIMAL_DATA, err_msg)
+        err = self._check_minimal_data(pop, _exec)
+        if err:
+            return err
         
         # Skip if early return and not conditional
         if not _exec and not pop.is_conditional():

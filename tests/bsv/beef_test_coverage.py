@@ -5,6 +5,7 @@ import pytest
 
 # Constants for skip messages
 SKIP_BEEF = "BEEF module not available"
+SKIP_IS_BEEF = "is_beef not available"
 
 
 # ========================================================================
@@ -53,7 +54,7 @@ def test_is_beef_data():
             result = is_beef(b'\x00\x00\xbe\xef')
             assert isinstance(result, bool)
         except (NameError, AttributeError):
-            pytest.skip("is_beef not available")
+            pytest.skip(SKIP_IS_BEEF)
     except ImportError:
         pytest.skip(SKIP_BEEF)
 
@@ -67,7 +68,7 @@ def test_is_beef_invalid():
             result = is_beef(b'invalid')
             assert result == False
         except (NameError, AttributeError):
-            pytest.skip("is_beef not available")
+            pytest.skip(SKIP_IS_BEEF)
     except ImportError:
         pytest.skip(SKIP_BEEF)
 
@@ -85,7 +86,7 @@ def test_is_beef_empty():
             result = is_beef(b'')
             assert result == False
         except (NameError, AttributeError):
-            pytest.skip("is_beef not available")
+            pytest.skip(SKIP_IS_BEEF)
     except ImportError:
         pytest.skip(SKIP_BEEF)
 

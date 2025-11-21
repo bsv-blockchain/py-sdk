@@ -3,6 +3,10 @@ Coverage tests for chaintracker.py - untested branches.
 """
 import pytest
 
+# Constants for skip messages
+SKIP_CHAINTRACKER = "ChainTracker not available"
+SKIP_DEFAULT_CHAINTRACKER = "DefaultChainTracker not available"
+
 
 # ========================================================================
 # ChainTracker interface branches
@@ -14,7 +18,7 @@ def test_chaintracker_interface_exists():
         from bsv.chaintracker import ChainTracker
         assert ChainTracker  # Verify import succeeds and class exists
     except ImportError:
-        pytest.skip("ChainTracker not available")
+        pytest.skip(SKIP_CHAINTRACKER)
 
 
 # ========================================================================
@@ -27,7 +31,7 @@ def test_chaintracker_get_header():
         from bsv.chaintracker import ChainTracker
         assert hasattr(ChainTracker, 'get_header') or True
     except ImportError:
-        pytest.skip("ChainTracker not available")
+        pytest.skip(SKIP_CHAINTRACKER)
 
 
 def test_chaintracker_get_height():
@@ -36,7 +40,7 @@ def test_chaintracker_get_height():
         from bsv.chaintracker import ChainTracker
         assert hasattr(ChainTracker, 'get_height') or True
     except ImportError:
-        pytest.skip("ChainTracker not available")
+        pytest.skip(SKIP_CHAINTRACKER)
 
 
 # ========================================================================
@@ -50,7 +54,7 @@ def test_default_chaintracker_init():
         tracker = DefaultChainTracker()
         assert tracker is not None
     except (ImportError, AttributeError):
-        pytest.skip("DefaultChainTracker not available")
+        pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 
 
 def test_default_chaintracker_get_height():
@@ -68,7 +72,7 @@ def test_default_chaintracker_get_height():
                 # May require connection
                 assert True
     except (ImportError, AttributeError):
-        pytest.skip("DefaultChainTracker not available")
+        pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 
 
 def test_default_chaintracker_get_header():
@@ -86,7 +90,7 @@ def test_default_chaintracker_get_header():
                 # May require connection
                 assert True
     except (ImportError, AttributeError):
-        pytest.skip("DefaultChainTracker not available")
+        pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 
 
 # ========================================================================
@@ -108,7 +112,7 @@ def test_chaintracker_get_header_negative():
                 # Expected
                 assert True
     except (ImportError, AttributeError):
-        pytest.skip("DefaultChainTracker not available")
+        pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 
 
 def test_chaintracker_get_header_future():
@@ -126,5 +130,5 @@ def test_chaintracker_get_header_future():
                 # Expected
                 assert True
     except (ImportError, AttributeError):
-        pytest.skip("DefaultChainTracker not available")
+        pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 

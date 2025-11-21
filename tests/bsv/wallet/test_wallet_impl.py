@@ -534,4 +534,4 @@ def test_wallet_initialization_with_load_env():
     priv = PrivateKey()
     # Should not raise even if dotenv is not available
     wallet = WalletImpl(priv, load_env=True)
-    assert wallet is not None
+    assert hasattr(wallet, 'create_action')

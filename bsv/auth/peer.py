@@ -1021,20 +1021,10 @@ class Peer:
             except Exception as e:
                 self.logger.warning(f"Certificate callback error: {e}")
 
-    def handle_general_message(self, ctx: Any, message: Any, sender_public_key: Any) -> Optional[Exception]:
-        """
-        Processes a general message.
-        """
-        # Short-circuit for loopback echo to allow tests with simplified wallets
-        # (skip nonce/signature verification when message originates from self)
-        if self._is_loopback_echo(ctx, sender_public_key):
-            return None
-
-        # Verify your_nonce (required for general messages, matches TypeScript/Go)
-        your_nonce = getattr(message, 'your_nonce', None)
+    def _verify_your_nonce(self, ctx: Any, your_nonce: Any) -> Optional[Exception]:
+        """Verify the your_nonce field."""
         if not your_nonce:
             return Exception("your_nonce is required for general message")
-
         try:
             from .utils import verify_nonce
             valid = verify_nonce(your_nonce, self.wallet, {'type': 1}, ctx)
@@ -1042,36 +1032,56 @@ class Peer:
                 return Exception("Unable to verify nonce for general message")
         except Exception as e:
             return Exception(f"Failed to validate nonce: {e}")
+        return None
 
+    def _log_signature_verification_failure(self, err: Exception, message: Any, session: Any, data_to_verify: Any) -> None:
+        """Log signature verification failure with diagnostic info."""
+        if self.logger:
+            try:
+                digest_preview = data_to_verify[:32].hex() if isinstance(data_to_verify, (bytes, bytearray)) else str(data_to_verify)[:64]
+                self.logger.warning(
+                    "General message signature verification failed",
+                    extra={
+                        "error": str(err),
+                        "nonce": getattr(message, 'nonce', None),
+                        "session_nonce": getattr(session, 'session_nonce', None),
+                        "payload_digest_head": digest_preview,
+                        "payload_len": len(data_to_verify) if isinstance(data_to_verify, (bytes, bytearray)) else None,
+                    }
+                )
+            except Exception:
+                self.logger.warning(f"General message signature verification failed: {err}")
+        else:
+            print(f"[AUTH DEBUG] General message signature verification failed: {err}")
+
+    def handle_general_message(self, ctx: Any, message: Any, sender_public_key: Any) -> Optional[Exception]:
+        """
+        Processes a general message.
+        """
+        # Short-circuit for loopback echo
+        if self._is_loopback_echo(ctx, sender_public_key):
+            return None
+
+        # Verify your_nonce
+        your_nonce = getattr(message, 'your_nonce', None)
+        err = self._verify_your_nonce(ctx, your_nonce)
+        if err:
+            return err
+
+        # Get session
         session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
-        
         if session is None:
             return Exception(self.SESSION_NOT_FOUND)
 
+        # Verify signature
         payload = getattr(message, 'payload', None)
-        
         data_to_verify = self._serialize_for_signature(payload)
         err = self._verify_general_message_signature(ctx, message, session, sender_public_key, data_to_verify)
         if err is not None:
-            if self.logger:
-                try:
-                    digest_preview = data_to_verify[:32].hex() if isinstance(data_to_verify, (bytes, bytearray)) else str(data_to_verify)[:64]
-                    self.logger.warning(
-                        "General message signature verification failed",
-                        extra={
-                            "error": str(err),
-                            "nonce": getattr(message, 'nonce', None),
-                            "session_nonce": getattr(session, 'session_nonce', None),
-                            "payload_digest_head": digest_preview,
-                            "payload_len": len(data_to_verify) if isinstance(data_to_verify, (bytes, bytearray)) else None,
-                        }
-                    )
-                except Exception:
-                    self.logger.warning(f"General message signature verification failed: {err}")
-            else:
-                print(f"[AUTH DEBUG] General message signature verification failed: {err}")
+            self._log_signature_verification_failure(err, message, session, data_to_verify)
             return err
 
+        # Update session
         self._touch_session(session)
         if self.auto_persist_last_session:
             self.last_interacted_with_peer = sender_public_key

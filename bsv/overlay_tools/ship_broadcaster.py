@@ -151,24 +151,75 @@ class TopicBroadcaster:
         self.require_acknowledgment_from_specific_hosts_for_topics = \
             config.require_acknowledgment_from_specific_hosts_for_topics or {}
 
-    async def broadcast(self, tx: Transaction) -> BroadcastResponse | BroadcastFailure:
-        """Broadcast a transaction to Overlay Services via SHIP."""
-        # Convert transaction to BEEF
+    def _extract_beef_from_transaction(self, tx: Transaction) -> tuple[Optional[bytes], Optional[BroadcastFailure]]:
+        """Extract BEEF from transaction, returning (beef, error)."""
         try:
             beef = tx.to_beef()
+            return beef, None
         except Exception as e:
-            return BroadcastFailure(
+            return None, BroadcastFailure(
                 status="error",
                 code="ERR_INVALID_BEEF",
                 description=f"Transactions sent via SHIP must be serializable to BEEF format: {str(e)}"
             )
 
-        # Check for off-chain values metadata
-        off_chain_values = None
+    def _extract_off_chain_values(self, tx: Transaction) -> Optional[bytes]:
+        """Extract and normalize off-chain values from transaction metadata."""
         if hasattr(tx, 'metadata') and tx.metadata:
             off_chain_values = tx.metadata.get('OffChainValues')
             if off_chain_values and not isinstance(off_chain_values, bytes):
-                off_chain_values = bytes(off_chain_values)
+                return bytes(off_chain_values)
+            return off_chain_values
+        return None
+
+    async def _send_to_all_hosts(self, interested_hosts: Dict, beef: bytes, off_chain_values: Optional[bytes]) -> list:
+        """Send tagged BEEF to all interested hosts and gather results."""
+        host_promises = []
+        for host, topics in interested_hosts.items():
+            tagged_beef = TaggedBEEF(
+                beef=beef,
+                topics=list(topics),
+                off_chain_values=off_chain_values
+            )
+            host_promises.append(self._send_to_host_with_tracking(host, tagged_beef))
+        
+        return await asyncio.gather(*host_promises, return_exceptions=True)
+
+    def _process_host_results(self, results: list, interested_hosts: Dict) -> tuple[list, Dict[str, set]]:
+        """Process results from all hosts and extract acknowledgments."""
+        successful_hosts = []
+        host_acknowledgments: Dict[str, set] = {}
+        
+        for i, result in enumerate(results):
+            host = list(interested_hosts.keys())[i]
+            
+            if isinstance(result, Exception):
+                continue
+            
+            steak = result
+            if not steak or not isinstance(steak, dict):
+                continue
+            
+            acknowledged_topics = set()
+            for topic, instructions in steak.items():
+                if self._has_meaningful_instructions(instructions):
+                    acknowledged_topics.add(topic)
+            
+            if acknowledged_topics:
+                successful_hosts.append(host)
+                host_acknowledgments[host] = acknowledged_topics
+        
+        return successful_hosts, host_acknowledgments
+
+    async def broadcast(self, tx: Transaction) -> BroadcastResponse | BroadcastFailure:
+        """Broadcast a transaction to Overlay Services via SHIP."""
+        # Convert transaction to BEEF
+        beef, error = self._extract_beef_from_transaction(tx)
+        if error:
+            return error
+
+        # Extract off-chain values
+        off_chain_values = self._extract_off_chain_values(tx)
 
         # Find interested hosts
         interested_hosts = await self._find_interested_hosts()
@@ -179,41 +230,11 @@ class TopicBroadcaster:
                 description=f"No {self.network_preset} hosts are interested in receiving this transaction."
             )
 
-        # Send to all interested hosts
-        host_promises = []
-        for host, topics in interested_hosts.items():
-            tagged_beef = TaggedBEEF(
-                beef=beef,
-                topics=list(topics),
-                off_chain_values=off_chain_values
-            )
-            host_promises.append(self._send_to_host_with_tracking(host, tagged_beef))
+        # Send to all interested hosts and collect results
+        results = await self._send_to_all_hosts(interested_hosts, beef, off_chain_values)
 
-        # Wait for all responses
-        results = await asyncio.gather(*host_promises, return_exceptions=True)
-
-        # Process results
-        successful_hosts = []
-        host_acknowledgments: Dict[str, set] = {}
-
-        for i, result in enumerate(results):
-            host = list(interested_hosts.keys())[i]
-
-            if isinstance(result, Exception):
-                continue
-
-            steak = result
-            if not steak or not isinstance(steak, dict):
-                continue
-
-            acknowledged_topics = set()
-            for topic, instructions in steak.items():
-                if self._has_meaningful_instructions(instructions):
-                    acknowledged_topics.add(topic)
-
-            if acknowledged_topics:
-                successful_hosts.append(host)
-                host_acknowledgments[host] = acknowledged_topics
+        # Process results and extract acknowledgments
+        successful_hosts, host_acknowledgments = self._process_host_results(results, interested_hosts)
 
         if not successful_hosts:
             return BroadcastFailure(
@@ -290,39 +311,50 @@ class TopicBroadcaster:
             # In a full implementation, we'd track host failures
             raise
 
-    def _check_acknowledgment_requirements(self, host_acknowledgments: Dict[str, set]) -> bool:
-        """Check if acknowledgment requirements are met."""
-
-        # Check require_acknowledgment_from_all_hosts_for_topics
-        if self.require_acknowledgment_from_all_hosts_for_topics:
-            required_topics = self.require_acknowledgment_from_all_hosts_for_topics
-            for host, acknowledged in host_acknowledgments.items():
-                for topic in required_topics:
-                    if topic not in acknowledged:
-                        return False
-
-        # Check require_acknowledgment_from_any_host_for_topics
-        if self.require_acknowledgment_from_any_host_for_topics:
-            required_topics = self.require_acknowledgment_from_any_host_for_topics
-            for topic in required_topics:
-                topic_acknowledged = any(topic in acknowledged
-                                       for acknowledged in host_acknowledgments.values())
-                if not topic_acknowledged:
-                    return False
-
-        # Check require_acknowledgment_from_specific_hosts_for_topics
-        for host, requirements in self.require_acknowledgment_from_specific_hosts_for_topics.items():
-            if host not in host_acknowledgments:
-                return False
-
-            acknowledged = host_acknowledgments[host]
-            required_topics = requirements if isinstance(requirements, list) else self.topics
-
+    def _check_all_hosts_acknowledgment(self, host_acknowledgments: Dict[str, set]) -> bool:
+        """Check if all hosts acknowledged required topics."""
+        if not self.require_acknowledgment_from_all_hosts_for_topics:
+            return True
+        
+        required_topics = self.require_acknowledgment_from_all_hosts_for_topics
+        for host, acknowledged in host_acknowledgments.items():
             for topic in required_topics:
                 if topic not in acknowledged:
                     return False
-
         return True
+
+    def _check_any_host_acknowledgment(self, host_acknowledgments: Dict[str, set]) -> bool:
+        """Check if at least one host acknowledged required topics."""
+        if not self.require_acknowledgment_from_any_host_for_topics:
+            return True
+        
+        required_topics = self.require_acknowledgment_from_any_host_for_topics
+        for topic in required_topics:
+            topic_acknowledged = any(topic in acknowledged
+                                   for acknowledged in host_acknowledgments.values())
+            if not topic_acknowledged:
+                return False
+        return True
+
+    def _check_specific_hosts_acknowledgment(self, host_acknowledgments: Dict[str, set]) -> bool:
+        """Check if specific hosts acknowledged required topics."""
+        for host, requirements in self.require_acknowledgment_from_specific_hosts_for_topics.items():
+            if host not in host_acknowledgments:
+                return False
+            
+            acknowledged = host_acknowledgments[host]
+            required_topics = requirements if isinstance(requirements, list) else self.topics
+            
+            for topic in required_topics:
+                if topic not in acknowledged:
+                    return False
+        return True
+
+    def _check_acknowledgment_requirements(self, host_acknowledgments: Dict[str, set]) -> bool:
+        """Check if acknowledgment requirements are met."""
+        return (self._check_all_hosts_acknowledgment(host_acknowledgments) and
+                self._check_any_host_acknowledgment(host_acknowledgments) and
+                self._check_specific_hosts_acknowledgment(host_acknowledgments))
 
 
 # Alias for backward compatibility

@@ -1,4 +1,5 @@
 import pytest
+from typing import cast
 
 
 def test_merge_txid_only_and_make_txid_only():
@@ -17,6 +18,8 @@ def test_merge_txid_only_and_make_txid_only():
 def test_merge_transaction_sets_bump_index_when_bump_proves_txid():
     from bsv.transaction.beef import Beef, BeefTx, BEEF_V2
     from bsv.transaction.beef_builder import merge_bump, merge_transaction
+    from bsv.merkle_path import MerklePath
+    from bsv.transaction import Transaction
 
     class DummyBump:
         def __init__(self, height, txid):
@@ -49,10 +52,10 @@ def test_merge_transaction_sets_bump_index_when_bump_proves_txid():
     beef = Beef(version=BEEF_V2)
     txid = "bb" * 32
     bump = DummyBump(100, txid)
-    idx = merge_bump(beef, bump)
+    idx = merge_bump(beef, cast(MerklePath, bump))
     assert idx == 0
     # Merge transaction and expect bump_index to be set
-    btx = merge_transaction(beef, DummyTx(txid))
+    btx = merge_transaction(beef, cast(Transaction, DummyTx(txid)))
     assert btx.bump_index == 0
 
 
@@ -88,6 +91,8 @@ def test_merge_beef_merges_bumps_and_txs():
 def test_merge_bump_combines_same_root_objects_and_sets_bump_index():
     from bsv.transaction.beef import Beef, BEEF_V2, BeefTx
     from bsv.transaction.beef_builder import merge_bump
+    from bsv.merkle_path import MerklePath
+    from bsv.transaction import Transaction
 
     class DummyBump:
         def __init__(self, height, txid, root):
@@ -112,8 +117,8 @@ def test_merge_bump_combines_same_root_objects_and_sets_bump_index():
     b1 = DummyBump(100, txid, "rootX")
     b2 = DummyBump(100, txid, "rootX")  # same root/height -> should combine
 
-    i1 = merge_bump(beef, b1)
-    i2 = merge_bump(beef, b2)
+    i1 = merge_bump(beef, cast(MerklePath, b1))
+    i2 = merge_bump(beef, cast(MerklePath, b2))
     assert i1 == 0 and i2 == 0
     assert len(beef.bumps) == 1
 
@@ -132,7 +137,7 @@ def test_merge_bump_combines_same_root_objects_and_sets_bump_index():
         def serialize(self):
             return b"\x00"
 
-    btx = merge_transaction(beef, DummyTx(txid))
+    btx = merge_transaction(beef, cast(Transaction, DummyTx(txid)))
     assert btx.bump_index == 0
 
 

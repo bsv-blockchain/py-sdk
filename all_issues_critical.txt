@@ -11,40 +11,10 @@ Type: Code Smell
 Effort: 10min effort
 --------------------------------------------------------------------------------
 bsv/keystore/local_kv_store.py
-Line: L149
-Description: Refactor this function to reduce its Cognitive Complexity from 56 to the 15 allowed.
-Type: Code Smell
-Effort: 46min effort
---------------------------------------------------------------------------------
-bsv/keystore/local_kv_store.py
-Line: L232
-Description: Refactor this function to reduce its Cognitive Complexity from 67 to the 15 allowed.
-Type: Code Smell
-Effort: 57min effort
---------------------------------------------------------------------------------
-bsv/keystore/local_kv_store.py
-Line: L665
-Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
-Type: Code Smell
-Effort: 7min effort
---------------------------------------------------------------------------------
-bsv/keystore/local_kv_store.py
-Line: L840
-Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
-Type: Code Smell
-Effort: 7min effort
---------------------------------------------------------------------------------
-bsv/keystore/local_kv_store.py
 Line: L963
 Description: Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
 Type: Code Smell
 Effort: 9min effort
---------------------------------------------------------------------------------
-bsv/keystore/local_kv_store.py
-Line: L1010
-Description: Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed.
-Type: Code Smell
-Effort: 10min effort
 --------------------------------------------------------------------------------
 bsv/overlay_tools/ship_broadcaster.py
 Line: L154
@@ -54,12 +24,6 @@ Effort: 15min effort
 --------------------------------------------------------------------------------
 bsv/overlay_tools/ship_broadcaster.py
 Line: L293
-Description: Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.
-Type: Code Smell
-Effort: 16min effort
---------------------------------------------------------------------------------
-bsv/registry/client.py
-Line: L240
 Description: Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.
 Type: Code Smell
 Effort: 16min effort
@@ -76,29 +40,11 @@ Description: Refactor this function to reduce its Cognitive Complexity from 22 t
 Type: Code Smell
 Effort: 12min effort
 --------------------------------------------------------------------------------
-bsv/script/interpreter/operations.py
-Line: L70
-Description: Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed.
-Type: Code Smell
-Effort: 16min effort
---------------------------------------------------------------------------------
-bsv/script/interpreter/stack.py
-Line: L71
-Description: Add a nested comment explaining why this method is empty, or complete the implementation.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
 bsv/script/interpreter/thread.py
 Line: L108
 Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
 Type: Code Smell
 Effort: 7min effort
---------------------------------------------------------------------------------
-bsv/storage/downloader.py
-Line: L100
-Description: Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed.
-Type: Code Smell
-Effort: 6min effort
 --------------------------------------------------------------------------------
 bsv/transaction/beef.py
 Line: L352
@@ -129,30 +75,6 @@ Line: L138
 Description: Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed.
 Type: Code Smell
 Effort: 13min effort
---------------------------------------------------------------------------------
-bsv/transaction/beef_validate.py
-Line: L163
-Description: Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed.
-Type: Code Smell
-Effort: 23min effort
---------------------------------------------------------------------------------
-bsv/utils/script_chunks.py
-Line: L11
-Description: Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed.
-Type: Code Smell
-Effort: 23min effort
---------------------------------------------------------------------------------
-bsv/wallet/serializer/list_outputs.py
-Line: L6
-Description: Refactor this function to reduce its Cognitive Complexity from 21 to the 15 allowed.
-Type: Code Smell
-Effort: 11min effort
---------------------------------------------------------------------------------
-bsv/wallet/substrates/serializer.py
-Line: L340
-Description: Refactor this function to reduce its Cognitive Complexity from 46 to the 15 allowed.
-Type: Code Smell
-Effort: 36min effort
 --------------------------------------------------------------------------------
 bsv/wallet/substrates/wallet_wire_transceiver.py
 Line: L471
@@ -430,24 +352,6 @@ Description: Add a default value to parameter originator.
 Type: Code Smell
 Effort: 15min effort
 --------------------------------------------------------------------------------
-tests/bsv/auth/test_metanet_desktop_auth.py
-Line: L1320
-Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
-Type: Code Smell
-Effort: 7min effort
---------------------------------------------------------------------------------
-tests/bsv/auth/test_ssl_helper.py
-Line: L41
-Description: Enable server hostname verification on this SSL/TLS connection.
-Type: Vulnerability
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/auth/transports/test_auth_transport_http.py
-Line: L30
-Description: Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
-Type: Code Smell
-Effort: 9min effort
---------------------------------------------------------------------------------
 tests/bsv/beef/test_beef_builder_methods.py
 Line: L52
 Description: Change this argument; Function "merge_bump" expects a different type
@@ -467,22 +371,10 @@ Type: Code Smell
 Effort: 20min effort
 --------------------------------------------------------------------------------
 tests/bsv/beef/test_beef_comprehensive.py
-Line: L323
-Description: Add a nested comment explaining why this method is empty, or complete the implementation.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_comprehensive.py
-Line: L446
+Line: L447
 Description: Change this argument; Function "merge_beef_tx" expects a different type
 Type: Code Smell
 Effort: 20min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_hardening.py
-Line: L126
-Description: Add a nested comment explaining why this method is empty, or complete the implementation.
-Type: Code Smell
-Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/beef/test_kvstore_beef_e2e.py
 Line: L260
@@ -802,12 +694,6 @@ Description: Remove this identity check; it will always be True.
 Type: Code Smell
 Effort: 10min effort
 --------------------------------------------------------------------------------
-tests/bsv/keystore/test_keystore_local_kv_store.py
-Line: L42
-Description: Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.
-Type: Code Smell
-Effort: 7min effort
---------------------------------------------------------------------------------
 tests/bsv/keystore_test_coverage.py
 Line: L60
 Description: Define a constant instead of duplicating this literal "MemoryKeystore operations not available" 3 times.
@@ -940,12 +826,6 @@ Description: Change this argument; Function "sign" expects a different type
 Type: Code Smell
 Effort: 20min effort
 --------------------------------------------------------------------------------
-tests/bsv/signature_test_coverage.py
-Line: L348
-Description: Specify an exception class to catch or reraise the exception
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
 tests/bsv/totp_test_coverage.py
 Line: L28
 Description: Define a constant instead of duplicating this literal "TOTP module not available" 7 times.
@@ -1005,10 +885,4 @@ Line: L47
 Description: Remove this identity check; it will always be True.
 Type: Code Smell
 Effort: 10min effort
---------------------------------------------------------------------------------
-tests/vectors/generate_woc_vector.py
-Line: L10
-Description: Refactor this function to reduce its Cognitive Complexity from 19 to the 15 allowed.
-Type: Code Smell
-Effort: 9min effort
 --------------------------------------------------------------------------------

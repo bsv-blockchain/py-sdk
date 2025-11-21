@@ -28,7 +28,7 @@ def test_beef_tx_from_transaction():
         
         tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
         beef_tx = BeefTx(txid=tx.txid(), tx_obj=tx)
-        assert beef_tx is not None
+        assert hasattr(beef_tx, 'txid')
     except ImportError:
         pytest.skip("BeefTx not available")
 
@@ -43,7 +43,7 @@ def test_beef_tx_serialize():
         beef_tx = BeefTx(txid="0"*64, tx_obj=tx)
         
         # BeefTx is a dataclass, not expected to have serialize
-        assert beef_tx is not None
+        assert hasattr(beef_tx, 'txid')
     except ImportError:
         pytest.skip("BeefTx not available")
 

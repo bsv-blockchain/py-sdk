@@ -131,7 +131,7 @@ def test_pushdrop_decode_basic():
         script = Script(b'\x01\x41\x04' + b'\x00' * 65 + b'\xac')  # pubkey + checksig + data
         
         if hasattr(PushDrop, 'decode'):
-            result = PushDrop.decode(script)
+            result = PushDrop.decode(script.serialize() if hasattr(script, 'serialize') else bytes(script))
             assert result is not None or True
     except (ImportError, Exception):
         pytest.skip("PushDrop decode not fully testable")

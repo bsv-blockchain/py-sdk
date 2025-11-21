@@ -4,6 +4,9 @@ Coverage tests for broadcaster.py - untested branches.
 import pytest
 from bsv.transaction import Transaction
 
+# Constants for skip messages
+SKIP_DEFAULT_BROADCASTER = "DefaultBroadcaster not available"
+
 
 # ========================================================================
 # Broadcaster interface branches
@@ -44,7 +47,7 @@ def test_default_broadcaster_init():
         broadcaster = DefaultBroadcaster()
         assert broadcaster is not None
     except (ImportError, AttributeError):
-        pytest.skip("DefaultBroadcaster not available")
+        pytest.skip(SKIP_DEFAULT_BROADCASTER)
 
 
 def test_default_broadcaster_with_url():
@@ -54,7 +57,7 @@ def test_default_broadcaster_with_url():
         broadcaster = DefaultBroadcaster(url='https://api.example.com')
         assert broadcaster is not None
     except (ImportError, AttributeError):
-        pytest.skip("DefaultBroadcaster not available")
+        pytest.skip(SKIP_DEFAULT_BROADCASTER)
 
 
 def test_default_broadcaster_broadcast_tx():
@@ -73,7 +76,7 @@ def test_default_broadcaster_broadcast_tx():
                 # Expected without real endpoint
                 assert True
     except (ImportError, AttributeError):
-        pytest.skip("DefaultBroadcaster not available")
+        pytest.skip(SKIP_DEFAULT_BROADCASTER)
 
 
 # ========================================================================
@@ -92,7 +95,7 @@ def test_broadcaster_with_invalid_url():
             # May validate URL
             assert True
     except (ImportError, AttributeError):
-        pytest.skip("DefaultBroadcaster not available")
+        pytest.skip(SKIP_DEFAULT_BROADCASTER)
 
 
 def test_broadcaster_broadcast_none():
@@ -110,5 +113,5 @@ def test_broadcaster_broadcast_none():
                 # Expected
                 assert True
     except (ImportError, AttributeError):
-        pytest.skip("DefaultBroadcaster not available")
+        pytest.skip(SKIP_DEFAULT_BROADCASTER)
 

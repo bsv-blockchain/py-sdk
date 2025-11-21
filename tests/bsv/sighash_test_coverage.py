@@ -15,6 +15,7 @@ from bsv.script.script import Script
 # Sighash calculation branches
 # ========================================================================
 
+SKIP_SIGHASH = SKIP_SIGHASH
 def test_sighash_all():
     """Test SIGHASH_ALL calculation."""
     try:
@@ -32,7 +33,7 @@ def test_sighash_all():
             # May need valid inputs
             pytest.skip(SKIP_VALID_TX)
     except ImportError:
-        pytest.skip("Sighash not available")
+        pytest.skip(SKIP_SIGHASH)
 
 
 def test_sighash_none():
@@ -49,7 +50,7 @@ def test_sighash_none():
         except (IndexError, AttributeError):
             pytest.skip(SKIP_VALID_TX)
     except ImportError:
-        pytest.skip("Sighash not available")
+        pytest.skip(SKIP_SIGHASH)
 
 
 def test_sighash_single():
@@ -66,7 +67,7 @@ def test_sighash_single():
         except (IndexError, AttributeError):
             pytest.skip(SKIP_VALID_TX)
     except ImportError:
-        pytest.skip("Sighash not available")
+        pytest.skip(SKIP_SIGHASH)
 
 
 def test_sighash_anyonecanpay():
@@ -83,7 +84,7 @@ def test_sighash_anyonecanpay():
         except (IndexError, AttributeError):
             pytest.skip(SKIP_VALID_TX)
     except ImportError:
-        pytest.skip("Sighash not available")
+        pytest.skip(SKIP_SIGHASH)
 
 
 # ========================================================================
@@ -133,5 +134,5 @@ def test_sighash_forkid():
         except (IndexError, AttributeError):
             pytest.skip(SKIP_VALID_TX)
     except ImportError:
-        pytest.skip("Sighash not available")
+        pytest.skip(SKIP_SIGHASH)
 

@@ -22,17 +22,15 @@ def _leaf_exists_in_bump(bump: MerklePath, txid: str) -> bool:  # NOSONAR - Comp
     return False
 
 
-def merge_bump(beef: Beef, bump: MerklePath) -> int:
-    """
-    Merge a MerklePath that is assumed to be fully valid into the beef and return its index.
-    Tries to combine proofs that share the same block height and root.
-    """
-    # identical instance
+def _find_identical_bump(beef: Beef, bump: MerklePath) -> Optional[int]:
+    """Check if identical bump instance already exists."""
     for i, existing in enumerate(getattr(beef, "bumps", []) or []):
         if existing is bump:
             return i
+    return None
 
-    # same root at same height → combine
+def _find_combinable_bump(beef: Beef, bump: MerklePath) -> Optional[int]:
+    """Find bump with same height and root that can be combined."""
     for i, existing in enumerate(beef.bumps):
         if getattr(existing, "block_height", None) == getattr(bump, "block_height", None):
             try:
@@ -40,22 +38,41 @@ def merge_bump(beef: Beef, bump: MerklePath) -> int:
                     existing.combine(bump)
                     return i
             except Exception:
-                # cannot compute/compare root; skip to append
                 pass
+    return None
 
-    # append new bump
-    beef.bumps.append(bump)
-    new_index = len(beef.bumps) - 1
-
-    # attach bumps to any existing transactions if proven by this bump
+def _attach_bump_to_transactions(beef: Beef, bump: MerklePath, bump_index: int) -> None:
+    """Attach bump to transactions that it proves."""
     for btx in beef.txs.values():
         if btx.tx_obj is not None and btx.bump_index is None:
             try:
                 if _leaf_exists_in_bump(bump, btx.txid):
-                    btx.bump_index = new_index
+                    btx.bump_index = bump_index
                     btx.tx_obj.merkle_path = bump
             except Exception:
                 pass
+
+def merge_bump(beef: Beef, bump: MerklePath) -> int:
+    """
+    Merge a MerklePath that is assumed to be fully valid into the beef and return its index.
+    Tries to combine proofs that share the same block height and root.
+    """
+    # Check for identical instance
+    idx = _find_identical_bump(beef, bump)
+    if idx is not None:
+        return idx
+
+    # Try to combine with existing bump
+    idx = _find_combinable_bump(beef, bump)
+    if idx is not None:
+        return idx
+
+    # Append new bump
+    beef.bumps.append(bump)
+    new_index = len(beef.bumps) - 1
+
+    # Attach to transactions
+    _attach_bump_to_transactions(beef, bump, new_index)
 
     return new_index
 

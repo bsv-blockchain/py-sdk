@@ -135,6 +135,30 @@ def trim_known_txids(beef: Beef, known_txids: List[str]) -> None:  # NOSONAR - C
         beef.txs.pop(txid, None)
 
 
+def _attach_input_transaction(beef: Beef, txin) -> None:
+    """Attach source transaction to input if available in BEEF."""
+    if getattr(txin, "source_transaction", None) is None:
+        parent = beef.txs.get(getattr(txin, "source_txid", None))
+        if parent and parent.tx_obj:
+            txin.source_transaction = parent.tx_obj
+
+def _attach_merkle_path_recursive(beef: Beef, tx) -> None:
+    """Recursively attach merkle paths to transaction and its parents."""
+    mp = find_bump(beef, tx.txid())
+    if mp is not None:
+        tx.merkle_path = mp
+        return
+    
+    for txin in getattr(tx, "inputs", []) or []:
+        _attach_input_transaction(beef, txin)
+        if getattr(txin, "source_transaction", None) is not None:
+            source_tx = txin.source_transaction
+            p = find_bump(beef, source_tx.txid())
+            if p is not None:
+                source_tx.merkle_path = p
+            else:
+                _attach_merkle_path_recursive(beef, source_tx)
+
 def find_atomic_transaction(beef: Beef, txid: str):
     """
     Build the proof tree rooted at a specific Transaction.
@@ -146,24 +170,7 @@ def find_atomic_transaction(beef: Beef, txid: str):
     if btx is None or btx.tx_obj is None:
         return None
 
-    def _add_input_proof(tx) -> None:
-        mp = find_bump(beef, tx.txid())
-        if mp is not None:
-            tx.merkle_path = mp
-            return
-        for i in getattr(tx, "inputs", []) or []:
-            if getattr(i, "source_transaction", None) is None:
-                parent = beef.txs.get(getattr(i, "source_txid", None))
-                if parent and parent.tx_obj:
-                    i.source_transaction = parent.tx_obj
-            if getattr(i, "source_transaction", None) is not None:
-                p = find_bump(beef, i.source_transaction.txid())
-                if p is not None:
-                    i.source_transaction.merkle_path = p
-                else:
-                    _add_input_proof(i.source_transaction)
-
-    _add_input_proof(btx.tx_obj)
+    _attach_merkle_path_recursive(beef, btx.tx_obj)
     return btx.tx_obj
 
 

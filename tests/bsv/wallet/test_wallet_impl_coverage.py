@@ -44,7 +44,7 @@ def test_wallet_init_with_env_loading_failure():
     WalletImpl._dotenv_loaded = False
     # Import will fail but should be caught
     wallet = WalletImpl(priv, load_env=True)
-    assert wallet is not None
+    assert hasattr(wallet, 'create_action')
     assert WalletImpl._dotenv_loaded is True
 
 

@@ -11,6 +11,8 @@ SKIP_NETWORK_CONFIG = "get_network_config not available"
 # Network module branches
 # ========================================================================
 
+SKIP_WOC_CLIENT = SKIP_WOC_CLIENT
+MOCK_REQUESTS_GET = MOCK_REQUESTS_GET
 def test_network_module_exists():
     """Test that network module exists."""
     try:
@@ -111,7 +113,7 @@ def test_woc_client_initialization():
                 del os.environ["WOC_API_KEY"]
 
     except ImportError:
-        pytest.skip("WOCClient not available")
+        pytest.skip(SKIP_WOC_CLIENT)
 
 
 def test_woc_client_get_tx_hex_invalid_txid():
@@ -135,7 +137,7 @@ def test_woc_client_get_tx_hex_invalid_txid():
             client.get_tx_hex(None)
 
     except ImportError:
-        pytest.skip("WOCClient not available")
+        pytest.skip(SKIP_WOC_CLIENT)
 
 
 def test_woc_client_get_tx_hex_network_errors():
@@ -148,19 +150,19 @@ def test_woc_client_get_tx_hex_network_errors():
         client = WOCClient()
 
         # Mock network timeout
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_get.side_effect = requests.exceptions.Timeout("Request timed out")
             with pytest.raises(requests.exceptions.Timeout):
                 client.get_tx_hex("a" * 64)
 
         # Mock connection error
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_get.side_effect = requests.exceptions.ConnectionError("Connection failed")
             with pytest.raises(requests.exceptions.ConnectionError):
                 client.get_tx_hex("a" * 64)
 
         # Mock HTTP error (404 Not Found)
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_response = mock_get.return_value
             mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("404 Not Found")
             mock_response.status_code = 404
@@ -168,7 +170,7 @@ def test_woc_client_get_tx_hex_network_errors():
                 client.get_tx_hex("a" * 64)
 
     except ImportError:
-        pytest.skip("WOCClient not available")
+        pytest.skip(SKIP_WOC_CLIENT)
 
 
 def test_woc_client_get_tx_hex_malformed_response():
@@ -180,7 +182,7 @@ def test_woc_client_get_tx_hex_malformed_response():
         client = WOCClient()
 
         # Test with response missing rawtx/hex field
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_response.json.return_value = {"some_other_field": "value"}
@@ -190,7 +192,7 @@ def test_woc_client_get_tx_hex_malformed_response():
             assert result is None
 
         # Test with non-string rawtx/hex field
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_response.json.return_value = {"rawtx": 12345}  # Number instead of string
@@ -200,7 +202,7 @@ def test_woc_client_get_tx_hex_malformed_response():
             assert result is None
 
         # Test with invalid JSON response
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_response.json.side_effect = ValueError("Invalid JSON")
@@ -210,7 +212,7 @@ def test_woc_client_get_tx_hex_malformed_response():
                 client.get_tx_hex("a" * 64)
 
     except ImportError:
-        pytest.skip("WOCClient not available")
+        pytest.skip(SKIP_WOC_CLIENT)
 
 
 def test_woc_client_get_tx_hex_with_api_key():
@@ -221,7 +223,7 @@ def test_woc_client_get_tx_hex_with_api_key():
 
         client = WOCClient(api_key="test_key")  # noqa: S106  # NOSONAR - Mock API key for tests
 
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_response.json.return_value = {"rawtx": "deadbeef"}
@@ -241,7 +243,7 @@ def test_woc_client_get_tx_hex_with_api_key():
             assert result == "deadbeef"
 
     except ImportError:
-        pytest.skip("WOCClient not available")
+        pytest.skip(SKIP_WOC_CLIENT)
 
 
 def test_woc_client_get_tx_hex_without_api_key():
@@ -252,7 +254,7 @@ def test_woc_client_get_tx_hex_without_api_key():
 
         client = WOCClient(api_key="")  # No API key
 
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_response.json.return_value = {"hex": "deadbeef"}
@@ -270,7 +272,7 @@ def test_woc_client_get_tx_hex_without_api_key():
             assert result == "deadbeef"
 
     except ImportError:
-        pytest.skip("WOCClient not available")
+        pytest.skip(SKIP_WOC_CLIENT)
 
 
 def test_woc_client_get_tx_hex_custom_timeout():
@@ -281,7 +283,7 @@ def test_woc_client_get_tx_hex_custom_timeout():
 
         client = WOCClient()
 
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_response.json.return_value = {"rawtx": "deadbeef"}
@@ -297,7 +299,7 @@ def test_woc_client_get_tx_hex_custom_timeout():
             assert result == "deadbeef"
 
     except ImportError:
-        pytest.skip("WOCClient not available")
+        pytest.skip(SKIP_WOC_CLIENT)
 
 
 def test_woc_client_different_networks():
@@ -314,7 +316,7 @@ def test_woc_client_different_networks():
         client_test = WOCClient(network="test")
         assert client_test.network == "test"
 
-        with patch('requests.get') as mock_get:
+        with patch(MOCK_REQUESTS_GET) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_response.json.return_value = {"rawtx": "deadbeef"}
@@ -331,7 +333,7 @@ def test_woc_client_different_networks():
             assert "test" in test_call_args[0][0]
 
     except ImportError:
-        pytest.skip("WOCClient not available")
+        pytest.skip(SKIP_WOC_CLIENT)
 
 
 def test_woc_client_concurrent_requests():
@@ -348,7 +350,7 @@ def test_woc_client_concurrent_requests():
 
         def make_request(txid):
             try:
-                with patch('requests.get') as mock_get:
+                with patch(MOCK_REQUESTS_GET) as mock_get:
                     mock_response = Mock()
                     mock_response.raise_for_status.return_value = None
                     mock_response.json.return_value = {"rawtx": f"tx_{txid}"}
@@ -377,5 +379,5 @@ def test_woc_client_concurrent_requests():
         assert all(r.startswith("tx_") for r in results)
 
     except ImportError:
-        pytest.skip("WOCClient not available")
+        pytest.skip(SKIP_WOC_CLIENT)
 

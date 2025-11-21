@@ -29,7 +29,7 @@ def test_beef_init_with_transactions():
         if hasattr(Beef, '__init__'):
             try:
                 beef = Beef(transactions=[tx])
-                assert beef is not None
+                assert hasattr(beef, 'txs')
             except TypeError:
                 # Constructor may have different signature
                 pytest.skip("Different constructor signature")

@@ -154,16 +154,8 @@ class WalletImpl(WalletInterface):
             if protocol_id is None or key_id is None:
                 return {"error": "create_signature: protocol_id and key_id are required"}
             
-            # Handle protocol_id as list [security_level, protocol_string] or dict
-            if isinstance(protocol_id, (list, tuple)) and len(protocol_id) == 2:
-                protocol = SimpleNamespace(security_level=int(protocol_id[0]), protocol=str(protocol_id[1]))
-            elif isinstance(protocol_id, dict):
-                protocol = SimpleNamespace(
-                    security_level=int(protocol_id.get("security_level", 0)),
-                    protocol=str(protocol_id.get("protocol", ""))
-                )
-            else:
-                protocol = protocol_id
+            # Normalize protocol_id (supports both camelCase and snake_case)
+            protocol = self._normalize_protocol(protocol_id)
             
             cp = self._normalize_counterparty(counterparty)
             priv = self.key_deriver.derive_private_key(protocol, key_id, cp)
@@ -183,104 +175,125 @@ class WalletImpl(WalletInterface):
         except Exception as e:
             return {"error": f"create_signature: {e}"}
 
+    def _normalize_protocol(self, protocol_id):
+        """Normalize protocol_id to SimpleNamespace (supports both camelCase and snake_case)."""
+        if isinstance(protocol_id, (list, tuple)) and len(protocol_id) == 2:
+            return SimpleNamespace(security_level=int(protocol_id[0]), protocol=str(protocol_id[1]))
+        elif isinstance(protocol_id, dict):
+            # Support both camelCase (API standard) and snake_case (Python standard)
+            security_level = protocol_id.get("security_level") or protocol_id.get("securityLevel", 0)
+            protocol_str = protocol_id.get("protocol", "")
+            return SimpleNamespace(
+                security_level=int(security_level),
+                protocol=str(protocol_str)
+            )
+        else:
+            return protocol_id
+
+    def _debug_log_verify_params(self, protocol_id, key_id, for_self, cp, pub):
+        """Log verification parameters if debug is enabled."""
+        if os.getenv("BSV_DEBUG", "0") == "1":
+            try:
+                proto_dbg = protocol_id if not isinstance(protocol_id, dict) else protocol_id.get('protocol')
+                print(f"[DEBUG WalletImpl.verify_signature] protocol={proto_dbg} key_id={key_id} for_self={for_self}")
+                cp_pub_dbg = cp.to_public_key(self.public_key)
+                print(f"[DEBUG WalletImpl.verify_signature] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()} derived.pub={pub.hex()}")
+            except Exception:
+                pass
+
+    def _compute_hash_to_verify(self, args: Dict) -> tuple[bytes, bytes]:
+        """Compute hash to verify and return (to_verify, data)."""
+        data = args.get("data", b"")
+        hash_to_verify = args.get("hash_to_directly_verify")
+        
+        if hash_to_verify:
+            return hash_to_verify, data
+        else:
+            return hashlib.sha256(data).digest(), data
+
+    def _debug_log_verification_data(self, data: bytes, to_verify: bytes, signature: bytes, pub):
+        """Log verification data if debug is enabled."""
+        if os.getenv("BSV_DEBUG", "0") == "1":
+            try:
+                print(f"[DEBUG WalletImpl.verify_signature] data_len={len(data)} sha256={to_verify.hex()[:32]}.. sig_len={len(signature)}")
+                print(f"[DEBUG WalletImpl.verify_signature] pub.hex={pub.hex()}")
+            except Exception:
+                pass
+
+    def _log_verification_details(self, originator: str, protocol_id, key_id, counterparty, pub, data: bytes, to_verify: bytes, signature: bytes):
+        """Log detailed verification information."""
+        print("[WALLET VERIFY] === SIGNATURE VERIFICATION START ===")
+        print(f"[WALLET VERIFY] originator: {originator}")
+        if isinstance(protocol_id, dict):
+            print(f"[WALLET VERIFY] protocol: {protocol_id.get('protocol', 'NONE')}")
+        print(f"[WALLET VERIFY] key_id: {key_id[:50] if key_id else 'NONE'}...")
+        if isinstance(counterparty, dict):
+            cp_obj = counterparty.get('counterparty')
+            if hasattr(cp_obj, 'hex'):
+                print(f"[WALLET VERIFY] counterparty.hex: {cp_obj.hex()}")
+        
+        print(f"[WALLET VERIFY] derived_public_key: {pub.hex()}")
+        print(f"[WALLET VERIFY] data_to_verify_length: {len(data)}")
+        print(f"[WALLET VERIFY] data_digest (SHA-256): {to_verify.hex()}")
+        print(f"[WALLET VERIFY] signature_bytes: {signature.hex()}")
+        print(f"[WALLET VERIFY] signature_length: {len(signature)}")
+
+    def _log_verification_result(self, valid: bool, signature: bytes):
+        """Log verification result and debug info."""
+        print("[WALLET VERIFY] === CALLING pub.verify() ===")
+        print(f"[WALLET VERIFY] === ECDSA RESULT: {valid} ===")
+        
+        if valid:
+            print("[WALLET VERIFY] ✅ SIGNATURE VERIFICATION SUCCESS!")
+        else:
+            print("[WALLET VERIFY] ❌ SIGNATURE VERIFICATION FAILED!")
+            try:
+                print("[WALLET VERIFY] Signature DER format check...")
+                print(f"[WALLET VERIFY] Signature first byte: 0x{signature[0]:02x}")
+                print("[WALLET VERIFY] Expected DER start: 0x30")
+            except Exception as e:
+                print(f"[WALLET VERIFY] Signature format check error: {e}")
+
     def verify_signature(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         try:
-            # BRC-100 compliant flat structure (Python snake_case)
+            # Extract and validate parameters
             protocol_id = args.get("protocol_id")
             key_id = args.get("key_id")
             counterparty = args.get("counterparty")
             for_self = args.get("for_self", False)
             
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                try:
-                    proto_dbg = protocol_id if not isinstance(protocol_id, dict) else protocol_id.get('protocol')
-                    print(f"[DEBUG WalletImpl.verify_signature] protocol={proto_dbg} key_id={key_id} for_self={for_self}")
-                except Exception:
-                    pass
-            
             if protocol_id is None or key_id is None:
                 return {"error": "verify_signature: protocol_id and key_id are required"}
             
-            # Handle protocol_id as list [security_level, protocol_string] or dict
-            if isinstance(protocol_id, (list, tuple)) and len(protocol_id) == 2:
-                protocol = SimpleNamespace(security_level=int(protocol_id[0]), protocol=str(protocol_id[1]))
-            elif isinstance(protocol_id, dict):
-                protocol = SimpleNamespace(
-                    security_level=int(protocol_id.get("security_level", 0)),
-                    protocol=str(protocol_id.get("protocol", ""))
-                )
-            else:
-                protocol = protocol_id
-            
+            # Normalize protocol and derive public key
+            protocol = self._normalize_protocol(protocol_id)
             cp = self._normalize_counterparty(counterparty)
             pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self)
             
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                try:
-                    cp_pub_dbg = cp.to_public_key(self.public_key)
-                    print(f"[DEBUG WalletImpl.verify_signature] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()} derived.pub={pub.hex()}")
-                except Exception as dbg_e:
-                    print(f"[DEBUG WalletImpl.verify_signature] cp normalization error: {dbg_e}")
+            # Debug logging
+            self._debug_log_verify_params(protocol_id, key_id, for_self, cp, pub)
             
-            # Get data or hash to verify
-            data = args.get("data", b"")
-            hash_to_verify = args.get("hash_to_directly_verify")
+            # Get data and signature
             signature = args.get("signature")
-            
             if signature is None:
                 return {"error": "verify_signature: signature is required"}
             
-            if hash_to_verify:
-                to_verify = hash_to_verify
-            else:
-                to_verify = hashlib.sha256(data).digest()
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                try:
-                    print(f"[DEBUG WalletImpl.verify_signature] data_len={len(data)} sha256={to_verify.hex()[:32]}.. sig_len={len(signature)}")
-                    print(f"[DEBUG WalletImpl.verify_signature] pub.hex={pub.hex()}")
-                except Exception:
-                    pass
-            # TS parity: verify against the SHA-256 digest directly (no extra hashing in verifier)
+            to_verify, data = self._compute_hash_to_verify(args)
+            
+            # Debug log verification data
+            self._debug_log_verification_data(data, to_verify, signature, pub)
+            
+            # Log detailed verification info
+            self._log_verification_details(originator, protocol_id, key_id, counterparty, pub, data, to_verify, signature)
+            
+            # Perform verification
             valid = pub.verify(signature, to_verify, hasher=lambda m: m)
+            
+            # Log result
+            self._log_verification_result(valid, signature)
+            
             if os.getenv("BSV_DEBUG", "0") == "1":
                 print(f"[DEBUG WalletImpl.verify_signature] valid={valid}")
-            
-            # SIGNATURE LEVEL VERIFICATION - 署名レベル詳細確認
-            print("[WALLET VERIFY] === SIGNATURE VERIFICATION START ===")
-            print(f"[WALLET VERIFY] originator: {originator}")
-            if isinstance(protocol_id, dict):
-                print(f"[WALLET VERIFY] protocol: {protocol_id.get('protocol', 'NONE')}")
-            print(f"[WALLET VERIFY] key_id: {key_id[:50] if key_id else 'NONE'}...")
-            if isinstance(counterparty, dict):
-                cp_obj = counterparty.get('counterparty')
-                if hasattr(cp_obj, 'hex'):
-                    print(f"[WALLET VERIFY] counterparty.hex: {cp_obj.hex()}")
-            
-            # 署名検証の核心データ
-            print(f"[WALLET VERIFY] derived_public_key: {pub.hex()}")
-            print(f"[WALLET VERIFY] data_to_verify_length: {len(data)}")
-            print(f"[WALLET VERIFY] data_digest (SHA-256): {to_verify.hex()}")
-            print(f"[WALLET VERIFY] signature_bytes: {signature.hex()}")
-            print(f"[WALLET VERIFY] signature_length: {len(signature)}")
-            
-            # ECDSA署名検証実行
-            print("[WALLET VERIFY] === CALLING pub.verify() ===")
-            valid = pub.verify(signature, to_verify, hasher=lambda m: m)
-            print(f"[WALLET VERIFY] === ECDSA RESULT: {valid} ===")
-            
-            if valid:
-                print("[WALLET VERIFY] ✅ SIGNATURE VERIFICATION SUCCESS!")
-            else:
-                print("[WALLET VERIFY] ❌ SIGNATURE VERIFICATION FAILED!")
-                # 追加デバッグ: 署名形式確認
-                try:
-                    print("[WALLET VERIFY] Signature DER format check...")
-                    from bsv.keys import PublicKey
-                    # 署名の基本検証
-                    print(f"[WALLET VERIFY] Signature first byte: 0x{signature[0]:02x}")
-                    print("[WALLET VERIFY] Expected DER start: 0x30")
-                except Exception as e:
-                    print(f"[WALLET VERIFY] Signature format check error: {e}")
             
             return {"valid": valid}
         except Exception as e:
@@ -308,34 +321,49 @@ class WalletImpl(WalletInterface):
         except Exception as e:
             return {"error": f"create_hmac: {e}"}
 
+    def _extract_hmac_params(self, args: Dict) -> tuple:
+        """Extract HMAC verification parameters from args."""
+        encryption_args = args.get("encryption_args", {})
+        protocol_id = encryption_args.get("protocol_id")
+        key_id = encryption_args.get("key_id")
+        counterparty = encryption_args.get("counterparty")
+        data = args.get("data", b"")
+        hmac_value = args.get("hmac")
+        return encryption_args, protocol_id, key_id, counterparty, data, hmac_value
+
+    def _debug_log_hmac_params(self, encryption_args: dict, cp):
+        """Log HMAC parameters if debug is enabled."""
+        if os.getenv("BSV_DEBUG", "0") == "1":
+            print(f"[DEBUG WalletImpl.verify_hmac] enc_args={encryption_args}")
+            try:
+                cp_pub_dbg = cp.to_public_key(self.public_key)
+                print(f"[DEBUG WalletImpl.verify_hmac] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()}")
+            except Exception as dbg_e:
+                print(f"[DEBUG WalletImpl.verify_hmac] cp normalization error: {dbg_e}")
+
     def verify_hmac(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         try:
-            encryption_args = args.get("encryption_args", {})
-            protocol_id = encryption_args.get("protocol_id")
-            key_id = encryption_args.get("key_id")
-            counterparty = encryption_args.get("counterparty")
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.verify_hmac] enc_args={encryption_args}")
+            # Extract parameters
+            encryption_args, protocol_id, key_id, counterparty, data, hmac_value = self._extract_hmac_params(args)
+            
+            # Validate required fields
             if protocol_id is None or key_id is None:
                 return {"error": "verify_hmac: protocol_id and key_id are required"}
-            if isinstance(protocol_id, dict):
-                protocol = SimpleNamespace(security_level=int(protocol_id.get("securityLevel", 0)), protocol=str(protocol_id.get("protocol", "")))
-            else:
-                protocol = protocol_id
-            cp = self._normalize_counterparty(counterparty)
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                try:
-                    cp_pub_dbg = cp.to_public_key(self.public_key)
-                    print(f"[DEBUG WalletImpl.verify_hmac] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()}")
-                except Exception as dbg_e:
-                    print(f"[DEBUG WalletImpl.verify_hmac] cp normalization error: {dbg_e}")
-            shared_secret = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
-            data = args.get("data", b"")
-            hmac_value = args.get("hmac")
             if hmac_value is None:
                 return {"error": "verify_hmac: hmac is required"}
+            
+            # Normalize protocol and counterparty
+            protocol = self._normalize_protocol(protocol_id) if isinstance(protocol_id, dict) else protocol_id
+            cp = self._normalize_counterparty(counterparty)
+            
+            # Debug logging
+            self._debug_log_hmac_params(encryption_args, cp)
+            
+            # Derive shared secret and verify HMAC
+            shared_secret = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
             expected = hmac.new(shared_secret, data, hashlib.sha256).digest()
             valid = hmac.compare_digest(expected, hmac_value)
+            
             return {"valid": valid}
         except Exception as e:
             return {"error": f"verify_hmac: {e}"}
@@ -557,36 +585,47 @@ class WalletImpl(WalletInterface):
             "action": action,
         }
 
+    def _normalize_locking_script_to_bytes(self, ls_val) -> bytes:
+        """Normalize lockingScript value to bytes."""
+        if isinstance(ls_val, str):
+            try:
+                return bytes.fromhex(ls_val)
+            except Exception:
+                return b""
+        return ls_val or b""
+
+    def _normalize_output_description(self, output_desc) -> str:
+        """Normalize outputDescription (serialize dict to JSON if needed)."""
+        if isinstance(output_desc, dict):
+            import json
+            return json.dumps(output_desc)
+        return output_desc or ""
+
+    def _normalize_output_for_action(self, output: dict, index: int, created_at: int) -> dict:
+        """Normalize a single output for action dictionary."""
+        ls_bytes = self._normalize_locking_script_to_bytes(output.get("lockingScript", b""))
+        output_desc = self._normalize_output_description(output.get("outputDescription", ""))
+        
+        return {
+            "outputIndex": int(index),
+            "satoshis": int(output.get("satoshis", 0)),
+            "lockingScript": ls_bytes,
+            "spendable": True,
+            "outputDescription": output_desc,
+            "basket": output.get("basket", ""),
+            "tags": output.get("tags") or [],
+            "customInstructions": output.get("customInstructions"),
+            "createdAt": created_at,
+        }
+
     def _build_action_dict(self, args, total_out, description, labels, inputs_meta, outputs):
         created_at = int(time.time())
         txid = (b"\x00" * 32).hex()
-        # Normalize outputs' lockingScript to bytes for wire serialization
-        norm_outputs = []
-        for i, o in enumerate(outputs):
-            ls_val = o.get("lockingScript", b"")
-            if isinstance(ls_val, str):
-                try:
-                    ls_bytes = bytes.fromhex(ls_val)
-                except Exception:
-                    ls_bytes = b""
-            else:
-                ls_bytes = ls_val
-            # Serialize outputDescription to JSON if it's a dict
-            output_desc = o.get("outputDescription", "")
-            if isinstance(output_desc, dict):
-                import json
-                output_desc = json.dumps(output_desc)
-            norm_outputs.append({
-                "outputIndex": int(i),
-                "satoshis": int(o.get("satoshis", 0)),
-                "lockingScript": ls_bytes,
-                "spendable": True,
-                "outputDescription": output_desc,
-                "basket": o.get("basket", ""),
-                "tags": o.get("tags") or [],
-                "customInstructions": o.get("customInstructions"),
-                "createdAt": created_at,
-            })
+        
+        # Normalize all outputs
+        norm_outputs = [self._normalize_output_for_action(o, i, created_at) 
+                       for i, o in enumerate(outputs)]
+        
         return {
             "txid": txid,
             "satoshis": total_out,
@@ -1298,69 +1337,93 @@ class WalletImpl(WalletInterface):
         except Exception as e:
             return {"error": f"reveal_specific_key_linkage: {e}"}
 
-    def sign_action(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def _extract_transaction_bytes(self, args: Dict) -> Optional[bytes]:
+        """Extract transaction bytes from args."""
+        if "tx" in args:
+            return args["tx"]
+        elif "signableTransaction" in args and "tx" in args["signableTransaction"]:
+            return args["signableTransaction"]["tx"]
+        return None
+
+    def _parse_transaction(self, tx_bytes: bytes):
+        """Parse transaction from bytes (BEEF or raw format)."""
+        from bsv.transaction import Transaction
+        from bsv.utils import Reader
+        
+        if tx_bytes[:4] == b'\x01\x00\xBE\xEF':  # BEEF magic
+            return Transaction.from_beef(tx_bytes)
+        else:
+            return Transaction.from_reader(Reader(tx_bytes))
+
+    def _get_or_generate_spends(self, ctx: Any, tx, args: Dict, originator: str, spends: Dict) -> tuple[Dict, Optional[str]]:
+        """Get spends from args or auto-generate them."""
+        if spends:
+            return spends, None
+        
+        if hasattr(self, "_prepare_spends"):
+            return self._prepare_spends(ctx, tx, args, originator), None
+        else:
+            return {}, "sign_action: spends missing and _prepare_spends unavailable"
+
+    def _apply_unlocking_scripts(self, tx, spends: Dict) -> Optional[str]:
+        """Apply unlocking scripts from spends to transaction inputs."""
         from bsv.script.script import Script
-        """
-        Sign the provided transaction using the provided spends (unlocking scripts),
-        following the Go/TS flow. Returns the signed transaction and txid.
-        Enhancements:
-        - If spends is not specified, auto-generate using _prepare_spends
-        - Ensure unlockingScript in spends is generated via PushDropUnlocker
-        - Explicitly comment SIGHASH/BIP143/Unlocker branches
-        - Add detailed error info in return value
-        - Optionally return signature bytes and txid as hex for test vector comparison
-        """
+        
+        for idx, input in enumerate(tx.inputs):
+            spend = spends.get(str(idx)) or spends.get(idx) or {}
+            unlocking_script = spend.get("unlockingScript", b"")
+            
+            if unlocking_script and isinstance(unlocking_script, (bytes, bytearray)):
+                if len(unlocking_script) < 2:
+                    return f"sign_action: unlockingScript too short at input {idx}"
+                input.unlocking_script = Script(unlocking_script)
+            else:
+                input.unlocking_script = unlocking_script
+        return None
+
+    def _build_sign_result(self, tx, spends: Dict) -> Dict:
+        """Build result dictionary from signed transaction."""
         import binascii
+        
+        signed_tx_bytes = tx.serialize()
+        txid = tx.txid() if hasattr(tx, "txid") else hashlib.sha256(signed_tx_bytes).hexdigest()
+        
+        result = {
+            "tx": signed_tx_bytes,
+            "tx_hex": binascii.hexlify(signed_tx_bytes).decode(),
+            "txid": txid,
+            "txid_hex": txid if isinstance(txid, str) else binascii.hexlify(txid).decode(),
+            "spends": spends,
+        }
+        self._last_sign_action_result = result
+        return result
+
+    def sign_action(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+        """
+        Sign the provided transaction using the provided spends (unlocking scripts).
+        Returns the signed transaction and txid.
+        """
         try:
-            # Extract signable transaction bytes
-            tx_bytes = None
-            if "tx" in args:
-                tx_bytes = args["tx"]
-            elif "signableTransaction" in args and "tx" in args["signableTransaction"]:
-                tx_bytes = args["signableTransaction"]["tx"]
+            # Extract and parse transaction
+            tx_bytes = self._extract_transaction_bytes(args)
             if not tx_bytes:
                 return {"error": "sign_action: missing tx bytes"}
-            from bsv.transaction import Transaction
-            from bsv.utils import Reader
-            # Support both BEEF and raw tx formats
-            if tx_bytes[:4] == b'\x01\x00\xBE\xEF':  # BEEF magic (little-endian)
-                tx = Transaction.from_beef(tx_bytes)
-            else:
-                tx = Transaction.from_reader(Reader(tx_bytes))
-
-            spends = args.get("spends") or {}
-            # If spends is not specified, auto-generate using _prepare_spends
-            if not spends:
-                if hasattr(self, "_prepare_spends"):
-                    spends = self._prepare_spends(ctx, tx, args, originator)
-                else:
-                    return {"error": "sign_action: spends missing and _prepare_spends unavailable"}
-            # Set unlockingScript for each input
-            for idx, input in enumerate(tx.inputs):
-                spend = spends.get(str(idx)) or spends.get(idx) or {}
-                unlocking_script = spend.get("unlockingScript", b"")
-                # Check if unlockingScript is generated via Unlocker (type, length, SIGHASH flag)
-                if unlocking_script and isinstance(unlocking_script, (bytes, bytearray)):
-                    if len(unlocking_script) < 2:
-                        return {"error": f"sign_action: unlockingScript too short at input {idx}"}
-                    # SIGHASH flag is last byte (validated but not used here)
-                    _ = unlocking_script[-1]  # SIGHASH flag for reference
-                    input.unlocking_script = Script(unlocking_script)  # bytesからScriptオブジェクトを作成
-                else:
-                    input.unlocking_script = unlocking_script  # 既にScriptオブジェクトの場合
-            # Serialize signed transaction
-            signed_tx_bytes = tx.serialize()
-            txid = tx.txid() if hasattr(tx, "txid") else hashlib.sha256(signed_tx_bytes).hexdigest()
-            # Optionally return hex for test vector comparison
-            result = {
-                "tx": signed_tx_bytes,
-                "tx_hex": binascii.hexlify(signed_tx_bytes).decode(),
-                "txid": txid,
-                "txid_hex": txid if isinstance(txid, str) else binascii.hexlify(txid).decode(),
-                "spends": spends,
-            }
-            self._last_sign_action_result = result  # Store for debugging
-            return result
+            
+            tx = self._parse_transaction(tx_bytes)
+            
+            # Get or generate spends
+            spends, error = self._get_or_generate_spends(ctx, tx, args, originator, args.get("spends") or {})
+            if error:
+                return {"error": error}
+            
+            # Apply unlocking scripts
+            error = self._apply_unlocking_scripts(tx, spends)
+            if error:
+                return {"error": error}
+            
+            # Build and return result
+            return self._build_sign_result(tx, spends)
+            
         except Exception as e:
             import traceback
             tb = traceback.format_exc()
@@ -1368,52 +1431,66 @@ class WalletImpl(WalletInterface):
     def wait_for_authentication(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         return {"authenticated": True}
 
-    def _get_utxos_from_woc(self, address: str, api_key: Optional[str] = None, timeout: int = 10) -> list:
-        """
-        Fetch UTXOs for the given address from Whatsonchain API and convert to SDK outputs format.
-        API key is loaded from the WOC_API_KEY environment variable (set via .env file).
-        Network is determined from the private key's network setting (testnet or mainnet).
-        """
-        import requests
-        # Load API key via configured precedence (TS parity): explicit -> instance -> env
-        api_key = api_key or self._woc_api_key or os.environ.get("WOC_API_KEY") or ""
-        
-        # Determine network from private key
-        network = "main"
+    def _determine_woc_network(self) -> str:
+        """Determine WOC network (main/test) from private key."""
         if hasattr(self, 'private_key') and hasattr(self.private_key, 'network'):
             from bsv.constants import Network
             if self.private_key.network == Network.TESTNET:
-                network = "test"
+                return "test"
+        return "main"
+
+    def _build_woc_headers(self, api_key: str) -> dict:
+        """Build headers for WOC API request."""
+        if not api_key:
+            return {}
+        return {
+            "Authorization": api_key,
+            "woc-api-key": api_key
+        }
+
+    def _convert_woc_utxo_to_output(self, utxo_data: dict, address: str) -> dict:
+        """Convert WOC UTXO format to SDK output format."""
+        # Derive locking script as fallback
+        try:
+            derived_ls = P2PKH().lock(address)
+            derived_ls_hex = derived_ls.hex()
+        except Exception:
+            derived_ls_hex = ""
         
+        return {
+            "outputIndex": int(utxo_data.get("tx_pos", utxo_data.get("vout", 0))),
+            "satoshis": int(utxo_data.get("value", 0)),
+            "lockingScript": (utxo_data.get("script") or derived_ls_hex or ""),
+            "spendable": True,
+            "outputDescription": "WOC UTXO",
+            "basket": address,
+            "tags": [],
+            "customInstructions": None,
+            "txid": utxo_data.get("tx_hash", utxo_data.get("txid", "")),
+        }
+
+    def _get_utxos_from_woc(self, address: str, api_key: Optional[str] = None, timeout: int = 10) -> list:
+        """
+        Fetch UTXOs for the given address from Whatsonchain API and convert to SDK outputs format.
+        """
+        import requests
+        
+        # Resolve API key
+        api_key = api_key or self._woc_api_key or os.environ.get("WOC_API_KEY") or ""
+        
+        # Build request
+        network = self._determine_woc_network()
         url = f"https://api.whatsonchain.com/v1/bsv/{network}/address/{address}/unspent"
-        headers = {}
-        if api_key:
-            headers["Authorization"] = api_key
-            headers["woc-api-key"] = api_key
+        headers = self._build_woc_headers(api_key)
+        
         try:
             resp = requests.get(url, headers=headers, timeout=timeout)
             resp.raise_for_status()
             data = resp.json()
-            utxos = []
-            for u in data:
-                # WOC unspent API does not include the locking script; derive P2PKH from address as fallback
-                try:
-                    derived_ls = P2PKH().lock(address)  # Script object
-                    derived_ls_hex = derived_ls.hex()  # Script objectからHEX文字列を取得
-                except Exception:
-                    derived_ls_hex = ""
-                utxos.append({
-                    "outputIndex": int(u.get("tx_pos", u.get("vout", 0))),
-                    "satoshis": int(u.get("value", 0)),
-                    "lockingScript": (u.get("script") or derived_ls_hex or ""),
-                    "spendable": True,
-                    "outputDescription": "WOC UTXO",
-                    "basket": address,
-                    "tags": [],
-                    "customInstructions": None,
-                    "txid": u.get("tx_hash", u.get("txid", "")),
-                })
-            return utxos
+            
+            # Convert each UTXO
+            return [self._convert_woc_utxo_to_output(u, address) for u in data]
+            
         except Exception as e:
             return [{"error": f"WOC UTXO fetch failed: {e}"}]
 
@@ -1584,39 +1661,62 @@ class WalletImpl(WalletInterface):
         except Exception as _dbg_e:
             print(f"[TRACE] [sign_check] prevout/pubkey hash check skipped: {_dbg_e}")
 
+    def _read_push_from_script(self, buf: bytes, pos: int) -> tuple[bytes, int]:
+        """Read a single push operation from script bytes."""
+        if pos >= len(buf):
+            raise ValueError("out of bounds")
+        
+        op = buf[pos]
+        if op <= 75:
+            ln = op
+            pos += 1
+        elif op == 76:  # OP_PUSHDATA1
+            ln = buf[pos+1]
+            pos += 2
+        elif op == 77:  # OP_PUSHDATA2
+            ln = int.from_bytes(buf[pos+1:pos+3], 'little')
+            pos += 3
+        elif op == 78:  # OP_PUSHDATA4
+            ln = int.from_bytes(buf[pos+1:pos+5], 'little')
+            pos += 5
+        else:
+            raise ValueError("unexpected push opcode")
+        
+        data = buf[pos:pos+ln]
+        if len(data) != ln:
+            raise ValueError("incomplete push data")
+        return data, pos + ln
+
+    def _validate_unlocking_script_components(self, sig: bytes, pub: bytes, private_key: PrivateKey) -> dict:
+        """Validate components of unlocking script."""
+        sighash_flag = sig[-1] if len(sig) > 0 else -1
+        is_flag_ok = (sighash_flag == 0x41)
+        is_pub_len_ok = (len(pub) == 33)
+        pub_equals = (pub.hex() == private_key.public_key().hex())
+        
+        return {
+            "sighash_flag": sighash_flag,
+            "is_flag_ok": is_flag_ok,
+            "is_pub_len_ok": is_pub_len_ok,
+            "pub_equals": pub_equals
+        }
+
     def _check_unlocking_sig(self, unlocking_script_bytes: bytes, private_key: PrivateKey) -> None:
         """Debug-print validation of unlocking script structure and SIGHASH flag.
 
         Expects two pushes: <DER+flag 0x41> <33-byte pubkey>.
         """
         try:
-            buf = unlocking_script_bytes
-            p = 0
-            def read_push(pos: int):
-                if pos >= len(buf):
-                    raise ValueError("out of bounds")
-                op = buf[pos]
-                if op <= 75:
-                    ln = op; pos += 1
-                elif op == 76:
-                    ln = buf[pos+1]; pos += 2
-                elif op == 77:
-                    ln = int.from_bytes(buf[pos+1:pos+3], 'little'); pos += 3
-                elif op == 78:
-                    ln = int.from_bytes(buf[pos+1:pos+5], 'little'); pos += 5
-                else:
-                    raise ValueError("unexpected push opcode")
-                data = buf[pos:pos+ln]
-                if len(data) != ln:
-                    raise ValueError("incomplete push data")
-                return data, pos + ln
-            sig, p = read_push(p)
-            pub, p = read_push(p)
-            sighash_flag = sig[-1] if len(sig) > 0 else -1
-            is_flag_ok = (sighash_flag == 0x41)
-            is_pub_len_ok = (len(pub) == 33)
-            pub_equals = (pub.hex() == private_key.public_key().hex())
-            print(f"[TRACE] [sign_check] pushes_ok={is_pub_len_ok} sighash=0x{sighash_flag:02x} ok={is_flag_ok} pub_matches_priv={pub_equals}")
+            # Read two pushes: signature and public key
+            sig, pos = self._read_push_from_script(unlocking_script_bytes, 0)
+            pub, pos = self._read_push_from_script(unlocking_script_bytes, pos)
+            
+            # Validate components
+            validation = self._validate_unlocking_script_components(sig, pub, private_key)
+            
+            print(f"[TRACE] [sign_check] pushes_ok={validation['is_pub_len_ok']} "
+                  f"sighash=0x{validation['sighash_flag']:02x} ok={validation['is_flag_ok']} "
+                  f"pub_matches_priv={validation['pub_equals']}")
         except Exception as _dbg_e2:
             print(f"[TRACE] [sign_check] scriptSig structure check skipped: {_dbg_e2}")
         

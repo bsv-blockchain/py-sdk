@@ -6,6 +6,8 @@ from bsv.keys import PrivateKey
 
 # Constants for skip messages
 SKIP_VALIDATE_ADDRESS = "validate_address not available"
+SKIP_DECODE_WIF = "decode_wif not available"
+SKIP_DECODE_ADDRESS = "decode_address not available"
 
 
 # ========================================================================
@@ -143,7 +145,7 @@ def test_decode_wif_compressed():
         assert compressed is True
         assert len(private_key) == 32
     except ImportError:
-        pytest.skip("decode_wif not available")
+        pytest.skip(SKIP_DECODE_WIF)
 
 
 def test_decode_wif_uncompressed():
@@ -161,7 +163,7 @@ def test_decode_wif_uncompressed():
         assert compressed is False
         assert len(private_key) == 32
     except ImportError:
-        pytest.skip("decode_wif not available")
+        pytest.skip(SKIP_DECODE_WIF)
 
 
 def test_decode_wif_invalid_prefix():
@@ -187,7 +189,7 @@ def test_decode_wif_invalid_prefix():
         with pytest.raises(ValueError, match="unknown WIF prefix"):
             decode_wif(invalid_wif)
     except ImportError:
-        pytest.skip("decode_wif not available")
+        pytest.skip(SKIP_DECODE_WIF)
 
 
 def test_decode_wif_invalid_format():
@@ -199,7 +201,7 @@ def test_decode_wif_invalid_format():
         with pytest.raises(Exception):  # Could be ValueError or other
             decode_wif(wif)
     except ImportError:
-        pytest.skip("decode_wif not available")
+        pytest.skip(SKIP_DECODE_WIF)
 
 
 # ========================================================================
@@ -214,7 +216,7 @@ def test_decode_address_invalid_format():
         with pytest.raises(ValueError, match="invalid P2PKH address"):
             decode_address("invalid_address")
     except ImportError:
-        pytest.skip("decode_address not available")
+        pytest.skip(SKIP_DECODE_ADDRESS)
 
 
 def test_decode_address_invalid_checksum():
@@ -232,7 +234,7 @@ def test_decode_address_invalid_checksum():
         with pytest.raises(ValueError):  # base58check_decode will raise ValueError for bad checksum
             decode_address(invalid_address)
     except ImportError:
-        pytest.skip("decode_address not available")
+        pytest.skip(SKIP_DECODE_ADDRESS)
 
 
 def test_decode_address_unknown_network():
@@ -243,7 +245,7 @@ def test_decode_address_unknown_network():
         # But let's try with a manipulated valid address
         pytest.skip("Hard to construct test case for unknown network prefix")
     except ImportError:
-        pytest.skip("decode_address not available")
+        pytest.skip(SKIP_DECODE_ADDRESS)
 
 
 # ========================================================================
