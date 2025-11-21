@@ -9,6 +9,7 @@ import threading
 import base64
 from unittest.mock import Mock, patch, MagicMock, call
 from requests.exceptions import RetryError
+from urllib.parse import urlparse
 from bsv.auth.clients.auth_fetch import (
     SimplifiedFetchRequestOptions,
     AuthPeer,
@@ -545,7 +546,8 @@ class TestAuthFetchCompleteFlow:
                                 pass  # Expected when no response is provided
                 
                 # Verify complete flow
-                assert "https://api.example.com" in auth_fetch.peers  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
+                # Check that at least one peer has host "api.example.com"
+                assert any(urlparse(k).hostname == "api.example.com" for k in auth_fetch.peers)
                 mock_peer.listen_for_certificates_received.assert_called_once()
                 mock_peer.listen_for_general_messages.assert_called_once()
                 mock_peer.to_peer.assert_called_once()
