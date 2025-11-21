@@ -1,15 +1,15 @@
 """
 Tests for LivePolicy fee model.
 
-Ported from TypeScript SDK.
+Aligned with TypeScript SDK design where only compute_fee() is public API.
 """
 
 import time
-import aiohttp
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 from bsv.fee_models.live_policy import LivePolicy
 from bsv.transaction import Transaction
+from bsv.transaction_output import TransactionOutput
 from bsv.script.script import Script
 
 
@@ -35,78 +35,144 @@ class TestLivePolicy:
     @pytest.mark.asyncio
     async def test_compute_fee_with_cached_rate(self):
         """Test compute_fee uses cached rate when available."""
-        policy = LivePolicy(60000)  # 1 minute cache
-        policy.cached_rate = 150  # Set cached rate
-        policy.cache_timestamp = time.time() * 1000  # Set recent timestamp
+        policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=100)  # 1 minute cache
 
-        # Create a simple transaction
-        tx = Transaction()
-        tx.version = 1
-        tx.lock_time = 0
+        # Mock the HTTP client to return a valid response
+        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
+            mock_response = MagicMock()
+            mock_response.json_data = {
+                'policy': {
+                    'miningFee': {
+                        'satoshis': 150,
+                        'bytes': 1000
+                    }
+                }
+            }
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value = mock_http
 
-        # Mock the parent compute_fee method
-        with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=1000) as mock_compute:
-            result = await policy.compute_fee(tx)
-
-            # Should use cached rate
-            assert policy.value == 150
-            mock_compute.assert_called_once_with(tx)
-            assert result == 1000
-
-    @pytest.mark.asyncio
-    async def test_fetch_fee_rate_fallback_to_default(self):
-        """Test that fetch_fee_rate falls back to default when API fails."""
-        policy = LivePolicy()
-
-        # Mock aiohttp to always fail
-        with patch('aiohttp.ClientSession', side_effect=Exception("Network error")):
-            rate = await policy.fetch_fee_rate()
-
-            # Should fall back to default rate
-            assert rate == 100
+            # Create a simple transaction with a mock size
+            tx = Transaction()
+            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=1000):
+                result = await policy.compute_fee(tx)
+                assert result == 1000
 
     @pytest.mark.asyncio
-    async def test_fetch_fee_rate_uses_cache(self):
-        """Test that cached rate is returned when available and not expired."""
-        policy = LivePolicy()
-        policy.cached_rate = 200
-        policy.cache_timestamp = time.time() * 1000  # Recent timestamp
+    async def test_compute_fee_fallback_to_default(self):
+        """Test that compute_fee falls back to default rate when API fails."""
+        policy = LivePolicy(fallback_sat_per_kb=100)
 
-        # Should return cached rate without making API call
-        rate = await policy.fetch_fee_rate()
-        assert rate == 200
+        # Mock the HTTP client to fail
+        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(side_effect=Exception("Network error"))
+            mock_client.return_value = mock_http
+
+            # Create a simple transaction
+            tx = Transaction()
+            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=500) as mock_compute:
+                result = await policy.compute_fee(tx)
+                # Should use fallback rate
+                assert policy.value == 100
+                assert result == 500
+
+    @pytest.mark.asyncio
+    async def test_compute_fee_uses_cache(self):
+        """Test that compute_fee uses cached rate when available and not expired."""
+        policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=100)
+
+        # First call to populate cache
+        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
+            mock_response = MagicMock()
+            mock_response.json_data = {
+                'policy': {
+                    'miningFee': {
+                        'satoshis': 200,
+                        'bytes': 1000
+                    }
+                }
+            }
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value = mock_http
+
+            # Create transaction
+            tx = Transaction()
+            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=1000):
+                # First call
+                await policy.compute_fee(tx)
+                assert policy.value == 200
+
+                # Second call should use cache (no HTTP call should be made)
+                mock_http.get.reset_mock()
+                await policy.compute_fee(tx)
+                mock_http.get.assert_not_called()
+                assert policy.value == 200
 
     @pytest.mark.asyncio
     async def test_compute_fee_updates_rate(self):
         """Test that compute_fee updates the rate property."""
-        policy = LivePolicy()
-        policy.cached_rate = 150  # Set cached rate
-        policy.cache_timestamp = time.time() * 1000  # Ensure cache is not expired
+        policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=100)
 
-        # Create a simple transaction
-        tx = Transaction()
-        tx.version = 1
-        tx.lock_time = 0
+        # Mock HTTP client to return rate
+        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
+            mock_response = MagicMock()
+            mock_response.json_data = {
+                'policy': {
+                    'miningFee': {
+                        'satoshis': 150,
+                        'bytes': 1000
+                    }
+                }
+            }
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value = mock_http
 
-        # Mock the parent compute_fee method
-        with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=500) as mock_compute:
-            result = await policy.compute_fee(tx)
+            # Create transaction
+            tx = Transaction()
+            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=500) as mock_compute:
+                result = await policy.compute_fee(tx)
 
-            # Should use cached rate
-            assert policy.value == 150
-            mock_compute.assert_called_once_with(tx)
-            assert result == 500
+                # Should update the value property with fetched rate
+                assert policy.value == 150
+                mock_compute.assert_called_once_with(tx)
+                assert result == 500
 
-    def test_cache_expiry(self):
-        """Test cache expiry logic."""
-        policy = LivePolicy(1000)  # 1 second cache
+    @pytest.mark.asyncio
+    async def test_cache_expiry(self):
+        """Test that cache expires after TTL."""
+        policy = LivePolicy(cache_ttl_ms=100, fallback_sat_per_kb=100)  # 100ms cache
 
-        # Set cached values
-        policy.cached_rate = 150
-        policy.cache_timestamp = 1000  # Old timestamp
+        # Mock HTTP client
+        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
+            mock_response = MagicMock()
+            mock_response.json_data = {
+                'policy': {
+                    'miningFee': {
+                        'satoshis': 150,
+                        'bytes': 1000
+                    }
+                }
+            }
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value = mock_http
 
-        # With current time much later, cache should be considered expired
-        current_time = time.time() * 1000  # Convert to milliseconds
+            # Create transaction
+            tx = Transaction()
+            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=500):
+                # First call to populate cache
+                await policy.compute_fee(tx)
+                assert policy.value == 150
 
-        # Cache should be expired
-        assert (current_time - policy.cache_timestamp) >= policy.cache_validity_ms
+                # Wait for cache to expire
+                time.sleep(0.15)  # 150ms
+
+                # Second call should fetch again (cache expired)
+                mock_http.get.reset_mock()
+                mock_response.json_data['policy']['miningFee']['satoshis'] = 200  # Different rate
+                await policy.compute_fee(tx)
+                mock_http.get.assert_called_once()  # Should have made a new HTTP call
+                assert policy.value == 200

@@ -4,6 +4,19 @@ from bsv.constants import OpCode, OPCODE_VALUE_NAME_DICT
 # Import from utils package that should have these functions available
 from bsv.utils import encode_pushdata, unsigned_to_varint, Reader
 
+# BRC-106 compliance: Opcode aliases for parsing
+# Build a comprehensive mapping of all opcode names (including aliases) to their byte values
+OPCODE_ALIASES = {
+    'OP_FALSE': b'\x00',
+    'OP_0': b'\x00',
+    'OP_TRUE': b'\x51',
+    'OP_1': b'\x51'
+}
+
+# Build name->value mapping for all OpCodes
+OPCODE_NAME_VALUE_DICT = {item.name: item.value for item in OpCode}
+# Merge with aliases
+OPCODE_NAME_VALUE_DICT.update(OPCODE_ALIASES)
 
 class ScriptChunk:
     """
@@ -139,31 +152,35 @@ class Script:
     @classmethod
     def from_asm(cls, asm: str) -> 'Script':
         chunks: [ScriptChunk] = []
+        if not asm:  # Handle empty string
+            return Script.from_chunks(chunks)
         tokens = asm.split(' ')
         i = 0
         while i < len(tokens):
             token = tokens[i]
-            token = 'OP_0' if token == 'OP_FALSE' else token
-            opcode: Optional[str] = None
-            op_value: Optional[bytes] = None
-            if token.startswith('OP_') and token in OPCODE_VALUE_NAME_DICT.values():
-                opcode = token
-                op_value = OpCode[opcode].value
-
-            if token == '0':
-                op_value = b'\x00'
-                chunks.append(ScriptChunk(op_value))
+            opcode_value: Optional[bytes] = None
+            # BRC-106: Check if token is a recognized opcode (including aliases)
+            if token in OPCODE_NAME_VALUE_DICT:
+                opcode_value = OPCODE_NAME_VALUE_DICT[token]
+                chunks.append(ScriptChunk(opcode_value))
+                i += 1
+            elif token == '0':
+                # Numeric literal 0
+                opcode_value = b'\x00'
+                chunks.append(ScriptChunk(opcode_value))
                 i += 1
             elif token == '-1':
-                op_value = OpCode.OP_1NEGATE
-                chunks.append(ScriptChunk(op_value))
+                # Numeric literal -1
+                opcode_value = OpCode.OP_1NEGATE
+                chunks.append(ScriptChunk(opcode_value))
                 i += 1
-            elif opcode is None:
-                hex_string = tokens[i]
+            else:
+                # Assume it's hex data to push
+                hex_string = token
                 if len(hex_string) % 2 != 0:
                     hex_string = '0' + hex_string
                 hex_bytes = bytes.fromhex(hex_string)
-                if hex_bytes.hex() != hex_string:
+                if hex_bytes.hex() != hex_string.lower():
                     raise ValueError('invalid hex string in script')
                 hex_len = len(hex_bytes)
                 if 0 <= hex_len < int.from_bytes(OpCode.OP_PUSHDATA1, 'big'):
@@ -176,14 +193,6 @@ class Script:
                     op_value = OpCode.OP_PUSHDATA4
                 chunks.append(ScriptChunk(op_value, hex_bytes))
                 i = i + 1
-            elif op_value == OpCode.OP_PUSHDATA1 \
-                    or op_value == OpCode.OP_PUSHDATA2 \
-                    or op_value == OpCode.OP_PUSHDATA4:
-                chunks.append(ScriptChunk(op_value, bytes.fromhex(tokens[i + 2])))
-                i += 3
-            else:
-                chunks.append(ScriptChunk(op_value))
-                i += 1
         return Script.from_chunks(chunks)
 
     def to_asm(self) -> str:

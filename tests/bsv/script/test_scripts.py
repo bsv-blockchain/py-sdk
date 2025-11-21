@@ -220,18 +220,18 @@ def test_is_push_only():
 
 
 def test_to_asm():
-    assert Script('000301020300').to_asm() == 'OP_0 010203 OP_0'
+    assert Script('000301020300').to_asm() == 'OP_FALSE 010203 OP_FALSE'
 
     asm = 'OP_DUP OP_HASH160 f4c03610e60ad15100929cc23da2f3a799af1725 OP_EQUALVERIFY OP_CHECKSIG'
     assert Script('76a914f4c03610e60ad15100929cc23da2f3a799af172588ac').to_asm() == asm
 
 
 def test_from_asm():
-    assert Script.from_asm('OP_0 3 010203 OP_0').to_asm() == 'OP_0 03 010203 OP_0'
+    assert Script.from_asm('OP_0 3 010203 OP_0').to_asm() == 'OP_FALSE 03 010203 OP_FALSE'
 
     asms = [
         '',
-        'OP_0 010203 OP_0',
+        'OP_FALSE 010203 OP_FALSE',
         'OP_SHA256 8cc17e2a2b10e1da145488458a6edec4a1fdb1921c2d5ccbc96aa0ed31b4d5f8 OP_EQUALVERIFY',
     ]
     for asm in asms:
@@ -247,7 +247,7 @@ def test_from_asm():
         '0',
     ]
     for asm in asms:
-        assert Script.from_asm(asm).to_asm() == 'OP_0'
+        assert Script.from_asm(asm).to_asm() == 'OP_FALSE'
 
     asms = [
         'OP_1NEGATE',

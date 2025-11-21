@@ -1,7 +1,6 @@
-import unittest
-from unittest.mock import MagicMock, patch
-from typing import Union, List
-import asyncio
+import pytest
+from unittest.mock import MagicMock
+from typing import Union
 
 
 # テスト対象のクラスとメソッドをモックで再現
@@ -36,7 +35,7 @@ class TransactionBroadcaster:
     def request_headers(self):
         return {"Content-Type": "application/json"}
 
-    def broadcast(self, tx: 'Transaction') -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, tx: 'Transaction') -> Union[BroadcastResponse, BroadcastFailure]:
         # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
         request_options = {
@@ -50,50 +49,54 @@ class TransactionBroadcaster:
 
 
 # ユニットテスト
-class TestTransactionBroadcaster(unittest.TestCase):
-    def setUp(self):
-        self.broadcaster = TransactionBroadcaster()
+@pytest.fixture
+def broadcaster():
+    return TransactionBroadcaster()
 
-    def test_all_inputs_have_source_transaction(self):
-        # すべての入力にsource_transactionがある場合
-        inputs = [
-            Input(source_transaction="tx1"),
-            Input(source_transaction="tx2"),
-            Input(source_transaction="tx3")
-        ]
-        tx = Transaction(inputs=inputs)
-        result = self.broadcaster.broadcast(tx)
 
-        # EFフォーマットが使われていることを確認
-        self.assertEqual(result["data"]["rawTx"], "ef_formatted_hex_data")
+@pytest.mark.asyncio
+async def test_all_inputs_have_source_transaction(broadcaster):
+    # すべての入力にsource_transactionがある場合
+    inputs = [
+        Input(source_transaction="tx1"),
+        Input(source_transaction="tx2"),
+        Input(source_transaction="tx3")
+    ]
+    tx = Transaction(inputs=inputs)
 
-    def test_some_inputs_missing_source_transaction(self):
-        # 一部の入力にsource_transactionがない場合
-        inputs = [
-            Input(source_transaction="tx1"),
-            Input(source_transaction=None),  # source_transactionがない
-            Input(source_transaction="tx3")
-        ]
-        tx = Transaction(inputs=inputs)
-        
-        result = self.broadcaster.broadcast(tx)
+    result = await broadcaster.broadcast(tx)
 
-        # 通常のhexフォーマットが使われていることを確認
-        self.assertEqual(result["data"]["rawTx"], "normal_hex_data")
+    # EFフォーマットが使われていることを確認
+    assert result["data"]["rawTx"] == "ef_formatted_hex_data"
 
-    def test_no_inputs_have_source_transaction(self):
-        # すべての入力にsource_transactionがない場合
-        inputs = [
-            Input(source_transaction=None),
-            Input(source_transaction=None),
-            Input(source_transaction=None)
-        ]
-        tx = Transaction(inputs=inputs)
 
-        result = self.broadcaster.broadcast(tx)
+@pytest.mark.asyncio
+async def test_some_inputs_missing_source_transaction(broadcaster):
+    # 一部の入力にsource_transactionがない場合
+    inputs = [
+        Input(source_transaction="tx1"),
+        Input(source_transaction=None),  # source_transactionがない
+        Input(source_transaction="tx3")
+    ]
+    tx = Transaction(inputs=inputs)
 
-        # 通常のhexフォーマットが使われていることを確認
-        self.assertEqual(result["data"]["rawTx"], "normal_hex_data")
+    result = await broadcaster.broadcast(tx)
 
-if __name__ == '__main__':
-    unittest.main()
+    # 通常のhexフォーマットが使われていることを確認
+    assert result["data"]["rawTx"] == "normal_hex_data"
+
+
+@pytest.mark.asyncio
+async def test_no_inputs_have_source_transaction(broadcaster):
+    # すべての入力にsource_transactionがない場合
+    inputs = [
+        Input(source_transaction=None),
+        Input(source_transaction=None),
+        Input(source_transaction=None)
+    ]
+    tx = Transaction(inputs=inputs)
+
+    result = await broadcaster.broadcast(tx)
+
+    # 通常のhexフォーマットが使われていることを確認
+    assert result["data"]["rawTx"] == "normal_hex_data"

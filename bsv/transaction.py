@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import math
 from contextlib import suppress
 from typing import List, Optional, Union, Dict, Any
@@ -6,7 +8,7 @@ from .broadcaster import Broadcaster, BroadcastResponse
 from .broadcasters import default_broadcaster
 from .chaintracker import ChainTracker
 from .chaintrackers import default_chain_tracker
-from .fee_models import SatoshisPerKilobyte
+from .fee_models import LivePolicy
 from .constants import (
     TRANSACTION_VERSION,
     TRANSACTION_LOCKTIME,
@@ -173,61 +175,89 @@ class Transaction:
 
     estimated_size = estimated_byte_length
 
+    # Private helper method for handling asynchronous fee resolution and application
+    async def _resolve_and_apply_fee(self, fee_estimate, change_distribution):
+        """
+        A helper method to resolve and apply the transaction fee asynchronously.
+
+        :param fee_estimate: An awaitable object that resolves to the estimated fee
+        :param change_distribution: The method of distributing change ('equal' or 'random')
+        :return: The resolved fee value (int) or None in case of an error
+        """
+        try:
+            # Resolve the fee asynchronously
+            resolved_fee = await fee_estimate
+            # Apply the resolved fee to the transaction
+            self._apply_fee_amount(resolved_fee, change_distribution)
+            return resolved_fee
+        except Exception as e:
+            # Handle any errors and return None on failure
+            return None
+
     def fee(self, model_or_fee=None, change_distribution='equal'):
         """
-        Computes the fee for the transaction and adjusts the change outputs accordingly.
-        
-        :param model_or_fee: Fee model or fee amount. Defaults to `SatoshisPerKilobyte` with value 10 if not provided.
-        :param change_distribution: Method of change distribution ('equal' or 'random'). Defaults to 'equal'.
+        Computes the transaction fee and adjusts the change outputs accordingly.
+        This method can be called synchronously, even if it internally uses asynchronous operations.
+
+        :param model_or_fee: A fee model or a fee amount. If not provided, it defaults to an instance
+            of `LivePolicy` that fetches the latest mining fees.
+        :param change_distribution: Method of distributing change ('equal' or 'random'). Defaults to 'equal'.
         """
-        fee = self._calculate_fee(model_or_fee)
-        change = self._calculate_available_change(fee)
-        change_count = self._count_change_outputs()
-        
-        if change <= change_count:
-            self.outputs = [out for out in self.outputs if not out.change]
-            return
-        
-        self._distribute_change(change, change_count, change_distribution)
-
-    def _calculate_fee(self, model_or_fee):
-        """Calculate the transaction fee."""
         if model_or_fee is None:
-            model_or_fee = SatoshisPerKilobyte(int(TRANSACTION_FEE_RATE))
-        
-        if isinstance(model_or_fee, int):
-            return model_or_fee
-        return model_or_fee.compute_fee(self)
+            # Retrieve the default fee model
+            model_or_fee = LivePolicy.get_instance(
+                fallback_sat_per_kb=int(TRANSACTION_FEE_RATE)
+            )
 
-    def _calculate_available_change(self, fee):
-        """Calculate available change after fee and non-change outputs."""
+        # If the fee is provided as a fixed value (synchronous)
+        if isinstance(model_or_fee, int):
+            self._apply_fee_amount(model_or_fee, change_distribution)
+            return model_or_fee
+
+        # If the fee estimation requires asynchronous computation
+        fee_estimate = model_or_fee.compute_fee(self)
+
+        if inspect.isawaitable(fee_estimate):
+            # Execute the asynchronous task synchronously and get the result
+            resolved_fee = asyncio.run(self._resolve_and_apply_fee(fee_estimate, change_distribution))
+            return resolved_fee
+
+        # Apply the fee directly if it is computed synchronously
+        self._apply_fee_amount(fee_estimate, change_distribution)
+        return fee_estimate
+
+    def _apply_fee_amount(self, fee: int, change_distribution: str):
         change = 0
         for tx_in in self.inputs:
             if not tx_in.source_transaction:
                 raise ValueError('Source transactions are required for all inputs during fee computation')
             change += tx_in.source_transaction.outputs[tx_in.source_output_index].satoshis
-        
+
         change -= fee
         
+        change_count = 0
         for out in self.outputs:
             if not out.change:
                 change -= out.satoshis
+            else:
+                change_count += 1
         
-        return change
-
-    def _count_change_outputs(self):
-        """Count the number of change outputs."""
-        return sum(1 for out in self.outputs if out.change)
-
-    def _distribute_change(self, change, change_count, distribution='equal'):
-        """Distribute change among change outputs."""
-        if distribution == 'random':
+        if change <= change_count:
+            # Not enough change to distribute among the change outputs.
+            # Remove all change outputs and leave the extra for the miners.
+            self.outputs = [out for out in self.outputs if not out.change]
+            return
+        
+        # Distribute change among change outputs
+        if change_distribution == 'random':
+            # TODO: Implement random distribution
             raise NotImplementedError('Random change distribution is not yet implemented')
-        elif distribution == 'equal':
+        elif change_distribution == 'equal':
             per_output = change // change_count
             for out in self.outputs:
                 if out.change:
                     out.satoshis = per_output
+        return None
 
     async def broadcast(
             self,

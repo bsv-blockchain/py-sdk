@@ -6,6 +6,4 @@ and reduce side effects. Import submodules explicitly where needed, e.g.:
     from bsv.auth.peer import Peer
 """
 
-__version__ = '1.0.8'
-
-# Optionally expose convenient factories later if needed.
+__version__ = '1.0.10'

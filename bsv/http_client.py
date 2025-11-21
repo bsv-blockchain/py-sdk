@@ -19,15 +19,27 @@ class HttpResponse:
     def json(self):
         return self._json_data
 
+    @property
+    def json_data(self):
+        return self._json_data
+
 
 class DefaultHttpClient(HttpClient):
     async def fetch(self, url: str, options: dict) -> HttpResponse:
+        timeout_value = options.get("timeout")
+        aiohttp_timeout = (
+            aiohttp.ClientTimeout(total=timeout_value)
+            if timeout_value is not None
+            else None
+        )
+
         async with aiohttp.ClientSession() as session:
             async with session.request(
                 method=options["method"],
                 url=url,
                 headers=options.get("headers", {}),
                 json=options.get("data", None),
+                timeout=aiohttp_timeout,
             ) as response:
                 try:
                     json_data = await response.json()
@@ -44,6 +56,34 @@ class DefaultHttpClient(HttpClient):
                         status_code=response.status,
                         json_data={},
                     )
+
+    async def get(
+        self,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None,
+    ) -> HttpResponse:
+        options = {
+            "method": "GET",
+            "headers": headers or {},
+            "timeout": timeout,
+        }
+        return await self.fetch(url, options)
+
+    async def post(
+        self,
+        url: str,
+        data: Optional[dict] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None,
+    ) -> HttpResponse:
+        options = {
+            "method": "POST",
+            "headers": headers or {},
+            "data": data,
+            "timeout": timeout,
+        }
+        return await self.fetch(url, options)
 
 class SyncHttpClient(HttpClient):
     """Synchronous HTTP client compatible with DefaultHttpClient"""

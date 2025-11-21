@@ -9,6 +9,7 @@ htmlcov/
 .coverage
 build/
 .wallet
+.venv/
 
 # Environment files
 .env
