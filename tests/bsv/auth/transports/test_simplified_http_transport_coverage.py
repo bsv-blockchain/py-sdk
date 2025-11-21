@@ -3,6 +3,7 @@ Coverage tests for simplified_http_transport.py - error paths and edge cases.
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
+from urllib.parse import urlparse
 from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
 from bsv.auth.auth_message import AuthMessage
 from bsv.keys import PrivateKey
@@ -50,7 +51,8 @@ def test_transport_init_with_https_url():
 def test_transport_init_with_trailing_slash():
     """Test initialization with trailing slash."""
     t = SimplifiedHTTPTransport("https://example.com/")
-    assert "example.com" in t.base_url  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
+    parsed_url = urlparse(t.base_url)
+    assert parsed_url.hostname == "example.com"
 
 
 def test_transport_init_with_port():
@@ -62,7 +64,9 @@ def test_transport_init_with_port():
 def test_transport_init_with_path():
     """Test initialization with path."""
     t = SimplifiedHTTPTransport("https://example.com/api")
-    assert "/api" in t.base_url or "example.com" in t.base_url  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
+    parsed_url = urlparse(t.base_url)
+    assert parsed_url.hostname == "example.com"
+    assert parsed_url.path == "/api"
 
 
 # ========================================================================
