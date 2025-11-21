@@ -50,7 +50,7 @@ def test_transport_init_with_https_url():
 def test_transport_init_with_trailing_slash():
     """Test initialization with trailing slash."""
     t = SimplifiedHTTPTransport("https://example.com/")
-    assert "example.com" in t.base_url
+    assert "example.com" in t.base_url  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
 
 
 def test_transport_init_with_port():
@@ -62,7 +62,7 @@ def test_transport_init_with_port():
 def test_transport_init_with_path():
     """Test initialization with path."""
     t = SimplifiedHTTPTransport("https://example.com/api")
-    assert "/api" in t.base_url or "example.com" in t.base_url
+    assert "/api" in t.base_url or "example.com" in t.base_url  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
 
 
 # ========================================================================
@@ -241,7 +241,7 @@ def test_transport_str_representation(transport):
 def test_transport_with_special_chars_in_url():
     """Test URL with special characters."""
     t = SimplifiedHTTPTransport("https://example.com/path?query=value&other=123")
-    assert "example.com" in t.base_url
+    assert "example.com" in t.base_url  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
 
 
 def test_transport_with_custom_client():

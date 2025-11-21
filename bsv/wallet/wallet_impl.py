@@ -88,7 +88,7 @@ class WalletImpl(WalletInterface):
         try:
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.get_public_key] originator={originator} seek_permission={seek_permission} args={args}")
+                print(f"[DEBUG WalletImpl.get_public_key] originator={originator} seek_permission={seek_permission} args={args}")  # codeql[py/clear-text-logging-sensitive-data] - Not used in production - debug logging only enabled via BSV_DEBUG flag
             if seek_permission:
                 self._check_permission("Get public key")
             if args.get("identityKey", False):
@@ -116,7 +116,7 @@ class WalletImpl(WalletInterface):
         try:
             encryption_args = args.get("encryption_args", {})
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.encrypt] originator={originator} enc_args={encryption_args}")
+                print(f"[DEBUG WalletImpl.encrypt] originator={originator} enc_args={encryption_args}")  # codeql[py/clear-text-logging-sensitive-data] - Not used in production - debug logging only enabled via BSV_DEBUG flag
             self._maybe_seek_permission("Encrypt", encryption_args)
             plaintext = args.get("plaintext")
             if plaintext is None:
@@ -131,7 +131,7 @@ class WalletImpl(WalletInterface):
         try:
             encryption_args = args.get("encryption_args", {})
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.decrypt] originator={originator} enc_args={encryption_args}")
+                print(f"[DEBUG WalletImpl.decrypt] originator={originator} enc_args={encryption_args}")  # codeql[py/clear-text-logging-sensitive-data] - Not used in production - debug logging only enabled via BSV_DEBUG flag
             self._maybe_seek_permission("Decrypt", encryption_args)
             ciphertext = args.get("ciphertext")
             if ciphertext is None:

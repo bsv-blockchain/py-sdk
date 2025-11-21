@@ -26,13 +26,13 @@ def simple_tx():
 def test_arc_init_with_http_url():
     """Test initialization with http URL."""
     arc = ARC("https://arc.example.com")
-    assert "arc.example.com" in arc.URL
+    assert "arc.example.com" in arc.URL  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
 
 
 def test_arc_init_with_https_url():
     """Test initialization with https URL."""
     arc = ARC("https://arc.example.com")
-    assert "arc.example.com" in arc.URL
+    assert "arc.example.com" in arc.URL  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
 
 
 def test_arc_init_with_string_api_key():

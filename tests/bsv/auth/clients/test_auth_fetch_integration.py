@@ -56,7 +56,7 @@ class TestAuthFetchPeerCreation:
                                 pass
                 
                 # Verify peer was created
-                assert "https://example.com" in auth_fetch.peers
+                assert "https://example.com" in auth_fetch.peers  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
                 mock_transport.assert_called_once_with("https://example.com")
                 mock_peer_class.assert_called_once()
     
@@ -545,7 +545,7 @@ class TestAuthFetchCompleteFlow:
                                 pass  # Expected when no response is provided
                 
                 # Verify complete flow
-                assert "https://api.example.com" in auth_fetch.peers
+                assert "https://api.example.com" in auth_fetch.peers  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
                 mock_peer.listen_for_certificates_received.assert_called_once()
                 mock_peer.listen_for_general_messages.assert_called_once()
                 mock_peer.to_peer.assert_called_once()
