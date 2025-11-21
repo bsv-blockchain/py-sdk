@@ -49,7 +49,7 @@ jobs:
       - name: Commit coverage update
         if: matrix.python-version == '3.11' && github.ref == 'refs/heads/master' && github.event_name == 'push'
         # Pin to specific commit SHA for security - v9.1.4
-        uses: EndBug/add-and-commit@61a88be553afe4206585b31aa72d388864cbe0d5  # v9.1.4
+        uses: EndBug/add-and-commit@777a761e0f8293b7b051170404976d7cf10611cb  # v9.1.4
         with:
           add: README.md
           message: "Update coverage badge to ${{ steps.coverage.outputs.coverage_percentage }}%"
