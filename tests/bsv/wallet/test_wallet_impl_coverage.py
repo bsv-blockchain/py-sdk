@@ -93,7 +93,7 @@ def test_get_public_key_with_debug_enabled(wallet, capsys):
         _ = wallet.get_public_key(None, args, "test_originator")
         captured = capsys.readouterr()
         assert "DEBUG WalletImpl.get_public_key" in captured.out
-        assert "test_originator" in captured.out
+        assert "originator=<redacted>" in captured.out  # Sensitive info is redacted
 
 
 def test_encrypt_with_debug_enabled(wallet, capsys):

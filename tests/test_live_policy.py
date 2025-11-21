@@ -35,7 +35,7 @@ def test_parses_mining_fee(mock_http_client_factory):
     )
 
     # Execute and verify the result
-    rate = asyncio.run(policy.current_rate_sat_per_kb())
+    rate = asyncio.run(policy._current_rate_sat_per_kb())
     assert rate == 20
     mock_http_client.get.assert_called_once()
 
@@ -60,8 +60,8 @@ def test_cache_reused_when_valid(mock_http_client_factory):
     )
 
     # Call multiple times within the cache validity period
-    first_rate = asyncio.run(policy.current_rate_sat_per_kb())
-    second_rate = asyncio.run(policy.current_rate_sat_per_kb())
+    first_rate = asyncio.run(policy._current_rate_sat_per_kb())
+    second_rate = asyncio.run(policy._current_rate_sat_per_kb())
 
     # Verify the results
     assert first_rate == 50
@@ -89,7 +89,7 @@ def test_uses_cached_value_when_fetch_fails(mock_log, mock_http_client_factory):
     )
 
     # The first execution succeeds
-    first_rate = asyncio.run(policy.current_rate_sat_per_kb())
+    first_rate = asyncio.run(policy._current_rate_sat_per_kb())
     assert first_rate == 75
 
     # Force invalidation of the cache
@@ -97,7 +97,7 @@ def test_uses_cached_value_when_fetch_fails(mock_log, mock_http_client_factory):
         policy._cache.fetched_at_ms -= 10
 
     # The second execution uses the cache
-    second_rate = asyncio.run(policy.current_rate_sat_per_kb())
+    second_rate = asyncio.run(policy._current_rate_sat_per_kb())
     assert second_rate == 75
 
     # Verify that a log is recorded for cache usage
@@ -124,7 +124,7 @@ def test_falls_back_to_default_when_no_cache(mock_log, mock_http_client_factory)
     )
 
     # Fallback value is returned during execution
-    rate = asyncio.run(policy.current_rate_sat_per_kb())
+    rate = asyncio.run(policy._current_rate_sat_per_kb())
     assert rate == 9
 
     # Verify that a log is recorded
@@ -154,7 +154,7 @@ def test_invalid_response_triggers_fallback(mock_log, mock_http_client_factory):
     )
 
     # Fallback value is returned due to the invalid response
-    rate = asyncio.run(policy.current_rate_sat_per_kb())
+    rate = asyncio.run(policy._current_rate_sat_per_kb())
     assert rate == 3
 
     # Verify that a log is recorded

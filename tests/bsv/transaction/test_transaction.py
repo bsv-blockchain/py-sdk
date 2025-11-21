@@ -746,7 +746,8 @@ def test_transaction_fee_with_default_rate():
     )
     t.add_output(TransactionOutput(P2PKH().lock(address), change=True))
 
-    t.fee()
+    # Use synchronous fee model instead of default LivePolicy
+    t.fee(SatoshisPerKilobyte(int(TRANSACTION_FEE_RATE)))
 
     estimated_size = t.estimated_byte_length()
     expected_fee = int((estimated_size / 1000) * TRANSACTION_FEE_RATE)
