@@ -1,6 +1,7 @@
 """
 Coverage tests for signature.py - untested branches.
 """
+import time
 import pytest
 from bsv.keys import PrivateKey
 
