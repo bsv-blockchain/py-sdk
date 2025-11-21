@@ -131,7 +131,7 @@ class WalletImpl(WalletInterface):
         try:
             encryption_args = args.get("encryption_args", {})
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.decrypt] originator={originator} enc_args={encryption_args}")  # codeql[py/clear-text-logging-sensitive-data] - Not used in production - debug logging only enabled via BSV_DEBUG flag
+                print(f"[DEBUG WalletImpl.decrypt] enc_args keys={list(encryption_args.keys())}")  # Do not log originator or sensitive argument values
             self._maybe_seek_permission("Decrypt", encryption_args)
             ciphertext = args.get("ciphertext")
             if ciphertext is None:
