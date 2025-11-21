@@ -90,11 +90,11 @@ class LivePolicy(SatoshisPerKilobyte):
 
     async def compute_fee(self, tx) -> int:  # type: ignore[override]
         """Compute a fee for ``tx`` using the latest ARC rate."""
-        rate = await self.current_rate_sat_per_kb()
+        rate = await self._current_rate_sat_per_kb()
         self.value = rate
         return super().compute_fee(tx)
 
-    async def current_rate_sat_per_kb(self) -> int:
+    async def _current_rate_sat_per_kb(self) -> int:
         """Return the cached sat/kB rate or fetch a new value from ARC."""
         cache = self._get_cache(allow_stale=True)
         if cache and self._cache_valid(cache):

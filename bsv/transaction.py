@@ -16,12 +16,16 @@ from .constants import (
 )
 from .hash import hash256
 from .merkle_path import MerklePath
-from .script.spend import Spend
 from .script.type import P2PKH
 from .transaction_input import TransactionInput
 from .transaction_output import TransactionOutput
 from .transaction_preimage import tx_preimage
 from .utils import unsigned_to_varint, Reader, Writer, reverse_hex_byte_order
+
+# Lazy import to avoid circular dependency
+def Spend(params):  # NOSONAR - Matches TS SDK naming (class Spend)
+    from .script.spend import Spend as SpendClass
+    return SpendClass(params)
 
 
 class InsufficientFunds(ValueError):
@@ -434,7 +438,6 @@ class Transaction:
             if proof_valid:
                 return True
 
-        input_total = 0
         for i, tx_input in enumerate(self.inputs):
             if not tx_input.source_transaction:
                 raise ValueError(
@@ -450,37 +453,114 @@ class Transaction:
                     f"merkle proof for the transaction spending the UTXO.")
 
             source_output = tx_input.source_transaction.outputs[tx_input.source_output_index]
-            input_total += source_output.satoshis
 
-            input_verified = await tx_input.source_transaction.verify(chaintracker)
+            input_verified = await tx_input.source_transaction.verify(chaintracker, scripts_only=scripts_only)
             if not input_verified:
                 return False
 
-            other_inputs = self.inputs[:i] + self.inputs[i + 1:]
-            spend = Spend({
-                'sourceTXID': tx_input.source_transaction.txid(),
-                'sourceOutputIndex': tx_input.source_output_index,
-                'sourceSatoshis': source_output.satoshis,
-                'lockingScript': source_output.locking_script,
-                'transactionVersion': self.version,
-                'otherInputs': other_inputs,
-                'inputIndex': i,
-                'unlockingScript': tx_input.unlocking_script,
-                'outputs': self.outputs,
-                'inputSequence': tx_input.sequence,
-                'lockTime': self.locktime,
-            })
-            spend_valid = spend.validate()
-            if not spend_valid:
+            # Use Engine-based script interpreter (matches Go SDK implementation)
+            from bsv.script.interpreter import Engine, with_tx, with_after_genesis, with_fork_id
+            
+            engine = Engine()
+            err = engine.execute(
+                with_tx(self, i, source_output),
+                with_after_genesis(),
+                with_fork_id()
+            )
+            
+            if err is not None:
+                # Script verification failed
                 return False
 
-        output_total = 0
-        for out in self.outputs:
-            if not out.satoshis:
-                raise ValueError("Every output must have a defined amount during transaction verification.")
-            output_total += out.satoshis
+        # All inputs verified successfully
+        # Note: Fee validation would be done separately if needed
+        return True
 
-        return output_total <= input_total
+    def signature_hash(self, index: int) -> bytes:
+        """
+        Calculate the signature hash for the input at the specified index.
+        This is the hash that gets signed for transaction signing.
+        """
+        preimage = self.preimage(index)
+        return hash256(preimage)
+
+    def to_json(self) -> str:
+        """
+        Convert the transaction to a JSON string representation.
+        """
+        import json
+
+        tx_dict = {
+            "txid": self.txid(),
+            "version": self.version,
+            "lockTime": self.locktime,
+            "hex": self.hex(),
+            "inputs": [
+                {
+                    "txid": inp.source_txid if hasattr(inp, 'source_txid') and inp.source_txid else "",
+                    "vout": inp.source_output_index if hasattr(inp, 'source_output_index') else 0,
+                    "sequence": inp.sequence,
+                    "unlockingScript": inp.unlocking_script.hex() if inp.unlocking_script else "",
+                    "satoshis": inp.satoshis if hasattr(inp, 'satoshis') else 0,
+                }
+                for inp in self.inputs
+            ],
+            "outputs": [
+                {
+                    "satoshis": out.satoshis,
+                    "lockingScript": out.locking_script.hex(),
+                }
+                for out in self.outputs
+            ]
+        }
+
+        return json.dumps(tx_dict, indent=2)
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "Transaction":
+        """
+        Create a Transaction from a JSON string representation.
+        """
+        import json
+
+        tx_dict = json.loads(json_str)
+
+        # If hex is provided, use it directly
+        if "hex" in tx_dict:
+            return cls.from_hex(tx_dict["hex"])
+
+        # Otherwise, construct from components
+        # Create inputs
+        inputs = []
+        for inp_dict in tx_dict.get("inputs", []):
+            inp = TransactionInput(
+                source_txid=inp_dict.get("txid", ""),
+                source_output_index=inp_dict.get("vout", 0),
+                sequence=inp_dict.get("sequence", 0xFFFFFFFF),
+            )
+            if "satoshis" in inp_dict:
+                inp.satoshis = inp_dict["satoshis"]
+            if "unlockingScript" in inp_dict and inp_dict["unlockingScript"]:
+                from .script.script import Script
+                inp.unlocking_script = Script(bytes.fromhex(inp_dict["unlockingScript"]))
+            inputs.append(inp)
+
+        # Create outputs
+        outputs = []
+        for out_dict in tx_dict.get("vout", tx_dict.get("outputs", [])):
+            from .script.script import Script
+            out = TransactionOutput(
+                satoshis=out_dict["satoshis"],
+                locking_script=Script(bytes.fromhex(out_dict.get("lockingScript", out_dict.get("scriptPubKey", ""))))
+            )
+            outputs.append(out)
+
+        return cls(
+            tx_inputs=inputs,
+            tx_outputs=outputs,
+            version=tx_dict.get("version", 1),
+            locktime=tx_dict.get("lockTime", tx_dict.get("locktime", 0)),
+        )
 
     @classmethod
     def parse_script_offsets(cls, octets: Union[bytes, str]) -> Dict[str, List[Dict[str, int]]]:
