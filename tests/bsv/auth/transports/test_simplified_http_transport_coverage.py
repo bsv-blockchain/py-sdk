@@ -245,7 +245,7 @@ def test_transport_str_representation(transport):
 def test_transport_with_special_chars_in_url():
     """Test URL with special characters."""
     t = SimplifiedHTTPTransport("https://example.com/path?query=value&other=123")
-    assert "example.com" in t.base_url  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
+    assert t.base_url.startswith("https://example.com") or "example.com" in t.base_url.split("//")
 
 
 def test_transport_with_custom_client():

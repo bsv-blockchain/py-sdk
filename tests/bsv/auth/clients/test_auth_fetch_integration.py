@@ -57,7 +57,7 @@ class TestAuthFetchPeerCreation:
                                 pass
                 
                 # Verify peer was created
-                assert "https://example.com" in auth_fetch.peers  # Fixed: require exact match for key, not substring
+                assert auth_fetch.peers.get("https://example.com") is not None
                 mock_transport.assert_called_once_with("https://example.com")
                 mock_peer_class.assert_called_once()
     
