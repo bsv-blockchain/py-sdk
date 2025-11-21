@@ -9,7 +9,7 @@ import pytest
 # ========================================================================
 
 # Constants for skip messages
-SKIP_POLYNOMIAL = SKIP_POLYNOMIAL
+SKIP_POLYNOMIAL = "Polynomial not available"
 
 def test_polynomial_creation():
     """Test creating polynomial."""

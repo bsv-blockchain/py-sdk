@@ -10,9 +10,9 @@ from bsv.keys import PrivateKey
 # ========================================================================
 
 # Constants for skip messages
-SKIP_MEMORY_KEYSTORE = SKIP_MEMORY_KEYSTORE
-SKIP_LOCAL_KVSTORE = SKIP_LOCAL_KVSTORE
-SKIP_COMPLEX_MOCKING = SKIP_COMPLEX_MOCKING
+SKIP_MEMORY_KEYSTORE = "MemoryKeystore operations not available"
+SKIP_LOCAL_KVSTORE = "LocalKVStore not available"
+SKIP_COMPLEX_MOCKING = "Skipped due to complex mocking requirements"
 
 def test_keystore_module_exists():
     """Test that keystore module exists."""

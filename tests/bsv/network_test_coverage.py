@@ -11,8 +11,8 @@ SKIP_NETWORK_CONFIG = "get_network_config not available"
 # Network module branches
 # ========================================================================
 
-SKIP_WOC_CLIENT = SKIP_WOC_CLIENT
-MOCK_REQUESTS_GET = MOCK_REQUESTS_GET
+SKIP_WOC_CLIENT = "WOCClient not available"
+MOCK_REQUESTS_GET = 'requests.get'
 def test_network_module_exists():
     """Test that network module exists."""
     try:

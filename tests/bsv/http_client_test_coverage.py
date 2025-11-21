@@ -9,7 +9,7 @@ import pytest
 # ========================================================================
 
 # Constants for skip messages
-SKIP_HTTP_CLIENT = SKIP_HTTP_CLIENT
+SKIP_HTTP_CLIENT = "HttpClient not available"
 TEST_PATH = '/test'
 
 def test_http_client_init():

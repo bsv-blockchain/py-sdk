@@ -15,7 +15,7 @@ from bsv.script.script import Script
 # Sighash calculation branches
 # ========================================================================
 
-SKIP_SIGHASH = SKIP_SIGHASH
+SKIP_SIGHASH = "Sighash not available"
 def test_sighash_all():
     """Test SIGHASH_ALL calculation."""
     try:

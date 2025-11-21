@@ -10,10 +10,10 @@ from bsv.keys import PrivateKey, PublicKey
 # ========================================================================
 
 # Constants for skip messages
-TEST_MESSAGE_BYTES = TEST_MESSAGE_BYTES
-TEST_MESSAGE_BYTES2 = TEST_MESSAGE_BYTES2
-SKIP_SIGNATURE_OPS = SKIP_SIGNATURE_OPS
-SKIP_KEY_SHARING = SKIP_KEY_SHARING
+TEST_MESSAGE_BYTES = b'test message'
+TEST_MESSAGE_BYTES2 = b'test message'
+SKIP_SIGNATURE_OPS = "signature operations not available"
+SKIP_KEY_SHARING = "key sharing operations not available"
 
 def test_private_key_init_none():
     """Test PrivateKey with None (generates random)."""
