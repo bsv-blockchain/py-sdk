@@ -35,8 +35,8 @@ def test_storage_upload_download_e2e():
     assert downloaded.data == test_data
     assert downloaded.mime_type == mime_type or downloaded.mime_type is not None
 
-@ pytest.mark.e2e
-@ pytest.mark.skipif(
+@pytest.mark.e2e
+@pytest.mark.skipif(
     not os.environ.get("E2E_STORAGE_URL"),
     reason="E2E_STORAGE_URL not set; set to real storage service to run E2E test"
 )
@@ -53,8 +53,8 @@ def test_storage_find_file_e2e():
     assert file_data.mime_type == mime_type
     assert file_data.expiry_time > 0
 
-@ pytest.mark.e2e
-@ pytest.mark.skipif(
+@pytest.mark.e2e
+@pytest.mark.skipif(
     not os.environ.get("E2E_STORAGE_URL"),
     reason="E2E_STORAGE_URL not set; set to real storage service to run E2E test"
 )
@@ -72,8 +72,8 @@ def test_storage_list_uploads_e2e():
         assert isinstance(first_upload, dict) or hasattr(first_upload, '__dict__'), \
             "Upload entries should be dict-like or objects with attributes"
 
-@ pytest.mark.e2e
-@ pytest.mark.skipif(
+@pytest.mark.e2e
+@pytest.mark.skipif(
     not os.environ.get("E2E_STORAGE_URL"),
     reason="E2E_STORAGE_URL not set; set to real storage service to run E2E test"
 )
@@ -88,8 +88,8 @@ def test_storage_renew_file_e2e():
     assert renew_result.status == "success"
     assert renew_result.new_expiry_time > renew_result.prev_expiry_time
 
-@ pytest.mark.e2e
-@ pytest.mark.skipif(
+@pytest.mark.e2e
+@pytest.mark.skipif(
     not os.environ.get("E2E_STORAGE_URL"),
     reason="E2E_STORAGE_URL not set; set to real storage service to run E2E test"
 )
