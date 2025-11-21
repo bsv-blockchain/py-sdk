@@ -56,7 +56,7 @@ class TestAuthFetchPeerCreation:
                                 pass
                 
                 # Verify peer was created
-                assert "https://example.com" in auth_fetch.peers  # codeql[py/incomplete-url-substring-sanitization] - Not used in production - test code only
+                assert "https://example.com" in auth_fetch.peers  # Fixed: require exact match for key, not substring
                 mock_transport.assert_called_once_with("https://example.com")
                 mock_peer_class.assert_called_once()
     
