@@ -4,6 +4,7 @@ Tests for LivePolicy fee model.
 Aligned with TypeScript SDK design where only compute_fee() is public API.
 """
 
+import asyncio
 import time
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
@@ -168,7 +169,7 @@ class TestLivePolicy:
                 assert policy.value == 150
 
                 # Wait for cache to expire
-                time.sleep(0.15)  # 150ms
+                await asyncio.sleep(0.15)  # 150ms
 
                 # Second call should fetch again (cache expired)
                 mock_http.get.reset_mock()
