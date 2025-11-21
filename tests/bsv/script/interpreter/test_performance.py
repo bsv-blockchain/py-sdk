@@ -148,7 +148,7 @@ class TestScriptInterpreterPerformance:
 
     def test_memory_usage_bounds(self):
         """Test that memory usage stays within reasonable bounds."""
-        import psutil
+        psutil = pytest.importorskip("psutil", reason="psutil not installed")
         import os
 
         process = psutil.Process(os.getpid())

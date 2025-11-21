@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 from bsv.keys import PrivateKey
 from bsv.wallet.wallet_impl import WalletImpl
@@ -9,7 +10,7 @@ def _latest_action(wallet: WalletImpl) -> dict:
     return wallet._actions[-1]
 
 
-def _find_change_output(outputs: list[dict]) -> dict | None:
+def _find_change_output(outputs: list[dict]) -> Optional[dict]:
     for o in outputs:
         if (o.get("outputDescription") or "").lower() == "change":
             return o

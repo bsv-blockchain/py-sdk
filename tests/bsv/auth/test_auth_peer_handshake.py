@@ -1,5 +1,6 @@
 import base64
 import threading
+from typing import Optional
 
 from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.auth_message import AuthMessage
@@ -10,7 +11,7 @@ from bsv.keys import PrivateKey, PublicKey
 class LocalTransport:
     def __init__(self):
         self._on_data_callback = None
-        self.peer: "LocalTransport | None" = None
+        self.peer: Optional["LocalTransport"] = None
 
     def connect(self, other: "LocalTransport"):
         self.peer = other

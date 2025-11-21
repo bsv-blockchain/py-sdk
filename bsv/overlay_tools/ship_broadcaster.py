@@ -5,7 +5,7 @@ Ported from TypeScript SDK.
 """
 
 import asyncio
-from typing import Dict, List, Optional, Any, Protocol
+from typing import Dict, List, Optional, Any, Protocol, Union
 from dataclasses import dataclass
 
 from bsv.transaction import Transaction
@@ -211,7 +211,7 @@ class TopicBroadcaster:
         
         return successful_hosts, host_acknowledgments
 
-    async def broadcast(self, tx: Transaction) -> BroadcastResponse | BroadcastFailure:
+    async def broadcast(self, tx: Transaction) -> Union[BroadcastResponse, BroadcastFailure]:
         """Broadcast a transaction to Overlay Services via SHIP."""
         # Convert transaction to BEEF
         beef, error = self._extract_beef_from_transaction(tx)
