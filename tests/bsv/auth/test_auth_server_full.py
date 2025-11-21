@@ -286,7 +286,7 @@ async def handle_auth_message(request):
         
     except PermissionError as e:
         logger.warning(f"Authentication error: {e}")
-        return web.Response(status=403, text=str(e))  # codeql[py/stack-trace-exposure] - Not used in production - test server only
+        return web.Response(status=403, text="Permission denied")
     except ValueError as e:
         logger.warning(f"Validation error: {e}")
         return web.Response(status=400, text="Validation error occurred")  # codeql[py/stack-trace-exposure] - Not used in production - test server only
