@@ -17,11 +17,3 @@ from .bip276 import (
     NETWORK_TESTNET,
     CURRENT_VERSION,
 )
-
-# Lazy import for Spend to avoid circular dependency
-# (Spend imports TransactionInput, which imports Script from here)
-def __getattr__(name):
-    if name == "Spend":
-        from .spend import Spend
-        return Spend
-    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

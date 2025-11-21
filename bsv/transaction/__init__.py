@@ -27,6 +27,7 @@ _sys.modules.setdefault("bsv._legacy_transaction", _legacy_mod)
 Transaction = _legacy_mod.Transaction  # type: ignore[attr-defined]
 TransactionInput = _legacy_mod.TransactionInput  # type: ignore[attr-defined]
 TransactionOutput = _legacy_mod.TransactionOutput  # type: ignore[attr-defined]
+InsufficientFunds = _legacy_mod.InsufficientFunds  # type: ignore[attr-defined]
 
 __all__ = [
     "build_pushdrop_locking_script",
@@ -38,6 +39,7 @@ __all__ = [
     "Transaction",
     "TransactionInput",
     "TransactionOutput",
+    "InsufficientFunds",
 ]
 
 from .beef import Beef, new_beef_from_bytes, new_beef_from_atomic_bytes, parse_beef, parse_beef_ex
