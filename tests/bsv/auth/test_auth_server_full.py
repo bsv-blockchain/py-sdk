@@ -289,7 +289,7 @@ async def handle_auth_message(request):
         return web.Response(status=403, text=str(e))  # codeql[py/stack-trace-exposure] - Not used in production - test server only
     except ValueError as e:
         logger.warning(f"Validation error: {e}")
-        return web.Response(status=400, text=str(e))  # codeql[py/stack-trace-exposure] - Not used in production - test server only
+        return web.Response(status=400, text="Validation error occurred")  # codeql[py/stack-trace-exposure] - Not used in production - test server only
     except Exception as e:
         logger.error(f"Server error: {e}")
         return web.Response(status=500, text="Internal server error")
