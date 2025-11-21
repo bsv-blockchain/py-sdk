@@ -245,7 +245,7 @@ def test_transport_str_representation(transport):
 def test_transport_with_special_chars_in_url():
     """Test URL with special characters."""
     t = SimplifiedHTTPTransport("https://example.com/path?query=value&other=123")
-    assert t.base_url.startswith("https://example.com") or "example.com" in t.base_url.split("//")
+    assert urlparse(t.base_url).hostname == "example.com"
 
 
 def test_transport_with_custom_client():
