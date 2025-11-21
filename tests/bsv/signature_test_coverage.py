@@ -2,10 +2,10 @@
 Coverage tests for signature.py - untested branches.
 """
 import pytest
+from bsv.keys import PrivateKey
 
 # Constants
-TEST_MESSAGE = TEST_MESSAGE
-from bsv.keys import PrivateKey
+TEST_MESSAGE = b'test message for signature coverage'
 
 
 # ========================================================================

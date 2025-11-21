@@ -474,7 +474,7 @@ class WalletWireTransceiver:
         return {"authenticated": bool(resp[0] == 1)}
 
     def is_authenticated_decoded(self, ctx: Any, args: dict, originator: str) -> dict:
-        resp = self.is_authenticated(ctx, args, originator)
+        resp = self.is_authenticated(ctx, originator)
         if not resp:
             # No payload provided currently by processor; unknown state
             return {}
@@ -485,7 +485,7 @@ class WalletWireTransceiver:
         return {"authenticated": True}
 
     def wait_for_authentication_decoded(self, ctx: Any, args: dict, originator: str) -> dict:
-        resp = self.wait_for_authentication(ctx, args, originator)
+        resp = self.wait_for_authentication(ctx, originator)
         # Go's DeserializeWaitAuthenticatedResult returns Authenticated=true regardless of payload
         if resp is None:
             return {"authenticated": True}

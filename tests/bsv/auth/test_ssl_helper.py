@@ -1,6 +1,12 @@
 """
 SSL Certificate Helper for Testing
 
+⚠️  WARNING: THIS IS TEST-ONLY CODE ⚠️
+This module disables SSL/TLS hostname verification and certificate validation
+for testing purposes with self-signed certificates.
+
+DO NOT USE IN PRODUCTION CODE.
+
 Generates and caches self-signed SSL certificates for use in test servers.
 This allows tests to use HTTPS without requiring real certificates.
 """
@@ -28,20 +34,26 @@ class TestSSLHelper:
         """
         Get an SSL context for testing.
         
+        ⚠️  WARNING: TEST-ONLY - Disables certificate verification for self-signed certs.
+        DO NOT USE IN PRODUCTION.
+        
         Args:
             for_server: If True, returns a server SSL context with certificate
             for_client: If True, returns a client SSL context that accepts self-signed certs
             
         Returns:
-            ssl.SSLContext configured appropriately
+            ssl.SSLContext configured appropriately for testing
         """
         if for_client:
             # Client context that accepts self-signed certificates for testing
+            # SECURITY NOTE: This is TEST-ONLY code for local development with self-signed certificates.
+            # Production code MUST use proper certificate verification.
             # Using TLS 1.2+ with secure defaults from create_default_context()
-            context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)  # noqa: S323
-            context.check_hostname = False  # noqa: S501  # NOSONAR - Required for self-signed test certs
-            context.verify_mode = ssl.CERT_NONE  # noqa: S502  # NOSONAR - Test server uses self-signed certs
-            # Ensure minimum TLS 1.2
+            context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=None)  # NOSONAR - Test-only: Hostname verification disabled below for self-signed certs
+            # Disable hostname verification for self-signed test certificates
+            context.check_hostname = False  # NOSONAR - Test-only: Required for self-signed test certs
+            context.verify_mode = ssl.CERT_NONE  # NOSONAR - Test-only: Accepts self-signed test certs
+            # Ensure minimum TLS 1.2 for security even in tests
             context.minimum_version = ssl.TLSVersion.TLSv1_2
             return context
         
