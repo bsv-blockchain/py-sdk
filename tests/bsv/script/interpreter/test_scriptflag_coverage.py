@@ -11,120 +11,120 @@ import pytest
 def test_scriptflag_module_exists():
     """Test that scriptflag module exists."""
     try:
-        import bsv.script.interpreter.scriptflag
-        assert bsv.script.interpreter.scriptflag is not None
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag is not None
     except ImportError:
         pytest.skip("scriptflag module not available")
 
 
-def test_scriptflag_verify_p2sh():
-    """Test SCRIPT_VERIFY_P2SH flag."""
+def test_scriptflag_bip16():
+    """Test BIP16 flag (P2SH)."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_P2SH
-        assert SCRIPT_VERIFY_P2SH is not None
-        assert isinstance(SCRIPT_VERIFY_P2SH, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.BIP16 is not None
+        assert isinstance(Flag.BIP16, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_P2SH not available")
+        pytest.skip("BIP16 flag not available")
 
 
-def test_scriptflag_verify_strictenc():
-    """Test SCRIPT_VERIFY_STRICTENC flag."""
+def test_scriptflag_verify_strict_encoding():
+    """Test VERIFY_STRICT_ENCODING flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_STRICTENC
-        assert SCRIPT_VERIFY_STRICTENC is not None
-        assert isinstance(SCRIPT_VERIFY_STRICTENC, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.VERIFY_STRICT_ENCODING is not None
+        assert isinstance(Flag.VERIFY_STRICT_ENCODING, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_STRICTENC not available")
+        pytest.skip("VERIFY_STRICT_ENCODING not available")
 
 
-def test_scriptflag_verify_dersig():
-    """Test SCRIPT_VERIFY_DERSIG flag."""
+def test_scriptflag_verify_der_signatures():
+    """Test VERIFY_DER_SIGNATURES flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_DERSIG
-        assert SCRIPT_VERIFY_DERSIG is not None
-        assert isinstance(SCRIPT_VERIFY_DERSIG, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.VERIFY_DER_SIGNATURES is not None
+        assert isinstance(Flag.VERIFY_DER_SIGNATURES, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_DERSIG not available")
+        pytest.skip("VERIFY_DER_SIGNATURES not available")
 
 
 def test_scriptflag_verify_low_s():
-    """Test SCRIPT_VERIFY_LOW_S flag."""
+    """Test VERIFY_LOW_S flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_LOW_S
-        assert SCRIPT_VERIFY_LOW_S is not None
-        assert isinstance(SCRIPT_VERIFY_LOW_S, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.VERIFY_LOW_S is not None
+        assert isinstance(Flag.VERIFY_LOW_S, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_LOW_S not available")
+        pytest.skip("VERIFY_LOW_S not available")
 
 
-def test_scriptflag_verify_nulldummy():
-    """Test SCRIPT_VERIFY_NULLDUMMY flag."""
+def test_scriptflag_strict_multisig():
+    """Test STRICT_MULTISIG flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_NULLDUMMY
-        assert SCRIPT_VERIFY_NULLDUMMY is not None
-        assert isinstance(SCRIPT_VERIFY_NULLDUMMY, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.STRICT_MULTISIG is not None
+        assert isinstance(Flag.STRICT_MULTISIG, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_NULLDUMMY not available")
+        pytest.skip("STRICT_MULTISIG not available")
 
 
-def test_scriptflag_verify_sigpushonly():
-    """Test SCRIPT_VERIFY_SIGPUSHONLY flag."""
+def test_scriptflag_verify_sig_push_only():
+    """Test VERIFY_SIG_PUSH_ONLY flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_SIGPUSHONLY
-        assert SCRIPT_VERIFY_SIGPUSHONLY is not None
-        assert isinstance(SCRIPT_VERIFY_SIGPUSHONLY, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.VERIFY_SIG_PUSH_ONLY is not None
+        assert isinstance(Flag.VERIFY_SIG_PUSH_ONLY, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_SIGPUSHONLY not available")
+        pytest.skip("VERIFY_SIG_PUSH_ONLY not available")
 
 
-def test_scriptflag_verify_minimaldata():
-    """Test SCRIPT_VERIFY_MINIMALDATA flag."""
+def test_scriptflag_verify_minimal_data():
+    """Test VERIFY_MINIMAL_DATA flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_MINIMALDATA
-        assert SCRIPT_VERIFY_MINIMALDATA is not None
-        assert isinstance(SCRIPT_VERIFY_MINIMALDATA, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.VERIFY_MINIMAL_DATA is not None
+        assert isinstance(Flag.VERIFY_MINIMAL_DATA, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_MINIMALDATA not available")
+        pytest.skip("VERIFY_MINIMAL_DATA not available")
 
 
-def test_scriptflag_verify_discourage_upgradable_nops():
-    """Test SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS flag."""
+def test_scriptflag_discourage_upgradable_nops():
+    """Test DISCOURAGE_UPGRADABLE_NOPS flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS
-        assert SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS is not None
-        assert isinstance(SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.DISCOURAGE_UPGRADABLE_NOPS is not None
+        assert isinstance(Flag.DISCOURAGE_UPGRADABLE_NOPS, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS not available")
+        pytest.skip("DISCOURAGE_UPGRADABLE_NOPS not available")
 
 
-def test_scriptflag_verify_cleanstack():
-    """Test SCRIPT_VERIFY_CLEANSTACK flag."""
+def test_scriptflag_verify_clean_stack():
+    """Test VERIFY_CLEAN_STACK flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_CLEANSTACK
-        assert SCRIPT_VERIFY_CLEANSTACK is not None
-        assert isinstance(SCRIPT_VERIFY_CLEANSTACK, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.VERIFY_CLEAN_STACK is not None
+        assert isinstance(Flag.VERIFY_CLEAN_STACK, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_CLEANSTACK not available")
+        pytest.skip("VERIFY_CLEAN_STACK not available")
 
 
-def test_scriptflag_verify_checklocktimeverify():
-    """Test SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY flag."""
+def test_scriptflag_verify_check_lock_time_verify():
+    """Test VERIFY_CHECK_LOCK_TIME_VERIFY flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY
-        assert SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY is not None
-        assert isinstance(SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.VERIFY_CHECK_LOCK_TIME_VERIFY is not None
+        assert isinstance(Flag.VERIFY_CHECK_LOCK_TIME_VERIFY, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY not available")
+        pytest.skip("VERIFY_CHECK_LOCK_TIME_VERIFY not available")
 
 
-def test_scriptflag_verify_checksequenceverify():
-    """Test SCRIPT_VERIFY_CHECKSEQUENCEVERIFY flag."""
+def test_scriptflag_verify_check_sequence_verify():
+    """Test VERIFY_CHECK_SEQUENCE_VERIFY flag."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_CHECKSEQUENCEVERIFY
-        assert SCRIPT_VERIFY_CHECKSEQUENCEVERIFY is not None
-        assert isinstance(SCRIPT_VERIFY_CHECKSEQUENCEVERIFY, int)
+        from bsv.script.interpreter.scriptflag import Flag
+        assert Flag.VERIFY_CHECK_SEQUENCE_VERIFY is not None
+        assert isinstance(Flag.VERIFY_CHECK_SEQUENCE_VERIFY, int)
     except (ImportError, AttributeError):
-        pytest.skip("SCRIPT_VERIFY_CHECKSEQUENCEVERIFY not available")
+        pytest.skip("VERIFY_CHECK_SEQUENCE_VERIFY not available")
 
 
 # ========================================================================
@@ -134,9 +134,9 @@ def test_scriptflag_verify_checksequenceverify():
 def test_scriptflag_combinations():
     """Test combining script flags."""
     try:
-        from bsv.script.interpreter.scriptflag import SCRIPT_VERIFY_P2SH, SCRIPT_VERIFY_STRICTENC
+        from bsv.script.interpreter.scriptflag import Flag
         
-        combined = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC
+        combined = Flag.BIP16 | Flag.VERIFY_STRICT_ENCODING
         assert isinstance(combined, int)
         assert combined != 0
     except (ImportError, AttributeError):
