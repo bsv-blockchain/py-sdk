@@ -76,11 +76,23 @@ async def auth_server():
     yield server_process
     
     # Cleanup: terminate the server
-    server_process.terminate()
+    try:
+        server_process.terminate()
+    except ProcessLookupError:
+        # Process already dead, that's fine
+        pass
+    
     try:
         await asyncio.wait_for(server_process.wait(), timeout=5)
     except asyncio.TimeoutError:
-        server_process.kill()
+        try:
+            server_process.kill()
+        except ProcessLookupError:
+            # Process already dead, that's fine
+            pass
+    except ProcessLookupError:
+        # Process already dead, that's fine
+        pass
 
 @pytest.mark.asyncio
 async def test_auth_fetch_full_protocol(auth_server):
