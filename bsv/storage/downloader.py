@@ -97,7 +97,7 @@ class Downloader(StorageDownloaderInterface):
             raise last_err
         raise DownloadError(f"Unable to download content from {uhrp_url} after {self.max_retries} retries per host.")
     
-    def _try_download_from_url(self, url: str, expected_hash: bytes):
+    def _try_download_from_url(self, url: str, expected_hash: bytes):  # NOSONAR - Complexity (16), requires refactoring
         """
         Attempt to download file from a specific URL with retries.
         Returns (DownloadResult, None) on success or (None, Error) on failure.

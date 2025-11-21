@@ -13,7 +13,7 @@ class LookupQuestion:
 @dataclass
 class LookupOutput:
     beef: bytes
-    outputIndex: int
+    outputIndex: int  # NOSONAR - camelCase matches external API format
 
 
 @dataclass

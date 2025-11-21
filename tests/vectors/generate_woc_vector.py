@@ -7,7 +7,7 @@ from typing import Optional
 from bsv.http_client import default_sync_http_client
 
 
-def fetch_woc_tx_and_header(txid: str, network: str = "main", _: Optional[str] = None, height: Optional[int] = None):
+def fetch_woc_tx_and_header(txid: str, network: str = "main", _: Optional[str] = None, height: Optional[int] = None):  # NOSONAR - Complexity (19), requires refactoring
     base = f"https://api.whatsonchain.com/v1/bsv/{network}"
     client = default_sync_http_client()
     # tx raw

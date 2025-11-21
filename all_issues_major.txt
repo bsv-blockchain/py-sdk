@@ -1,15 +1,3 @@
-bsv/beef/builder.py
-Line: L29
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/compat/bsm.py
-Line: L147
-Description: Return a value of type "PublicKey" instead of "NoneType" or update function "recover_public_key" type hint.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
 bsv/headers_client/types.py
 Line: L28
 Description: Rename field "state"
@@ -27,18 +15,6 @@ Line: L26
 Description: Rename field "counterparty"
 Type: Code Smell
 Effort: 10min effort
---------------------------------------------------------------------------------
-bsv/keystore/local_kv_store.py
-Line: L1010
-Description: Remove the unused function parameter "outs".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/keystore/local_kv_store.py
-Line: L1010
-Description: Remove the unused function parameter "ctx".
-Type: Code Smell
-Effort: 5min effort
 --------------------------------------------------------------------------------
 bsv/overlay_tools/lookup_resolver.py
 Line: L117
@@ -88,39 +64,9 @@ Description: Rename function "AESCBCDecrypt" to match the regular expression ^[a
 Type: Code Smell
 Effort: 10min effort
 --------------------------------------------------------------------------------
-bsv/primitives/drbg.py
-Line: L77
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/primitives/drbg.py
-Line: L88
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/primitives/drbg.py
-Line: L104
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
 bsv/registry/resolver.py
 Line: L49
 Description: Remove the unused function parameter "query".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/script/interpreter/operations.py
-Line: L70
-Description: Remove the unused function parameter "require_strict".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/script/interpreter/thread.py
-Line: L90
-Description: Remove the unused function parameter "pop".
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
@@ -135,30 +81,6 @@ Line: L24
 Description: Rename function "Spend" to match the regular expression ^[a-z_][a-z0-9_]*$.
 Type: Code Smell
 Effort: 10min effort
---------------------------------------------------------------------------------
-bsv/transaction/beef_utils.py
-Line: L34
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-bsv/transaction/beef_utils.py
-Line: L37
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-bsv/transaction/pushdrop.py
-Line: L666
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-bsv/transaction/pushdrop.py
-Line: L686
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
 --------------------------------------------------------------------------------
 bsv/wallet/key_deriver.py
 Line: L21
@@ -184,12 +106,6 @@ Description: Rename field "counterparty"
 Type: Code Smell
 Effort: 10min effort
 --------------------------------------------------------------------------------
-bsv/wallet/serializer/key_linkage.py
-Line: L130
-Description: Remove the unused function parameter "result".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
 bsv/wallet/serializer/list_outputs.py
 Line: L64
 Description: Extract this nested conditional expression into an independent statement.
@@ -202,89 +118,89 @@ Description: Extract this nested conditional expression into an independent stat
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
-bsv/wallet/serializer/verify_hmac.py
-Line: L47
-Description: Merge this if statement with the enclosing one.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/wallet/serializer/verify_signature.py
-Line: L69
-Description: Merge this if statement with the enclosing one.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/wallet/substrates/http_wallet_json.py
-Line: L11
-Description: Remove the unused function parameter "ctx".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/wallet/substrates/serializer.py
-Line: L147
-Description: Update this function so that its implementation is not identical to read_int_bytes on line 134.
-Type: Code Smell
-Effort: 15min effort
---------------------------------------------------------------------------------
-bsv/wallet/substrates/wallet_wire_transceiver.py
-Line: L470
-Description: Remove the unused function parameter "args".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/wallet/substrates/wallet_wire_transceiver.py
-Line: L483
-Description: Remove the unused function parameter "args".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-bsv/wallet/wallet_impl.py
-Line: L249
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-bsv/wallet/wallet_impl.py
-Line: L267
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-bsv/wallet/wallet_impl.py
-Line: L272
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-bsv/wallet/wallet_impl.py
-Line: L274
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-bsv/wallet/wallet_impl.py
-Line: L277
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-bsv/wallet/wallet_impl.py
-Line: L281
-Description: Add replacement fields or use a normal string instead of an f-string.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
 bsv/wallet/wallet_impl.py
 Line: L1151
 Description: Extract this nested conditional expression into an independent statement.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
-tests/bsv/aes_cbc_test_coverage.py
-Line: L103
-Description: Replace this expression; its boolean value is constant.
+bsv/wallet/wallet_impl.py
+Line: L46
+Description: Add replacement fields or use a normal string instead of an f-string.
 Type: Code Smell
-Effort: 5min effort
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L48
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L52
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L54
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L86
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L35
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L51
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L71
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L99
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L105
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L159
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L168
+Description: Add replacement fields or use a normal string instead of an f-string.
+Type: Code Smell
+Effort: 1min effort
+--------------------------------------------------------------------------------
+bsv/wallet/wallet_impl.py
+Line: L61
+Description: parse_real_unused_vars.py
+Type: Code Smell
+Effort: 1min effort
 --------------------------------------------------------------------------------
 tests/bsv/aes_cbc_test_coverage.py
 Line: L106
@@ -293,7 +209,7 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/aes_cbc_test_coverage.py
-Line: L166
+Line: L109
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -304,14 +220,14 @@ Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
-tests/bsv/aes_gcm_test_coverage.py
-Line: L81
+tests/bsv/aes_cbc_test_coverage.py
+Line: L172
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/aes_gcm_test_coverage.py
-Line: L94
+Line: L84
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -323,13 +239,19 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/aes_gcm_test_coverage.py
-Line: L136
+Line: L100
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/aes_gcm_test_coverage.py
 Line: L139
+Description: Replace this expression; its boolean value is constant.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/aes_gcm_test_coverage.py
+Line: L142
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -352,18 +274,6 @@ Description: Replace this generic exception class with a more specific one.
 Type: Code Smell
 Effort: 20min effort
 --------------------------------------------------------------------------------
-tests/bsv/auth/test_auth_cryptononce.py
-Line: L52
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/auth/test_metanet_desktop_auth.py
-Line: L531
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
 tests/bsv/auth/test_metanet_desktop_auth.py
 Line: L549
 Description: Replace this generic exception class with a more specific one.
@@ -375,12 +285,6 @@ Line: L570
 Description: Replace this generic exception class with a more specific one.
 Type: Code Smell
 Effort: 20min effort
---------------------------------------------------------------------------------
-tests/bsv/auth/test_metanet_desktop_auth.py
-Line: L594
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/auth/test_metanet_desktop_auth.py
 Line: L607
@@ -418,65 +322,11 @@ Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
-tests/bsv/base58_test_coverage.py
-Line: L133
-Description: Fix the syntax of this issue suppression comment.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
 tests/bsv/beef/test_beef_comprehensive.py
 Line: L201
 Description: Remove this assignment to local variable 'txid3'; the value is never used.
 Type: Code Smell
 Effort: 1min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_hardening.py
-Line: L7
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_hardening.py
-Line: L53
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_hardening.py
-Line: L54
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_hardening.py
-Line: L100
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_hardening.py
-Line: L101
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_hardening.py
-Line: L180
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_hardening.py
-Line: L200
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/beef/test_beef_hardening.py
-Line: L201
-Description: Remove this commented out code.
-Type: Code Smell
-Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/beef/test_kvstore_beef_e2e.py
 Line: L286
@@ -563,25 +413,25 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/broadcasters_test_coverage.py
-Line: L46
+Line: L49
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/broadcasters_test_coverage.py
-Line: L80
-Description: Replace this expression; its boolean value is constant.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/broadcasters_test_coverage.py
-Line: L136
+Line: L83
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/broadcasters_test_coverage.py
 Line: L139
+Description: Replace this expression; its boolean value is constant.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/broadcasters_test_coverage.py
+Line: L142
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -617,13 +467,13 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/chaintrackers_test_coverage.py
-Line: L102
+Line: L105
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/chaintrackers_test_coverage.py
-Line: L105
+Line: L108
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -635,13 +485,7 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/encrypted_message_test_coverage.py
-Line: L91
-Description: Replace this expression; its boolean value is constant.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/encrypted_message_test_coverage.py
-Line: L105
+Line: L94
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -653,13 +497,19 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/encrypted_message_test_coverage.py
-Line: L142
+Line: L111
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/encrypted_message_test_coverage.py
 Line: L145
+Description: Replace this expression; its boolean value is constant.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/encrypted_message_test_coverage.py
+Line: L148
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -683,13 +533,13 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/hd/test_bip39_coverage.py
-Line: L75
+Line: L73
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/hd/test_bip39_coverage.py
-Line: L89
+Line: L87
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -701,13 +551,13 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/headers_client_test_coverage.py
-Line: L109
+Line: L112
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/headers_client_test_coverage.py
-Line: L112
+Line: L115
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -893,12 +743,6 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/keystore_test_coverage.py
-Line: L89
-Description: Fix the syntax of this issue suppression comment.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-tests/bsv/keystore_test_coverage.py
 Line: L116
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
@@ -929,25 +773,25 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/merkle_tree_parent_test_coverage.py
-Line: L83
-Description: Replace this expression; its boolean value is constant.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/merkle_tree_parent_test_coverage.py
 Line: L86
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/merkle_tree_parent_test_coverage.py
-Line: L98
+Line: L89
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/merkle_tree_parent_test_coverage.py
 Line: L101
+Description: Replace this expression; its boolean value is constant.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/merkle_tree_parent_test_coverage.py
+Line: L104
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -1001,7 +845,7 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/network_test_coverage.py
-Line: L70
+Line: L73
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -1139,31 +983,31 @@ Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/rpc_test_coverage.py
-Line: L45
-Description: Replace this expression; its boolean value is constant.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/rpc_test_coverage.py
 Line: L48
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/rpc_test_coverage.py
-Line: L66
+Line: L51
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/rpc_test_coverage.py
-Line: L77
+Line: L69
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/rpc_test_coverage.py
 Line: L80
+Description: Replace this expression; its boolean value is constant.
+Type: Code Smell
+Effort: 5min effort
+--------------------------------------------------------------------------------
+tests/bsv/rpc_test_coverage.py
+Line: L83
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -1203,12 +1047,6 @@ Line: L145
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
---------------------------------------------------------------------------------
-tests/bsv/script/interpreter/test_opcodes_hash.py
-Line: L80
-Description: Fix the syntax of this issue suppression comment.
-Type: Code Smell
-Effort: 1min effort
 --------------------------------------------------------------------------------
 tests/bsv/script/interpreter/test_operations_extended.py
 Line: L84
@@ -1258,6 +1096,12 @@ Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
+tests/bsv/signature_test_coverage.py
+Line: L7
+Description: Remove or correct this useless self-assignment.
+Type: Bug
+Effort: 3min effort
+--------------------------------------------------------------------------------
 tests/bsv/spv/test_verify_coverage.py
 Line: L98
 Description: Replace this expression; its boolean value is constant.
@@ -1283,19 +1127,13 @@ Type: Code Smell
 Effort: 20min effort
 --------------------------------------------------------------------------------
 tests/bsv/storage_test_coverage.py
-Line: L67
+Line: L70
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------
 tests/bsv/storage_test_coverage.py
-Line: L97
-Description: Fix the syntax of this issue suppression comment.
-Type: Code Smell
-Effort: 1min effort
---------------------------------------------------------------------------------
-tests/bsv/storage_test_coverage.py
-Line: L124
+Line: L127
 Description: Replace this expression; its boolean value is constant.
 Type: Code Smell
 Effort: 5min effort
@@ -1627,42 +1465,6 @@ Effort: 5min effort
 tests/bsv/wallet/test_wallet_outputs.py
 Line: L130
 Description: Replace this expression; its boolean value is constant.
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/vectors/auth/generate_auth_vectors.py
-Line: L15
-Description: Remove the unused function parameter "msg".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/vectors/auth/generate_auth_vectors.py
-Line: L15
-Description: Remove the unused function parameter "ctx".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/vectors/auth/generate_auth_vectors.py
-Line: L24
-Description: Remove the unused function parameter "originator".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/vectors/auth/generate_auth_vectors.py
-Line: L24
-Description: Remove the unused function parameter "ctx".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/vectors/auth/generate_auth_vectors.py
-Line: L24
-Description: Remove the unused function parameter "args".
-Type: Code Smell
-Effort: 5min effort
---------------------------------------------------------------------------------
-tests/vectors/generate_woc_vector.py
-Line: L10
-Description: Remove the unused function parameter "api_key".
 Type: Code Smell
 Effort: 5min effort
 --------------------------------------------------------------------------------

@@ -76,19 +76,19 @@ class HandshakeWallet:
         return HmacResult()
 
 
-def test_mutual_authentication_and_general_message():
+def test_mutual_authentication_and_general_message():  # NOSONAR - Protocol notation for peer handshake testing
     # Setup transports and connect
-    tA = LocalTransport()
-    tB = LocalTransport()
+    tA = LocalTransport()  # NOSONAR - Protocol notation (transport A)
+    tB = LocalTransport()  # NOSONAR - Protocol notation (transport B)
     tA.connect(tB)
 
     # Wallets
-    wA = HandshakeWallet(PrivateKey(1111))
-    wB = HandshakeWallet(PrivateKey(2222))
+    wA = HandshakeWallet(PrivateKey(1111))  # NOSONAR - Protocol notation (wallet A)
+    wB = HandshakeWallet(PrivateKey(2222))  # NOSONAR - Protocol notation (wallet B)
 
     # Peers
-    pA = Peer(PeerOptions(wallet=wA, transport=tA, session_manager=DefaultSessionManager()))
-    pB = Peer(PeerOptions(wallet=wB, transport=tB, session_manager=DefaultSessionManager()))
+    pA = Peer(PeerOptions(wallet=wA, transport=tA, session_manager=DefaultSessionManager()))  # NOSONAR - Protocol notation (peer A)
+    pB = Peer(PeerOptions(wallet=wB, transport=tB, session_manager=DefaultSessionManager()))  # NOSONAR - Protocol notation (peer B)
 
     # Ensure peers are started (transport callbacks registered)
     pA.start()

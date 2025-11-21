@@ -76,10 +76,10 @@ class TestScriptInterpreterPerformance:
 
         # Create a script that adds 500 ones together
         script_bytes = b""
-        for i in range(num_operations):
+        for _ in range(num_operations):
             script_bytes += b'\x51'  # OP_1
 
-        for i in range(num_operations - 1):
+        for _ in range(num_operations - 1):
             script_bytes += b'\x93'  # OP_ADD
 
         locking_script = Script(script_bytes)
@@ -102,7 +102,7 @@ class TestScriptInterpreterPerformance:
         stack_depth = 100
 
         script_bytes = b'\x51'  # Start with OP_1
-        for i in range(stack_depth - 1):
+        for _ in range(stack_depth - 1):
             script_bytes += b'\x76'  # OP_DUP
 
         locking_script = Script(script_bytes)
@@ -125,13 +125,13 @@ class TestScriptInterpreterPerformance:
         nesting_depth = 20
 
         script_bytes = b""
-        for i in range(nesting_depth):
+        for _ in range(nesting_depth):
             script_bytes += b'\x51'  # OP_1 (always true)
             script_bytes += b'\x63'  # OP_IF
 
         script_bytes += b'\x51'  # Final OP_1 result
 
-        for i in range(nesting_depth):
+        for _ in range(nesting_depth):
             script_bytes += b'\x68'  # OP_ENDIF
 
         locking_script = Script(script_bytes)
@@ -158,7 +158,7 @@ class TestScriptInterpreterPerformance:
 
         # Run a memory-intensive script
         script_parts = []
-        for i in range(500):
+        for _ in range(500):
             script_parts.extend(["OP_TRUE", "OP_DUP"])
 
         locking_script = Script.from_asm(" ".join(script_parts))
@@ -205,13 +205,13 @@ class TestScriptInterpreterPerformance:
         string_size = 100  # bytes per string
 
         script_parts = []
-        for i in range(num_strings):
+        for _ in range(num_strings):
             # Create a string of specified size
             data = "41" * string_size  # 'A' characters
             script_parts.append(f"{data}")
 
         # Add concatenation operations
-        for i in range(num_strings - 1):
+        for _ in range(num_strings - 1):
             script_parts.append("OP_CAT")
 
         locking_script = Script.from_asm(" ".join(script_parts))
@@ -239,7 +239,7 @@ class TestScriptInterpreterPerformance:
         import gc
 
         # Run many script executions
-        for i in range(100):
+        for _ in range(100):
             engine = Engine()
             locking_script = Script.from_asm("OP_TRUE OP_TRUE OP_EQUAL")
             unlocking_script = Script.from_bytes(b"")

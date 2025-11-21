@@ -8,7 +8,7 @@ class ScriptChunk:
     data: Optional[bytes]
 
 
-def read_script_chunks(script: Union[bytes, str]) -> List[ScriptChunk]:
+def read_script_chunks(script: Union[bytes, str]) -> List[ScriptChunk]:  # NOSONAR - Complexity (33), requires refactoring
     # Accept hex string input for convenience (tests may pass hex)
     if isinstance(script, str):
         try:

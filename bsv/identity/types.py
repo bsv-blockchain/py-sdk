@@ -21,7 +21,7 @@ class IdentityClientOptions:
     token_amount: int = 1
     output_index: int = 0
 
-class KnownIdentityTypes:
+class KnownIdentityTypes:  # NOSONAR - PascalCase constants match TS/Go SDK identity certificate types
     IdentiCert  = "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="
     DiscordCert = "2TgqRC35B1zehGmB21xveZNc7i5iqHc0uxMb+1NMPW4="
     PhoneCert   = "mffUklUzxbHr65xLohn0hRL0Tq2GjW1GYF/OPfzqJ6A="

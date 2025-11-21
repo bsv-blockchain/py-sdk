@@ -6,9 +6,6 @@ from bsv.hd.bip44 import bip44_derive_xprvs_from_mnemonic
 
 from bsv.constants import BIP32_DERIVATION_PATH, BIP44_DERIVATION_PATH
 
-# BIP32_DERIVATION_PATH = "m/"
-# BIP44_DERIVATION_PATH = "m/44'/236'/0'"
-
 def test_key_derivation_consistency():
     # Test mnemonic phrase
     test_mnemonic = "skin index hair zone brush soldier airport found stuff rare wonder physical"

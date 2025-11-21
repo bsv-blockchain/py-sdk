@@ -23,7 +23,7 @@ class TestScriptInterpreterEdgeCases:
         # Create a script that tries to create a very deep stack
         script_parts = []
         # Push 1000 items onto the stack
-        for i in range(1000):
+        for _ in range(1000):
             script_parts.append("OP_TRUE")
 
         # Try to execute
@@ -226,10 +226,10 @@ class TestScriptInterpreterEdgeCases:
         depth = 50  # Reasonable depth for testing
 
         # Create deeply nested IF statements
-        for i in range(depth):
+        for _ in range(depth):
             nested_script += "OP_TRUE OP_IF "
         nested_script += "OP_TRUE "  # Final operation
-        for i in range(depth):
+        for _ in range(depth):
             nested_script += "OP_ENDIF "
 
         locking_script = Script.from_asm(nested_script)
@@ -317,7 +317,7 @@ class TestScriptInterpreterEdgeCases:
 
         # Run multiple threads concurrently
         threads = []
-        for i in range(10):
+        for _ in range(10):
             t = threading.Thread(target=run_script)
             threads.append(t)
             t.start()

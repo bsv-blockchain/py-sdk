@@ -114,10 +114,10 @@ class Thread:
                 f"element size {len(pop.data)} exceeds max {self.cfg.max_script_element_size()}",
             )
         
-        exec = self.should_exec(pop)
+        _exec = self.should_exec(pop)  # NOSONAR - renamed to avoid shadowing builtin
         
         # Check disabled opcodes
-        if pop.is_disabled() and (not self.after_genesis or exec):
+        if pop.is_disabled() and (not self.after_genesis or _exec):
             return Error(ErrorCode.ERR_DISABLED_OPCODE, f"attempt to execute disabled opcode {pop.name()}")
         
         # Count operations
@@ -131,13 +131,13 @@ class Thread:
             return None
         
         # Check minimal data encoding
-        if self.dstack.verify_minimal_data and self.is_branch_executing() and pop.opcode <= OpCode.OP_PUSHDATA4 and exec:
+        if self.dstack.verify_minimal_data and self.is_branch_executing() and pop.opcode <= OpCode.OP_PUSHDATA4 and _exec:
             err_msg = pop.enforce_minimum_data_push()
             if err_msg:
                 return Error(ErrorCode.ERR_MINIMAL_DATA, err_msg)
         
         # Skip if early return and not conditional
-        if not exec and not pop.is_conditional():
+        if not _exec and not pop.is_conditional():
             return None
         
         # Execute opcode

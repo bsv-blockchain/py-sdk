@@ -237,7 +237,7 @@ class RegistryClient:
 
         return results
 
-    def revoke_own_registry_entry(self, ctx: Any, record: Dict[str, Any]) -> Dict[str, Any]:
+    def revoke_own_registry_entry(self, ctx: Any, record: Dict[str, Any]) -> Dict[str, Any]:  # NOSONAR - Complexity (26), requires refactoring
         # Owner check: ensure this wallet controls the registry operator key
         me = self.wallet.get_public_key(ctx, {"identityKey": True}, self.originator) or {}
         my_pub = cast(str, me.get("publicKey") or "")

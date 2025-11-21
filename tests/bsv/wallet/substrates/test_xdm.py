@@ -33,7 +33,7 @@ class DummyWindow:
     def __init__(self):
         self.parent = self
         self.called = []
-    def postMessage(self, msg, target):
+    def postMessage(self, msg, target):  # NOSONAR - Matches JavaScript Web API naming
         self.called.append((msg, target))
 
 
@@ -41,11 +41,18 @@ def test_xdm_constructor_throws_if_no_window():
     with pytest.raises(WalletError, match='global window object'):
         XDMSubstrate(window=None)
 
-def test_xdm_constructor_throws_if_no_postMessage():
+def test_xdm_constructor_throws_if_no_postMessage():  # NOSONAR - Testing JavaScript Web API naming
     class NoPostMessage:
         pass
     with pytest.raises(WalletError, match='support postMessage calls'):
         XDMSubstrate(window=NoPostMessage())
+
+def test_xdm_invoke_calls_postMessage():  # NOSONAR - Testing JavaScript Web API naming
+    win = DummyWindow()
+    xdm = XDMSubstrate(window=win)
+    result = xdm.invoke('testCall', {'foo': 'bar'})
+    assert result == {'result': 'ok'}
+    assert win.called
 
 def test_xdm_constructor_success():
     win = DummyWindow()

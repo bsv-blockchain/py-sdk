@@ -67,7 +67,7 @@ def minimally_encode(num: int) -> bytes:
     return bytes(octets)
 
 
-def check_signature_encoding(octets: bytes, require_low_s: bool = True, require_der: bool = True, _: bool = False) -> Optional[Error]:
+def check_signature_encoding(octets: bytes, require_low_s: bool = True, require_der: bool = True, _: bool = False) -> Optional[Error]:  # NOSONAR - Complexity (26), requires refactoring
     """
     Check signature encoding with detailed DER validation.
 

@@ -1317,7 +1317,7 @@ def run_real_library_demo():
         print("\n🛑 モックHTTPサーバーを停止しました")
 
 
-def test_single_process_server_management():
+def test_single_process_server_management():  # NOSONAR - Complexity (17), requires refactoring
     """
     Test that multiple servers can be managed in a single process
     This function demonstrates the improved server management

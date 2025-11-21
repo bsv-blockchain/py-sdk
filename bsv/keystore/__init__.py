@@ -11,7 +11,7 @@ class SecurityLevel:
 @dataclass
 class Protocol:
     security_level: int = SecurityLevel.SILENT
-    protocol: str = ""
+    protocol: str = ""  # NOSONAR - Field names match protocol specification
 
 # CounterpartyType and Counterparty (ported from go-sdk)
 class CounterpartyType:
@@ -23,7 +23,7 @@ class CounterpartyType:
 @dataclass
 class Counterparty:
     type: int = CounterpartyType.UNINITIALIZED
-    counterparty: Optional[PublicKey] = None
+    counterparty: Optional[PublicKey] = None  # NOSONAR - Field names match protocol specification
 
 # EncryptionArgs (common cryptographic parameters)
 @dataclass

@@ -321,7 +321,8 @@ def test_beef_merge_bump():
             return "root"
         
         def combine(self, other):
-            pass
+            """Intentionally empty: test stub."""
+            pass  # NOSONAR
     
     bump = DummyBump(400, "33" * 32)
     

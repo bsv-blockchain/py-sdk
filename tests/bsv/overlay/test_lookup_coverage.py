@@ -67,7 +67,7 @@ def test_overlay_lookup_empty_query():
             try:
                 _ = lookup.query('')
                 assert True
-            except (ValueError, Exception):
+            except (ValueError, Exception):  # NOSONAR - Intentional exception handling pattern for testing
                 # Expected
                 assert True
     except (ImportError, AttributeError):

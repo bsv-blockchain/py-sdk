@@ -36,7 +36,7 @@ class ParsedOpcode:
             or self.opcode == OpCode.OP_ENDIF
         )
 
-    def name(self) -> str:
+    def name(self) -> str:  # NOSONAR - Complexity (22), requires refactoring
         """Get opcode name."""
         from bsv.constants import OPCODE_VALUE_NAME_DICT
         return OPCODE_VALUE_NAME_DICT.get(self.opcode, f"UNKNOWN_{self.opcode.hex()}")

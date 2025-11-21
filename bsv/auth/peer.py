@@ -253,7 +253,7 @@ class Peer:
         try:
             from .requested_certificate_set import RequestedCertificateSet
         except Exception:
-            RequestedCertificateSet = None  # type: ignore
+            RequestedCertificateSet = None  # type: ignore  # NOSONAR - Holds class type, PascalCase intentional
 
         if requested is None:
             return {"certifiers": [], "certificateTypes": {}}

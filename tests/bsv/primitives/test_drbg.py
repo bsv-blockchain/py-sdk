@@ -109,7 +109,7 @@ class TestHmacDRBG:
         drbg = DRBG(vector['entropy'], vector['nonce'])
 
         last = None
-        for i in range(len(vector['add'])):
+        for _ in range(len(vector['add'])):
             # Generate bytes (expected length is in hex chars, so divide by 2)
             last = drbg.generate(len(vector['expected']) // 2)
 

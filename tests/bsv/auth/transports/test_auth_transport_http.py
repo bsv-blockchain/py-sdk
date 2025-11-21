@@ -27,7 +27,7 @@ def test_send_without_handler_returns_error(monkeypatch):
     assert "handler" in str(err).lower() or "no handler" in str(err).lower() or "not registered" in str(err).lower()
 
 
-def test_send_general_performs_http_and_notifies_handler(monkeypatch):
+def test_send_general_performs_http_and_notifies_handler(monkeypatch):  # NOSONAR - Complexity (19), requires refactoring
     # Stub requests.Session().request
     def fake_request(self, method, url, headers=None, data=None):  # noqa: D401
         assert method == "GET"

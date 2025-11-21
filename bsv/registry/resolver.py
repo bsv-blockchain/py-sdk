@@ -46,7 +46,7 @@ class WalletWireResolver:
             return []
         return self.query(ctx, definition_type, query)
 
-    def query(self, ctx: Any, definition_type: DefinitionType, query: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+    def query(self, ctx: Any, definition_type: DefinitionType, query: Dict[str, Any] = None) -> List[Dict[str, Any]]:  # NOSONAR - query parameter reserved for future filtering capability
         lo = self.wallet.list_outputs(
             ctx,
             {

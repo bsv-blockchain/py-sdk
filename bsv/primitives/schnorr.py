@@ -22,7 +22,7 @@ class Schnorr:
         """Initialize Schnorr instance."""
         pass
 
-    def generate_proof(
+    def generate_proof(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
         self,
         a: PrivateKey,
         A: PublicKey,
@@ -46,10 +46,10 @@ class Schnorr:
         r_int = r_key.int()
         
         # Compute R = r * G
-        R = curve_multiply(r_int, curve.g)
+        R = curve_multiply(r_int, curve.g)  # NOSONAR - Mathematical notation
         
         # Compute S' = r * B
-        S_prime = curve_multiply(r_int, B.point())
+        S_prime = curve_multiply(r_int, B.point())  # NOSONAR - Mathematical notation
         
         # Compute challenge e
         e = self._compute_challenge(A, B, S, S_prime, R)
@@ -63,7 +63,7 @@ class Schnorr:
             'z': z
         }
 
-    def verify_proof(
+    def verify_proof(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
         self,
         A: Optional[Point],
         B: Optional[Point],
@@ -85,8 +85,8 @@ class Schnorr:
         if A is None or B is None or S is None:
             return False
         
-        R = proof.get('R')
-        S_prime = proof.get('SPrime')
+        R = proof.get('R')  # NOSONAR - Mathematical notation
+        S_prime = proof.get('SPrime')  # NOSONAR - Mathematical notation
         z = proof.get('z')
         
         if R is None or S_prime is None or z is None:
@@ -96,24 +96,24 @@ class Schnorr:
         e = self._compute_challenge_from_points(A, B, S, S_prime, R)
         
         # Check zG = R + eA
-        zG = curve_multiply(z, curve.g)
-        eA = curve_multiply(e, A)
-        R_plus_eA = curve_add(R, eA)
+        zG = curve_multiply(z, curve.g)  # NOSONAR - Mathematical notation
+        eA = curve_multiply(e, A)  # NOSONAR - Mathematical notation
+        R_plus_eA = curve_add(R, eA)  # NOSONAR - Mathematical notation
         
         if zG != R_plus_eA:
             return False
         
         # Check zB = S' + eS
-        zB = curve_multiply(z, B)
-        eS = curve_multiply(e, S)
-        S_prime_plus_eS = curve_add(S_prime, eS)
+        zB = curve_multiply(z, B)  # NOSONAR - Mathematical notation
+        eS = curve_multiply(e, S)  # NOSONAR - Mathematical notation
+        S_prime_plus_eS = curve_add(S_prime, eS)  # NOSONAR - Mathematical notation
         
         if zB != S_prime_plus_eS:
             return False
         
         return True
 
-    def _compute_challenge(
+    def _compute_challenge(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
         self,
         A: PublicKey,
         B: PublicKey,
@@ -126,7 +126,7 @@ class Schnorr:
         B_point = B.point()
         return self._compute_challenge_from_points(A_point, B_point, S, S_prime, R)
 
-    def _compute_challenge_from_points(
+    def _compute_challenge_from_points(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
         self,
         A: Optional[Point],
         B: Optional[Point],

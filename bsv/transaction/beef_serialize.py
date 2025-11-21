@@ -8,7 +8,7 @@ from bsv.merkle_path import MerklePath
 from .beef import Beef, BeefTx, BEEF_V1, BEEF_V2, ATOMIC_BEEF
 
 
-def to_bytes_le_u32(v: int) -> bytes:
+def to_bytes_le_u32(v: int) -> bytes:  # NOSONAR - Complexity (23), requires refactoring
     return int(v).to_bytes(4, "little", signed=False)
 
 

@@ -241,7 +241,7 @@ def test_decode_address_unknown_network():
         from bsv.utils.address import decode_address
         # This might not be testable if all base58check_decode failures are caught the same way
         # But let's try with a manipulated valid address
-        pass  # Skip for now if hard to construct
+        pytest.skip("Hard to construct test case for unknown network prefix")
     except ImportError:
         pytest.skip("decode_address not available")
 

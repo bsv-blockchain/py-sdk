@@ -21,7 +21,7 @@ from .transaction_preimage import tx_preimage
 from .utils import unsigned_to_varint, Reader, Writer, reverse_hex_byte_order
 
 # Lazy import to avoid circular dependency
-def Spend(params):
+def Spend(params):  # NOSONAR - Matches TS SDK naming (class Spend)
     from .script.spend import Spend as SpendClass
     return SpendClass(params)
 
@@ -408,7 +408,6 @@ class Transaction:
             if proof_valid:
                 return True
 
-        input_total = 0
         for i, tx_input in enumerate(self.inputs):
             if not tx_input.source_transaction:
                 raise ValueError(
@@ -424,7 +423,6 @@ class Transaction:
                     f"merkle proof for the transaction spending the UTXO.")
 
             source_output = tx_input.source_transaction.outputs[tx_input.source_output_index]
-            input_total += source_output.satoshis
 
             input_verified = await tx_input.source_transaction.verify(chaintracker, scripts_only=scripts_only)
             if not input_verified:
@@ -445,8 +443,7 @@ class Transaction:
                 return False
 
         # All inputs verified successfully
-        # Note: We don't check input_total <= output_total here as the Go SDK doesn't either
-        # Fee validation would be done separately if needed
+        # Note: Fee validation would be done separately if needed
         return True
 
     def signature_hash(self, index: int) -> bytes:

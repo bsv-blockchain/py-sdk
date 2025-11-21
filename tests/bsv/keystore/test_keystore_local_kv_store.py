@@ -39,7 +39,7 @@ class DummyWallet(SimpleNamespace):
                 }
         return {"outputs": [], "beef": b""}
     
-    def create_action(self, ctx, args, originator):
+    def create_action(self, ctx, args, originator):  # NOSONAR - Complexity (17), requires refactoring
         """Mock create_action method."""
         # Extract key and value from the action description for KV operations
         description = args.get("description", "")

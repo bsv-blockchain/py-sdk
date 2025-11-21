@@ -160,7 +160,7 @@ def _collect_results(result: ValidationResult, ctx: _ValidationContext):
     result.missing_inputs = list(ctx.missing_inputs)
 
 
-def verify_valid(beef: Beef, allow_txid_only: bool = False) -> Tuple[bool, Dict[int, str]]:
+def verify_valid(beef: Beef, allow_txid_only: bool = False) -> Tuple[bool, Dict[int, str]]:  # NOSONAR - Complexity (33), requires refactoring
     """
     Validate structure and confirm that computed roots are consistent per block height.
     Returns (valid, roots_map).

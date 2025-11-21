@@ -338,7 +338,7 @@ class TestBase58:
         with pytest.raises(ValueError, match="Invalid base58 character"):
             from_base58('1230456')
     
-    def test_from_base58_I_char_raises(self):
+    def test_from_base58_I_char_raises(self):  # NOSONAR - Testing Base58 exclusion of 'I' character
         """Test that 'I' character raises ValueError."""
         with pytest.raises(ValueError, match="Invalid base58 character"):
             from_base58('123I456')

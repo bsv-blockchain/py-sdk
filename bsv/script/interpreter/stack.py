@@ -69,7 +69,8 @@ class NopStateHandler:
         return {}
 
     def set_state(self, state: dict) -> None:
-        pass
+        """Intentionally empty: null object pattern."""
+        pass  # NOSONAR
 
 
 def as_bool(data: bytes) -> bool:

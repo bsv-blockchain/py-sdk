@@ -498,7 +498,7 @@ def test_transceiver_concurrent_access():
 
         # Start multiple threads
         threads = []
-        for i in range(5):
+        for _ in range(5):
             thread = threading.Thread(target=worker)
             threads.append(thread)
             thread.start()

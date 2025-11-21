@@ -7,7 +7,7 @@ from bsv.broadcasters import default_broadcaster
 
 class BroadcasterConfig:
     def __init__(self, network_preset: str = "mainnet") -> None:
-        self.networkPreset = network_preset
+        self.networkPreset = network_preset  # NOSONAR - camelCase matches external API format
 
 
 class TopicBroadcaster:

@@ -22,10 +22,10 @@ class Header:
 
 
 @dataclass
-class State:
+class State:  # NOSONAR - Field names match protocol specification
     """Blockchain state information."""
     header: Header
-    state: str
+    state: str  # NOSONAR - Field names match protocol specification
     height: int
 
 

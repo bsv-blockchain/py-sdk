@@ -286,9 +286,9 @@ class TopicBroadcaster:
         """Send tagged BEEF to a host with error tracking."""
         try:
             return await self.facilitator.send(host, tagged_beef)
-        except Exception as e:
+        except Exception as e:  # NOSONAR - Reserved for future host failure tracking
             # In a full implementation, we'd track host failures
-            raise e
+            raise
 
     def _check_acknowledgment_requirements(self, host_acknowledgments: Dict[str, set]) -> bool:
         """Check if acknowledgment requirements are met."""

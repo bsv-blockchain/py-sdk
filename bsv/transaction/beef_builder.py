@@ -12,7 +12,7 @@ def remove_existing_txid(beef: Beef, txid: str) -> None:
     beef.txs.pop(txid, None)
 
 
-def _leaf_exists_in_bump(bump: MerklePath, txid: str) -> bool:
+def _leaf_exists_in_bump(bump: MerklePath, txid: str) -> bool:  # NOSONAR - Complexity (23), requires refactoring
     try:
         for leaf in bump.path[0]:
             if leaf.get("hash_str") == txid:

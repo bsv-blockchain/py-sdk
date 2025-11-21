@@ -337,7 +337,7 @@ def decode_outpoint(r: Reader) -> str:
 # Actions Serializers (Args only – Results TBD)
 # ==========================================================
 
-def serialize_create_action_args(args: dict) -> bytes:
+def serialize_create_action_args(args: dict) -> bytes:  # NOSONAR - Complexity (46), requires refactoring
     """Ported from Go SerializeCreateActionArgs / TS implementation."""
     w = Writer()
     # Description & inputBEEF

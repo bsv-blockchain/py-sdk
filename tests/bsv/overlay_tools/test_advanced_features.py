@@ -359,7 +359,7 @@ class TestOverlayIntegration:
                 results.append(f"error: {e}")
 
         threads = []
-        for i in range(5):
+        for _ in range(5):
             t = threading.Thread(target=update_host)
             threads.append(t)
             t.start()

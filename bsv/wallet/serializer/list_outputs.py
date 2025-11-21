@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Optional
 from bsv.wallet.substrates.serializer import Reader, Writer
 
 
-def serialize_list_outputs_args(args: Dict[str, Any]) -> bytes:
+def serialize_list_outputs_args(args: Dict[str, Any]) -> bytes:  # NOSONAR - Complexity (21), requires refactoring
     w = Writer()
     # basket
     w.write_string(args.get("basket", ""))
@@ -144,8 +144,8 @@ def _deserialize_output(r: Reader) -> Dict[str, Any]:
     idx = r.read_varint()
     satoshis = int(r.read_varint())
     ls_len = r.read_varint()
-    lockingScript = b"" if ls_len == (1 << 64) - 1 else r.read_bytes(int(ls_len))
-    customInstructions = r.read_string()
+    lockingScript = b"" if ls_len == (1 << 64) - 1 else r.read_bytes(int(ls_len))  # NOSONAR - camelCase matches wallet wire API
+    customInstructions = r.read_string()  # NOSONAR - camelCase matches wallet wire API
     tcnt = r.read_varint()
     tags = [r.read_string() for _ in range(int(tcnt))]
     lcnt = r.read_varint()

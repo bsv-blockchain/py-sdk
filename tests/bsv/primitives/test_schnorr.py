@@ -27,7 +27,7 @@ class TestSchnorrZeroKnowledgeProof:
         B = b.public_key()
 
         # Compute shared secret S = B * a
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         # Generate proof
         proof = self.schnorr.generate_proof(a, A, B, S_point)
@@ -42,7 +42,7 @@ class TestSchnorrZeroKnowledgeProof:
         b = PrivateKey()
         A = a.public_key()
         B = b.public_key()
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
@@ -59,7 +59,7 @@ class TestSchnorrZeroKnowledgeProof:
         b = PrivateKey()
         A = a.public_key()
         B = b.public_key()
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
@@ -76,7 +76,7 @@ class TestSchnorrZeroKnowledgeProof:
         b = PrivateKey()
         A = a.public_key()
         B = b.public_key()
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
@@ -93,7 +93,7 @@ class TestSchnorrZeroKnowledgeProof:
         b = PrivateKey()
         A = a.public_key()
         B = b.public_key()
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
@@ -109,7 +109,7 @@ class TestSchnorrZeroKnowledgeProof:
         b = PrivateKey()
         A = a.public_key()
         B = b.public_key()
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
@@ -125,7 +125,7 @@ class TestSchnorrZeroKnowledgeProof:
         b = PrivateKey()
         A = a.public_key()
         B = b.public_key()
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
@@ -142,7 +142,7 @@ class TestSchnorrZeroKnowledgeProof:
         b = PrivateKey()
         A = a.public_key()
         B = b.public_key()
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         # Generate proof using wrong private key
         proof = self.schnorr.generate_proof(wrong_a, A, B, S_point)
@@ -158,7 +158,7 @@ class TestSchnorrZeroKnowledgeProof:
         A = a.public_key()
         B = b.public_key()
         wrong_b_public = wrong_b.public_key()
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
@@ -194,7 +194,7 @@ class TestSchnorrZeroKnowledgeProof:
 
         A = a.public_key()
         B = b.public_key()
-        S_point = curve_multiply(a.int(), B.point())
+        S_point = curve_multiply(a.int(), B.point())  # NOSONAR - Mathematical notation for Schnorr ZKP
 
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 

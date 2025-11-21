@@ -48,12 +48,12 @@ class TestDecodeAddress:
         with pytest.raises(ValueError, match="invalid P2PKH address"):
             decode_address("1A1zP1eP5QGefi2DMPTfTL5SLmv7Divf0a")  # Contains '0'
     
-    def test_decode_address_with_O(self):
+    def test_decode_address_with_O(self):  # NOSONAR - Testing Base58 exclusion of 'O' character
         """Test that addresses with 'O' raise ValueError."""
         with pytest.raises(ValueError, match="invalid P2PKH address"):
             decode_address("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfOa")
     
-    def test_decode_address_with_I(self):
+    def test_decode_address_with_I(self):  # NOSONAR - Testing Base58 exclusion of 'I' character
         """Test that addresses with 'I' raise ValueError."""
         with pytest.raises(ValueError, match="invalid P2PKH address"):
             decode_address("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfIa")

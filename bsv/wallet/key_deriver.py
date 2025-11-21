@@ -16,9 +16,9 @@ CURVE_ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 
 
 @dataclass
-class Protocol:
+class Protocol:  # NOSONAR - Field names match protocol specification
     security_level: int  # 0,1,2
-    protocol: str
+    protocol: str  # NOSONAR - Field names match protocol specification
     
     def __init__(self, security_level: int, protocol: str):
         # Allow 3-400 characters to match TS/Go (e.g., "ctx" is valid in tests)
@@ -46,9 +46,9 @@ class CounterpartyType:
 
 
 @dataclass
-class Counterparty:
+class Counterparty:  # NOSONAR - Field names match protocol specification
     type: int
-    counterparty: Optional[PublicKey] = None
+    counterparty: Optional[PublicKey] = None  # NOSONAR - Field names match protocol specification
 
     def to_public_key(self, self_pub: PublicKey) -> PublicKey:
         if self.type == CounterpartyType.SELF:

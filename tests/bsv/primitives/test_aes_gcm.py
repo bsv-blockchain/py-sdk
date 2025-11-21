@@ -30,8 +30,8 @@ def test_aes_gcm_vectors():
 
 def test_ghash():
     # go-sdk/primitives/aesgcm/aesgcm_test.go TestGhash 準拠
-    input = unhexlify("000000000000000000000000000000000388dace60b6a392f328c2b971b2fe7800000000000000000000000000000080")
+    input_data = unhexlify("000000000000000000000000000000000388dace60b6a392f328c2b971b2fe7800000000000000000000000000000080")  # NOSONAR - renamed to avoid shadowing builtin
     hash_subkey = unhexlify("66e94bd4ef8a2c3b884cfa59ca342b2e")
     expected = unhexlify("f38cbb1ad69223dcc3457ae5b6b0f885")
-    actual = ghash(input, hash_subkey)
+    actual = ghash(input_data, hash_subkey)
     assert actual == expected, f"ghash mismatch: got {actual.hex()} want {expected.hex()}"

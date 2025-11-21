@@ -345,7 +345,7 @@ def test_signature_invalid_public_key_types():
         # Create invalid public key somehow
         invalid_pub = type('MockPub', (), {'verify': lambda self, sig, msg: False})()
         # This won't work but shows the intent
-    except:
+    except Exception:  # NOSONAR - intentional broad catch in test
         pass
 
 
@@ -371,7 +371,7 @@ def test_signature_concurrent_usage():
 
     # Run multiple threads
     threads = []
-    for i in range(10):
+    for _ in range(10):
         t = threading.Thread(target=sign_and_verify)
         threads.append(t)
         t.start()

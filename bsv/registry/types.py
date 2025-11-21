@@ -14,7 +14,7 @@ class CertificateFieldDescriptor(TypedDict):
 
 
 @dataclass
-class BasketDefinitionData:
+class BasketDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     definitionType: Literal["basket"]
     basketID: str
     name: str
@@ -25,7 +25,7 @@ class BasketDefinitionData:
 
 
 @dataclass
-class ProtocolDefinitionData:
+class ProtocolDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     definitionType: Literal["protocol"]
     protocolID: Dict[str, Any]  # WalletProtocol-like: {securityLevel, protocol}
     name: str
@@ -36,7 +36,7 @@ class ProtocolDefinitionData:
 
 
 @dataclass
-class CertificateDefinitionData:
+class CertificateDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     definitionType: Literal["certificate"]
     type: str
     name: str
@@ -55,7 +55,7 @@ DefinitionData = Union[
 
 
 @dataclass
-class TokenData:
+class TokenData:  # NOSONAR - camelCase matches TS/Go registry API
     txid: str
     outputIndex: int
     satoshis: int

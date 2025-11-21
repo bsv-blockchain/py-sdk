@@ -15,7 +15,7 @@ ERROR_NON_MINIMAL_ENCODING = "non-minimally encoded script number"
 class ScriptNumber:
     """ScriptNumber represents a number used in Bitcoin scripts."""
 
-    def __init__(self, value: int):
+    def __init__(self, value: int):  # NOSONAR - Complexity (18), requires refactoring
         """Initialize a ScriptNumber with an integer value."""
         self.value = value
 

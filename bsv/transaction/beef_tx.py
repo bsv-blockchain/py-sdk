@@ -9,7 +9,7 @@ from bsv.utils import Writer, Reader
 from bsv.hash import hash256
 
 
-class TX_DATA_FORMAT:
+class TX_DATA_FORMAT:  # NOSONAR - Matches TS SDK naming
     """Transaction data format constants."""
     RAWTX = 0
     RAWTX_AND_BUMP_INDEX = 1

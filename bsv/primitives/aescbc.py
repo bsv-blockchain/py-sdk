@@ -5,11 +5,11 @@ from Cryptodome.Hash import HMAC, SHA256
 class InvalidPadding(Exception):
     pass
 
-def PKCS7Padd(data: bytes, block_size: int) -> bytes:
+def PKCS7Padd(data: bytes, block_size: int) -> bytes:  # NOSONAR - Standard PKCS7 naming convention
     padding = block_size - (len(data) % block_size)
     return data + bytes([padding]) * padding
 
-def PKCS7Unpad(data: bytes, block_size: int) -> bytes:
+def PKCS7Unpad(data: bytes, block_size: int) -> bytes:  # NOSONAR - Standard PKCS7 naming convention
     length = len(data)
     if length % block_size != 0 or length == 0:
         raise InvalidPadding("invalid padding length")
@@ -20,7 +20,7 @@ def PKCS7Unpad(data: bytes, block_size: int) -> bytes:
         raise InvalidPadding("invalid padding byte (inconsistent)")
     return data[:-padding]
 
-def AESCBCEncrypt(data: bytes, key: bytes, iv: bytes, concat_iv: bool) -> bytes:
+def AESCBCEncrypt(data: bytes, key: bytes, iv: bytes, concat_iv: bool) -> bytes:  # NOSONAR - Standard AES-CBC naming convention
     block_size = AES.block_size
     padded = PKCS7Padd(data, block_size)
     # AES-CBC is used with HMAC-SHA256 for authenticated encryption (see aes_cbc_encrypt_mac)
@@ -30,7 +30,7 @@ def AESCBCEncrypt(data: bytes, key: bytes, iv: bytes, concat_iv: bool) -> bytes:
         return iv + ciphertext
     return ciphertext
 
-def AESCBCDecrypt(data: bytes, key: bytes, iv: bytes) -> bytes:
+def AESCBCDecrypt(data: bytes, key: bytes, iv: bytes) -> bytes:  # NOSONAR - Standard AES-CBC naming convention
     block_size = AES.block_size
     # AES-CBC is used with HMAC-SHA256 for authenticated encryption (see aes_cbc_decrypt_mac)
     cipher = AES.new(key, AES.MODE_CBC, iv)  # noqa: S305  # NOSONAR - CBC mode with HMAC provides authenticated encryption

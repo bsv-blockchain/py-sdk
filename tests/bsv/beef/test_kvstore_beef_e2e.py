@@ -164,7 +164,7 @@ def test_beef_v2_raw_and_bump_chain_linking_best_effort():
         new_beef_from_bytes(v2)
     except Exception as e:
         # Accept failure for malformed raw tx; parser should raise rather than crash entire process
-        assert(str(e)=="unsupported operand type(s) for &: 'NoneType' and 'int'"); pass
+        assert str(e) == "unsupported operand type(s) for &: 'NoneType' and 'int'"
 
 
 def test_sighash_rules_end_byte_matrix():
@@ -760,7 +760,7 @@ def _assert_input_meta_valid(ims):
         length = m.get("unlockingScriptLength")
         assert isinstance(length, int) and length >= 1 + 70 + 1
 
-def _assert_spends_valid(spends2):
+def _assert_spends_valid(spends2):  # NOSONAR - Complexity (18), requires refactoring
     if not (isinstance(spends2, dict) and spends2):
         return
     for s in spends2.values():

@@ -342,7 +342,7 @@ def test_beef_merge_multiple_transactions():
     beef = Beef(version=4022206465)
     
     # Merge several transactions
-    for i in range(5):
+    for _ in range(5):
         tx = Transaction()
         beef.merge_transaction(tx)
     

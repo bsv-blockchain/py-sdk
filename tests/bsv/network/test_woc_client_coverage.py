@@ -135,7 +135,7 @@ def test_woc_client_invalid_address():
             try:
                 _ = client.get_balance('invalid')
                 assert True
-            except (ValueError, Exception):
+            except (ValueError, Exception):  # NOSONAR - Intentional exception handling pattern for testing
                 # Expected
                 assert True
     except (ImportError, AttributeError):

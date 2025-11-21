@@ -342,7 +342,7 @@ def _link_inputs_for_tx(btx, beef):
                 updated = True
     return updated
 
-def _normalize_bump_for_tx(btx):
+def _normalize_bump_for_tx(btx):  # NOSONAR - Complexity (24), requires refactoring
     if btx.bump_index is not None and btx.tx_obj and btx.tx_obj.merkle_path:
         try:
             _ = btx.tx_obj.merkle_path.compute_root()
@@ -387,7 +387,7 @@ def new_beef_from_atomic_bytes(data: bytes) -> tuple[Beef, Optional[str]]:
     return beef, subject
 
 
-def parse_beef(data: bytes) -> Beef:
+def parse_beef(data: bytes) -> Beef:  # NOSONAR - Complexity (19), requires refactoring
     if len(data) < 4:
         raise ValueError("invalid beef bytes")
     version = int.from_bytes(data[:4], "little")

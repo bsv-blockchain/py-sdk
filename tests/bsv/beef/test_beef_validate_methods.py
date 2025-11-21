@@ -135,11 +135,11 @@ def test_long_dependency_chain_requires_bump_for_validity():
 
     beef = Beef(version=BEEF_V2)
     # Chain: A -> B -> C -> D (D newest)
-    A, B, C, D = ("a1"*32), ("b1"*32), ("c1"*32), ("d1"*32)
-    tA = Tx(A)
-    tB = Tx(B, [Inp(A)])
-    tC = Tx(C, [Inp(B)])
-    tD = Tx(D, [Inp(C)])
+    A, B, C, D = ("a1"*32), ("b1"*32), ("c1"*32), ("d1"*32)  # NOSONAR - Transaction chain notation
+    tA = Tx(A)  # NOSONAR - Transaction notation
+    tB = Tx(B, [Inp(A)])  # NOSONAR - Transaction notation
+    tC = Tx(C, [Inp(B)])  # NOSONAR - Transaction notation
+    tD = Tx(D, [Inp(C)])  # NOSONAR - Transaction notation
     # Merge in order without bumps
     beef.merge_transaction(tA);
     beef.merge_transaction(tB)
