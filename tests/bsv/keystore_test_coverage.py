@@ -3,7 +3,7 @@ Coverage tests for keystore/ modules - untested branches.
 """
 import pytest
 from bsv.keys import PrivateKey
-
+from unittest.mock import Mock
 
 # ========================================================================
 # Keystore interface branches
