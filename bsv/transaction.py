@@ -1,5 +1,3 @@
-import asyncio
-import inspect
 import math
 from contextlib import suppress
 from typing import List, Optional, Union, Dict, Any
@@ -171,29 +169,10 @@ class Transaction:
 
     estimated_size = estimated_byte_length
 
-    # Private helper method for handling asynchronous fee resolution and application
-    async def _resolve_and_apply_fee(self, fee_estimate, change_distribution):
-        """
-        A helper method to resolve and apply the transaction fee asynchronously.
-
-        :param fee_estimate: An awaitable object that resolves to the estimated fee
-        :param change_distribution: The method of distributing change ('equal' or 'random')
-        :return: The resolved fee value (int) or None in case of an error
-        """
-        try:
-            # Resolve the fee asynchronously
-            resolved_fee = await fee_estimate
-            # Apply the resolved fee to the transaction
-            self._apply_fee_amount(resolved_fee, change_distribution)
-            return resolved_fee
-        except Exception as e:
-            # Handle any errors and return None on failure
-            return None
-
     def fee(self, model_or_fee=None, change_distribution='equal'):
         """
         Computes the transaction fee and adjusts the change outputs accordingly.
-        This method can be called synchronously, even if it internally uses asynchronous operations.
+        This method can be called synchronously or from async contexts.
 
         :param model_or_fee: A fee model or a fee amount. If not provided, it defaults to an instance
             of `LivePolicy` that fetches the latest mining fees.
@@ -210,15 +189,10 @@ class Transaction:
             self._apply_fee_amount(model_or_fee, change_distribution)
             return model_or_fee
 
-        # If the fee estimation requires asynchronous computation
+        # Compute the fee using the fee model
         fee_estimate = model_or_fee.compute_fee(self)
-
-        if inspect.isawaitable(fee_estimate):
-            # Execute the asynchronous task synchronously and get the result
-            resolved_fee = asyncio.run(self._resolve_and_apply_fee(fee_estimate, change_distribution))
-            return resolved_fee
-
-        # Apply the fee directly if it is computed synchronously
+        
+        # Apply the fee directly
         self._apply_fee_amount(fee_estimate, change_distribution)
         return fee_estimate
 
