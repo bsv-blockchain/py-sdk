@@ -7,7 +7,7 @@ NUMBER_BYTE_LENGTH: int = 32
 TRANSACTION_SEQUENCE: int = int(os.getenv('BSV_PY_SDK_TRANSACTION_SEQUENCE') or 0xffffffff)
 TRANSACTION_VERSION: int = int(os.getenv('BSV_PY_SDK_TRANSACTION_VERSION') or 1)
 TRANSACTION_LOCKTIME: int = int(os.getenv('BSV_PY_SDK_TRANSACTION_LOCKTIME') or 0)
-TRANSACTION_FEE_RATE: int = int(os.getenv('BSV_PY_SDK_TRANSACTION_FEE_RATE') or 5)  # satoshi per kilobyte
+TRANSACTION_FEE_RATE: int = int(os.getenv('BSV_PY_SDK_TRANSACTION_FEE_RATE') or 10)  # satoshi per kilobyte
 BIP32_DERIVATION_PATH = os.getenv('BSV_PY_SDK_BIP32_DERIVATION_PATH') or "m/"
 BIP39_ENTROPY_BIT_LENGTH: int = int(os.getenv('BSV_PY_SDK_BIP39_ENTROPY_BIT_LENGTH') or 128)
 BIP44_DERIVATION_PATH = os.getenv('BSV_PY_SDK_BIP44_DERIVATION_PATH') or "m/44'/236'/0'"
@@ -340,4 +340,7 @@ class OpCode(bytes, Enum):
 
 
 OPCODE_VALUE_NAME_DICT: Dict[bytes, str] = {item.value: item.name for item in OpCode}
-OPCODE_VALUE_NAME_DICT[b'\x00'] = 'OP_0'
+# BRC-106 compliance: Use most human-readable names for output
+# When multiple names exist for the same opcode value, prefer the more descriptive one
+OPCODE_VALUE_NAME_DICT[b'\x00'] = 'OP_FALSE'  # More human-readable than OP_0
+OPCODE_VALUE_NAME_DICT[b'\x51'] = 'OP_TRUE'   # More human-readable than OP_1
