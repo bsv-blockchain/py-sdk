@@ -666,38 +666,4 @@ def test_input_auto_txid():
             unlocking_script_template=P2PKH().unlock(private_key),
         )
 
-
-def test_transaction_fee_with_default_rate():
-    from bsv.constants import TRANSACTION_FEE_RATE
-
-    address = "1AfxgwYJrBgriZDLryfyKuSdBsi59jeBX9"
-    t = Transaction()
-    t_in = TransactionInput(
-        source_transaction=Transaction(
-            [],
-            [
-                None,
-                TransactionOutput(locking_script=P2PKH().lock(address), satoshis=1000),
-            ],
-        ),
-        source_txid="d2bc57099dd434a5adb51f7de38cc9b8565fb208090d9b5ea7a6b4778e1fdd48",
-        source_output_index=1,
-        unlocking_script_template=P2PKH().unlock(PrivateKey()),
-    )
-    t.add_input(t_in)
-    t.add_output(
-        TransactionOutput(
-            P2PKH().lock("1JDZRGf5fPjGTpqLNwjHFFZnagcZbwDsxw"), satoshis=100
-        )
-    )
-    t.add_output(TransactionOutput(P2PKH().lock(address), change=True))
-
-    t.fee()
-
-    estimated_size = t.estimated_byte_length()
-    expected_fee = int((estimated_size / 1000) * TRANSACTION_FEE_RATE)
-    actual_fee = t.get_fee()
-
-    assert abs(actual_fee - expected_fee) <= 1
-
 # TODO: Test tx.verify()

@@ -1,5 +1,4 @@
-import asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import MagicMock, patch
 from bsv.fee_models.live_policy import LivePolicy
 
 # Reset the singleton instance before each test
@@ -10,10 +9,10 @@ def setup_function(_):
 def teardown_function(_):
     LivePolicy._instance = None
 
-@patch("bsv.fee_models.live_policy.default_http_client", autospec=True)
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
 def test_parses_mining_fee(mock_http_client_factory):
-    # Prepare the mocked DefaultHttpClient instance
-    mock_http_client = AsyncMock()
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
     mock_http_client_factory.return_value = mock_http_client
 
     # Set up a mock response
@@ -35,15 +34,15 @@ def test_parses_mining_fee(mock_http_client_factory):
     )
 
     # Execute and verify the result
-    rate = asyncio.run(policy.current_rate_sat_per_kb())
+    rate = policy.current_rate_sat_per_kb()
     assert rate == 20
     mock_http_client.get.assert_called_once()
 
 
-@patch("bsv.fee_models.live_policy.default_http_client", autospec=True)
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
 def test_cache_reused_when_valid(mock_http_client_factory):
-    # Prepare the mocked DefaultHttpClient instance
-    mock_http_client = AsyncMock()
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
     mock_http_client_factory.return_value = mock_http_client
 
     # Set up a mock response
@@ -60,8 +59,8 @@ def test_cache_reused_when_valid(mock_http_client_factory):
     )
 
     # Call multiple times within the cache validity period
-    first_rate = asyncio.run(policy.current_rate_sat_per_kb())
-    second_rate = asyncio.run(policy.current_rate_sat_per_kb())
+    first_rate = policy.current_rate_sat_per_kb()
+    second_rate = policy.current_rate_sat_per_kb()
 
     # Verify the results
     assert first_rate == 50
@@ -69,16 +68,16 @@ def test_cache_reused_when_valid(mock_http_client_factory):
     mock_http_client.get.assert_called_once()
 
 
-@patch("bsv.fee_models.live_policy.default_http_client", autospec=True)
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
 @patch("bsv.fee_models.live_policy.logger.warning")
 def test_uses_cached_value_when_fetch_fails(mock_log, mock_http_client_factory):
-    # Prepare the mocked DefaultHttpClient instance
-    mock_http_client = AsyncMock()
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
     mock_http_client_factory.return_value = mock_http_client
 
     # Set up mock responses (success first, then failure)
     mock_http_client.get.side_effect = [
-        AsyncMock(json_data={"data": {"policy": {"satPerKb": 75}}}),
+        MagicMock(json_data={"data": {"policy": {"satPerKb": 75}}}),
         Exception("Network down")
     ]
 
@@ -89,7 +88,7 @@ def test_uses_cached_value_when_fetch_fails(mock_log, mock_http_client_factory):
     )
 
     # The first execution succeeds
-    first_rate = asyncio.run(policy.current_rate_sat_per_kb())
+    first_rate = policy.current_rate_sat_per_kb()
     assert first_rate == 75
 
     # Force invalidation of the cache
@@ -97,7 +96,7 @@ def test_uses_cached_value_when_fetch_fails(mock_log, mock_http_client_factory):
         policy._cache.fetched_at_ms -= 10
 
     # The second execution uses the cache
-    second_rate = asyncio.run(policy.current_rate_sat_per_kb())
+    second_rate = policy.current_rate_sat_per_kb()
     assert second_rate == 75
 
     # Verify that a log is recorded for cache usage
@@ -107,11 +106,11 @@ def test_uses_cached_value_when_fetch_fails(mock_log, mock_http_client_factory):
     mock_http_client.get.assert_called()
 
 
-@patch("bsv.fee_models.live_policy.default_http_client", autospec=True)
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
 @patch("bsv.fee_models.live_policy.logger.warning")
 def test_falls_back_to_default_when_no_cache(mock_log, mock_http_client_factory):
-    # Prepare the mocked DefaultHttpClient instance
-    mock_http_client = AsyncMock()
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
     mock_http_client_factory.return_value = mock_http_client
 
     # Set up a mock response (always failing)
@@ -124,7 +123,7 @@ def test_falls_back_to_default_when_no_cache(mock_log, mock_http_client_factory)
     )
 
     # Fallback value is returned during execution
-    rate = asyncio.run(policy.current_rate_sat_per_kb())
+    rate = policy.current_rate_sat_per_kb()
     assert rate == 9
 
     # Verify that a log is recorded
@@ -135,11 +134,11 @@ def test_falls_back_to_default_when_no_cache(mock_log, mock_http_client_factory)
     mock_http_client.get.assert_called()
 
 
-@patch("bsv.fee_models.live_policy.default_http_client", autospec=True)
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
 @patch("bsv.fee_models.live_policy.logger.warning")
 def test_invalid_response_triggers_fallback(mock_log, mock_http_client_factory):
-    # Prepare the mocked DefaultHttpClient instance
-    mock_http_client = AsyncMock()
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
     mock_http_client_factory.return_value = mock_http_client
 
     # Set up an invalid response
@@ -154,7 +153,7 @@ def test_invalid_response_triggers_fallback(mock_log, mock_http_client_factory):
     )
 
     # Fallback value is returned due to the invalid response
-    rate = asyncio.run(policy.current_rate_sat_per_kb())
+    rate = policy.current_rate_sat_per_kb()
     assert rate == 3
 
     # Verify that a log is recorded
