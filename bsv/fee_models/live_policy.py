@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from ..constants import HTTP_REQUEST_TIMEOUT, TRANSACTION_FEE_RATE
-from ..http_client import default_http_client
+from ..http_client import default_sync_http_client
 from .satoshis_per_kilobyte import SatoshisPerKilobyte
 
 
@@ -88,19 +88,19 @@ class LivePolicy(SatoshisPerKilobyte):
                     )
         return cls._instance
 
-    async def compute_fee(self, tx) -> int:  # type: ignore[override]
+    def compute_fee(self, tx) -> int:  # type: ignore[override]
         """Compute a fee for ``tx`` using the latest ARC rate."""
-        rate = await self._current_rate_sat_per_kb()
+        rate = self.current_rate_sat_per_kb()
         self.value = rate
         return super().compute_fee(tx)
 
-    async def _current_rate_sat_per_kb(self) -> int:
+    def current_rate_sat_per_kb(self) -> int:
         """Return the cached sat/kB rate or fetch a new value from ARC."""
         cache = self._get_cache(allow_stale=True)
         if cache and self._cache_valid(cache):
             return cache.value
 
-        rate, error = await self._fetch_sat_per_kb()
+        rate, error = self._fetch_sat_per_kb()
         if rate is not None:
             self._set_cache(rate)
             return rate
@@ -142,15 +142,15 @@ class LivePolicy(SatoshisPerKilobyte):
         with self._cache_lock:
             self._cache = _CachedRate(value=value, fetched_at_ms=time.time() * 1000)
 
-    async def _fetch_sat_per_kb(self) -> Tuple[Optional[int], Optional[Exception]]:
+    def _fetch_sat_per_kb(self) -> Tuple[Optional[int], Optional[Exception]]:
         """Fetch the latest fee policy from ARC and coerce it to sat/kB."""
         try:
             headers = {"Accept": "application/json"}
             if self.api_key:
                 headers["Authorization"] = self.api_key
 
-            http_client = default_http_client()
-            response = await http_client.get(
+            http_client = default_sync_http_client()
+            response = http_client.get(
                 self.arc_policy_url,
                 headers=headers,
                 timeout=self.request_timeout,

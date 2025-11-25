@@ -1,179 +1,164 @@
-"""
-Tests for LivePolicy fee model.
-
-Aligned with TypeScript SDK design where only compute_fee() is public API.
-"""
-
-import asyncio
-import time
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import MagicMock, patch
 from bsv.fee_models.live_policy import LivePolicy
-from bsv.transaction import Transaction
-from bsv.transaction_output import TransactionOutput
-from bsv.script.script import Script
 
+# Reset the singleton instance before each test
+def setup_function(_):
+    LivePolicy._instance = None
 
-class TestLivePolicy:
-    """Test LivePolicy fee model."""
+# Reset the singleton instance after each test
+def teardown_function(_):
+    LivePolicy._instance = None
 
-    def test_singleton_instance(self):
-        """Test that get_instance returns the same instance."""
-        instance1 = LivePolicy.get_instance()
-        instance2 = LivePolicy.get_instance()
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
+def test_parses_mining_fee(mock_http_client_factory):
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
+    mock_http_client_factory.return_value = mock_http_client
 
-        assert instance1 is instance2
-        assert isinstance(instance1, LivePolicy)
-
-    def test_singleton_different_cache_validity(self):
-        """Test that get_instance with different cache validity still returns same instance."""
-        instance1 = LivePolicy.get_instance(300000)  # 5 minutes
-        instance2 = LivePolicy.get_instance(600000)  # 10 minutes
-
-        # Should return the same instance (first one created)
-        assert instance1 is instance2
-
-    @pytest.mark.asyncio
-    async def test_compute_fee_with_cached_rate(self):
-        """Test compute_fee uses cached rate when available."""
-        policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=100)  # 1 minute cache
-
-        # Mock the HTTP client to return a valid response
-        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
-            mock_response = MagicMock()
-            mock_response.json_data = {
-                'policy': {
-                    'miningFee': {
-                        'satoshis': 150,
-                        'bytes': 1000
-                    }
+    # Set up a mock response
+    mock_http_client.get.return_value.json_data = {
+        "data": {
+            "policy": {
+                "fees": {
+                    "miningFee": {"satoshis": 5, "bytes": 250}
                 }
             }
-            mock_http = MagicMock()
-            mock_http.get = AsyncMock(return_value=mock_response)
-            mock_client.return_value = mock_http
+        }
+    }
 
-            # Create a simple transaction with a mock size
-            tx = Transaction()
-            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=1000):
-                result = await policy.compute_fee(tx)
-                assert result == 1000
+    # Create the test instance
+    policy = LivePolicy(
+        cache_ttl_ms=60000,
+        fallback_sat_per_kb=1,
+        arc_policy_url="https://arc.mock/policy"
+    )
 
-    @pytest.mark.asyncio
-    async def test_compute_fee_fallback_to_default(self):
-        """Test that compute_fee falls back to default rate when API fails."""
-        policy = LivePolicy(fallback_sat_per_kb=100)
+    # Execute and verify the result
+    rate = policy.current_rate_sat_per_kb()
+    assert rate == 20
+    mock_http_client.get.assert_called_once()
 
-        # Mock the HTTP client to fail
-        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
-            mock_http = MagicMock()
-            mock_http.get = AsyncMock(side_effect=Exception("Network error"))
-            mock_client.return_value = mock_http
 
-            # Create a simple transaction
-            tx = Transaction()
-            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=500) as mock_compute:
-                result = await policy.compute_fee(tx)
-                # Should use fallback rate
-                assert policy.value == 100
-                assert result == 500
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
+def test_cache_reused_when_valid(mock_http_client_factory):
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
+    mock_http_client_factory.return_value = mock_http_client
 
-    @pytest.mark.asyncio
-    async def test_compute_fee_uses_cache(self):
-        """Test that compute_fee uses cached rate when available and not expired."""
-        policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=100)
+    # Set up a mock response
+    mock_http_client.get.return_value.json_data = {
+        "data": {
+            "policy": {"satPerKb": 50}
+        }
+    }
 
-        # First call to populate cache
-        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
-            mock_response = MagicMock()
-            mock_response.json_data = {
-                'policy': {
-                    'miningFee': {
-                        'satoshis': 200,
-                        'bytes': 1000
-                    }
-                }
-            }
-            mock_http = MagicMock()
-            mock_http.get = AsyncMock(return_value=mock_response)
-            mock_client.return_value = mock_http
+    policy = LivePolicy(
+        cache_ttl_ms=60000,
+        fallback_sat_per_kb=1,
+        arc_policy_url="https://arc.mock/policy"
+    )
 
-            # Create transaction
-            tx = Transaction()
-            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=1000):
-                # First call
-                await policy.compute_fee(tx)
-                assert policy.value == 200
+    # Call multiple times within the cache validity period
+    first_rate = policy.current_rate_sat_per_kb()
+    second_rate = policy.current_rate_sat_per_kb()
 
-                # Second call should use cache (no HTTP call should be made)
-                mock_http.get.reset_mock()
-                await policy.compute_fee(tx)
-                mock_http.get.assert_not_called()
-                assert policy.value == 200
+    # Verify the results
+    assert first_rate == 50
+    assert second_rate == 50
+    mock_http_client.get.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_compute_fee_updates_rate(self):
-        """Test that compute_fee updates the rate property."""
-        policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=100)
 
-        # Mock HTTP client to return rate
-        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
-            mock_response = MagicMock()
-            mock_response.json_data = {
-                'policy': {
-                    'miningFee': {
-                        'satoshis': 150,
-                        'bytes': 1000
-                    }
-                }
-            }
-            mock_http = MagicMock()
-            mock_http.get = AsyncMock(return_value=mock_response)
-            mock_client.return_value = mock_http
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
+@patch("bsv.fee_models.live_policy.logger.warning")
+def test_uses_cached_value_when_fetch_fails(mock_log, mock_http_client_factory):
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
+    mock_http_client_factory.return_value = mock_http_client
 
-            # Create transaction
-            tx = Transaction()
-            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=500) as mock_compute:
-                result = await policy.compute_fee(tx)
+    # Set up mock responses (success first, then failure)
+    mock_http_client.get.side_effect = [
+        MagicMock(json_data={"data": {"policy": {"satPerKb": 75}}}),
+        Exception("Network down")
+    ]
 
-                # Should update the value property with fetched rate
-                assert policy.value == 150
-                mock_compute.assert_called_once_with(tx)
-                assert result == 500
+    policy = LivePolicy(
+        cache_ttl_ms=1,
+        fallback_sat_per_kb=5,
+        arc_policy_url="https://arc.mock/policy"
+    )
 
-    @pytest.mark.asyncio
-    async def test_cache_expiry(self):
-        """Test that cache expires after TTL."""
-        policy = LivePolicy(cache_ttl_ms=100, fallback_sat_per_kb=100)  # 100ms cache
+    # The first execution succeeds
+    first_rate = policy.current_rate_sat_per_kb()
+    assert first_rate == 75
 
-        # Mock HTTP client
-        with patch('bsv.fee_models.live_policy.default_http_client') as mock_client:
-            mock_response = MagicMock()
-            mock_response.json_data = {
-                'policy': {
-                    'miningFee': {
-                        'satoshis': 150,
-                        'bytes': 1000
-                    }
-                }
-            }
-            mock_http = MagicMock()
-            mock_http.get = AsyncMock(return_value=mock_response)
-            mock_client.return_value = mock_http
+    # Force invalidation of the cache
+    with policy._cache_lock:
+        policy._cache.fetched_at_ms -= 10
 
-            # Create transaction
-            tx = Transaction()
-            with patch('bsv.fee_models.satoshis_per_kilobyte.SatoshisPerKilobyte.compute_fee', return_value=500):
-                # First call to populate cache
-                await policy.compute_fee(tx)
-                assert policy.value == 150
+    # The second execution uses the cache
+    second_rate = policy.current_rate_sat_per_kb()
+    assert second_rate == 75
 
-                # Wait for cache to expire
-                await asyncio.sleep(0.15)  # 150ms
+    # Verify that a log is recorded for cache usage
+    assert mock_log.call_count == 1
+    args, _ = mock_log.call_args
+    assert args[0] == "Failed to fetch live fee rate, using cached value: %s"
+    mock_http_client.get.assert_called()
 
-                # Second call should fetch again (cache expired)
-                mock_http.get.reset_mock()
-                mock_response.json_data['policy']['miningFee']['satoshis'] = 200  # Different rate
-                await policy.compute_fee(tx)
-                mock_http.get.assert_called_once()  # Should have made a new HTTP call
-                assert policy.value == 200
+
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
+@patch("bsv.fee_models.live_policy.logger.warning")
+def test_falls_back_to_default_when_no_cache(mock_log, mock_http_client_factory):
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
+    mock_http_client_factory.return_value = mock_http_client
+
+    # Set up a mock response (always failing)
+    mock_http_client.get.side_effect = Exception("Network failure")
+
+    policy = LivePolicy(
+        cache_ttl_ms=60000,
+        fallback_sat_per_kb=9,
+        arc_policy_url="https://arc.mock/policy"
+    )
+
+    # Fallback value is returned during execution
+    rate = policy.current_rate_sat_per_kb()
+    assert rate == 9
+
+    # Verify that a log is recorded
+    assert mock_log.call_count == 1
+    args, _ = mock_log.call_args
+    assert args[0] == "Failed to fetch live fee rate, using fallback %d sat/kB: %s"
+    assert args[1] == 9
+    mock_http_client.get.assert_called()
+
+
+@patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
+@patch("bsv.fee_models.live_policy.logger.warning")
+def test_invalid_response_triggers_fallback(mock_log, mock_http_client_factory):
+    # Prepare the mocked SyncHttpClient instance
+    mock_http_client = MagicMock()
+    mock_http_client_factory.return_value = mock_http_client
+
+    # Set up an invalid response
+    mock_http_client.get.return_value.json_data = {
+        "data": {"policy": {"invalid": True}}
+    }
+
+    policy = LivePolicy(
+        cache_ttl_ms=60000,
+        fallback_sat_per_kb=3,
+        arc_policy_url="https://arc.mock/policy"
+    )
+
+    # Fallback value is returned due to the invalid response
+    rate = policy.current_rate_sat_per_kb()
+    assert rate == 3
+
+    # Verify that a log is recorded
+    assert mock_log.call_count == 1
+    args, _ = mock_log.call_args
+    assert args[0] == "Failed to fetch live fee rate, using fallback %d sat/kB: %s"
+    assert args[1] == 3
+    mock_http_client.get.assert_called()
