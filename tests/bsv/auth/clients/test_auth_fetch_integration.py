@@ -498,7 +498,8 @@ class TestAuthFetchCertificateCollection:
         """Test that certificate callback handles None gracefully."""
         # Simulate callback with None - test the empty list fallback
         try:
-            value_to_extend = [] if None is None else None  # Explicitly test None case
+            # Test the None-coalescing pattern commonly used in the codebase
+            value_to_extend = None or []
             auth_fetch.certificates_received.extend(value_to_extend)
             success = True
         except Exception:

@@ -482,6 +482,50 @@ class WalletImpl(WalletInterface):
             if isinstance(ls, bytes):
                 o["lockingScript"] = ls.hex()
 
+    def _add_change_output_if_needed(self, change_output: Optional[Dict], inputs_meta: List[Dict], outputs: List[Dict], fee_rate: int, fee_model) -> None:
+        """Add change output to outputs if it has positive satoshis."""
+        if not change_output:
+            return
+        
+        change_sats, fee = self._calculate_change_amount(inputs_meta, outputs, fee_rate, fee_model)
+        print(f"[TRACE] [create_action] Change calculation: change_sats={change_sats}, fee={fee}")
+        
+        if change_sats is not None and change_sats > 0:
+            change_output["satoshis"] = change_sats
+            outputs.append(change_output)
+            print(f"[TRACE] [create_action] Added change output: {change_sats} satoshis")
+        elif int(change_output.get("satoshis", 0)) > 0:
+            outputs.append(change_output)
+            print(f"[TRACE] [create_action] Added change output: {change_output.get('satoshis')} satoshis")
+
+    def _normalize_action_txid(self, action: Dict) -> None:
+        """Ensure txid is bytes for wallet serialization."""
+        try:
+            txid = action.get("txid")
+            if isinstance(txid, str) and len(txid) == 64:
+                action["txid"] = bytes.fromhex(txid)
+        except Exception:
+            pass
+
+    def _build_result_dict(self, signable_tx, inputs_meta: List[Dict], outputs: List[Dict], fee_rate: int, change_output: Optional[Dict], action: Dict) -> Dict:
+        """Build the final result dictionary."""
+        import binascii
+        
+        # Return lockingScript as hex for test vectors
+        for out in outputs:
+            ls = out.get("lockingScript")
+            if ls is not None and not isinstance(ls, str):
+                out["lockingScriptHex"] = binascii.hexlify(ls).decode()
+        
+        return {
+            "signableTransaction": {"tx": signable_tx.serialize()},
+            "inputs": inputs_meta,
+            "outputs": outputs,
+            "feeRate": fee_rate,
+            "changeOutput": change_output,
+            "action": action,
+        }
+
     def create_action(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         """
         Build a Transaction from inputs/outputs; auto-fund with wallet UTXOs (Go-style).
@@ -526,16 +570,7 @@ class WalletImpl(WalletInterface):
             print(f"[TRACE] [create_action] Calculated fee: {fee} satoshis")
         
         # Add change output if generated
-        if change_output:
-            change_sats, fee = self._calculate_change_amount(inputs_meta, outputs, fee_rate, fee_model)
-            print(f"[TRACE] [create_action] Change calculation: change_sats={change_sats}, fee={fee}")
-            if change_sats is not None and change_sats > 0:
-                change_output["satoshis"] = change_sats
-                outputs.append(change_output)
-                print(f"[TRACE] [create_action] Added change output: {change_sats} satoshis")
-            elif int(change_output.get("satoshis", 0)) > 0:
-                outputs.append(change_output)
-                print(f"[TRACE] [create_action] Added change output: {change_output.get('satoshis')} satoshis")
+        self._add_change_output_if_needed(change_output, inputs_meta, outputs, fee_rate, fee_model)
         
         total_out = self._sum_outputs(outputs)
         self._normalize_outputs_to_hex(outputs)
@@ -543,13 +578,7 @@ class WalletImpl(WalletInterface):
         print("[TRACE] [create_action] before _build_action_dict inputs_meta:", inputs_meta)
         action = self._build_action_dict(args, total_out, description, labels, inputs_meta, outputs)
         
-        # Ensure txid is bytes for wallet serialization
-        try:
-            if isinstance(action.get("txid"), str) and len(action.get("txid")) == 64:
-                action["txid"] = bytes.fromhex(action["txid"])
-        except Exception:
-            pass
-        
+        self._normalize_action_txid(action)
         self._actions.append(action)
         
         # Build signable transaction
@@ -559,20 +588,7 @@ class WalletImpl(WalletInterface):
             funding_start_index=funding_start_index, funding_context=funding_ctx
         )
         
-        # Return lockingScript as hex for test vectors
-        for out in outputs:
-            ls = out.get("lockingScript")
-            if ls is not None and not isinstance(ls, str):
-                out["lockingScriptHex"] = binascii.hexlify(ls).decode()
-        
-        return {
-            "signableTransaction": {"tx": signable_tx.serialize()},
-            "inputs": inputs_meta,
-            "outputs": outputs,
-            "feeRate": fee_rate,
-            "changeOutput": change_output,
-            "action": action,
-        }
+        return self._build_result_dict(signable_tx, inputs_meta, outputs, fee_rate, change_output, action)
 
     def _normalize_locking_script_to_bytes(self, ls_val) -> bytes:
         """Normalize lockingScript value to bytes."""
@@ -1858,41 +1874,55 @@ class WalletImpl(WalletInterface):
         
         return existing_outpoints
 
-    def _determine_signing_key_for_utxo(self, u: Dict, args: Dict) -> tuple[Optional[Any], Optional[str], Optional[Any]]:
-        """Determine which key (master vs derived) signs this UTXO."""
+    def _extract_protocol_params_from_args(self, args: Dict) -> tuple:
+        """Extract protocol parameters from args and pushdrop args."""
         pushdrop_args = args.get("pushdrop", {})
         protocol = pushdrop_args.get("protocolID") or pushdrop_args.get("protocol_id") or args.get("protocolID") or args.get("protocol_id")
         key_id = pushdrop_args.get("keyID") or pushdrop_args.get("key_id") or args.get("keyID") or args.get("key_id")
         counterparty = pushdrop_args.get("counterparty") or args.get("counterparty")
+        return protocol, key_id, counterparty
+
+    def _convert_protocol_to_obj(self, protocol) -> Any:
+        """Convert protocol dict to SimpleNamespace object if needed."""
+        if isinstance(protocol, dict):
+            return SimpleNamespace(
+                security_level=int(protocol.get("securityLevel", 0)),
+                protocol=str(protocol.get("protocol", ""))
+            )
+        return protocol
+
+    def _check_derived_key_match(self, protocol, key_id, counterparty, utxo_hash) -> bool:
+        """Check if derived key matches UTXO hash."""
+        if not (protocol and key_id is not None):
+            return False
+        
+        protocol_obj = self._convert_protocol_to_obj(protocol)
+        cp = self._normalize_counterparty(counterparty)
+        derived_pub = self.key_deriver.derive_public_key(protocol_obj, key_id, cp, for_self=False)
+        return self._pubkey_matches_hash(derived_pub, utxo_hash)
+
+    def _determine_signing_key_for_utxo(self, u: Dict, args: Dict) -> tuple[Optional[Any], Optional[str], Optional[Any]]:
+        """Determine which key (master vs derived) signs this UTXO."""
+        protocol, key_id, counterparty = self._extract_protocol_params_from_args(args)
         
         ls_hex = u.get("lockingScript")
         utxo_hash = self._extract_pubkey_hash_from_locking_script(ls_hex) if isinstance(ls_hex, str) else None
         
-        use_protocol = None
-        use_key_id = None
-        use_counterparty = None
+        if not utxo_hash:
+            return None, None, None
         
+        # If master key matches, use it (return None values)
+        if self.check_pubkey_hash(self.private_key, utxo_hash):
+            return None, None, None
+        
+        # Try derived key
         try:
-            if utxo_hash:
-                if not self.check_pubkey_hash(self.private_key, utxo_hash):
-                    if protocol and key_id is not None:
-                        if isinstance(protocol, dict):
-                            protocol_obj = SimpleNamespace(
-                                security_level=int(protocol.get("securityLevel", 0)),
-                                protocol=str(protocol.get("protocol", ""))
-                            )
-                        else:
-                            protocol_obj = protocol
-                        cp = self._normalize_counterparty(counterparty)
-                        derived_pub = self.key_deriver.derive_public_key(protocol_obj, key_id, cp, for_self=False)
-                        if self._pubkey_matches_hash(derived_pub, utxo_hash):
-                            use_protocol = protocol
-                            use_key_id = key_id
-                            use_counterparty = counterparty
+            if self._check_derived_key_match(protocol, key_id, counterparty, utxo_hash):
+                return protocol, key_id, counterparty
         except Exception:
             pass
         
-        return use_protocol, use_key_id, use_counterparty
+        return None, None, None
 
     def _build_funding_context(self, selected: List[Dict], inputs_meta: List[Dict], args: Dict, existing_outpoints: set) -> List[Dict[str, Any]]:
         """Build funding context from selected UTXOs."""
