@@ -443,8 +443,9 @@ def test_beef_merge_beef_tx():
     assert len(beef.txs) == 1
     
     # Test handle nil transaction - Python doesn't allow None, but we can test TypeError
+    from typing import cast, Any
     with pytest.raises((TypeError, AttributeError, ValueError), match="'NoneType' object has no attribute 'data_format'"):
-        beef.merge_beef_tx(None)  # type: ignore
+        beef.merge_beef_tx(cast(Any, None))
     
     # Test handle BeefTx with nil Transaction (txid-only)
     btx_nil = BeefTx(txid="55" * 32, tx_bytes=b"", tx_obj=None, data_format=2)

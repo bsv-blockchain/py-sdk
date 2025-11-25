@@ -54,8 +54,9 @@ class TestPrivateKeySharing(unittest.TestCase):
         k = PrivateKey()
 
         # Test with invalid threshold type
+        from typing import cast, Any
         with self.assertRaises(ValueError) as cm:
-            k.to_key_shares("invalid", 14)  # type: ignore
+            k.to_key_shares(cast(Any, "invalid"), 14)
         self.assertIn("threshold and totalShares must be numbers", str(cm.exception))
 
         # Test with invalid totalShares type

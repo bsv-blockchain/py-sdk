@@ -32,11 +32,12 @@ def test_validate_transactions_with_no_bumps():
 def test_validate_transactions_with_missing_bumps_attr():
     """Test validate_transactions when bumps attribute is missing."""
     from types import SimpleNamespace
+    from typing import cast, Any
     beef = SimpleNamespace()
     beef.txs = {}
-    # No bumps attribute
+    # No bumps attribute - test with incomplete mock object
     try:
-        result = validate_transactions(beef)  # type: ignore
+        result = validate_transactions(cast(Any, beef))
         assert isinstance(result, ValidationResult)
     except AttributeError:
         # Expected if code doesn't handle missing attribute

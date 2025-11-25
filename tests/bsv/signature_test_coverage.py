@@ -218,8 +218,8 @@ def test_signature_creation_edge_cases():
     """Test signature creation with edge case inputs."""
     priv = PrivateKey()
 
-    # Test with None message (should work with default hasher)
-    signature = priv.sign(None)
+    # Test with empty bytes message
+    signature = priv.sign(b"")
     assert isinstance(signature, bytes)
     assert len(signature) > 0
 

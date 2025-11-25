@@ -384,6 +384,104 @@ class WalletImpl(WalletInterface):
         }
         self._certificates.append(record)
         return {}
+
+    def _process_pushdrop_args(self, pushdrop_args: Dict, originator: str, ctx: Any, outputs: List[Dict]) -> None:
+        """Process PushDrop arguments and append the output if needed."""
+        from bsv.transaction.pushdrop import build_lock_before_pushdrop, PushDrop
+        
+        fields = pushdrop_args.get("fields", [])
+        pubkey = pushdrop_args.get("public_key")
+        include_signature = pushdrop_args.get("include_signature", False)
+        signature = pushdrop_args.get("signature")
+        lock_position = pushdrop_args.get("lock_position", "before")
+        basket = pushdrop_args.get("basket")
+        retention = pushdrop_args.get("retentionSeconds")
+        protocol_id = pushdrop_args.get("protocolID")
+        key_id = pushdrop_args.get("keyID")
+        counterparty = pushdrop_args.get("counterparty")
+        
+        if pubkey:
+            locking_script = build_lock_before_pushdrop(
+                fields, pubkey, include_signature=include_signature,
+                signature=signature, lock_position=lock_position
+            )
+        else:
+            pd = PushDrop(self, originator)
+            locking_script = pd.lock(
+                ctx, fields, protocol_id, key_id, counterparty,
+                for_self=True, include_signature=include_signature,
+                lock_position=lock_position
+            )
+        
+        pushdrop_satoshis = pushdrop_args.get("satoshis", 1)
+        output = {"lockingScript": locking_script, "satoshis": pushdrop_satoshis}
+        if basket:
+            output["basket"] = basket
+        if retention:
+            output["outputDescription"] = {"retentionSeconds": retention}
+        
+        if not outputs:
+            outputs.append(output)
+
+    def _calculate_existing_unlock_lens(self, inputs_meta: List[Dict]) -> List[int]:
+        """Calculate existing inputs' estimated unlocking lengths."""
+        return [int(meta.get("unlockingScriptLength", 73)) for meta in inputs_meta]
+
+    def _calculate_change_amount(
+        self, inputs_meta: List[Dict], outputs: List[Dict], fee_rate: int, fee_model
+    ) -> tuple[Optional[int], int]:
+        """Calculate change amount and fee. Returns (change_sats, fee)."""
+        input_sum = 0
+        for meta in inputs_meta:
+            outpoint = meta.get("outpoint") or meta.get("Outpoint")
+            if outpoint and isinstance(outpoint, dict):
+                for o in outputs:
+                    if self._outpoint_matches_output(outpoint, o):
+                        input_sum += int(o.get("satoshis", 0))
+                        break
+        
+        keyvalue_satoshis = self._find_keyvalue_satoshis(outputs)
+        fee = self._calculate_fee(fee_rate, fee_model, len(outputs), len(inputs_meta))
+        
+        if input_sum > 0:
+            change_sats = input_sum - keyvalue_satoshis - fee
+            return change_sats if change_sats > 0 else None, fee
+        return None, fee
+
+    def _outpoint_matches_output(self, outpoint: Dict, output: Dict) -> bool:
+        """Check if an outpoint matches an output."""
+        txid_match = (
+            (isinstance(output.get("txid"), str) and bytes.fromhex(output.get("txid")) == outpoint.get("txid")) or
+            (isinstance(output.get("txid"), (bytes, bytearray)) and output.get("txid") == outpoint.get("txid"))
+        )
+        index_match = int(output.get("outputIndex", 0)) == int(outpoint.get("index", 0))
+        return txid_match and index_match
+
+    def _find_keyvalue_satoshis(self, outputs: List[Dict]) -> int:
+        """Find satoshis amount for key-value output."""
+        for o in outputs:
+            desc = o.get("outputDescription", "")
+            if (isinstance(desc, str) and "kv.set" in desc) or (isinstance(desc, dict) and desc.get("type") == "kv.set"):
+                return int(o.get("satoshis", 0))
+        return 0
+
+    def _calculate_fee(self, fee_rate: int, fee_model, output_count: int, input_count: int) -> int:
+        """Calculate transaction fee."""
+        if fee_rate and fee_rate > 0:
+            estimated_size = input_count * 148 + output_count * 34 + 10
+            return int(estimated_size * fee_rate / 1000)
+        try:
+            return fee_model.estimate(output_count, input_count)
+        except Exception:
+            return 0
+
+    def _normalize_outputs_to_hex(self, outputs: List[Dict]) -> None:
+        """Normalize lockingScript in outputs to hex string."""
+        for o in outputs:
+            ls = o.get("lockingScript")
+            if isinstance(ls, bytes):
+                o["lockingScript"] = ls.hex()
+
     def create_action(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         """
         Build a Transaction from inputs/outputs; auto-fund with wallet UTXOs (Go-style).
@@ -391,191 +489,82 @@ class WalletImpl(WalletInterface):
         """
         import binascii
         print(f"[TRACE] [create_action] called with labels={args.get('labels')} outputs_count={len(args.get('outputs') or [])}")
+        
         labels = args.get("labels") or []
         description = args.get("description", "")
         outputs = list(args.get("outputs") or [])
         inputs_meta = list(args.get("inputs") or [])
+        
         print("[TRACE] [create_action] initial inputs_meta:", inputs_meta)
         print("[TRACE] [create_action] initial outputs:", outputs)
-        # --- PushDrop extension: fields/signature/lock-position/basket/retention ---
+        
+        # Process PushDrop extension if provided
         pushdrop_args = args.get("pushdrop")
-        print("[TRACE] [create_action] pushdrop_args:", pushdrop_args)
         if pushdrop_args:
             print("[TRACE] [create_action] found pushdrop_args")
-            from bsv.transaction.pushdrop import build_lock_before_pushdrop
-            fields = pushdrop_args.get("fields", [])
-            pubkey = pushdrop_args.get("public_key")
-            include_signature = pushdrop_args.get("include_signature", False)
-            signature = pushdrop_args.get("signature")
-            lock_position = pushdrop_args.get("lock_position", "before")
-            basket = pushdrop_args.get("basket")
-            retention = pushdrop_args.get("retentionSeconds")
-            protocol_id = pushdrop_args.get("protocolID")
-            key_id = pushdrop_args.get("keyID")
-            counterparty = pushdrop_args.get("counterparty")
-            # Build PushDrop locking script (Go/TS parity)
-            print(f"[TRACE] [create_action] found pubkey:{pubkey}")
-            # Always build the locking script, letting build_lock_before_pushdrop handle pubkey lookup if needed
-            if pubkey:
-                locking_script = build_lock_before_pushdrop(fields, pubkey, include_signature=include_signature, signature=signature, lock_position=lock_position)
-            else:
-                # If pubkey is None, try to fetch from wallet (Go/TS parity)
-                from bsv.transaction.pushdrop import PushDrop
-                pd = PushDrop(self, originator)
-                locking_script = pd.lock(
-                    ctx,
-                    fields,
-                    protocol_id,
-                    key_id,
-                    counterparty,
-                    for_self=True,
-                    include_signature=include_signature,
-                    lock_position=lock_position,
-                )
-            # Calculate appropriate satoshis for PushDrop output (input - fee)
-            # Default to 1 satoshi if no specific amount is provided
-            pushdrop_satoshis = pushdrop_args.get("satoshis")
-            if pushdrop_satoshis is None:
-                # Will be calculated after funding selection
-                pushdrop_satoshis = 1  # Placeholder, will be updated later
-            output = {"lockingScript": locking_script, "satoshis": pushdrop_satoshis}
-            if basket:
-                output["basket"] = basket
-            if retention:
-                output["outputDescription"] = {"retentionSeconds": retention}
-
-            # Avoid duplicating pushdrop output: only append if caller did not provide outputs
-            if not outputs:
-                outputs.append(output)
-
+            self._process_pushdrop_args(pushdrop_args, originator, ctx, outputs)
+        
         print("[TRACE] [create_action] after pushdrop outputs:", outputs)
-        print("[TRACE] [create_action] after pushdrop inputs_meta:", inputs_meta)
-        # Fee model (default 500 sat/kB unless overridden)
+        
+        # Setup fee model and existing unlock lengths
         fee_rate = int(args.get("feeRate") or 500)
         fee_model = SatoshisPerKilobyte(fee_rate)
-        # Compute current target output sum (for potential fee calculation)
         _ = self._sum_outputs(outputs)
-        # Determine existing inputs' estimated unlocking lengths if provided
-        existing_unlock_lens: List[int] = []
-        for _ in inputs_meta:
-            est = int(_.get("unlockingScriptLength", 73))
-            existing_unlock_lens.append(est)
-        # Auto-fund if needed (extracts funding inputs and optional change)
-        funding_ctx: List[Dict[str, Any]]
-        change_output: Optional[Dict]
-        # Pass ca_args (args) to _select_funding_and_change for correct propagation
+        existing_unlock_lens = self._calculate_existing_unlock_lens(inputs_meta)
+        
+        # Auto-fund if needed
         funding_ctx, change_output = self._select_funding_and_change(
-            ctx,
-            args,  # <-- pass the original args/ca_args here
-            originator,
-            outputs,
-            inputs_meta,
-            existing_unlock_lens,
-            fee_model,
+            ctx, args, originator, outputs, inputs_meta, existing_unlock_lens, fee_model
         )
         
-        # Update inputs_meta with the funding context returned from _select_funding_and_change
-        # This ensures that the selected UTXOs are properly added to inputs_meta
         if funding_ctx:
             print(f"[TRACE] [create_action] funding_ctx returned: {len(funding_ctx)} UTXOs")
-            # The _select_funding_and_change method already updated inputs_meta directly
-            # Just verify that inputs_meta now contains the funding UTXOs
-            print(f"[TRACE] [create_action] inputs_meta after funding: {len(inputs_meta)} inputs")
-        else:
-            print("[TRACE] [create_action] No funding UTXOs selected")
-            
-        # Only trace fee estimation for visibility; do not override KV output amount.
-        if pushdrop_args and funding_ctx:
-            _ = sum(int(c.get("satoshis", 0)) for c in funding_ctx)  # Calculate for validation
-            if fee_rate and fee_rate > 0:
-                estimated_size = len(inputs_meta) * 148 + len(outputs) * 34 + 10
-                est_fee = int(estimated_size * fee_rate / 1000)
-                print(f"[TRACE] [create_action] Using feeRate {fee_rate} sat/kB, estimated size: {estimated_size} bytes, calculated fee: {est_fee} satoshis")
-            else:
-                unlocking_lens = [107] * len(inputs_meta)
-                est_fee = self._estimate_fee(outputs, unlocking_lens, fee_model)
-                print(f"[TRACE] [create_action] Using fee_model, calculated fee: {est_fee} satoshis")
         
-        print("[TRACE] [create_action] after _select_funding_and_change outputs:", outputs)
-        print("[TRACE] [create_action] after _select_funding_and_change inputs_meta:", inputs_meta)
-        # If change output is generated, add to outputs
+        # Trace fee estimation if needed
+        if pushdrop_args and funding_ctx:
+            fee = self._calculate_fee(fee_rate, fee_model, len(outputs), len(inputs_meta))
+            print(f"[TRACE] [create_action] Calculated fee: {fee} satoshis")
+        
+        # Add change output if generated
         if change_output:
-            # Calculate the total input sum
-            input_sum = 0
-            for meta in inputs_meta:
-                outpoint = meta.get("outpoint") or meta.get("Outpoint")
-                if outpoint and isinstance(outpoint, dict):
-                    for o in outputs:
-                        if (
-                            (isinstance(o.get("txid"), str) and bytes.fromhex(o.get("txid")) == outpoint.get("txid")) or
-                            (isinstance(o.get("txid"), (bytes, bytearray)) and o.get("txid") == outpoint.get("txid"))
-                        ) and int(o.get("outputIndex", 0)) == int(outpoint.get("index", 0)):
-                            input_sum += int(o.get("satoshis", 0))
-                            break
-            if input_sum == 0:
-                input_sum = None
-            # Find the key-value output (the main output, not change)
-            keyvalue_satoshis = 0
-            for o in outputs:
-                desc = o.get("outputDescription", "")
-                if (isinstance(desc, str) and "kv.set" in desc) or (isinstance(desc, dict) and desc.get("type") == "kv.set"):
-                    keyvalue_satoshis = int(o.get("satoshis", 0))
-                    break
-            # Calculate the fee based on feeRate if specified, otherwise use fee_model
-            fee = 0
-            if fee_rate and fee_rate > 0:
-                # Use the same fee calculation as above for consistency
-                estimated_size = len(inputs_meta) * 148 + len(outputs) * 34 + 10
-                fee = int(estimated_size * fee_rate / 1000)
-                print(f"[TRACE] [create_action] Change calculation using feeRate {fee_rate} sat/kB, fee: {fee} satoshis")
-            else:
-                # Use fee_model as fallback
-                try:
-                    fee = fee_model.estimate(len(outputs), len(inputs_meta))
-                    print(f"[TRACE] [create_action] Change calculation using fee_model, fee: {fee} satoshis")
-                except Exception:
-                    pass
-            
-            # Calculate the change amount
-            if input_sum is not None:
-                change_sats = input_sum - keyvalue_satoshis - fee
-                print(f"[TRACE] [create_action] Change calculation: input_sum={input_sum}, keyvalue_satoshis={keyvalue_satoshis}, fee={fee}, change_sats={change_sats}")
-            else:
-                change_sats = int(change_output.get("satoshis", 0))
-            
-            if change_sats > 0:                # BSV does not have dust limits, so add any positive change output
+            change_sats, fee = self._calculate_change_amount(inputs_meta, outputs, fee_rate, fee_model)
+            print(f"[TRACE] [create_action] Change calculation: change_sats={change_sats}, fee={fee}")
+            if change_sats is not None and change_sats > 0:
+                change_output["satoshis"] = change_sats
                 outputs.append(change_output)
                 print(f"[TRACE] [create_action] Added change output: {change_sats} satoshis")
+            elif int(change_output.get("satoshis", 0)) > 0:
+                outputs.append(change_output)
+                print(f"[TRACE] [create_action] Added change output: {change_output.get('satoshis')} satoshis")
+        
         total_out = self._sum_outputs(outputs)
-        # lockingScriptを必ずhex stringに統一
-        for o in outputs:
-            ls = o.get("lockingScript")
-            if isinstance(ls, bytes):
-                o["lockingScript"] = ls.hex()
+        self._normalize_outputs_to_hex(outputs)
+        
         print("[TRACE] [create_action] before _build_action_dict inputs_meta:", inputs_meta)
         action = self._build_action_dict(args, total_out, description, labels, inputs_meta, outputs)
-        # Ensure txid is 32 bytes for wallet wire serialization (store bytes not hex)
+        
+        # Ensure txid is bytes for wallet serialization
         try:
             if isinstance(action.get("txid"), str) and len(action.get("txid")) == 64:
-                action["txid"] = bytes.fromhex(action["txid"])  # 32 bytes
+                action["txid"] = bytes.fromhex(action["txid"])
         except Exception:
             pass
+        
         self._actions.append(action)
-        # Build signable tx and pre-sign funding inputs (P2PKH)
+        
+        # Build signable transaction
         funding_start_index = len(inputs_meta) - len(funding_ctx) if funding_ctx else None
-        print("[TRACE] [create_action] before _build_signable_transaction inputs_meta:", inputs_meta)
         signable_tx = self._build_signable_transaction(
-            outputs,
-            inputs_meta,
-            prefill_funding=True,
-            funding_start_index=funding_start_index,
-            funding_context=funding_ctx,
+            outputs, inputs_meta, prefill_funding=True,
+            funding_start_index=funding_start_index, funding_context=funding_ctx
         )
-        # For test/E2E vector: return lockingScript as hex if not already
+        
+        # Return lockingScript as hex for test vectors
         for out in outputs:
             ls = out.get("lockingScript")
             if ls is not None and not isinstance(ls, str):
                 out["lockingScriptHex"] = binascii.hexlify(ls).decode()
+        
         return {
             "signableTransaction": {"tx": signable_tx.serialize()},
             "inputs": inputs_meta,
@@ -639,136 +628,162 @@ class WalletImpl(WalletInterface):
             "outputs": norm_outputs,
         }
 
+    def _normalize_lockingscripts_to_hex(self, outputs: List[Dict]) -> None:
+        """Convert all lockingScripts in outputs to hex strings."""
+        for output in outputs:
+            ls = output.get("lockingScript")
+            if isinstance(ls, bytes):
+                output["lockingScript"] = ls.hex()
+
+    def _add_outputs_to_transaction(self, t, outputs: List[Dict], logger) -> None:
+        """Add all outputs to the transaction."""
+        from bsv.transaction_output import TransactionOutput
+        from bsv.script.script import Script
+        
+        for o in outputs:
+            ls = o.get("lockingScript", b"")
+            ls_hex = ls.hex() if isinstance(ls, bytes) else ls
+            satoshis = o.get("satoshis", 0)
+            logger.debug(f"Output satoshis type: {type(satoshis)}, value: {satoshis}")
+            logger.debug(f"Output lockingScript type: {type(ls_hex)}, value: {ls_hex}")
+            assert isinstance(satoshis, int), f"satoshis must be int, got {type(satoshis)}"
+            assert isinstance(ls_hex, str), f"lockingScript must be hex string, got {type(ls_hex)}"
+            s = Script(ls_hex)
+            to = TransactionOutput(s, int(satoshis))
+            t.add_output(to)
+
+    def _add_inputs_to_transaction(self, t, inputs_meta: List[Dict]) -> List[int]:
+        """Add all inputs to the transaction and return funding indices."""
+        from bsv.transaction_input import TransactionInput
+        
+        funding_indices: List[int] = []
+        for i, meta in enumerate(inputs_meta):
+            print(f"[TRACE] [_build_signable_transaction] input_meta[{i}]:", meta)
+            outpoint = meta.get("outpoint") or meta.get("Outpoint")
+            if outpoint and isinstance(outpoint, dict):
+                txid = outpoint.get("txid")
+                index = outpoint.get("index", 0)
+                txid_str = self._convert_txid_to_hex(txid)
+                ti = TransactionInput(source_txid=txid_str, source_output_index=int(index))
+                t.add_input(ti)
+                funding_indices.append(len(t.inputs) - 1)
+        return funding_indices
+
+    def _convert_txid_to_hex(self, txid) -> str:
+        """Convert txid to hex string format."""
+        if isinstance(txid, bytes):
+            return txid.hex()
+        elif isinstance(txid, str):
+            return txid
+        return "00" * 32
+
+    def _set_funding_context_on_inputs(self, t, funding_start_index: int, funding_context: List[Dict]) -> None:
+        """Set precise prevout data from funding context."""
+        from bsv.script.script import Script
+        
+        for j, ctx_item in enumerate(funding_context):
+            idx = funding_start_index + j
+            if 0 <= idx < len(t.inputs):
+                tin = t.inputs[idx]
+                tin.satoshis = int(ctx_item.get("satoshis", 0))
+                ls_b = ctx_item.get("lockingScript") or b""
+                if isinstance(ls_b, str):
+                    try:
+                        ls_b = bytes.fromhex(ls_b)
+                    except Exception:
+                        ls_b = b""
+                tin.locking_script = Script(ls_b)
+
+    def _set_generic_funding_scripts(self, t, funding_indices: List[int]) -> None:
+        """Set generic P2PKH lock for funding inputs."""
+        addr = self.public_key.address()
+        ls_fund = P2PKH().lock(addr)
+        for idx in funding_indices:
+            tin = t.inputs[idx]
+            tin.satoshis = 0
+            tin.locking_script = ls_fund
+
+    def _derive_private_key_for_input(self, meta: Dict):
+        """Derive the appropriate private key for an input."""
+        protocol = meta.get("protocol")
+        key_id = meta.get("key_id")
+        counterparty = meta.get("counterparty")
+        
+        if protocol is not None and key_id is not None:
+            if isinstance(protocol, dict):
+                protocol_obj = SimpleNamespace(
+                    security_level=int(protocol.get("securityLevel", 0)),
+                    protocol=str(protocol.get("protocol", ""))
+                )
+            else:
+                protocol_obj = protocol
+            cp = self._normalize_counterparty(counterparty)
+            return self.key_deriver.derive_private_key(protocol_obj, key_id, cp)
+        return self.private_key
+
+    def _sign_funding_inputs(self, t, funding_indices: List[int], inputs_meta: List[Dict]) -> None:
+        """Sign all funding inputs."""
+        for idx in funding_indices:
+            meta = inputs_meta[idx] if idx < len(inputs_meta) else {}
+            priv = self._derive_private_key_for_input(meta)
+            print(f"[TRACE] [_build_signable_transaction] priv address: {priv.address()}")
+            
+            try:
+                prevout_script_bytes = t.inputs[idx].locking_script.serialize()
+                self._check_prevout_pubkey(priv, prevout_script_bytes)
+            except Exception as _dbg_e:
+                print(f"[TRACE] [sign_check] prevout/pubkey hash check skipped: {_dbg_e}")
+            
+            unlock_tpl = P2PKH().unlock(priv)
+            t.inputs[idx].unlocking_script = unlock_tpl.sign(t, idx)
+            
+            try:
+                us_b = t.inputs[idx].unlocking_script.serialize()
+                self._check_unlocking_sig(us_b, priv)
+            except Exception as _dbg_e2:
+                print(f"[TRACE] [sign_check] scriptSig structure check skipped: {_dbg_e2}")
+
     def _build_signable_transaction(self, outputs, inputs_meta, prefill_funding: bool = False, funding_start_index: Optional[int] = None, funding_context: Optional[List[Dict[str, Any]]] = None):
         """
         Always return a Transaction object, even if outputs is empty (for remove flows).
         Ensure TransactionInput receives source_txid as hex string (str), not bytes.
         Ensure TransactionOutput receives int(satoshis) and Script in correct order.
         """
-        # --- bytes→hex string変換を必ず最初に一括で実施 ---
-        for output in outputs:
-            ls = output.get("lockingScript")
-            if isinstance(ls, bytes):
-                output["lockingScript"] = ls.hex()
+        self._normalize_lockingscripts_to_hex(outputs)
         print("[TRACE] [_build_signable_transaction] inputs_meta at entry:", inputs_meta)
         print("[TRACE] [_build_signable_transaction] outputs at entry:", outputs)
+        
         try:
             from bsv.transaction import Transaction
-            from bsv.transaction_output import TransactionOutput
-            from bsv.transaction_input import TransactionInput
-            from bsv.script.script import Script
             import logging
             logging.basicConfig(level=logging.DEBUG)
             logger = logging.getLogger(__name__)
-            # Debug: Log outputs and inputs_meta
+            
             logger.debug(f"Building transaction with outputs: {outputs}")
             logger.debug(f"Building transaction with inputs_meta: {inputs_meta}")
+            
             t = Transaction()
-            # After all outputs are constructed, ensure lockingScript is always hex string
-            for output in outputs:
-                ls = output.get("lockingScript")
-                if isinstance(ls, bytes):
-                    output["lockingScript"] = ls.hex()
-            for o in outputs:
-                ls = o.get("lockingScript", b"")
-                if isinstance(ls, bytes):
-                    ls_hex = ls.hex()
-                else:
-                    ls_hex = ls
-                satoshis = o.get("satoshis", 0)
-                logger.debug(f"Output satoshis type: {type(satoshis)}, value: {satoshis}")
-                logger.debug(f"Output lockingScript type: {type(ls_hex)}, value: {ls_hex}")
-                # Defensive: ensure satoshis is int, ls_hex is hex string
-                assert isinstance(satoshis, int), f"satoshis must be int, got {type(satoshis)}"
-                assert isinstance(ls_hex, str), f"lockingScript must be hex string, got {type(ls_hex)}"
-                s = Script(ls_hex)  # Script constructor accepts hex string directly
-                to = TransactionOutput(s, int(satoshis))
-                t.add_output(to)
-            # Map to track which inputs are funding (P2PKH) to optionally pre-sign
-            funding_indices: List[int] = []
-            for i, meta in enumerate(inputs_meta):
-                print(f"[TRACE] [_build_signable_transaction] input_meta[{i}]:", meta)
-                outpoint = meta.get("outpoint") or meta.get("Outpoint")
-                if outpoint and isinstance(outpoint, dict):
-                    txid = outpoint.get("txid")
-                    index = outpoint.get("index", 0)
-                    # Always pass txid as hex string
-                    if isinstance(txid, bytes):
-                        txid_str = txid.hex()
-                    elif isinstance(txid, str):
-                        txid_str = txid
-                    else:
-                        txid_str = "00" * 32
-                    ti = TransactionInput(source_txid=txid_str, source_output_index=int(index))
-                    t.add_input(ti)  # Add input to transaction
-                    # Heuristic: treat inputs lacking custom descriptors as funding (P2PKH)
-                    funding_indices.append(len(t.inputs) - 1)
+            self._normalize_lockingscripts_to_hex(outputs)
+            self._add_outputs_to_transaction(t, outputs, logger)
+            funding_indices = self._add_inputs_to_transaction(t, inputs_meta)
+            
             print("[TRACE] [_build_signable_transaction] funding_indices:", funding_indices)
-            # Optionally prefill funding inputs with P2PKH signatures
+            
             if prefill_funding and funding_indices:
                 try:
-                    # If caller provided funding context, use it to set precise prevout data
                     if funding_start_index is not None and funding_context:
-                        for j, ctx_item in enumerate(funding_context):
-                            idx = funding_start_index + j
-                            if 0 <= idx < len(t.inputs):
-                                tin = t.inputs[idx]
-                                tin.satoshis = int(ctx_item.get("satoshis", 0))
-                                ls_b = ctx_item.get("lockingScript") or b""
-                                if isinstance(ls_b, str):
-                                    try:
-                                        ls_b = bytes.fromhex(ls_b)
-                                    except Exception:
-                                        ls_b = b""
-                                tin.locking_script = Script(ls_b)
+                        self._set_funding_context_on_inputs(t, funding_start_index, funding_context)
                     else:
-                        # Fallback: set generic P2PKH lock with our address
-                        addr = self.public_key.address()
-                        ls_fund = P2PKH().lock(addr)  # Script object
-                        for idx in funding_indices:
-                            tin = t.inputs[idx]
-                            tin.satoshis = 0
-                            tin.locking_script = ls_fund  # Script objectを直接使用
-                    # Now produce signatures for those inputs
-                    for idx in funding_indices:
-                        meta = inputs_meta[idx] if idx < len(inputs_meta) else {}
-                        protocol = meta.get("protocol")
-                        key_id = meta.get("key_id")
-                        counterparty = meta.get("counterparty")
-                        if protocol is not None and key_id is not None:
-                            # If protocol is a dict, convert to Protocol object
-                            if isinstance(protocol, dict):
-                                protocol_obj = SimpleNamespace(security_level=int(protocol.get("securityLevel", 0)), protocol=str(protocol.get("protocol", "")))
-                            else:
-                                protocol_obj = protocol
-                            cp = self._normalize_counterparty(counterparty)
-                            priv = self.key_deriver.derive_private_key(protocol_obj, key_id, cp)
-                        else:
-                            priv = self.private_key
-                        print(f"[TRACE] [_build_signable_transaction] priv address: {priv.address()}")
-                        # Verify pubkey-hash matches prevout's P2PKH before signing (debug aid)
-                        try:
-                            prevout_script_bytes = t.inputs[idx].locking_script.serialize()
-                            self._check_prevout_pubkey(priv, prevout_script_bytes)
-                        except Exception as _dbg_e:
-                            print(f"[TRACE] [sign_check] prevout/pubkey hash check skipped: {_dbg_e}")
-                        
-                        unlock_tpl = P2PKH().unlock(priv)
-                        t.inputs[idx].unlocking_script = unlock_tpl.sign(t, idx)
-                        # Validate unlocking script structure: <sig+flag(0x41)> <33-byte pubkey>
-                        try:
-                            us_b = t.inputs[idx].unlocking_script.serialize()
-                            self._check_unlocking_sig(us_b, priv)
-                        except Exception as _dbg_e2:
-                            print(f"[TRACE] [sign_check] scriptSig structure check skipped: {_dbg_e2}")
+                        self._set_generic_funding_scripts(t, funding_indices)
+                    
+                    self._sign_funding_inputs(t, funding_indices, inputs_meta)
                 except Exception:
                     pass
-            return t  # Always return Transaction object
+            
+            return t
         except Exception as e:
             print(f"[ERROR] Exception in _build_signable_transaction: {e}")
             raise
-            from bsv.transaction import Transaction
-            return Transaction()  # Return empty Transaction on error
 
     def discover_by_attributes(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
         attrs = args.get("attributes", {}) or {}
@@ -1524,14 +1539,13 @@ class WalletImpl(WalletInterface):
         except Exception:
             return ""
 
-    def _list_self_utxos(self, ctx: Any = None, args: Dict = None, originator: str = None) -> List[Dict[str, Any]]:
-        # Prefer derived key UTXOs when protocol/key_id is provided; fallback to master if none found
-        # _list_self_utxosは「どのアドレスから取るか」を決めてから、実際の取得をlist_outputsに委譲。
-        
+    def _extract_protocol_params(self, args: Dict) -> tuple:
+        """Extract protocol_id, key_id, and counterparty from args."""
         protocol_id = args.get("protocolID") or args.get("protocol_id")
         key_id = args.get("keyID") or args.get("key_id")
         counterparty = args.get("counterparty")
-        # Also support nested pushdrop params (create_action passes ca_args under pushdrop)
+        
+        # Also support nested pushdrop params
         if protocol_id is None or key_id is None:
             pd = args.get("pushdrop") or {}
             if protocol_id is None:
@@ -1540,50 +1554,75 @@ class WalletImpl(WalletInterface):
                 key_id = pd.get("keyID") or pd.get("key_id")
             if counterparty is None:
                 counterparty = pd.get("counterparty")
+        
+        return protocol_id, key_id, counterparty
 
+    def _derive_address_from_protocol(self, protocol_id, key_id, counterparty) -> Optional[str]:
+        """Derive address from protocol, key_id, and counterparty."""
+        try:
+            if isinstance(protocol_id, dict):
+                protocol = SimpleNamespace(
+                    security_level=int(protocol_id.get("securityLevel", 0)),
+                    protocol=str(protocol_id.get("protocol", ""))
+                )
+            else:
+                protocol = protocol_id
+            
+            cp = self._normalize_counterparty(counterparty)
+            derived_pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self=False)
+            
+            network = self.private_key.network if hasattr(self, 'private_key') and hasattr(self.private_key, 'network') else None
+            derived_addr = derived_pub.address(network=network) if network else derived_pub.address()
+            
+            if derived_addr and validate_address(derived_addr):
+                if os.getenv("BSV_DEBUG", "0") == "1":
+                    print(f"[DEBUG _list_self_utxos] Candidate derived address: {derived_addr}")
+                return derived_addr
+        except Exception as e:
+            if os.getenv("BSV_DEBUG", "0") == "1":
+                print(f"[DEBUG _list_self_utxos] derive addr error: {e}")
+        return None
+
+    def _build_candidate_addresses(self, protocol_id, key_id, counterparty, args: Dict) -> List[str]:
+        """Build list of candidate addresses to search for UTXOs."""
         candidate_addresses: List[str] = []
+        
         # 1) Derived address candidate
         if protocol_id and key_id:
-            try:
-                if isinstance(protocol_id, dict):
-                    protocol = SimpleNamespace(security_level=int(protocol_id.get("securityLevel", 0)), protocol=str(protocol_id.get("protocol", "")))
-                else:
-                    protocol = protocol_id
-                cp = self._normalize_counterparty(counterparty)
-                derived_pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self=False)
-                
-                # Use the private key's network to generate the correct address
-                network = self.private_key.network if hasattr(self, 'private_key') and hasattr(self.private_key, 'network') else None
-                derived_addr = derived_pub.address(network=network) if network else derived_pub.address()
-                
-                if derived_addr and validate_address(derived_addr):
-                    candidate_addresses.append(derived_addr)
-                    if os.getenv("BSV_DEBUG", "0") == "1":
-                        print(f"[DEBUG _list_self_utxos] Candidate derived address: {derived_addr}")
-            except Exception as e:
-                if os.getenv("BSV_DEBUG", "0") == "1":
-                    print(f"[DEBUG _list_self_utxos] derive addr error: {e}")
+            derived_addr = self._derive_address_from_protocol(protocol_id, key_id, counterparty)
+            if derived_addr:
+                candidate_addresses.append(derived_addr)
+        
         # 2) Master address fallback
         master_addr = self._self_address()
         if master_addr and validate_address(master_addr):
             candidate_addresses.append(master_addr)
             if os.getenv("BSV_DEBUG", "0") == "1":
                 print(f"[DEBUG _list_self_utxos] Candidate master address: {master_addr}")
-
-        # 3) Optional explicit basket override (lowest priority)
+        
+        # 3) Optional explicit basket override
         explicit_basket = args.get("basket")
         if explicit_basket and isinstance(explicit_basket, str) and validate_address(explicit_basket):
             candidate_addresses.append(explicit_basket)
+        
+        return candidate_addresses
 
-        # Use WOC for funding UTXOs only if USE_WOC environment variable is set and not "0"
-        # E2E tests may set USE_WOC=1 to test real WOC integration, unit tests typically disable it
+    def _search_utxos_in_addresses(self, candidate_addresses: List[str], ctx: Any, originator: str) -> List[Dict[str, Any]]:
+        """Search for UTXOs across candidate addresses."""
         use_woc = os.getenv("USE_WOC") != "0" and "USE_WOC" in os.environ
+        
         for addr in candidate_addresses:
             lo = self.list_outputs(ctx, {"basket": addr, "use_woc": use_woc}, originator) or {}
             outs = [u for u in lo.get("outputs", []) if isinstance(u, dict) and u.get("satoshis")]
             if outs:
                 return outs
         return []
+
+    def _list_self_utxos(self, ctx: Any = None, args: Dict = None, originator: str = None) -> List[Dict[str, Any]]:
+        """Prefer derived key UTXOs when protocol/key_id is provided; fallback to master if none found."""
+        protocol_id, key_id, counterparty = self._extract_protocol_params(args)
+        candidate_addresses = self._build_candidate_addresses(protocol_id, key_id, counterparty, args)
+        return self._search_utxos_in_addresses(candidate_addresses, ctx, originator)
 
     def _sort_utxos_deterministic(self, utxos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         def _sort_key(u: Dict[str, Any]):
@@ -1730,6 +1769,166 @@ class WalletImpl(WalletInterface):
             "tags": [],
         }
 
+    def _estimate_fee_with_change(self, outputs: List[Dict], existing_unlock_lens: List[int], sel_count: int, include_change: bool, fee_model) -> int:
+        """Estimate fee optionally including a hypothetical change output."""
+        base_outs = list(outputs)
+        if include_change:
+            addr = self._self_address()
+            if addr:
+                try:
+                    print(f"[TRACE] [estimate_with_optional_change] addr: {addr}")
+                    ch_ls = P2PKH().lock(addr)
+                    base_outs = base_outs + [{"satoshis": 1, "lockingScript": ch_ls.hex()}]
+                except Exception:
+                    pass
+        unlocking_lens = list(existing_unlock_lens) + [107] * sel_count
+        return self._estimate_fee(base_outs, unlocking_lens, fee_model)
+
+    def _select_single_utxo(self, utxos: List[Dict], need: int) -> Optional[Dict]:
+        """Heuristic 1: single UTXO covering need with minimal excess."""
+        for u in sorted(utxos, key=lambda x: int(x.get("satoshis", 0))):
+            if int(u.get("satoshis", 0)) >= need:
+                return u
+        return None
+
+    def _select_best_pair(self, utxos: List[Dict], need: int) -> Optional[tuple]:
+        """Heuristic 2: try best pair (limit search space)."""
+        pair = None
+        best_sum = None
+        limited = utxos[:50]
+        
+        for i in range(len(limited)):
+            vi = int(limited[i].get("satoshis", 0))
+            if vi >= need:
+                if best_sum is None or vi < best_sum:
+                    best_sum = vi
+                    pair = (limited[i],)
+                break
+            for j in range(i + 1, len(limited)):
+                vj = int(limited[j].get("satoshis", 0))
+                s = vi + vj
+                if s >= need and (best_sum is None or s < best_sum):
+                    best_sum = s
+                    pair = (limited[i], limited[j])
+        
+        return pair
+
+    def _greedy_select_utxos(self, utxos: List[Dict], target: int, outputs: List[Dict], existing_unlock_lens: List[int], fee_model) -> List[Dict]:
+        """Fallback to greedy largest-first selection."""
+        selected: List[Dict] = []
+        total_in = 0
+        
+        for u in utxos:
+            selected.append(u)
+            total_in += int(u.get("satoshis", 0))
+            est_fee = self._estimate_fee_with_change(outputs, existing_unlock_lens, len(selected), True, fee_model)
+            if total_in >= target + est_fee:
+                break
+        
+        return selected
+
+    def _refine_utxo_coverage(self, selected: List[Dict], utxos: List[Dict], target: int, outputs: List[Dict], existing_unlock_lens: List[int], fee_model) -> tuple[List[Dict], int]:
+        """Ensure coverage with refined fee; add more greedily if needed."""
+        remaining = [u for u in utxos if u not in selected]
+        total_in = sum(int(u.get("satoshis", 0)) for u in selected)
+        
+        while True:
+            est_fee = self._estimate_fee_with_change(outputs, existing_unlock_lens, len(selected), True, fee_model)
+            need = target + est_fee
+            if total_in >= need or not remaining:
+                break
+            u = remaining.pop(0)
+            selected.append(u)
+            total_in += int(u.get("satoshis", 0))
+        
+        return selected, total_in
+
+    def _get_existing_outpoints(self, inputs_meta: List[Dict]) -> set:
+        """Build a set of existing outpoints in inputs_meta."""
+        existing_outpoints = set()
+        
+        for meta in inputs_meta:
+            op = meta.get("outpoint") or meta.get("Outpoint")
+            if op and isinstance(op, dict):
+                txid_val = op.get("txid")
+                txid_hex = self._convert_txid_to_hex(txid_val) if txid_val else None
+                if txid_hex and txid_hex != "00" * 32:
+                    key = (txid_hex, int(op.get("index", 0)))
+                    existing_outpoints.add(key)
+        
+        return existing_outpoints
+
+    def _determine_signing_key_for_utxo(self, u: Dict, args: Dict) -> tuple[Optional[Any], Optional[str], Optional[Any]]:
+        """Determine which key (master vs derived) signs this UTXO."""
+        pushdrop_args = args.get("pushdrop", {})
+        protocol = pushdrop_args.get("protocolID") or pushdrop_args.get("protocol_id") or args.get("protocolID") or args.get("protocol_id")
+        key_id = pushdrop_args.get("keyID") or pushdrop_args.get("key_id") or args.get("keyID") or args.get("key_id")
+        counterparty = pushdrop_args.get("counterparty") or args.get("counterparty")
+        
+        ls_hex = u.get("lockingScript")
+        utxo_hash = self._extract_pubkey_hash_from_locking_script(ls_hex) if isinstance(ls_hex, str) else None
+        
+        use_protocol = None
+        use_key_id = None
+        use_counterparty = None
+        
+        try:
+            if utxo_hash:
+                if not self.check_pubkey_hash(self.private_key, utxo_hash):
+                    if protocol and key_id is not None:
+                        if isinstance(protocol, dict):
+                            protocol_obj = SimpleNamespace(
+                                security_level=int(protocol.get("securityLevel", 0)),
+                                protocol=str(protocol.get("protocol", ""))
+                            )
+                        else:
+                            protocol_obj = protocol
+                        cp = self._normalize_counterparty(counterparty)
+                        derived_pub = self.key_deriver.derive_public_key(protocol_obj, key_id, cp, for_self=False)
+                        if self._pubkey_matches_hash(derived_pub, utxo_hash):
+                            use_protocol = protocol
+                            use_key_id = key_id
+                            use_counterparty = counterparty
+        except Exception:
+            pass
+        
+        return use_protocol, use_key_id, use_counterparty
+
+    def _build_funding_context(self, selected: List[Dict], inputs_meta: List[Dict], args: Dict, existing_outpoints: set) -> List[Dict[str, Any]]:
+        """Build funding context from selected UTXOs."""
+        funding_ctx: List[Dict[str, Any]] = []
+        p2pkh_unlock_len = 107
+        
+        for u in selected:
+            txid_hex = self._convert_txid_to_hex(u.get("txid"))
+            outpoint_key = (txid_hex, int(u.get("outputIndex", 0)))
+            
+            if outpoint_key in existing_outpoints:
+                continue
+            
+            use_protocol, use_key_id, use_counterparty = self._determine_signing_key_for_utxo(u, args)
+            
+            inputs_meta.append({
+                "outpoint": {"txid": txid_hex, "index": int(u.get("outputIndex", 0))},
+                "unlockingScriptLength": p2pkh_unlock_len,
+                "inputDescription": u.get("outputDescription", "Funding UTXO"),
+                "sequenceNumber": 0,
+                "protocol": use_protocol,
+                "key_id": use_key_id,
+                "counterparty": use_counterparty,
+            })
+            existing_outpoints.add(outpoint_key)
+            
+            ls_val = u.get("lockingScript")
+            ls_hex = ls_val.hex() if isinstance(ls_val, bytes) else (ls_val if isinstance(ls_val, str) else "")
+            
+            funding_ctx.append({
+                "satoshis": int(u.get("satoshis", 0)),
+                "lockingScript": ls_hex,
+            })
+        
+        return funding_ctx
+
     def _select_funding_and_change(
         self,
         ctx: Any,
@@ -1746,177 +1945,43 @@ class WalletImpl(WalletInterface):
         """
         target = self._sum_outputs(outputs)
         utxos = self._sort_utxos_deterministic(self._list_self_utxos(ctx, args, originator))
-
-        # Helper: estimate fee optionally including a hypothetical change output
-        def estimate_with_optional_change(sel_count: int, include_change: bool) -> int:
-            base_outs = list(outputs)
-            if include_change:
-                addr = self._self_address()
-                if addr:
-                    try:
-                        addr=self._self_address()
-                        print(f"[TRACE] [estimate_with_optional_change] addr: {addr}")
-                        ch_ls = P2PKH().lock(addr)  # Script object
-                        base_outs = base_outs + [{"satoshis": 1, "lockingScript": ch_ls.hex()}]  # HEX文字列に変換
-                    except Exception:
-                        pass
-            unlocking_lens = list(existing_unlock_lens) + [107] * sel_count
-            return self._estimate_fee(base_outs, unlocking_lens, fee_model)
-
+        
         # Initial need assumes we will add a change output (worst case for size)
-        need0 = target + estimate_with_optional_change(0, include_change=True)
-
-        # Heuristic 1: single UTXO covering need0 with minimal excess
-        single = None
-        for u in sorted(utxos, key=lambda x: int(x.get("satoshis", 0))):
-            if int(u.get("satoshis", 0)) >= need0:
-                single = u
-                break
-
-        # Heuristic 2: try best pair (limit search space)
-        pair = None
-        best_sum = None
-        limited = utxos[:50]
-        for i in range(len(limited)):
-            vi = int(limited[i].get("satoshis", 0))
-            if vi >= need0:
-                if best_sum is None or vi < best_sum:
-                    best_sum = vi
-                    pair = (limited[i],)
-                break
-            for j in range(i + 1, len(limited)):
-                vj = int(limited[j].get("satoshis", 0))
-                s = vi + vj
-                if s >= need0 and (best_sum is None or s < best_sum):
-                    best_sum = s
-                    pair = (limited[i], limited[j])
-
+        need0 = target + self._estimate_fee_with_change(outputs, existing_unlock_lens, 0, True, fee_model)
+        
+        # Try selection heuristics
+        single = self._select_single_utxo(utxos, need0)
+        pair = self._select_best_pair(utxos, need0)
+        
         selected: List[Dict] = []
         if single is not None:
             selected = [single]
         elif pair is not None and len(pair) == 2:
             selected = [pair[0], pair[1]]
-        # If still empty, fallback to greedy largest-first
+        
+        # Fallback to greedy if no heuristic worked
         if not selected:
-            total_in = 0
-            for u in utxos:
-                selected.append(u)
-                total_in += int(u.get("satoshis", 0))
-                est_fee = estimate_with_optional_change(len(selected), include_change=True)
-                if total_in >= target + est_fee:
-                    break
-
-        # Ensure coverage with refined fee using selected set; add more greedily if needed
-        remaining = [u for u in utxos if u not in selected]
-        total_in = sum(int(u.get("satoshis", 0)) for u in selected)
-        while True:
-            est_fee = estimate_with_optional_change(len(selected), include_change=True)
-            need = target + est_fee
-            if total_in >= need or not remaining:
-                break
-            u = remaining.pop(0)
-            selected.append(u)
-            total_in += int(u.get("satoshis", 0))
-
+            selected = self._greedy_select_utxos(utxos, target, outputs, existing_unlock_lens, fee_model)
+        
+        # Ensure coverage with refined fee
+        selected, total_in = self._refine_utxo_coverage(selected, utxos, target, outputs, existing_unlock_lens, fee_model)
+        
+        # Build funding context and change output
         funding_ctx: List[Dict[str, Any]] = []
         change_output: Optional[Dict] = None
+        
         if selected:
+            existing_outpoints = self._get_existing_outpoints(inputs_meta)
+            funding_ctx = self._build_funding_context(selected, inputs_meta, args, existing_outpoints)
+            
             p2pkh_unlock_len = 107
-            # Build a set of existing outpoints in inputs_meta
-            existing_outpoints = set()
-            for meta in inputs_meta:
-                op = meta.get("outpoint") or meta.get("Outpoint")
-                if op and isinstance(op, dict):
-                    txid_val = op.get("txid")
-                    if isinstance(txid_val, str) and len(txid_val) == 64:
-                        # Use hex string as-is
-                        txid_hex = txid_val
-                    elif isinstance(txid_val, (bytes, bytearray)) and len(txid_val) == 32:
-                        # Convert bytes to hex string
-                        txid_hex = txid_val.hex()
-                    else:
-                        continue  # Skip invalid txid
-                    key = (txid_hex, int(op.get("index", 0)))
-                    existing_outpoints.add(key)
-            for u in selected:
-                txid_val = u.get("txid")
-                if isinstance(txid_val, str) and len(txid_val) == 64:
-                    txid_hex = txid_val
-                elif isinstance(txid_val, (bytes, bytearray)) and len(txid_val) == 32:
-                    txid_hex = txid_val.hex()
-                else:
-                    txid_hex = "00" * 32
-                # Use hex string for comparison with existing_outpoints
-                outpoint_key = (txid_hex, int(u.get("outputIndex", 0)))
-                # Skip if this outpoint already exists in inputs_meta
-                if outpoint_key in existing_outpoints:
-                    continue
-                # Decide which key signs this UTXO: master vs derived
-                pushdrop_args = args.get("pushdrop", {})
-                protocol = pushdrop_args.get("protocolID") or pushdrop_args.get("protocol_id") or args.get("protocolID") or args.get("protocol_id")
-                key_id = pushdrop_args.get("keyID") or pushdrop_args.get("key_id") or args.get("keyID") or args.get("key_id")
-                counterparty = pushdrop_args.get("counterparty") or args.get("counterparty")
-
-                # Extract pubkey hash from UTXO locking script
-                ls_hex = u.get("lockingScript")
-                utxo_hash = self._extract_pubkey_hash_from_locking_script(ls_hex) if isinstance(ls_hex, str) else None
-
-                # Default: assume master key signs
-                use_protocol = None
-                use_key_id = None
-                use_counterparty = None
-
-                try:
-                    if utxo_hash:
-                        # If matches master, keep defaults (master priv)
-                        if not self.check_pubkey_hash(self.private_key, utxo_hash):
-                            # Try derived key
-                            if protocol and key_id is not None:
-                                if isinstance(protocol, dict):
-                                    protocol_obj = SimpleNamespace(security_level=int(protocol.get("securityLevel", 0)), protocol=str(protocol.get("protocol", "")))
-                                else:
-                                    protocol_obj = protocol
-                                cp = self._normalize_counterparty(counterparty)
-                                derived_pub = self.key_deriver.derive_public_key(protocol_obj, key_id, cp, for_self=False)
-                                if self._pubkey_matches_hash(derived_pub, utxo_hash):
-                                    use_protocol = protocol
-                                    use_key_id = key_id
-                                    use_counterparty = counterparty
-                except Exception:
-                    # On any error, fall back to master key
-                    pass
-
-                inputs_meta.append({
-                    "outpoint": {"txid": txid_hex, "index": int(u.get("outputIndex", 0))},
-                    "unlockingScriptLength": p2pkh_unlock_len,
-                    "inputDescription": u.get("outputDescription", "Funding UTXO"),
-                    "sequenceNumber": 0,
-                    "protocol": use_protocol,
-                    "key_id": use_key_id,
-                    "counterparty": use_counterparty,
-                })
-                existing_outpoints.add(outpoint_key)
-                ls_val = u.get("lockingScript")
-                if isinstance(ls_val, bytes):
-                    ls_hex = ls_val.hex()
-                elif isinstance(ls_val, str):
-                    ls_hex = ls_val
-                else:
-                    ls_hex = ""
-                funding_ctx.append({
-                    "satoshis": int(u.get("satoshis", 0)),
-                    "lockingScript": ls_hex,
-                })
             unlocking_lens = list(existing_unlock_lens) + [p2pkh_unlock_len] * len(selected)
             est_fee = self._estimate_fee(outputs, unlocking_lens, fee_model)
             change_amt = total_in - target - est_fee
-            if change_amt >= 0: # 546
+            
+            if change_amt >= 0:
                 addr = self._self_address()
                 if addr:
-                    # First pass: append tentative change
                     change_output = self._build_change_output_dict(addr, int(change_amt))
-                    # In _select_funding_and_change, do NOT append change_output to outputs. Only set change_output and return it.
-                    # Remove or comment out any outputs.append(change_output) in this method.
-                    # (No code to add here, just remove the append in the relevant place.)
-
+        
         return funding_ctx, change_output

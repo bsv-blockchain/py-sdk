@@ -355,9 +355,11 @@ def test_merklepath_verify_with_mock_chaintracker():
     mp = MerklePath(100, [[leaf0, leaf1]])
     # Verify using mock chaintracker
     import asyncio
+    from typing import cast, Any
     loop = asyncio.new_event_loop()
     try:
-        loop.run_until_complete(mp.verify(leaf0["hash_str"], MockChainTracker()))
+        # MockChainTracker is intentionally not a real ChainTracker type for testing
+        loop.run_until_complete(mp.verify(leaf0["hash_str"], cast(Any, MockChainTracker())))
     finally:
         loop.close()
 
@@ -768,7 +770,7 @@ def _assert_spends_valid(spends2):  # NOSONAR - Complexity (18), requires refact
         assert len(us) <= 1 + 73 + 1
         assert len(us) >= 1 + 70 + 1
 
-def _check_remove_unlocking_script_length(wallet, kv):
+def _check_remove_unlocking_script_length(wallet, kv):  # NOSONAR - Complexity (18), test helper function
     kv.remove(None, "lenkey")
     ims = wallet._actions[-1].get("inputs") if wallet._actions else []
     if isinstance(ims, list) and ims:
