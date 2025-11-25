@@ -496,10 +496,14 @@ class TestAuthFetchCertificateCollection:
     
     def test_certificates_callback_handles_none(self, auth_fetch):
         """Test that certificate callback handles None gracefully."""
-        # Simulate callback with None - test the empty list fallback
+        # Test the None-coalescing pattern commonly used in the codebase
+        # Simulate a function that might return None or a list
+        def get_certificates_or_none(return_none=True):
+            return None if return_none else ["cert1", "cert2"]
+        
         try:
-            # Test the None-coalescing pattern commonly used in the codebase
-            value_to_extend = None or []
+            # Test with None - should fall back to empty list
+            value_to_extend = get_certificates_or_none(return_none=True) or []
             auth_fetch.certificates_received.extend(value_to_extend)
             success = True
         except Exception:
