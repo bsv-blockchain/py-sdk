@@ -117,6 +117,59 @@ For a more detailed tutorial and advanced examples, check our [Documentation](#d
 * Support for chain tracking and verification
 
 
+### Wallet Infrastructure:
+
+* Complete wallet implementation with BIP270 payment protocols
+* Action serializers for creating, signing, and broadcasting transactions
+* Substrate support for various wallet backends (HTTP, Wire protocol)
+* Key derivation with caching for performance
+
+
+### Authentication & Security:
+
+* Peer-to-peer authentication with certificate management
+* Session handling with automatic renewal
+* Multiple transport protocols (HTTP, simplified transports)
+* Encrypted communications with AES-GCM
+
+
+### Script Interpreter:
+
+* Full Bitcoin script execution engine
+* Comprehensive opcode support (arithmetic, crypto, stack operations)
+* Configurable script flags for different validation modes
+* Thread-based execution for complex scripts
+
+
+### Storage & Overlay Services:
+
+* Upload/download interfaces with encryption support
+* Overlay network tools (SHIP broadcaster, lookup resolver)
+* Historian for tracking overlay data
+* Host reputation tracking
+* Registry client for overlay management
+
+
+### Identity & Registry:
+
+* Identity client with certificate management
+* Contacts manager for identity relationships
+* Registry services for overlay network coordination
+* Headers client for blockchain synchronization
+
+
+### Enhanced Cryptography & Protocols:
+
+* Schnorr signatures for advanced signing schemes
+* DRBG (Deterministic Random Bit Generator)
+* BSM (Bitcoin Signed Message) compatibility
+* ECIES encryption compatibility
+* TOTP (Time-based One-Time Password) 2FA support
+* BIP-276 payment destination encoding
+* PushDrop token protocol implementation
+* Teranode broadcaster support
+
+
 ## Documentation
 
 Detailed documentation of the SDK with code examples can be found at [BSV Skills Center](https://docs.bsvblockchain.org/guides/sdks/py).

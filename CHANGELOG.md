@@ -31,7 +31,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - Complete Wallet infrastructure with serializers, substrates, and implementations for full wallet functionality
 - Authentication system including peer authentication, certificates, session management, and HTTP transport
-- BEEF (Background Evaluation Extended Format) transaction format support with builder, serializer, and validator
+- Enhanced BEEF infrastructure with dedicated builder, serializer, and validator modules for advanced transaction management
 - Script interpreter with comprehensive opcode support, stack operations, and script execution engine
 - Storage interfaces and implementations for data upload/download with encryption support
 - Overlay tools including lookup resolver, SHIP broadcaster, historian, and host reputation tracker
