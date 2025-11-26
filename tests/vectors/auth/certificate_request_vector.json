@@ -1,0 +1,28 @@
+{
+  "canonical": {
+    "certificateTypes": {
+      "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=": [
+        "a",
+        "m",
+        "z"
+      ]
+    },
+    "certifiers": [
+      "023bb03660430c43f7e3b68acf00fe692b5ed6703cc808d7a7503b3536381180fe",
+      "03527bf4e51b4dfb6f492abefa72cfd8065250003439495ade60ea007e2d01c7b0"
+    ]
+  },
+  "request": {
+    "certificate_types": {
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": [
+        "z",
+        "a",
+        "m"
+      ]
+    },
+    "certifiers": [
+      "03527bf4e51b4dfb6f492abefa72cfd8065250003439495ade60ea007e2d01c7b0",
+      "023bb03660430c43f7e3b68acf00fe692b5ed6703cc808d7a7503b3536381180fe"
+    ]
+  }
+}

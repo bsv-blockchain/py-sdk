@@ -1,6 +1,7 @@
 from typing import Union, Optional, List
 
 from bsv.constants import OpCode, OPCODE_VALUE_NAME_DICT
+# Import from utils package that should have these functions available
 from bsv.utils import encode_pushdata, unsigned_to_varint, Reader
 
 # BRC-106 compliance: Opcode aliases for parsing
@@ -127,6 +128,28 @@ class Script:
         return s
 
     @classmethod
+    def from_bytes(cls, data: bytes) -> 'Script':
+        """
+        Create a Script object from bytes data.
+        
+        Args:
+            data: Raw script bytes
+            
+        Returns:
+            Script: A new Script object
+        """
+        return cls(data)
+
+    def to_bytes(self) -> bytes:
+        """
+        Convert the Script object to bytes.
+        
+        Returns:
+            bytes: The serialized script bytes
+        """
+        return self.serialize()
+
+    @classmethod
     def from_asm(cls, asm: str) -> 'Script':
         chunks: [ScriptChunk] = []
         if not asm:  # Handle empty string
@@ -161,14 +184,14 @@ class Script:
                     raise ValueError('invalid hex string in script')
                 hex_len = len(hex_bytes)
                 if 0 <= hex_len < int.from_bytes(OpCode.OP_PUSHDATA1, 'big'):
-                    opcode_value = int.to_bytes(hex_len, 1, 'big')
+                    op_value = int.to_bytes(hex_len, 1, 'big')
                 elif hex_len < pow(2, 8):
-                    opcode_value = OpCode.OP_PUSHDATA1
+                    op_value = OpCode.OP_PUSHDATA1
                 elif hex_len < pow(2, 16):
-                    opcode_value = OpCode.OP_PUSHDATA2
+                    op_value = OpCode.OP_PUSHDATA2
                 elif hex_len < pow(2, 32):
-                    opcode_value = OpCode.OP_PUSHDATA4
-                chunks.append(ScriptChunk(opcode_value, hex_bytes))
+                    op_value = OpCode.OP_PUSHDATA4
+                chunks.append(ScriptChunk(op_value, hex_bytes))
                 i = i + 1
         return Script.from_chunks(chunks)
 

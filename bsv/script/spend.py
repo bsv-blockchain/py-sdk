@@ -91,7 +91,7 @@ class Spend:
         if operation.data is not None and len(operation.data) > MAX_SCRIPT_ELEMENT_SIZE:
             _m = f"It's not currently possible to push data larger than {MAX_SCRIPT_ELEMENT_SIZE} bytes."
             self.script_evaluation_error(_m)
-        if is_script_executing and self.is_opcode_disabled(current_opcode):
+        if is_script_executing and self.is_op_disabled(current_opcode):
             self.script_evaluation_error('This opcode is currently disabled.')
 
         if is_script_executing and OpCode.OP_0 <= current_opcode <= OpCode.OP_PUSHDATA4:
@@ -780,7 +780,7 @@ class Spend:
         return self.stack[len(self.stack) + i]
 
     def script_evaluation_error(self, message: str) -> None:
-        raise Exception(f"Script evaluation error: {message}\n\n"
+        raise RuntimeError(f"Script evaluation error: {message}\n\n"
                         f"Source TXID: {self.source_txid}\n"
                         f"Source output index: {self.source_output_index}\n"
                         f"Context: {self.context}\n"
@@ -799,7 +799,7 @@ class Spend:
         return False
 
     @classmethod
-    def is_opcode_disabled(cls, opcode: bytes) -> bool:
+    def is_op_disabled(cls, opcode: bytes) -> bool:
         return (opcode == OpCode.OP_2MUL
                 or opcode == OpCode.OP_2DIV
                 or opcode == OpCode.OP_VERIF

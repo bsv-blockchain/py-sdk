@@ -1,0 +1,54 @@
+{
+  "canonical": [
+    {
+      "certifier": "0219b54cae3ca2fe9a8e582be34b374c7c24f8b2746e0fe5313eb25111fc59d031",
+      "fields": {
+        "x": "y"
+      },
+      "keyring": {
+        "x": "aw=="
+      },
+      "revocationOutpoint": null,
+      "serialNumber": "u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7s=",
+      "signature": "c2lnMQ==",
+      "subject": "03620f57725919db4d53b8f89c5669fc6a5a3f3846c31faee11e93e53fb1d20bc7",
+      "type": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo="
+    },
+    {
+      "certifier": "03c695eb09decf2fa35a0130bfb5ef4ec816efb6535e33286ecd31054759f8214c",
+      "fields": {},
+      "keyring": {},
+      "revocationOutpoint": null,
+      "serialNumber": "3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0=",
+      "signature": null,
+      "subject": "0349b1228bb624c71b2c23e334b098e84ed3d8fca05630305749dd39bf5296666c",
+      "type": "zMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMw="
+    }
+  ],
+  "certificates": [
+    {
+      "certificate": {
+        "certifier": "0219b54cae3ca2fe9a8e582be34b374c7c24f8b2746e0fe5313eb25111fc59d031",
+        "fields": {
+          "x": "y"
+        },
+        "serial_number": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "subject": "03620f57725919db4d53b8f89c5669fc6a5a3f3846c31faee11e93e53fb1d20bc7",
+        "type": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo="
+      },
+      "keyring": {
+        "x": "aw=="
+      },
+      "signature": "c2lnMQ=="
+    },
+    {
+      "certificate": {
+        "certifier": "03c695eb09decf2fa35a0130bfb5ef4ec816efb6535e33286ecd31054759f8214c",
+        "fields": {},
+        "serialNumber": "3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0=",
+        "subject": "0349b1228bb624c71b2c23e334b098e84ed3d8fca05630305749dd39bf5296666c",
+        "type": "zMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMw="
+      }
+    }
+  ]
+}
