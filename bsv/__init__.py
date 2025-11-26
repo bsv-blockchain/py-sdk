@@ -11,6 +11,9 @@ from .constants import *
 from .hash import *
 from .curve import *
 
+# Base58 encoding/decoding functions
+from .base58 import base58check_encode, base58check_decode, b58_encode, b58_decode, to_base58check, from_base58check
+
 # Step 2: HTTP client
 from .http_client import HttpClient, default_http_client
 
