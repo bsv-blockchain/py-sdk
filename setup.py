@@ -8,5 +8,5 @@ with open('bsv/__init__.py', 'r') as f:
 
 setup(
     version=version,
-    packages=find_packages(exclude=('tests',)),
+    packages=find_packages(exclude=('tests', 'tests.*')),
 )
