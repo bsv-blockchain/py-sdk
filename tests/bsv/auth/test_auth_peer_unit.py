@@ -87,7 +87,7 @@ class TestPeerUnit:
         identity = PrivateKey(778).public_key()
         s = PeerSession(is_authenticated=True, session_nonce="s", peer_nonce="p", peer_identity_key=identity, last_update=1)
         session_manager.add_session(s)
-        got = peer.get_authenticated_session(None, identity, 0)
+        got = peer.get_authenticated_session(identity, 0)
         assert got is s
         # last_interacted_with_peer should be updated when auto_persist_last_session is True
         assert peer.last_interacted_with_peer == identity

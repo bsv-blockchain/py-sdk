@@ -54,7 +54,7 @@ def test_validate_certificates_unrequested_type():
     certifier = PrivateKey(7203).public_key().hex()
     certs = [_make_cert(t_other, subject, certifier, {"f": "v"})]
     requested = {"types": {t_req: ["f"]}, "certifiers": [certifier]}
-    ok = peer._validate_certificates(None, certs, requested, expected_subject=PrivateKey(7202).public_key())
+    ok = peer._validate_certificates(certs, requested, expected_subject=PrivateKey(7202).public_key())
     assert ok is False
 
 
@@ -65,7 +65,7 @@ def test_validate_certificates_missing_required_field():
     certifier = PrivateKey(7213).public_key().hex()
     certs = [_make_cert(t_req, subject, certifier, {"g": "v"})]
     requested = {"types": {t_req: ["f"]}, "certifiers": [certifier]}
-    ok = peer._validate_certificates(None, certs, requested, expected_subject=PrivateKey(7212).public_key())
+    ok = peer._validate_certificates(certs, requested, expected_subject=PrivateKey(7212).public_key())
     assert ok is False
 
 
@@ -77,7 +77,7 @@ def test_validate_certificates_unrequested_certifier():
     other_certifier = PrivateKey(7224).public_key().hex()
     certs = [_make_cert(t_req, subject, other_certifier, {"f": "v"})]
     requested = {"types": {t_req: ["f"]}, "certifiers": [certifier]}
-    ok = peer._validate_certificates(None, certs, requested, expected_subject=PrivateKey(7222).public_key())
+    ok = peer._validate_certificates(certs, requested, expected_subject=PrivateKey(7222).public_key())
     assert ok is False
 
 

@@ -71,7 +71,7 @@ def test_concurrent_handshakes_same_peer():
 
     def initiate_handshake(i):
         try:
-            session = peer.initiate_handshake(None, peer_identity_key, 1000)  # Shorter timeout for test
+            session = peer.initiate_handshake(peer_identity_key, 1000)  # Shorter timeout for test
             results.append((i, session))
         except Exception as e:
             errors.append((i, e))
@@ -121,7 +121,7 @@ def test_concurrent_handshakes_different_peers():
     def initiate_handshake(i):
         try:
             peer_identity_key = PrivateKey(i + 10).public_key()
-            session = peer.initiate_handshake(None, peer_identity_key, 1000)  # Shorter timeout for test
+            session = peer.initiate_handshake(peer_identity_key, 1000)  # Shorter timeout for test
             results.append((i, session, peer_identity_key))
         except Exception as e:
             errors.append((i, e))

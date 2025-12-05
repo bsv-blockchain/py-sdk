@@ -73,12 +73,12 @@ class AuthFetch:
         
         return self.peers[base_url]
 
-    def _try_fallback_http(self, ctx: Any, url_str: str, config: SimplifiedFetchRequestOptions, peer: AuthPeer):
+    def _try_fallback_http(self, url_str: str, config: SimplifiedFetchRequestOptions, peer: AuthPeer):
         """Try HTTP fallback if mutual auth is not supported."""
         if peer.supports_mutual_auth is not None and peer.supports_mutual_auth is False:
             resp = self.handle_fetch_and_validate(url_str, config, peer)
             if getattr(resp, 'status_code', None) == 402:
-                return self.handle_payment_and_retry(ctx, url_str, config, resp)
+                return self.handle_payment_and_retry(url_str, config, resp)
             return resp
         return None
 
@@ -104,7 +104,7 @@ class AuthFetch:
             self.callbacks[request_nonce_b64]['resolve'](resp_obj)
         return on_general_message
 
-    def _handle_peer_error(self, ctx: Any, err: Exception, base_url: str, url_str: str, config: SimplifiedFetchRequestOptions, request_nonce_b64: str, peer_to_use: AuthPeer) -> None:
+    def _handle_peer_error(self, err: Exception, base_url: str, url_str: str, config: SimplifiedFetchRequestOptions, request_nonce_b64: str, peer_to_use: AuthPeer) -> None:
         """Handle errors from peer transmission."""
         err_str = str(err)
         if 'Session not found for nonce' in err_str:
@@ -114,7 +114,7 @@ class AuthFetch:
                 pass
             if config.retry_counter is None:
                 config.retry_counter = 3
-            self.callbacks[request_nonce_b64]['resolve'](self.fetch(ctx, url_str, config))
+            self.callbacks[request_nonce_b64]['resolve'](self.fetch(url_str, config))
         elif 'HTTP server failed to authenticate' in err_str:
             try:
                 resp = self.handle_fetch_and_validate(url_str, config, peer_to_use)
@@ -133,7 +133,7 @@ class AuthFetch:
             raise RuntimeError(response_holder['err'])
         return response_holder['resp']
 
-    def fetch(self, ctx: Any, url_str: str, config: Optional[SimplifiedFetchRequestOptions] = None):
+    def fetch(self, url_str: str, config: Optional[SimplifiedFetchRequestOptions] = None):
         if config is None:
             config = SimplifiedFetchRequestOptions()
         
@@ -146,7 +146,7 @@ class AuthFetch:
         peer_to_use = self._get_or_create_peer(base_url)
         
         # Try fallback HTTP if auth not supported
-        fallback_resp = self._try_fallback_http(ctx, url_str, config, peer_to_use)
+        fallback_resp = self._try_fallback_http(url_str, config, peer_to_use)
         if fallback_resp is not None:
             return fallback_resp
         
@@ -164,9 +164,9 @@ class AuthFetch:
         
         # Send request via peer
         try:
-            err = peer_to_use.peer.to_peer(ctx, request_data, None, 30000)
+            err = peer_to_use.peer.to_peer(request_data, None, 30000)
             if err:
-                self._handle_peer_error(ctx, err, base_url, url_str, config, request_nonce_b64, peer_to_use)
+                self._handle_peer_error(err, base_url, url_str, config, request_nonce_b64, peer_to_use)
         except Exception as e:
             self.callbacks[request_nonce_b64]['reject'](e)
         
@@ -263,7 +263,7 @@ class AuthFetch:
         resp_obj.reason = str(status)
         return resp_obj
 
-    def send_certificate_request(self, ctx: Any, base_url: str, certificates_to_request):
+    def send_certificate_request(self, base_url: str, certificates_to_request):
         """
         GoのSendCertificateRequest相当: Peer経由で証明書リクエストを送り、受信まで待機。
         """
@@ -289,7 +289,7 @@ class AuthFetch:
             cert_event.set()
         callback_id = peer_to_use.peer.listen_for_certificates_received(on_certificates_received)
         try:
-            err = peer_to_use.peer.request_certificates(ctx, None, certificates_to_request, 30000)
+            err = peer_to_use.peer.request_certificates(None, certificates_to_request, 30000)
             if err:
                 cert_holder['err'] = err
                 cert_event.set()
@@ -402,20 +402,20 @@ class AuthFetch:
             return resp
         raise HTTPError(f"request failed with status: {resp.status_code}")
 
-    def handle_payment_and_retry(self, ctx: Any, url_str: str, config: SimplifiedFetchRequestOptions, original_response):
+    def handle_payment_and_retry(self, url_str: str, config: SimplifiedFetchRequestOptions, original_response):
         """
         On 402 Payment Required, create a payment transaction, attach x-bsv-payment header, and retry.
         Refactored version (reduced Cognitive Complexity)
         """
         payment_info = self._validate_payment_headers(original_response)
         derivation_suffix = self._generate_derivation_suffix()
-        derived_public_key = self._get_payment_public_key(ctx, payment_info, derivation_suffix)
+        derived_public_key = self._get_payment_public_key(payment_info, derivation_suffix)
         locking_script = self._build_locking_script(derived_public_key)
-        tx_b64 = self._create_payment_transaction(ctx, url_str, payment_info, derivation_suffix, locking_script)
+        tx_b64 = self._create_payment_transaction(url_str, payment_info, derivation_suffix, locking_script)
         self._set_payment_header(config, payment_info, derivation_suffix, tx_b64)
         if config.retry_counter is None:
             config.retry_counter = 3
-        return self.fetch(ctx, url_str, config)
+        return self.fetch(url_str, config)
 
     def _validate_payment_headers(self, response):
         payment_version = response.headers.get("x-bsv-payment-version")
@@ -443,12 +443,12 @@ class AuthFetch:
         import base64, os
         return base64.b64encode(os.urandom(8)).decode()
 
-    def _get_payment_public_key(self, ctx, payment_info, derivation_suffix):
+    def _get_payment_public_key(self, payment_info, derivation_suffix):
         if not hasattr(self.wallet, 'get_public_key'):
             raise NotImplementedError("wallet.get_public_key is not implemented")
         protocol_id = [2, '3241645161d8']
         key_id = f"{payment_info['derivation_prefix']} {derivation_suffix}"
-        pubkey_result = self.wallet.get_public_key(ctx, {
+        pubkey_result = self.wallet.get_public_key({
             "protocolID": protocol_id,
             "keyID": key_id,
             "counterparty": payment_info["server_identity_key"]
@@ -460,7 +460,7 @@ class AuthFetch:
     def _build_locking_script(self, derived_public_key):
         return p2pkh_locking_script_from_pubkey(derived_public_key)
 
-    def _create_payment_transaction(self, ctx, url_str, payment_info, derivation_suffix, locking_script):
+    def _create_payment_transaction(self, url_str, payment_info, derivation_suffix, locking_script):
         import json, base64
         if not hasattr(self.wallet, 'create_action'):
             raise NotImplementedError("wallet.create_action is not implemented")
@@ -482,7 +482,7 @@ class AuthFetch:
                 "randomizeOutputs": False
             }
         }
-        action_result = self.wallet.create_action(ctx, action_args, None)
+        action_result = self.wallet.create_action(action_args, None)
         if not action_result or "tx" not in action_result:
             raise RuntimeError("wallet.create_action did not return a transaction")
         tx_bytes = action_result["tx"]

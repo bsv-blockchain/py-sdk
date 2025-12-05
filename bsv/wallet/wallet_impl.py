@@ -84,7 +84,7 @@ class WalletImpl(WalletInterface):
         # None or unknown -> self
         return Counterparty(CounterpartyType.SELF)
 
-    def get_public_key(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def get_public_key(self, args: Dict = None, originator: str = None) -> Dict:
         try:
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
@@ -112,7 +112,7 @@ class WalletImpl(WalletInterface):
         except Exception as e:
             return {"error": f"get_public_key: {e}"}
 
-    def encrypt(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def encrypt(self, args: Dict = None, originator: str = None) -> Dict:
         try:
             encryption_args = args.get("encryption_args", {})
             if os.getenv("BSV_DEBUG", "0") == "1":
@@ -127,7 +127,7 @@ class WalletImpl(WalletInterface):
         except Exception as e:
             return {"error": f"encrypt: {e}"}
 
-    def decrypt(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def decrypt(self, args: Dict = None, originator: str = None) -> Dict:
         try:
             encryption_args = args.get("encryption_args", {})
             if os.getenv("BSV_DEBUG", "0") == "1":
@@ -141,7 +141,7 @@ class WalletImpl(WalletInterface):
         except Exception as e:
             return {"error": f"decrypt: {e}"}
 
-    def create_signature(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def create_signature(self, args: Dict = None, originator: str = None) -> Dict:
         try:
             # BRC-100 compliant flat structure (Python snake_case)
             protocol_id = args.get("protocol_id")
@@ -254,7 +254,7 @@ class WalletImpl(WalletInterface):
             except Exception as e:
                 print(f"[WALLET VERIFY] Signature format check error: {e}")
 
-    def verify_signature(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def verify_signature(self, args: Dict = None, originator: str = None) -> Dict:
         try:
             # Extract and validate parameters
             protocol_id = args.get("protocol_id")
@@ -299,7 +299,7 @@ class WalletImpl(WalletInterface):
         except Exception as e:
             return {"error": f"verify_signature: {e}"}
 
-    def create_hmac(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def create_hmac(self, args: Dict = None, originator: str = None) -> Dict:
         try:
             encryption_args = args.get("encryption_args", {})
             protocol_id = encryption_args.get("protocol_id")
@@ -341,7 +341,7 @@ class WalletImpl(WalletInterface):
             except Exception as dbg_e:
                 print(f"[DEBUG WalletImpl.verify_hmac] cp normalization error: {dbg_e}")
 
-    def verify_hmac(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def verify_hmac(self, args: Dict = None, originator: str = None) -> Dict:
         try:
             # Extract parameters
             encryption_args, protocol_id, key_id, counterparty, data, hmac_value = self._extract_hmac_params(args)
@@ -373,7 +373,7 @@ class WalletImpl(WalletInterface):
         # nothing to abort. The method is intentionally left empty to satisfy the
         # interface and to document that abort semantics are a no-op in tests.
         pass
-    def acquire_certificate(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def acquire_certificate(self, args: Dict = None, originator: str = None) -> Dict:
         # store minimal certificate record for listing/discovery
         record = {
             "certificateBytes": args.get("type", b"") + args.get("serialNumber", b""),
@@ -385,7 +385,7 @@ class WalletImpl(WalletInterface):
         self._certificates.append(record)
         return {}
 
-    def _process_pushdrop_args(self, pushdrop_args: Dict, originator: str, ctx: Any, outputs: List[Dict]) -> None:
+    def _process_pushdrop_args(self, pushdrop_args: Dict, originator: str, outputs: List[Dict]) -> None:
         """Process PushDrop arguments and append the output if needed."""
         from bsv.transaction.pushdrop import build_lock_before_pushdrop, PushDrop
         
@@ -408,7 +408,7 @@ class WalletImpl(WalletInterface):
         else:
             pd = PushDrop(self, originator)
             locking_script = pd.lock(
-                ctx, fields, protocol_id, key_id, counterparty,
+                fields, protocol_id, key_id, counterparty,
                 for_self=True, include_signature=include_signature,
                 lock_position=lock_position
             )
@@ -526,7 +526,7 @@ class WalletImpl(WalletInterface):
             "action": action,
         }
 
-    def create_action(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def create_action(self, args: Dict = None, originator: str = None) -> Dict:
         """
         Build a Transaction from inputs/outputs; auto-fund with wallet UTXOs (Go-style).
         - Always calls .serialize() on Transaction object returned by _build_signable_transaction.
@@ -546,7 +546,7 @@ class WalletImpl(WalletInterface):
         pushdrop_args = args.get("pushdrop")
         if pushdrop_args:
             print("[TRACE] [create_action] found pushdrop_args")
-            self._process_pushdrop_args(pushdrop_args, originator, ctx, outputs)
+            self._process_pushdrop_args(pushdrop_args, originator, outputs)
         
         print("[TRACE] [create_action] after pushdrop outputs:", outputs)
         
@@ -558,7 +558,7 @@ class WalletImpl(WalletInterface):
         
         # Auto-fund if needed
         funding_ctx, change_output = self._select_funding_and_change(
-            ctx, args, originator, outputs, inputs_meta, existing_unlock_lens, fee_model
+            args, originator, outputs, inputs_meta, existing_unlock_lens, fee_model
         )
         
         if funding_ctx:
@@ -801,7 +801,7 @@ class WalletImpl(WalletInterface):
             print(f"[ERROR] Exception in _build_signable_transaction: {e}")
             raise
 
-    def discover_by_attributes(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def discover_by_attributes(self, args: Dict = None, originator: str = None) -> Dict:
         attrs = args.get("attributes", {}) or {}
         matches = []
         for c in self._certificates:
@@ -814,19 +814,19 @@ class WalletImpl(WalletInterface):
                     "decryptedFields": {},
                 })
         return {"totalCertificates": len(matches), "certificates": matches}
-    def discover_by_identity_key(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def discover_by_identity_key(self, args: Dict = None, originator: str = None) -> Dict:
         # naive: no identity index, return empty
         return {"totalCertificates": 0, "certificates": []}
-    def get_header_for_height(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def get_header_for_height(self, args: Dict = None, originator: str = None) -> Dict:
         # minimal: return empty header bytes
         return {"header": b""}
-    def get_height(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def get_height(self, args: Dict = None, originator: str = None) -> Dict:
         return {"height": 0}
-    def get_network(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def get_network(self, args: Dict = None, originator: str = None) -> Dict:
         return {"network": "mocknet"}
-    def get_version(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def get_version(self, args: Dict = None, originator: str = None) -> Dict:
         return {"version": "0.0.0"}
-    def internalize_action(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def internalize_action(self, args: Dict = None, originator: str = None) -> Dict:
         """
         Broadcast the signed transaction to the network.
         - If outputs are empty, do not broadcast and return an error.
@@ -1035,9 +1035,9 @@ class WalletImpl(WalletInterface):
             return ct.query_tx(txid, timeout=timeout)
         except Exception as e:  # noqa: PERF203
             return {"known": False, "error": str(e)}
-    def is_authenticated(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def is_authenticated(self, args: Dict = None, originator: str = None) -> Dict:
         return {"authenticated": True}
-    def list_actions(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def list_actions(self, args: Dict = None, originator: str = None) -> Dict:
         labels = args.get("labels") or []
         mode = args.get("labelQueryMode", "")
         def match(act):
@@ -1050,10 +1050,10 @@ class WalletImpl(WalletInterface):
             return any(l in act_labels for l in labels)
         actions = [a for a in self._actions if match(a)]
         return {"totalActions": len(actions), "actions": actions}
-    def list_certificates(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def list_certificates(self, args: Dict = None, originator: str = None) -> Dict:
         # Minimal: return stored certificates
         return {"totalCertificates": len(self._certificates), "certificates": self._certificates}
-    def list_outputs(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def list_outputs(self, args: Dict = None, originator: str = None) -> Dict:
         """
         Fetch UTXOs. Priority: WOC > Mock logic
         When both WOC and ARC are enabled, WOC is preferred for UTXO fetching.
@@ -1311,9 +1311,9 @@ class WalletImpl(WalletInterface):
             return plaintext
         # Fallback path
         return self.private_key.decrypt(ciphertext)
-    def prove_certificate(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def prove_certificate(self, args: Dict = None, originator: str = None) -> Dict:
         return {"keyringForVerifier": {}, "verifier": args.get("verifier", b"")}
-    def relinquish_certificate(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def relinquish_certificate(self, args: Dict = None, originator: str = None) -> Dict:
         # Remove matching certificate if present
         typ = args.get("type")
         serial = args.get("serialNumber")
@@ -1322,9 +1322,9 @@ class WalletImpl(WalletInterface):
             c.get("match") != (typ, serial, certifier)
         ]
         return {}
-    def relinquish_output(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def relinquish_output(self, args: Dict = None, originator: str = None) -> Dict:
         return {}
-    def reveal_counterparty_key_linkage(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def reveal_counterparty_key_linkage(self, args: Dict = None, originator: str = None) -> Dict:
         """Reveal linkage information between our keys and a counterparty's key.
 
         The mock implementation does **not** actually compute any linkage bytes. The goal is
@@ -1350,7 +1350,7 @@ class WalletImpl(WalletInterface):
         except Exception as e:
             return {"error": f"reveal_counterparty_key_linkage: {e}"}
 
-    def reveal_specific_key_linkage(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def reveal_specific_key_linkage(self, args: Dict = None, originator: str = None) -> Dict:
         """Reveal linkage information for a *specific* derived key.
 
         Mimics `reveal_counterparty_key_linkage` with the addition of protocol/key parameters
@@ -1386,13 +1386,13 @@ class WalletImpl(WalletInterface):
         else:
             return Transaction.from_reader(Reader(tx_bytes))
 
-    def _get_or_generate_spends(self, ctx: Any, tx, args: Dict, originator: str, spends: Dict) -> tuple[Dict, Optional[str]]:
+    def _get_or_generate_spends(self, tx, args: Dict, originator: str, spends: Dict) -> tuple[Dict, Optional[str]]:
         """Get spends from args or auto-generate them."""
         if spends:
             return spends, None
         
         if hasattr(self, "_prepare_spends"):
-            return self._prepare_spends(ctx, tx, args, originator), None
+            return self._prepare_spends(tx, args, originator), None
         else:
             return {}, "sign_action: spends missing and _prepare_spends unavailable"
 
@@ -1429,7 +1429,7 @@ class WalletImpl(WalletInterface):
         self._last_sign_action_result = result
         return result
 
-    def sign_action(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def sign_action(self, args: Dict = None, originator: str = None) -> Dict:
         """
         Sign the provided transaction using the provided spends (unlocking scripts).
         Returns the signed transaction and txid.
@@ -1443,7 +1443,7 @@ class WalletImpl(WalletInterface):
             tx = self._parse_transaction(tx_bytes)
             
             # Get or generate spends
-            spends, error = self._get_or_generate_spends(ctx, tx, args, originator, args.get("spends") or {})
+            spends, error = self._get_or_generate_spends(tx, args, originator, args.get("spends") or {})
             if error:
                 return {"error": error}
             
@@ -1459,7 +1459,7 @@ class WalletImpl(WalletInterface):
             import traceback
             tb = traceback.format_exc()
             return {"tx": b"\x00", "txid": "00" * 32, "error": f"sign_action: {e}", "traceback": tb}
-    def wait_for_authentication(self, ctx: Any = None, args: Dict = None, originator: str = None) -> Dict:
+    def wait_for_authentication(self, args: Dict = None, originator: str = None) -> Dict:
         return {"authenticated": True}
 
     def _determine_woc_network(self) -> str:
@@ -1623,22 +1623,22 @@ class WalletImpl(WalletInterface):
         
         return candidate_addresses
 
-    def _search_utxos_in_addresses(self, candidate_addresses: List[str], ctx: Any, originator: str) -> List[Dict[str, Any]]:
+    def _search_utxos_in_addresses(self, candidate_addresses: List[str], originator: str) -> List[Dict[str, Any]]:
         """Search for UTXOs across candidate addresses."""
         use_woc = os.getenv("USE_WOC") != "0" and "USE_WOC" in os.environ
         
         for addr in candidate_addresses:
-            lo = self.list_outputs(ctx, {"basket": addr, "use_woc": use_woc}, originator) or {}
+            lo = self.list_outputs({"basket": addr, "use_woc": use_woc}, originator) or {}
             outs = [u for u in lo.get("outputs", []) if isinstance(u, dict) and u.get("satoshis")]
             if outs:
                 return outs
         return []
 
-    def _list_self_utxos(self, ctx: Any = None, args: Dict = None, originator: str = None) -> List[Dict[str, Any]]:
+    def _list_self_utxos(self, args: Dict = None, originator: str = None) -> List[Dict[str, Any]]:
         """Prefer derived key UTXOs when protocol/key_id is provided; fallback to master if none found."""
         protocol_id, key_id, counterparty = self._extract_protocol_params(args)
         candidate_addresses = self._build_candidate_addresses(protocol_id, key_id, counterparty, args)
-        return self._search_utxos_in_addresses(candidate_addresses, ctx, originator)
+        return self._search_utxos_in_addresses(candidate_addresses, originator)
 
     def _sort_utxos_deterministic(self, utxos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         def _sort_key(u: Dict[str, Any]):
@@ -1961,7 +1961,6 @@ class WalletImpl(WalletInterface):
 
     def _select_funding_and_change(
         self,
-        ctx: Any,
         args: Dict,
         originator: str,
         outputs: List[Dict],
@@ -1974,7 +1973,7 @@ class WalletImpl(WalletInterface):
         Returns (funding_context_list, change_output_or_None).
         """
         target = self._sum_outputs(outputs)
-        utxos = self._sort_utxos_deterministic(self._list_self_utxos(ctx, args, originator))
+        utxos = self._sort_utxos_deterministic(self._list_self_utxos(args, originator))
         
         # Initial need assumes we will add a change output (worst case for size)
         need0 = target + self._estimate_fee_with_change(outputs, existing_unlock_lens, 0, True, fee_model)

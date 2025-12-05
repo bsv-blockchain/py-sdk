@@ -360,7 +360,6 @@ class PushDrop:
 
     def lock(
         self,
-        ctx,
         fields: List[bytes],
         protocol_id,
         key_id: str,
@@ -370,11 +369,11 @@ class PushDrop:
         include_signature: bool = True,
         lock_position: str = "before",
     ) -> str:  # 返り値をhex stringに
-        pubhex = self._get_public_key_hex(ctx, protocol_id, key_id, counterparty, for_self)
-        sig_bytes = self._create_signature_if_needed(ctx, fields, protocol_id, key_id, counterparty, include_signature)
+        pubhex = self._get_public_key_hex(protocol_id, key_id, counterparty, for_self)
+        sig_bytes = self._create_signature_if_needed(fields, protocol_id, key_id, counterparty, include_signature)
         return self._build_locking_script(fields, pubhex, sig_bytes, include_signature, lock_position)
 
-    def _get_public_key_hex(self, ctx, protocol_id, key_id, counterparty, for_self):
+    def _get_public_key_hex(self, protocol_id, key_id, counterparty, for_self):
         """Get the public key hex from wallet."""
         args = {
             "protocolID": protocol_id,
@@ -383,13 +382,13 @@ class PushDrop:
             "forSelf": for_self,
         }
         print(f"[DEBUG] PushDrop.lock() args: {args}")
-        pub = self.wallet.get_public_key(ctx, args, self.originator) or {}
+        pub = self.wallet.get_public_key(args, self.originator) or {}
         print(f"[DEBUG] PushDrop.lock() pub: {pub}")
         pubhex = pub.get("publicKey") or ""
         print(f"[DEBUG] PushDrop.lock() pubhex: {pubhex}")
         return pubhex
 
-    def _create_signature_if_needed(self, ctx, fields, protocol_id, key_id, counterparty, include_signature):
+    def _create_signature_if_needed(self, fields, protocol_id, key_id, counterparty, include_signature):
         """Create signature if requested."""
         if not include_signature:
             return None
@@ -405,7 +404,7 @@ class PushDrop:
         }
         
         try:
-            cres = self.wallet.create_signature(ctx, sargs, self.originator) or {}
+            cres = self.wallet.create_signature(sargs, self.originator) or {}
             sig = cres.get("signature")
             if isinstance(sig, (bytes, bytearray)):
                 return bytes(sig)
@@ -468,8 +467,8 @@ class PushDrop:
         )
         # Return an object exposing sign() that returns only the signature push (no pubkey push),
         # matching TS/Go tests that expect a single push and inspect the last SIGHASH byte.
-        def _sign_only_sig(ctx, tx, input_index):
-            full = unlocker.sign(ctx, tx, input_index)
+        def _sign_only_sig(tx, input_index):
+            full = unlocker.sign(tx, input_index)
             # full may be "<sig> <pubkey>". Return only first push.
             from bsv.utils import read_script_chunks
             try:
@@ -537,7 +536,7 @@ class PushDropUnlocker:
         max_len = 1 + 73 + 1
         return (min_len, max_len)
 
-    def sign(self, ctx, tx, input_index: int) -> bytes:  # noqa: D401
+    def sign(self, tx, input_index: int) -> bytes:  # noqa: D401
         """Create a signature for the given input using SIGHASH flags and return as pushdata.
 
         Flags: base (ALL/NONE/SINGLE) derived from sign_outputs_mode, always includes FORKID,
@@ -548,16 +547,16 @@ class PushDropUnlocker:
         
         # Try script-specific signature methods first
         if self.prev_locking_script:
-            sig = self._try_p2pkh_signature(ctx, hash_to_sign, sighash_flag)
+            sig = self._try_p2pkh_signature(hash_to_sign, sighash_flag)
             if sig:
                 return sig
             
-            sig = self._try_pushdrop_signature(ctx, hash_to_sign, sighash_flag, used_preimage)
+            sig = self._try_pushdrop_signature(hash_to_sign, sighash_flag, used_preimage)
             if sig:
                 return sig
         
         # Fallback to derived key signature
-        return self._create_fallback_signature(ctx, hash_to_sign, sighash_flag, used_preimage)
+        return self._create_fallback_signature(hash_to_sign, sighash_flag, used_preimage)
     
     def _compute_sighash_flag(self) -> int:
         """Compute SIGHASH flag from sign_outputs_mode and anyone_can_pay settings."""
@@ -647,7 +646,7 @@ class PushDropUnlocker:
             return tx.serialize(), False
         return getattr(tx, "bytes", b""), False
     
-    def _try_p2pkh_signature(self, ctx, hash_to_sign: bytes, sighash_flag: int) -> Optional[bytes]:
+    def _try_p2pkh_signature(self, hash_to_sign: bytes, sighash_flag: int) -> Optional[bytes]:
         """Try to create signature for P2PKH script. Returns None if not P2PKH."""
         # P2PKH: OP_DUP OP_HASH160 <hash160> OP_EQUALVERIFY OP_CHECKSIG
         if not (len(self.prev_locking_script) == 25 and 
@@ -666,7 +665,7 @@ class PushDropUnlocker:
             "data": hash_to_sign,
         }
         print(f"[DEBUG] PushDropUnlocker.sign: Calling wallet.create_signature with args: {create_args}")
-        res = self.wallet.create_signature(ctx, create_args, "") if hasattr(self.wallet, "create_signature") else {}
+        res = self.wallet.create_signature(create_args, "") if hasattr(self.wallet, "create_signature") else {}
         print(f"[DEBUG] PushDropUnlocker.sign: create_signature result: {res}")
         sig = res.get("signature", b"")
         print(f"[DEBUG] PushDropUnlocker.sign: Extracted signature: {sig.hex() if sig else 'None'}")
@@ -674,7 +673,7 @@ class PushDropUnlocker:
         print(f"[DEBUG] PushDropUnlocker.sign: Final signature with sighash: {sig.hex()}")
         return encode_pushdata(sig)
     
-    def _try_pushdrop_signature(self, ctx, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> Optional[bytes]:
+    def _try_pushdrop_signature(self, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> Optional[bytes]:
         """Try to create signature for PushDrop script. Returns None if not PushDrop or fails."""
         try:
             decoded = PushDrop.decode(self.prev_locking_script)
@@ -690,7 +689,7 @@ class PushDropUnlocker:
                 },
                 ("hash_to_sign" if used_preimage else "data"): hash_to_sign,
             }
-            res = self.wallet.create_signature(ctx, create_args, "") if hasattr(self.wallet, "create_signature") else {}
+            res = self.wallet.create_signature(create_args, "") if hasattr(self.wallet, "create_signature") else {}
             sig = res.get("signature", b"")
             sig = bytes(sig) + bytes([sighash_flag])
             return encode_pushdata(sig)
@@ -698,7 +697,7 @@ class PushDropUnlocker:
             print(f"[WARN] PushDropUnlocker.sign: Error decoding PushDrop script: {e}")
             return None
     
-    def _create_fallback_signature(self, ctx, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> bytes:
+    def _create_fallback_signature(self, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> bytes:
         """Create signature using derived key (fallback method)."""
         print("[DEBUG] PushDropUnlocker.sign: Fallback to derived public key")
         create_args = {
@@ -709,7 +708,7 @@ class PushDropUnlocker:
             },
             ("hash_to_sign" if used_preimage else "data"): hash_to_sign,
         }
-        res = self.wallet.create_signature(ctx, create_args, "") if hasattr(self.wallet, "create_signature") else {}
+        res = self.wallet.create_signature(create_args, "") if hasattr(self.wallet, "create_signature") else {}
         sig = res.get("signature", b"")
         sig = bytes(sig) + bytes([sighash_flag])
         return encode_pushdata(sig)
@@ -720,7 +719,7 @@ def make_pushdrop_unlocker(wallet, protocol_id, key_id, counterparty, sign_outpu
                            prev_satoshis: Optional[int] = None, prev_locking_script: Optional[bytes] = None, outs: Optional[list] = None) -> PushDropUnlocker:
     """Convenience factory mirroring Go/TS helper to construct an unlocker.
 
-    Returns a `PushDropUnlocker` ready to `sign(ctx, tx_bytes, input_index)`.
+    Returns a `PushDropUnlocker` ready to `sign(tx_bytes, input_index)`.
     """
     return PushDropUnlocker(
         wallet,

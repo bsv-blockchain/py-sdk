@@ -101,7 +101,7 @@ def test_mutual_authentication_and_general_message():  # NOSONAR - Protocol nota
 
     def on_bob_general(sender_pk, payload):
         # Bob replies to Alice
-        pB.to_peer(None, b"Hello Alice!", identity_key=sender_pk)
+        pB.to_peer(b"Hello Alice!", identity_key=sender_pk)
         got_from_bob.set()
 
     pB.listen_for_general_messages(on_bob_general)
@@ -113,7 +113,7 @@ def test_mutual_authentication_and_general_message():  # NOSONAR - Protocol nota
 
     # Alice initiates communication; handshake should occur implicitly
     # Increase timeout to allow handshake to complete
-    err = pA.to_peer(None, b"Hello Bob!", max_wait_time=5000)
+    err = pA.to_peer(b"Hello Bob!", max_wait_time=5000)
     assert err is None
 
     # Wait for both directions

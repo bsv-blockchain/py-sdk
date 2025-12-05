@@ -87,7 +87,7 @@ class TestPeerBasic:
         peer, *_ = make_peer_pair()
         other_pub = PrivateKey(333).public_key()
         msg = AuthMessage(version="0.1", message_type="initialRequest", identity_key=other_pub, initial_nonce="")
-        err = peer.handle_initial_request(None, msg, other_pub)
+        err = peer.handle_initial_request(msg, other_pub)
         assert isinstance(err, Exception)
         assert 'Invalid nonce' in str(err)
 
@@ -100,7 +100,7 @@ class TestPeerBasic:
         s = PeerSession(is_authenticated=True, session_nonce=session_nonce, peer_nonce=peer_nonce, peer_identity_key=other_pub, last_update=1)
         session_manager.add_session(s)
 
-        err = peer.to_peer(None, b"hello", identity_key=other_pub, max_wait_time=0)
+        err = peer.to_peer(b"hello", identity_key=other_pub, max_wait_time=0)
         assert err is None
         assert len(transport.sent_messages) >= 1
         m = transport.sent_messages[-1]

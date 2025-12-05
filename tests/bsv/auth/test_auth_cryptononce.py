@@ -82,8 +82,8 @@ def test_serial_number_use_case():
     server_wallet = WalletImpl(server_priv)
     
     # Get identity keys (TypeScript版と同じ方式)
-    client_identity_result = client_wallet.get_public_key(None, {'identityKey': True}, '')
-    server_identity_result = server_wallet.get_public_key(None, {'identityKey': True}, '')
+    client_identity_result = client_wallet.get_public_key({'identityKey': True}, '')
+    server_identity_result = server_wallet.get_public_key({'identityKey': True}, '')
     client_pub = client_identity_result['publicKey']
     server_pub = server_identity_result['publicKey']
     
@@ -97,7 +97,7 @@ def test_serial_number_use_case():
     
     # The server compute a serial number from the client and server nonce
     data = (client_nonce + server_nonce).encode('utf-8')
-    hmac_result = server_wallet.create_hmac(None, {
+    hmac_result = server_wallet.create_hmac({
         'encryption_args': {
             'protocol_id': {'securityLevel': 2, 'protocol': 'certificate creation'},
             'key_id': server_nonce + client_nonce,
@@ -111,7 +111,7 @@ def test_serial_number_use_case():
     assert verify_nonce(server_nonce, client_wallet, counterparty=server_pub)
     
     # Client verifies the server included their nonce
-    verify_result = client_wallet.verify_hmac(None, {
+    verify_result = client_wallet.verify_hmac({
         'encryption_args': {
             'protocol_id': {'securityLevel': 2, 'protocol': 'certificate creation'},
             'key_id': server_nonce + client_nonce,

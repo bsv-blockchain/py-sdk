@@ -2,7 +2,7 @@ import base64
 import os
 from typing import Any
 
-def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None, ctx: Any = None) -> bool:
+def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None) -> bool:
     """
     Verifies that a nonce was derived from the given wallet.
     Ported from Go/TypeScript verifyNonce.
@@ -30,7 +30,7 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None, ctx: Any = N
         'hmac': hmac
     }
     try:
-        result = wallet.verify_hmac(ctx, args, "")
+        result = wallet.verify_hmac(args, "")
         print(f"[verify_nonce] result={result}")
         if isinstance(result, dict):
             return bool(result.get('valid', False))
@@ -39,7 +39,7 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None, ctx: Any = N
     except Exception:
         return False
 
-def create_nonce(wallet: Any, counterparty: Any = None, ctx: Any = None) -> str:
+def create_nonce(wallet: Any, counterparty: Any = None) -> str:
     """
     Creates a nonce derived from a wallet (ported from TypeScript createNonce).
     """
@@ -58,7 +58,7 @@ def create_nonce(wallet: Any, counterparty: Any = None, ctx: Any = None) -> str:
         'encryption_args': encryption_args,
         'data': first_half
     }
-    result = wallet.create_hmac(ctx, args, "")
+    result = wallet.create_hmac(args, "")
     print(f"[create_nonce] result={result}")
     hmac = result.get('hmac') if isinstance(result, dict) else getattr(result, 'hmac', None)
     if hmac is None:

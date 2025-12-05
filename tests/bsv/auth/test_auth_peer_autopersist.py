@@ -60,13 +60,13 @@ def test_auto_persist_last_session_is_used_when_identity_none():
     _seed(session_manager, other)
 
     # First send with explicit identity: should set last_interacted_with_peer
-    err1 = peer.to_peer(None, b"first", identity_key=other, max_wait_time=0)
+    err1 = peer.to_peer(b"first", identity_key=other, max_wait_time=0)
     assert err1 is None
     assert peer.last_interacted_with_peer == other
 
     # Next send without identity: should reuse last_interacted_with_peer
     n_before = len(transport.sent)
-    err2 = peer.to_peer(None, b"second", identity_key=None, max_wait_time=0)
+    err2 = peer.to_peer(b"second", identity_key=None, max_wait_time=0)
     assert err2 is None
     assert len(transport.sent) == n_before + 1
     last = transport.sent[-1]

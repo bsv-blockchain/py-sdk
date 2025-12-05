@@ -83,7 +83,7 @@ def test_handle_certificate_request_valid_signature():
         requested_certificates={"types": {"t": ["f1"]}},
         signature=b"dummy",
     )
-    err = peer.handle_certificate_request(None, msg, sender_pub);
+    err = peer.handle_certificate_request(msg, sender_pub);
     assert err is None;
 
 
@@ -125,7 +125,7 @@ def test_handle_certificate_response_valid_signature_invokes_listener():
         certificates=certs,
         signature=b"ok",
     )
-    err = peer.handle_certificate_response(None, msg, sender_pub)
+    err = peer.handle_certificate_response(msg, sender_pub)
     assert err is None
     assert called["n"] == 1
     assert called["last"] == certs
@@ -192,7 +192,7 @@ def test_request_certificates_sends_message():
     _seed_authenticated_session(session_manager, target_pub)
 
     req = {"types": {"X": ["f"]}, "certifiers": []}
-    err = peer.request_certificates(None, target_pub, req, max_wait_time=0)
+    err = peer.request_certificates(target_pub, req, max_wait_time=0)
     assert err is None
     assert len(transport.sent_messages) >= 1
     assert transport.sent_messages[-1].message_type == "certificateRequest"
@@ -208,7 +208,7 @@ def test_send_certificate_response_sends_message():
     _seed_authenticated_session(session_manager, target_pub)
 
     certs = []
-    err = peer.send_certificate_response(None, target_pub, certs)
+    err = peer.send_certificate_response(target_pub, certs)
     assert err is None
     assert len(transport.sent_messages) >= 1
     assert transport.sent_messages[-1].message_type == "certificateResponse"

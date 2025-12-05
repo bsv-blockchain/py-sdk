@@ -73,7 +73,7 @@ def test_initial_response_invalid_signature_returns_error():
         initial_nonce=base64.b64encode(b"I" * 32).decode(),
         signature=b"\x30\x00",  # invalid DER
     )
-    err = peer.handle_initial_response(None, msg, sender_pub)
+    err = peer.handle_initial_response(msg, sender_pub)
     assert isinstance(err, Exception)
     assert "unable to verify signature" in str(err)
 
@@ -100,7 +100,7 @@ def test_general_message_invalid_signature_returns_error():
         payload=b"hello",
         signature=b"\x30\x00",
     )
-    err = peer.handle_general_message(None, msg, sender_pub)
+    err = peer.handle_general_message(msg, sender_pub)
     assert isinstance(err, Exception)
     assert "general message - invalid signature" in str(err)
 

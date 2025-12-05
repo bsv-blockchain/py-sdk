@@ -105,7 +105,7 @@ def test_handle_certificate_request_triggers_response_via_wallet_fallback():
         requested_certificates=req,
         signature=b"dummy",
     )
-    err = peer.handle_certificate_request(None, msg, sender_pub)
+    err = peer.handle_certificate_request(msg, sender_pub)
     assert err is None
     # The last sent message should be a certificateResponse
     assert len(transport.sent_messages) >= 1
@@ -152,7 +152,7 @@ def test_handle_certificate_request_uses_callback_when_registered():
         requested_certificates=req,
         signature=b"dummy",
     )
-    err = peer.handle_certificate_request(None, msg, sender_pub)
+    err = peer.handle_certificate_request(msg, sender_pub)
     assert err is None
     assert called["n"] == 1
     assert len(transport.sent_messages) >= 1
