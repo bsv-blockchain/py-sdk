@@ -40,17 +40,17 @@ class MasterCertificate(Certificate):
             encrypted_field_b64 = base64.b64encode(encrypted_field_bytes).decode('utf-8')
             certificate_fields[field_name] = encrypted_field_b64
             protocol_id, key_id = get_certificate_encryption_details(field_name, None)
+            # BRC-100 flat args structure (TypeScript/Go parity)
             encrypt_args = {
-                "encryption_args": {
-                    "protocol_id": protocol_id,
-                    "key_id": key_id,
-                    "counterparty": certifier_or_subject,
-                    "privileged": privileged,
-                    "privileged_reason": privileged_reason,
-                },
+                "protocolID": protocol_id,
+                "keyID": key_id,
+                "counterparty": certifier_or_subject,
+                "privileged": privileged,
+                "privilegedReason": privileged_reason,
                 "plaintext": symmetric_key,
             }
-            encrypt_result = creator_wallet.encrypt(None, encrypt_args)
+            # wallet.encrypt(args, originator) - originator is optional
+            encrypt_result = creator_wallet.encrypt(encrypt_args)
             encrypted_key_bytes = encrypt_result["ciphertext"]
             encrypted_key_b64 = base64.b64encode(encrypted_key_bytes).decode('utf-8')
             master_keyring[field_name] = encrypted_key_b64
@@ -64,8 +64,9 @@ class MasterCertificate(Certificate):
         from bsv.keys import PublicKey
         pubkey = None
         try:
+            # BRC-100 args structure: wallet.get_public_key(args, originator)
             get_pk_args = {"identityKey": True}
-            res = wallet.get_public_key(None, get_pk_args, "auth-master-cert")
+            res = wallet.get_public_key(get_pk_args)
             if isinstance(res, dict):
                 pk_bytes_or_hex = res.get("publicKey")
                 if pk_bytes_or_hex:
@@ -119,16 +120,17 @@ class MasterCertificate(Certificate):
         """
         try:
             data_to_sign = cert.to_binary(include_signature=False)
-            # BRC-100 compliant flat structure (Python snake_case)
+            # BRC-100 compliant flat structure (camelCase for API consistency)
             sig_args = {
-                'protocol_id': [2, 'certificate signature'],
-                    'key_id': f"{certificate_type} {final_serial_number}",
-                    'counterparty': {'type': 2},
+                'protocolID': [2, 'certificate signature'],
+                'keyID': f"{certificate_type} {final_serial_number}",
+                'counterparty': {'type': 2},  # CounterpartyType.ANYONE
                 'data': data_to_sign,
             }
             sig_res = None
             try:
-                sig_res = certifier_wallet.create_signature(None, sig_args, "auth-master-cert")
+                # wallet.create_signature(args, originator)
+                sig_res = certifier_wallet.create_signature(sig_args)
             except Exception:
                 sig_res = None
             if isinstance(sig_res, dict) and sig_res.get('signature'):
@@ -197,18 +199,17 @@ class MasterCertificate(Certificate):
         encrypted_key_b64 = master_keyring[field_name]
         encrypted_key_bytes = base64.b64decode(encrypted_key_b64)
         protocol_id, key_id = get_certificate_encryption_details(field_name, None)
+        # BRC-100 flat args structure (TypeScript/Go parity)
         decrypt_args = {
-            "encryption_args": {
-                "protocol_id": protocol_id,
-                "key_id": key_id,
-                "counterparty": counterparty,
-                "privileged": privileged,
-                "privileged_reason": privileged_reason,
-            },
+            "protocolID": protocol_id,
+            "keyID": key_id,
+            "counterparty": counterparty,
+            "privileged": privileged,
+            "privilegedReason": privileged_reason,
             "ciphertext": encrypted_key_bytes,
         }
-        # Decrypt the symmetric key (wallet.decrypt)
-        decrypt_result = subject_or_certifier_wallet.decrypt(None, decrypt_args)
+        # wallet.decrypt(args, originator) - originator is optional
+        decrypt_result = subject_or_certifier_wallet.decrypt(decrypt_args)
         if not decrypt_result or 'plaintext' not in decrypt_result:
             raise NotImplementedError("wallet.decrypt implementation is required")
         field_revelation_key = decrypt_result['plaintext']
@@ -282,17 +283,17 @@ class MasterCertificate(Certificate):
             field_revelation_key = decrypt_result['fieldRevelationKey']
             # 2. Re-encrypt for the verifier with subject_wallet.encrypt
             protocol_id, key_id = get_certificate_encryption_details(field_name, serial_number)
+            # BRC-100 flat args structure (TypeScript/Go parity)
             encrypt_args = {
-                "encryption_args": {
-                    "protocol_id": protocol_id,
-                    "key_id": key_id,
-                    "counterparty": verifier,
-                    "privileged": privileged,
-                    "privileged_reason": privileged_reason,
-                },
+                "protocolID": protocol_id,
+                "keyID": key_id,
+                "counterparty": verifier,
+                "privileged": privileged,
+                "privilegedReason": privileged_reason,
                 "plaintext": field_revelation_key,
             }
-            encrypt_result = subject_wallet.encrypt(None, encrypt_args)
+            # wallet.encrypt(args, originator) - originator is optional
+            encrypt_result = subject_wallet.encrypt(encrypt_args)
             encrypted_key_bytes = encrypt_result["ciphertext"]
             encrypted_key_b64 = base64.b64encode(encrypted_key_bytes).decode('utf-8')
             keyring_for_verifier[field_name] = encrypted_key_b64
