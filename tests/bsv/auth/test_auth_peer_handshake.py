@@ -7,51 +7,7 @@ from bsv.auth.auth_message import AuthMessage
 from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey, PublicKey
 
-
-class LocalTransport:
-    def __init__(self):
-        self._on_data_callback = None
-        self.peer: Optional["LocalTransport"] = None
-
-    def connect(self, other: "LocalTransport"):
-        self.peer = other
-        other.peer = self
-
-    def on_data(self, callback):
-        self._on_data_callback = callback
-        return None
-
-    def send(self, message_or_ctx, message=None):
-        # Handle both calling patterns:
-        # - send(message) - peer.py calls it this way
-        # - send(ctx, message) - interface defines it this way
-        if message is None:
-            # Called as send(message) - first arg is the message
-            msg = message_or_ctx
-            ctx_arg = None
-        else:
-            # Called as send(ctx, message) - first arg is ctx, second is message
-            ctx_arg = message_or_ctx
-            msg = message
-        if not self.peer or not self.peer._on_data_callback:
-            return Exception("peer not connected or not listening")
-        # Note: peer.py callback expects just (message), not (ctx, message)
-        return self.peer._on_data_callback(msg)
-
-
-class GetPub:
-    def __init__(self, pk: PublicKey):
-        self.public_key = pk
-
-
-class Sig:
-    def __init__(self, signature: bytes):
-        self.signature = signature
-
-
-class Ver:
-    def __init__(self, valid: bool):
-        self.valid = valid
+from .conftest import LocalTransport, GetPub, Sig, Ver
 
 
 class HandshakeWallet:
