@@ -31,7 +31,7 @@ def test_create_action_simple_output(wallet):
         ]
     }
     
-    result = wallet.create_action(None, args, "test")
+    result = wallet.create_action(args, "test")
     
     # Should contain action data or error
     assert isinstance(result, dict)
@@ -55,7 +55,7 @@ def test_create_action_with_labels(wallet):
         ]
     }
     
-    result = wallet.create_action(None, args, "test")
+    result = wallet.create_action(args, "test")
     
     assert isinstance(result, dict)
 
@@ -78,7 +78,7 @@ def test_create_action_multiple_outputs(wallet):
         "outputs": outputs
     }
     
-    result = wallet.create_action(None, args, "test")
+    result = wallet.create_action(args, "test")
     
     assert isinstance(result, dict)
 
@@ -108,7 +108,7 @@ def test_create_action_with_inputs(wallet):
         ]
     }
     
-    result = wallet.create_action(None, args, "test")
+    result = wallet.create_action(args, "test")
     
     assert isinstance(result, dict)
 
@@ -119,7 +119,7 @@ def test_create_action_missing_outputs(wallet):
         "description": "No outputs"
     }
     
-    result = wallet.create_action(None, args, "test")
+    result = wallet.create_action(args, "test")
     
     # Should handle missing outputs
     assert isinstance(result, dict)
@@ -143,7 +143,7 @@ def test_sign_action_basic(wallet):
         ]
     }
     
-    action_result = wallet.create_action(None, create_args, "test")
+    action_result = wallet.create_action(create_args, "test")
     
     # Now try to sign it
     if "rawtx" in action_result or "tx" in action_result:
@@ -152,14 +152,14 @@ def test_sign_action_basic(wallet):
             "reference": action_result.get("reference", "test_ref")
         }
         
-        sign_result = wallet.sign_action(None, sign_args, "test")
+        sign_result = wallet.sign_action(sign_args, "test")
         
         assert isinstance(sign_result, dict)
 
 
 def test_list_actions_empty(wallet):
     """Test listing actions when none exist."""
-    result = wallet.list_actions(None, {}, "test")
+    result = wallet.list_actions({}, "test")
     
     assert "totalActions" in result
     assert result["totalActions"] == 0
@@ -169,15 +169,15 @@ def test_list_actions_empty(wallet):
 def test_list_actions_with_filters(wallet):
     """Test listing actions with various filters."""
     # Test with label filter
-    result = wallet.list_actions(None, {"labels": ["test"]}, "test")
+    result = wallet.list_actions({"labels": ["test"]}, "test")
     assert isinstance(result, dict)
     
     # Test with limit
-    result = wallet.list_actions(None, {"limit": 10}, "test")
+    result = wallet.list_actions({"limit": 10}, "test")
     assert isinstance(result, dict)
     
     # Test with offset
-    result = wallet.list_actions(None, {"offset": 5, "limit": 10}, "test")
+    result = wallet.list_actions({"offset": 5, "limit": 10}, "test")
     assert isinstance(result, dict)
 
 
@@ -195,7 +195,7 @@ def test_internalize_action(wallet):
         "description": "Received payment"
     }
     
-    result = wallet.internalize_action(None, args, "test")
+    result = wallet.internalize_action(args, "test")
     
     assert isinstance(result, dict)
 
@@ -215,7 +215,7 @@ def test_internalize_action_with_labels(wallet):
         "description": "Labeled received payment"
     }
     
-    result = wallet.internalize_action(None, args, "test")
+    result = wallet.internalize_action(args, "test")
     
     assert isinstance(result, dict)
 
@@ -242,7 +242,7 @@ def test_wait_for_authentication(wallet):
     """Test wait_for_authentication method."""
     args = {"sessionId": "test_session_123"}
     
-    result = wallet.wait_for_authentication(None, args, "test")
+    result = wallet.wait_for_authentication(args, "test")
     
     assert isinstance(result, dict)
 
@@ -271,7 +271,7 @@ def test_create_action_with_basket(wallet):
         ]
     }
     
-    result = wallet.create_action(None, args, "test")
+    result = wallet.create_action(args, "test")
     
     assert isinstance(result, dict)
 
@@ -294,7 +294,7 @@ def test_create_action_with_tags(wallet):
         ]
     }
     
-    result = wallet.create_action(None, args, "test")
+    result = wallet.create_action(args, "test")
     
     assert isinstance(result, dict)
 
@@ -317,7 +317,7 @@ def test_create_action_with_custom_instructions(wallet):
         ]
     }
     
-    result = wallet.create_action(None, args, "test")
+    result = wallet.create_action(args, "test")
     
     assert isinstance(result, dict)
 
@@ -347,7 +347,7 @@ def test_list_actions_with_include_beef(wallet):
     """Test listing actions with BEEF inclusion."""
     args = {"includeBEEF": True}
     
-    result = wallet.list_actions(None, args, "test")
+    result = wallet.list_actions(args, "test")
     
     assert isinstance(result, dict)
 
@@ -362,7 +362,7 @@ def test_reveal_counterparty_key_linkage(wallet):
         "privileged": False
     }
     
-    result = wallet.reveal_counterparty_key_linkage(None, args, "test")
+    result = wallet.reveal_counterparty_key_linkage(args, "test")
     
     assert isinstance(result, dict)
 
@@ -377,7 +377,7 @@ def test_reveal_specific_key_linkage(wallet):
         "privileged": False
     }
     
-    result = wallet.reveal_specific_key_linkage(None, args, "test")
+    result = wallet.reveal_specific_key_linkage(args, "test")
     
     assert isinstance(result, dict)
 

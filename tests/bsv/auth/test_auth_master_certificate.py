@@ -11,11 +11,11 @@ class EchoWallet:
     Simple mock wallet that encrypts by prefixing b'ENC:' and decrypts by stripping it.
     """
 
-    def encrypt(self, ctx, args):
+    def encrypt(self, args=None, originator=None):
         plaintext = args.get("plaintext", b"")
         return {"ciphertext": b"ENC:" + plaintext}
 
-    def decrypt(self, ctx, args):
+    def decrypt(self, args=None, originator=None):
         ciphertext = args.get("ciphertext", b"")
         if isinstance(ciphertext, str):
             ciphertext = base64.b64decode(ciphertext)
@@ -99,15 +99,15 @@ class WalletWithWireOK:
         # Intentionally different public_key attr to detect fallback non-use
         self.public_key = PrivateKey(999999).public_key()
 
-    def encrypt(self, ctx, args):
+    def encrypt(self, args=None, originator=None):
         plaintext = args.get("plaintext", b"")
         return {"ciphertext": b"ENC:" + plaintext}
 
-    def get_public_key(self, ctx, args, originator: str):
+    def get_public_key(self, args=None, originator=None):
         assert args.get("identityKey") is True
         return {"publicKey": self._pub.hex()}
 
-    def create_signature(self, ctx, args, originator: str):
+    def create_signature(self, args=None, originator=None):
         # Return a deterministic placeholder signature to ensure priority path
         return {"signature": b"WALLET_SIG"}
 
@@ -137,14 +137,14 @@ class WalletWithGetPkErrorAndAttrFallback:
         self._priv = priv
         self.public_key = priv.public_key()
 
-    def encrypt(self, ctx, args):
+    def encrypt(self, args=None, originator=None):
         plaintext = args.get("plaintext", b"")
         return {"ciphertext": b"ENC:" + plaintext}
 
-    def get_public_key(self, ctx, args, originator: str):
+    def get_public_key(self, args=None, originator=None):
         raise RuntimeError("wire error")
 
-    def create_signature(self, ctx, args, originator: str):
+    def create_signature(self, args=None, originator=None):
         return {"signature": b"WALLET_SIG"}
 
 
@@ -167,11 +167,11 @@ def test_issue_get_public_key_exception_then_fallback_to_public_key_attribute():
 
 
 class WalletGetPkAndAttrMissing:
-    def encrypt(self, ctx, args):
+    def encrypt(self, args=None, originator=None):
         plaintext = args.get("plaintext", b"")
         return {"ciphertext": b"ENC:" + plaintext}
 
-    def get_public_key(self, ctx, args, originator: str):
+    def get_public_key(self, args=None, originator=None):
         raise RuntimeError("no key")
 
 
@@ -194,15 +194,15 @@ class WalletWithFallbackSignOnly:
     def __init__(self, priv: PrivateKey):
         self.private_key = priv
 
-    def encrypt(self, ctx, args):
+    def encrypt(self, args=None, originator=None):
         plaintext = args.get("plaintext", b"")
         return {"ciphertext": b"ENC:" + plaintext}
 
-    def get_public_key(self, ctx, args, originator: str):
+    def get_public_key(self, args=None, originator=None):
         # Provide a different key to ensure it is overwritten by fallback signer
         return {"publicKey": PrivateKey(424242).public_key().hex()}
 
-    def create_signature(self, ctx, args, originator: str):
+    def create_signature(self, args=None, originator=None):
         # Simulate wallet unable to sign
         return {}
 

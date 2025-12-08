@@ -7,13 +7,13 @@ from bsv.keys import PrivateKey
 
 
 class DummyWallet:
-    def get_public_key(self, ctx, args, originator):
+    def get_public_key(self, args=None, originator=None):
         return type('obj', (object,), {'public_key': PrivateKey(1).public_key()})()
 
-    def create_signature(self, ctx, args, originator):
+    def create_signature(self, args=None, originator=None):
         return {"signature": b"dummy_signature"}
 
-    def verify_signature(self, ctx, args, originator):
+    def verify_signature(self, args=None, originator=None):
         return {"valid": True}
 
 
@@ -26,7 +26,18 @@ class DummyTransport:
         self.callback = callback
         return None
 
-    def send(self, ctx, msg):
+    def send(self, message_or_ctx, message=None):
+        # Handle both calling patterns:
+        # - send(message) - peer.py calls it this way
+        # - send(ctx, message) - interface defines it this way
+        if message is None:
+            # Called as send(message) - first arg is the message
+            msg = message_or_ctx
+            ctx_arg = None
+        else:
+            # Called as send(ctx, message) - first arg is ctx, second is message
+            ctx_arg = message_or_ctx
+            msg = message
         self.sent_messages.append(msg)
         # Simulate async response
         if self.callback and hasattr(msg, 'message_type') and msg.message_type == 'initialRequest':
@@ -44,7 +55,8 @@ class DummyTransport:
                 )
                 if self.callback:
                     try:
-                        self.callback(ctx, response)
+                        # Note: peer.py callback expects just (message), not (ctx, message)
+                        self.callback(response)
                     except Exception:
                         # Intentional: Callback may raise exceptions during concurrent execution
                         # We're testing that concurrent handshakes don't crash, not callback behavior

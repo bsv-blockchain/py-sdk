@@ -2,82 +2,10 @@ import base64
 
 from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.auth_message import AuthMessage
-from bsv.auth.peer_session import PeerSession
 from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
 
-
-class CaptureTransport:
-    def __init__(self):
-        self._on_data_callback = None
-        self.sent_messages = []
-
-    def on_data(self, callback):
-        self._on_data_callback = callback
-        return None
-
-    def send(self, ctx, message: AuthMessage):
-        self.sent_messages.append(message)
-        return None
-
-
-class MockSigResult:
-    def __init__(self, valid: bool):
-        self.valid = valid
-
-
-class MockCreateSig:
-    def __init__(self, signature: bytes):
-        self.signature = signature
-
-
-class WalletOK:
-    def __init__(self, priv: PrivateKey):
-        self._priv = priv
-        self._pub = priv.public_key()
-
-    def get_public_key(self, ctx, args, originator: str):
-        class R:
-            pass
-
-        r = R()
-        r.public_key = self._pub
-        return r
-
-    def verify_signature(self, ctx, args, originator: str):
-        return MockSigResult(True)
-
-    def create_signature(self, ctx, args, originator: str):
-        return MockCreateSig(b"sig")
-
-    # Optional stub for certificate acquisition
-    def acquire_certificate(self, ctx, args, originator: str):
-        # Return a simple dict-like certificate payload compatible with canonicalizer
-        return {
-            "certificate": {
-                "type": args.get("cert_type"),
-                "serialNumber": base64.b64encode(b"S" * 32).decode(),
-                "subject": args.get("subject"),
-                "certifier": args.get("certifiers", [self._pub.hex()])[0] if args.get("certifiers") else self._pub.hex(),
-                "fields": dict.fromkeys(args.get("fields", []), "v"),
-            },
-            "keyring": {},
-            "signature": b"sig",
-        }
-
-
-def _seed_authenticated_session(session_manager: DefaultSessionManager, peer_identity_key):
-    session_nonce = base64.b64encode(b"S" * 32).decode()
-    peer_nonce = base64.b64encode(b"P" * 32).decode()
-    s = PeerSession(
-        is_authenticated=True,
-        session_nonce=session_nonce,
-        peer_nonce=peer_nonce,
-        peer_identity_key=peer_identity_key,
-        last_update=1,
-    )
-    session_manager.add_session(s)
-    return s
+from .conftest import CaptureTransport, WalletOK, _seed_authenticated_session
 
 
 def test_handle_certificate_request_triggers_response_via_wallet_fallback():

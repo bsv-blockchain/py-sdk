@@ -37,7 +37,7 @@ def test_funding_adds_inputs_and_change_low_fee():
         ],
         "feeRate": 1,
     }
-    res = wallet.create_action(None, args, "test")
+    res = wallet.create_action(args, "test")
     assert isinstance(res, dict) and isinstance(res.get("signableTransaction"), dict)
 
     act = _latest_action(wallet)
@@ -61,7 +61,7 @@ def test_fee_rate_affects_change_amount():
         "outputs": [{"satoshis": 200, "lockingScript": b"\x51"}],
         "feeRate": 1,
     }
-    _ = w1.create_action(None, args, "test")
+    _ = w1.create_action(args, "test")
     chg1 = _find_change_output(_latest_action(w1).get("outputs") or [])
     assert chg1 is not None
     c1 = int(chg1.get("satoshis", 0))
@@ -74,7 +74,7 @@ def test_fee_rate_affects_change_amount():
         "outputs": [{"satoshis": 200, "lockingScript": b"\x51"}],
         "feeRate": 500,
     }
-    _ = w2.create_action(None, args2, "test")
+    _ = w2.create_action(args2, "test")
     chg2 = _find_change_output(_latest_action(w2).get("outputs") or [])
     # High fee may drop change below dust; tolerate missing change, but if present it must be smaller
     if chg2 is not None:
@@ -93,7 +93,7 @@ def test_no_change_when_dust():
         "outputs": [{"satoshis": 900, "lockingScript": b"\x51"}],
         "feeRate": 500,
     }
-    _ = wallet.create_action(None, args, "test")
+    _ = wallet.create_action(args, "test")
     outs = _latest_action(wallet).get("outputs") or []
     chg = _find_change_output(outs)
     # BSV does not have dust limits, so even small change outputs should be created

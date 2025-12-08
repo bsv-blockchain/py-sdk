@@ -12,7 +12,7 @@ class DummyWallet(SimpleNamespace):
         super().__init__()
         self.kv_storage = {}  # Simple in-memory storage for testing
     
-    def list_outputs(self, ctx, args, originator):
+    def list_outputs(self, args=None, originator=None):
         """Mock list_outputs method that returns mock KV outputs."""
         # Simulate finding a KV output for the requested key
         tags = args.get("tags", [])
@@ -39,7 +39,7 @@ class DummyWallet(SimpleNamespace):
                 }
         return {"outputs": [], "beef": b""}
     
-    def create_action(self, ctx, args, originator):  # NOSONAR - Complexity (17), requires refactoring
+    def create_action(self, args=None, originator=None):  # NOSONAR - Complexity (17), requires refactoring
         """Mock create_action method."""
         # Extract key and value from the action description for KV operations
         description = args.get("description", "")
@@ -80,19 +80,19 @@ class DummyWallet(SimpleNamespace):
             "txid": txid
         }
     
-    def get_public_key(self, ctx, args, originator):
+    def get_public_key(self, args=None, originator=None):
         """Mock get_public_key method."""
         return {"publicKey": "02a1633cafb311f41c1137864d7dd7cf2d5c9e5c2e5b5f5a5d5c5b5a59584f5e5f"}
     
-    def create_signature(self, ctx, args, originator):
+    def create_signature(self, args=None, originator=None):
         """Mock create_signature method."""
         return {"signature": b"dummy_signature_for_testing_purposes_32bytes"}
     
-    def verify_signature(self, ctx, args, originator):
+    def verify_signature(self, args=None, originator=None):
         """Mock verify_signature method."""
         return {"valid": True}
     
-    def internalize_action(self, ctx, args, originator):
+    def internalize_action(self, args=None, originator=None):
         """Mock internalize_action method."""
         # For remove operations, return the expected txid format
         # Check if this is a remove operation by looking at recent activity
@@ -103,7 +103,7 @@ class DummyWallet(SimpleNamespace):
             txid = "removed:unknown"
         return {"accepted": True, "txid": txid}
     
-    def sign_action(self, ctx, args, originator):
+    def sign_action(self, args=None, originator=None):
         """Mock sign_action method."""
         return {"tx": "signed_transaction_bytes", "txid": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab"}
 
