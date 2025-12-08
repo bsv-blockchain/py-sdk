@@ -18,10 +18,20 @@ class LocalTransport:
         self._on_data_callback = callback
         return None
 
-    def send(self, ctx: Any, message: AuthMessage) -> Optional[Exception]:
-        self.sent_messages.append(message)
+    def send(self, message_or_ctx, message=None):
+        # Handle both calling patterns:
+        # - send(message) - peer.py calls it this way
+        # - send(ctx, message) - interface defines it this way
+        if message is None:
+            # Called as send(message) - first arg is the message
+            msg = message_or_ctx
+        else:
+            # Called as send(ctx, message) - first arg is ctx, second is message
+            msg = message
+        self.sent_messages.append(msg)
+        # Note: peer.py callback expects just (message), not (ctx, message)
         if self._on_data_callback is not None:
-            return self._on_data_callback(ctx, message)
+            return self._on_data_callback(msg)
         return None
 
 
@@ -45,14 +55,14 @@ class MockWallet:
         self._priv = priv
         self._pub = priv.public_key()
 
-    def get_public_key(self, ctx: Any, args: dict, originator: str):
+    def get_public_key(self, args=None, originator=None):
         return GetPub(self._pub)
 
-    def create_signature(self, ctx: Any, args: dict, originator: str):
+    def create_signature(self, args=None, originator=None):
         data: bytes = args.get("data", b"")
         return Sig(self._priv.sign(data))
 
-    def verify_signature(self, ctx: Any, args: dict, originator: str):
+    def verify_signature(self, args=None, originator=None):
         data: bytes = args.get("data", b"")
         sig: bytes = args.get("signature")
         return Ver(self._pub.verify(sig, data))
@@ -71,7 +81,7 @@ class TestPeerBasic:
         peer, *_ = make_peer_pair()
         other_pub = PrivateKey(9991).public_key()
         msg = AuthMessage(version="0.1", message_type="nope", identity_key=other_pub)
-        err = peer.handle_incoming_message(None, msg);
+        err = peer.handle_incoming_message(msg);
         assert isinstance(err, Exception)
         assert 'unknown message type: nope' in str(err)
 
@@ -79,7 +89,7 @@ class TestPeerBasic:
         peer, *_ = make_peer_pair()
         other_pub = PrivateKey(9992).public_key()
         msg = AuthMessage(version="9.9", message_type="general", identity_key=other_pub)
-        err = peer.handle_incoming_message(None, msg)
+        err = peer.handle_incoming_message(msg)
         assert isinstance(err, Exception)
         assert 'Invalid or unsupported message auth version! Received: 9.9, expected: 0.1' in str(err)
 

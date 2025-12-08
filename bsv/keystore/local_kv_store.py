@@ -257,7 +257,7 @@ class LocalKVStore(KVStoreInterface):
                 args["counterparty"] = cpty
         except Exception:
             pass
-        lo = self._wallet.list_outputs(ctx, args, self._originator) or {}
+        lo = self._wallet.list_outputs(args, self._originator) or {}
         outputs = lo.get("outputs") or []
         beef_bytes = lo.get("BEEF") or b""
         if not beef_bytes and outputs:
@@ -579,7 +579,7 @@ class LocalKVStore(KVStoreInterface):
         if ca_args and "use_woc" in ca_args:
             create_args["use_woc"] = ca_args["use_woc"]
         
-        ca = self._wallet.create_action(ctx, create_args, self._originator) or {}
+        ca = self._wallet.create_action(create_args, self._originator) or {}
         signable = (ca.get("signableTransaction") or {}) if isinstance(ca, dict) else {}
         signable_tx_bytes = signable.get("tx") or b""
         
@@ -592,7 +592,7 @@ class LocalKVStore(KVStoreInterface):
         self._build_and_cache_beef(key, locking_script, tx_bytes)
         
         # Broadcast and return result
-        self._wallet.internalize_action(ctx, {"tx": tx_bytes}, self._originator)
+        self._wallet.internalize_action({"tx": tx_bytes}, self._originator)
         return self._extract_txid_from_bytes(tx_bytes, key)
 
     def _build_and_cache_beef(self, key: str, locking_script: bytes, tx_bytes: bytes) -> None:
@@ -693,7 +693,7 @@ class LocalKVStore(KVStoreInterface):
                     },
                     "plaintext": value.encode('utf-8')
                 }
-                encrypt_result = self._wallet.encrypt(ctx, encrypt_args, self._originator)
+                encrypt_result = self._wallet.encrypt(encrypt_args, self._originator)
                 if "ciphertext" in encrypt_result:
                     field_bytes = encrypt_result["ciphertext"]
                 else:
@@ -722,7 +722,6 @@ class LocalKVStore(KVStoreInterface):
         counterparty = ca_args.get("counterparty", pd_opts.get("counterparty"))
         pd = PushDrop(self._wallet, self._originator)
         return pd.lock(
-            ctx,
             fields,
             protocol_id,
             key_id,
@@ -753,7 +752,7 @@ class LocalKVStore(KVStoreInterface):
             args["key_id"] = kid
         if cpty is not None:
             args["counterparty"] = cpty
-        lo = self._wallet.list_outputs(ctx, args, self._originator) or {}
+        lo = self._wallet.list_outputs(args, self._originator) or {}
         outs = [o for o in lo.get("outputs") or [] if not o.get("error")]
         input_beef = lo.get("BEEF") or b""
         if not input_beef and outs:
@@ -814,7 +813,6 @@ class LocalKVStore(KVStoreInterface):
         try:
             spends_str_keys = {str(int(k)): v for k, v in (spends or {}).items()}
             res = self._wallet.sign_action(
-                ctx,
                 {
                     "spends": spends_str_keys,
                     "reference": signable.get("reference") or b"",
@@ -826,7 +824,7 @@ class LocalKVStore(KVStoreInterface):
         except Exception:
             for o in outs:
                 try:
-                    self._wallet.relinquish_output(ctx, {
+                    self._wallet.relinquish_output({
                         "basket": self._context,
                         "output": {
                             "txid": bytes.fromhex(o.get("txid", "00" * 32)) if isinstance(o.get("txid"), str) else (o.get("txid") or b"\x00" * 32),
@@ -871,7 +869,7 @@ class LocalKVStore(KVStoreInterface):
             self._release_key_lock(key)
 
     def _lookup_outputs_for_remove(self, ctx: Any, key: str) -> Tuple[list, bytes, Optional[int]]:
-        lo = self._wallet.list_outputs(ctx, {
+        lo = self._wallet.list_outputs({
             "basket": self._context,
             "tags": [key],
             "include": ENTIRE_TXS,
@@ -895,7 +893,7 @@ class LocalKVStore(KVStoreInterface):
         return outs, input_beef, total_outputs
 
     def _onchain_remove_flow(self, ctx: Any, key: str, inputs_meta: list, input_beef: bytes) -> Optional[str]:
-        ca_res = self._wallet.create_action(ctx, {
+        ca_res = self._wallet.create_action({
             "labels": ["kv", "remove"],
             "description": f"kvstore remove {key}",
             "inputs": inputs_meta,
@@ -909,9 +907,9 @@ class LocalKVStore(KVStoreInterface):
         reference = signable.get("reference") or b""
         spends = self._prepare_spends(key, inputs_meta, signable_tx_bytes, input_beef)
         spends_str = {str(int(k)): v for k, v in (spends or {}).items()}
-        res = self._wallet.sign_action(ctx, {"spends": spends_str, "reference": reference}, self._originator) or {}
+        res = self._wallet.sign_action({"spends": spends_str, "reference": reference}, self._originator) or {}
         signed_tx_bytes = res.get("tx") if isinstance(res, dict) else None
-        internalize_result = self._wallet.internalize_action(ctx, {"tx": signed_tx_bytes or signable_tx_bytes}, self._originator)
+        internalize_result = self._wallet.internalize_action({"tx": signed_tx_bytes or signable_tx_bytes}, self._originator)
         parsed_txid = None
         try:
             from bsv.transaction import Transaction
@@ -1017,7 +1015,7 @@ class LocalKVStore(KVStoreInterface):
         
         pd = PushDrop(self._wallet, self._originator)
         unlock_protocol = protocol if protocol is not None else self._get_protocol(key)
-        unlocker = pd.unlock(unlock_protocol, key, {"type": 0}, sign_outputs='all')
+        unlocker = pd.unlock(unlock_protocol, key, None, sign_outputs='all')  # None = SELF counterparty
         
         inputs_meta = []
         for o in outs:
@@ -1052,7 +1050,7 @@ class LocalKVStore(KVStoreInterface):
         pd = PushDrop(self._wallet, self._originator)
         # Use default protocol for unlocking (GO pattern: protocol and key are separate)
         unlock_protocol = self._get_protocol(key)
-        unlocker = pd.unlock(unlock_protocol, key, {"type": 0}, sign_outputs='all')
+        unlocker = pd.unlock(unlock_protocol, key, None, sign_outputs='all')  # None = SELF counterparty
         # Only prepare spends for inputs whose outpoint matches the tx input at the same index
         for idx, meta in enumerate(inputs_meta):
             try:

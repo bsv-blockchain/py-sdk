@@ -18,10 +18,10 @@ def test_create_and_verify_signature_identity(wallet):
             "counterparty": {"type": "self"},
         "data": data,
     }
-    sig = wallet.create_signature(None, args, "test")
+    sig = wallet.create_signature(args, "test")
     assert "signature" in sig and isinstance(sig["signature"], (bytes, bytearray))
 
-    ver = wallet.verify_signature(None, {**args, "signature": sig["signature"]}, "test")
+    ver = wallet.verify_signature({**args, "signature": sig["signature"]}, "test")
     assert ver.get("valid") is True
 
 
@@ -38,10 +38,10 @@ def test_create_and_verify_hmac_other_counterparty(wallet):
         },
         "data": data,
     }
-    h = wallet.create_hmac(None, args, "test")
+    h = wallet.create_hmac(args, "test")
     assert "hmac" in h and isinstance(h["hmac"], (bytes, bytearray))
 
-    ver = wallet.verify_hmac(None, {**args, "hmac": h["hmac"]}, "test")
+    ver = wallet.verify_hmac({**args, "hmac": h["hmac"]}, "test")
     assert ver.get("valid") is True
 
 

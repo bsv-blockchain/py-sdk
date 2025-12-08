@@ -14,7 +14,7 @@ def wallet():
 
 def test_list_outputs_empty(wallet):
     """Test listing outputs when none exist."""
-    result = wallet.list_outputs(None, {}, "test")
+    result = wallet.list_outputs({}, "test")
     
     # API returns 'outputs' array, not 'totalOutputs'
     assert "outputs" in result
@@ -26,7 +26,7 @@ def test_list_outputs_empty(wallet):
 def test_list_outputs_with_basket(wallet):
     """Test listing outputs filtered by basket."""
     args = {"basket": "savings"}
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
     assert "outputs" in result  # Fixed: API returns 'outputs', not 'totalOutputs'
@@ -35,7 +35,7 @@ def test_list_outputs_with_basket(wallet):
 def test_list_outputs_with_tags(wallet):
     """Test listing outputs filtered by tags."""
     args = {"tags": ["important", "urgent"]}
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
 
@@ -43,7 +43,7 @@ def test_list_outputs_with_tags(wallet):
 def test_list_outputs_with_type_filter(wallet):
     """Test listing outputs filtered by type."""
     args = {"type": "P2PKH"}
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
 
@@ -51,7 +51,7 @@ def test_list_outputs_with_type_filter(wallet):
 def test_list_outputs_with_limit(wallet):
     """Test listing outputs with limit."""
     args = {"limit": 10}
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
 
@@ -59,7 +59,7 @@ def test_list_outputs_with_limit(wallet):
 def test_list_outputs_with_offset(wallet):
     """Test listing outputs with offset pagination."""
     args = {"offset": 5, "limit": 10}
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
 
@@ -67,7 +67,7 @@ def test_list_outputs_with_offset(wallet):
 def test_list_outputs_include_beef(wallet):
     """Test listing outputs with BEEF inclusion."""
     args = {"includeBEEF": True}
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
     # Should include BEEF if outputs exist
@@ -76,7 +76,7 @@ def test_list_outputs_include_beef(wallet):
 def test_list_outputs_include_locked(wallet):
     """Test listing outputs including locked ones."""
     args = {"includeLocked": True}
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
 
@@ -84,7 +84,7 @@ def test_list_outputs_include_locked(wallet):
 def test_list_outputs_include_spent(wallet):
     """Test listing outputs including spent ones."""
     args = {"includeSpent": True}
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
 
@@ -92,7 +92,7 @@ def test_list_outputs_include_spent(wallet):
 def test_list_outputs_include_spendable_only(wallet):
     """Test listing only spendable outputs."""
     args = {"spendable": True}
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
 
@@ -106,7 +106,7 @@ def test_relinquish_output(wallet):
             "vout": 0
         }
     }
-    result = wallet.relinquish_output(None, args, "test")
+    result = wallet.relinquish_output(args, "test")
     
     # Should return empty dict on success
     assert result == {}
@@ -115,13 +115,13 @@ def test_relinquish_output(wallet):
 def test_relinquish_output_multiple(wallet):
     """Test relinquishing multiple outputs."""
     # Relinquish first output
-    wallet.relinquish_output(None, {
+    wallet.relinquish_output({
         "basket": "basket1",
         "output": {"txid": "a" * 64, "vout": 0}
     }, "test")
     
     # Relinquish second output
-    wallet.relinquish_output(None, {
+    wallet.relinquish_output({
         "basket": "basket1",
         "output": {"txid": "b" * 64, "vout": 1}
     }, "test")
@@ -215,7 +215,7 @@ def test_list_outputs_combined_filters(wallet):
         "includeEnvelope": True
     }
     
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
     assert "outputs" in result  # Fixed: API returns 'outputs', not 'totalOutputs'
@@ -227,7 +227,7 @@ def test_list_outputs_with_custom_fields(wallet):
         "customInstructions": {"field1": "value1"}
     }
     
-    result = wallet.list_outputs(None, args, "test")
+    result = wallet.list_outputs(args, "test")
     
     assert isinstance(result, dict)
 

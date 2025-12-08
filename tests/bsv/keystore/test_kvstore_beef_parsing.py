@@ -151,7 +151,7 @@ class TestKVStoreBEEFParsing:
         
         # Verify create_action was called with inputBEEF
         wallet.create_action.assert_called_once()
-        call_args = wallet.create_action.call_args[0][1]  # Get args dict
+        call_args = wallet.create_action.call_args[0][0]  # Get args dict (first positional argument)
         
         # Should have input_beef or inputBEEF in the call
         assert 'input_beef' in call_args or 'inputBEEF' in call_args or 'inputs_meta' in call_args
@@ -270,7 +270,7 @@ class TestKVStoreRetentionPeriod:
         
         # Verify create_action was called with retention period
         wallet.create_action.assert_called_once()
-        call_args = wallet.create_action.call_args[0][1]
+        call_args = wallet.create_action.call_args[0][0]  # Get args dict (first positional argument)
         
         # Check that outputs have retention period
         if 'outputs' in call_args:
@@ -347,7 +347,7 @@ class TestKVStoreTransactionCreation:
         
         # Verify create_action was called
         wallet.create_action.assert_called_once()
-        call_args = wallet.create_action.call_args[0][1]
+        call_args = wallet.create_action.call_args[0][0]  # Get args dict (first positional argument)
         
         # Should have outputs with locking script
         assert 'outputs' in call_args
@@ -395,7 +395,7 @@ class TestKVStoreTransactionCreation:
         
         # Verify create_action was called with inputs but no outputs
         wallet.create_action.assert_called_once()
-        call_args = wallet.create_action.call_args[0][1]
+        call_args = wallet.create_action.call_args[0][0]  # Get args dict (first positional argument)
         
         # Should have inputs
         assert 'inputs' in call_args or 'inputs_meta' in call_args

@@ -133,7 +133,7 @@ async def test_auth_fetch_full_protocol(auth_server):
         with patch.object(requests.Session, 'request', patched_request):
             with patch.object(requests.Session, 'post', lambda self, url, **kwargs: original_request(self, 'POST', url, **{**kwargs, 'verify': False})):
                 # The AuthFetch should use HTTP fallback to communicate with the server
-                resp = auth_fetch.fetch(None, "https://localhost:8084/auth", config)
+                resp = auth_fetch.fetch("https://localhost:8084/auth", config)
         
         assert resp is not None
         assert resp.status_code == 200
@@ -222,7 +222,7 @@ async def test_auth_fetch_session_management(auth_server):
                     body=b'{"request": 1}'
                 )
                 
-                resp1 = auth_fetch.fetch(None, f"{base_url}/auth", config1)
+                resp1 = auth_fetch.fetch(f"{base_url}/auth", config1)
                 assert resp1.status_code == 200
                 
                 # Second request - should reuse session
@@ -232,7 +232,7 @@ async def test_auth_fetch_session_management(auth_server):
                     body=b'{"request": 2}'
                 )
                 
-                resp2 = auth_fetch.fetch(None, f"{base_url}/auth", config2)
+                resp2 = auth_fetch.fetch(f"{base_url}/auth", config2)
                 assert resp2.status_code == 200
         
         # Verify both requests succeeded
@@ -279,7 +279,7 @@ async def test_auth_fetch_error_handling(auth_server):
     try:
         with patch.object(requests.Session, 'request', patched_request):
             with patch.object(requests.Session, 'post', lambda self, url, **kwargs: original_request(self, 'POST', url, **{**kwargs, 'verify': False})):
-                resp = auth_fetch.fetch(None, "https://localhost:8084/nonexistent", config)
+                resp = auth_fetch.fetch("https://localhost:8084/nonexistent", config)
                 response_received = True
         
         # If response is returned, verify it's a valid HTTP response

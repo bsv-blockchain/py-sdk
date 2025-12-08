@@ -16,8 +16,17 @@ class CaptureTransport:
         self._on_data_callback = callback
         return None
 
-    def send(self, ctx, message: AuthMessage):
-        self.sent_messages.append(message)
+    def send(self, message_or_ctx, message=None):
+        # Handle both calling patterns:
+        # - send(message) - peer.py calls it this way
+        # - send(ctx, message) - interface defines it this way
+        if message is None:
+            # Called as send(message) - first arg is the message
+            msg = message_or_ctx
+        else:
+            # Called as send(ctx, message) - first arg is ctx, second is message
+            msg = message
+        self.sent_messages.append(msg)
         return None
 
 
@@ -36,7 +45,7 @@ class WalletOK:
         self._priv = priv
         self._pub = priv.public_key()
 
-    def get_public_key(self, ctx, args, originator: str):
+    def get_public_key(self, args=None, originator=None):
         class R:
             pass
 
@@ -44,14 +53,14 @@ class WalletOK:
         r.public_key = self._pub
         return r
 
-    def verify_signature(self, ctx, args, originator: str):
+    def verify_signature(self, args=None, originator=None):
         return MockSigResult(True)
 
-    def create_signature(self, ctx, args, originator: str):
+    def create_signature(self, args=None, originator=None):
         return MockCreateSig(b"sig")
 
     # Optional stub for certificate acquisition
-    def acquire_certificate(self, ctx, args, originator: str):
+    def acquire_certificate(self, args=None, originator=None):
         # Return a simple dict-like certificate payload compatible with canonicalizer
         return {
             "certificate": {

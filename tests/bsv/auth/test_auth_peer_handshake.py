@@ -21,10 +21,22 @@ class LocalTransport:
         self._on_data_callback = callback
         return None
 
-    def send(self, ctx, message: AuthMessage):
+    def send(self, message_or_ctx, message=None):
+        # Handle both calling patterns:
+        # - send(message) - peer.py calls it this way
+        # - send(ctx, message) - interface defines it this way
+        if message is None:
+            # Called as send(message) - first arg is the message
+            msg = message_or_ctx
+            ctx_arg = None
+        else:
+            # Called as send(ctx, message) - first arg is ctx, second is message
+            ctx_arg = message_or_ctx
+            msg = message
         if not self.peer or not self.peer._on_data_callback:
             return Exception("peer not connected or not listening")
-        return self.peer._on_data_callback(ctx, message)
+        # Note: peer.py callback expects just (message), not (ctx, message)
+        return self.peer._on_data_callback(msg)
 
 
 class GetPub:
@@ -47,15 +59,15 @@ class HandshakeWallet:
         self._priv = priv
         self._pub = priv.public_key()
 
-    def get_public_key(self, ctx, args, originator: str):
+    def get_public_key(self, args=None, originator=None):
         return GetPub(self._pub)
 
-    def create_signature(self, ctx, args, originator: str):
+    def create_signature(self, args=None, originator=None):
         data: bytes = args.get("data", b"")
         # Sign raw data
         return Sig(self._priv.sign(data))
 
-    def verify_signature(self, ctx, args, originator: str):
+    def verify_signature(self, args=None, originator=None):
         data: bytes = args.get("data", b"")
         sig: bytes = args.get("signature")
         cp = args.get("encryption_args", {}).get("counterparty")
@@ -69,7 +81,7 @@ class HandshakeWallet:
         pub = pub or self._pub
         return Ver(pub.verify(sig, data))
     
-    def verify_hmac(self, ctx, args, originator: str):
+    def verify_hmac(self, args=None, originator=None):
         # Always return valid for nonce verification to pass
         class HmacResult:
             def __init__(self):

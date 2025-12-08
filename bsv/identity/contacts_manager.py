@@ -104,7 +104,7 @@ class ContactsManager:
 
     def _fetch_contact_outputs(self, tags: List[str], limit: int) -> List[Dict]:
         """Fetch contact outputs from wallet."""
-        outputs_result = self.wallet.list_outputs(None, {
+        outputs_result = self.wallet.list_outputs({
             'basket': 'contacts',
             'include': 'locking scripts',
             'includeCustomInstructions': True,
@@ -146,7 +146,7 @@ class ContactsManager:
         key_id = key_id_data.get('keyID')
 
         ciphertext = decoded['fields'][0]
-        decrypt_result = self.wallet.decrypt(None, {
+        decrypt_result = self.wallet.decrypt({
             'ciphertext': ciphertext,
             'protocolID': CONTACT_PROTOCOL_ID,
             'keyID': key_id,
@@ -198,7 +198,7 @@ class ContactsManager:
 
     def _find_existing_contact_output(self, hashed_key: bytes, key_id: str) -> tuple:
         """Find existing contact output if any."""
-        outputs_result = self.wallet.list_outputs(None, {
+        outputs_result = self.wallet.list_outputs({
             'basket': 'contacts',
             'include': 'entire transactions',
             'includeCustomInstructions': True,
@@ -226,7 +226,7 @@ class ContactsManager:
     def _create_contact_locking_script(self, contact_to_store: Dict, key_id: str) -> str:
         """Create encrypted locking script for contact."""
         contact_json = json.dumps(contact_to_store)
-        encrypt_result = self.wallet.encrypt(None, {
+        encrypt_result = self.wallet.encrypt({
             'plaintext': contact_json.encode('utf-8'),
             'protocolID': CONTACT_PROTOCOL_ID,
             'keyID': key_id,
@@ -236,8 +236,8 @@ class ContactsManager:
         ciphertext = encrypt_result.get('ciphertext') or b''
         pushdrop = PushDrop(self.wallet, None)
         return pushdrop.lock(
-            None, [ciphertext], CONTACT_PROTOCOL_ID, key_id,
-            {'type': 0}, for_self=True, include_signature=True, lock_position='before'
+            [ciphertext], CONTACT_PROTOCOL_ID, key_id,
+            None, for_self=True, include_signature=True, lock_position='before'
         )
 
     def _save_or_update_contact_action(
@@ -297,7 +297,7 @@ class ContactsManager:
             identity_key.encode('utf-8')
         )
 
-        outputs_result = self.wallet.list_outputs(None, {
+        outputs_result = self.wallet.list_outputs({
             'basket': 'contacts',
             'include': 'entire transactions',
             'tags': [f'identityKey {hashed_key.hex()}'],

@@ -16,11 +16,23 @@ class LocalTransport:
         self._on_data_callback = callback
         return None
 
-    def send(self, ctx, message: AuthMessage):
+    def send(self, message_or_ctx, message=None):
+        # Handle both calling patterns:
+        # - send(message) - peer.py calls it this way
+        # - send(ctx, message) - interface defines it this way
+        if message is None:
+            # Called as send(message) - first arg is the message
+            msg = message_or_ctx
+            ctx_arg = None
+        else:
+            # Called as send(ctx, message) - first arg is ctx, second is message
+            ctx_arg = message_or_ctx
+            msg = message
         # For these tests we directly call our own handler to emulate delivery
         if self._on_data_callback is None:
             return Exception("No handler")
-        return self._on_data_callback(ctx, message)
+        # Note: peer.py callback expects just (message), not (ctx, message)
+        return self._on_data_callback(msg)
 
 
 class MockSigResult:
@@ -34,17 +46,17 @@ class MockWallet:
         self._pub = priv.public_key()
         self._valid_verify = valid_verify
 
-    def get_public_key(self, ctx, args, originator: str):
+    def get_public_key(self, args=None, originator=None):
         class R:
             pass
         r = R()
         r.public_key = self._pub
         return r
 
-    def verify_signature(self, ctx, args, originator: str):
+    def verify_signature(self, args=None, originator=None):
         return MockSigResult(self._valid_verify)
     
-    def verify_hmac(self, ctx, args, originator: str):
+    def verify_hmac(self, args=None, originator=None):
         # Always return valid for nonce verification to pass
         class HmacResult:
             def __init__(self):
@@ -75,7 +87,7 @@ def test_initial_response_invalid_signature_returns_error():
     )
     err = peer.handle_initial_response(msg, sender_pub)
     assert isinstance(err, Exception)
-    assert "unable to verify signature" in str(err)
+    assert "unable to verify signature" in str(err) or "unable to verify signature in initial response" in str(err)
 
 
 def test_general_message_invalid_signature_returns_error():

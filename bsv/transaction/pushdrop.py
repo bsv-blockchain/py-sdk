@@ -542,6 +542,26 @@ class PushDropUnlocker:
         Flags: base (ALL/NONE/SINGLE) derived from sign_outputs_mode, always includes FORKID,
         and optionally ANYONECANPAY when anyone_can_pay is True.
         """
+        # Try to get locking script from transaction input if not already set
+        if not self.prev_locking_script and hasattr(tx, "inputs") and input_index < len(tx.inputs):
+            tin = tx.inputs[input_index]
+            if hasattr(tin, "source_transaction") and tin.source_transaction:
+                src_tx = tin.source_transaction
+                src_idx = getattr(tin, "source_output_index", 0)
+                if hasattr(src_tx, "outputs") and src_idx < len(src_tx.outputs):
+                    out = src_tx.outputs[src_idx]
+                    if hasattr(out, "locking_script"):
+                        ls = out.locking_script
+                        if hasattr(ls, "to_bytes"):
+                            self.prev_locking_script = ls.to_bytes()
+                        elif isinstance(ls, bytes):
+                            self.prev_locking_script = ls
+                        elif isinstance(ls, str):
+                            try:
+                                self.prev_locking_script = bytes.fromhex(ls)
+                            except Exception:
+                                pass
+        
         sighash_flag = self._compute_sighash_flag()
         hash_to_sign, used_preimage = self._compute_hash_to_sign(tx, input_index, sighash_flag)
         
@@ -683,12 +703,17 @@ class PushDropUnlocker:
                 return None
             
             print(f"[DEBUG] PushDropUnlocker.sign: Using locking public key from PushDrop UTXO: {locking_pubkey.hex()}")
+            # Use protocol_id/key_id/counterparty to derive the key (same as fallback)
+            # The derived key should match the locking public key if the protocol/key_id match
             create_args = {
-                "encryption_args": {
-                    "publicKey": locking_pubkey.hex(),
-                },
-                ("hash_to_sign" if used_preimage else "data"): hash_to_sign,
+                "protocol_id": self.protocol_id,
+                "key_id": self.key_id,
+                "counterparty": self.counterparty,
             }
+            if used_preimage:
+                create_args["hash_to_directly_sign"] = hash_to_sign
+            else:
+                create_args["data"] = hash_to_sign
             res = self.wallet.create_signature(create_args, "") if hasattr(self.wallet, "create_signature") else {}
             sig = res.get("signature", b"")
             sig = bytes(sig) + bytes([sighash_flag])
@@ -699,18 +724,24 @@ class PushDropUnlocker:
     
     def _create_fallback_signature(self, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> bytes:
         """Create signature using derived key (fallback method)."""
-        print("[DEBUG] PushDropUnlocker.sign: Fallback to derived public key")
+        print(f"[DEBUG] PushDropUnlocker.sign: Fallback to derived public key, protocol_id={self.protocol_id}, key_id={self.key_id}")
         create_args = {
-            "encryption_args": {
-                "protocol_id": self.protocol_id,
-                "key_id": self.key_id,
-                "counterparty": self.counterparty,
-            },
-            ("hash_to_sign" if used_preimage else "data"): hash_to_sign,
+            "protocol_id": self.protocol_id,
+            "key_id": self.key_id,
+            "counterparty": self.counterparty,
         }
+        if used_preimage:
+            create_args["hash_to_directly_sign"] = hash_to_sign
+        else:
+            create_args["data"] = hash_to_sign
+        print(f"[DEBUG] PushDropUnlocker.sign: Calling create_signature with args: {create_args}")
         res = self.wallet.create_signature(create_args, "") if hasattr(self.wallet, "create_signature") else {}
+        print(f"[DEBUG] PushDropUnlocker.sign: create_signature result: {res}")
         sig = res.get("signature", b"")
+        if not sig:
+            print(f"[WARN] PushDropUnlocker.sign: No signature in result, result keys: {list(res.keys()) if isinstance(res, dict) else 'not a dict'}")
         sig = bytes(sig) + bytes([sighash_flag])
+        print(f"[DEBUG] PushDropUnlocker.sign: Final sig length: {len(sig)}, sig: {sig.hex()[:100] if len(sig) > 0 else 'empty'}")
         return encode_pushdata(sig)
 
 

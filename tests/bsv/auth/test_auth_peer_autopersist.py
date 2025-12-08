@@ -16,11 +16,21 @@ class CaptureTransport:
         self._on_data_callback = callback
         return None
 
-    def send(self, ctx, message: AuthMessage):
-        self.sent.append(message)
+    def send(self, message_or_ctx, message=None):
+        # Handle both calling patterns:
+        # - send(message) - peer.py calls it this way
+        # - send(ctx, message) - interface defines it this way
+        if message is None:
+            # Called as send(message) - first arg is the message
+            msg = message_or_ctx
+        else:
+            # Called as send(ctx, message) - first arg is ctx, second is message
+            msg = message
+        self.sent.append(msg)
         # loopback to update timestamps safely
+        # Note: peer.py callback expects just (message), not (ctx, message)
         if self._on_data_callback is not None:
-            return self._on_data_callback(ctx, message)
+            return self._on_data_callback(msg)
         return None
 
 
@@ -29,13 +39,13 @@ class Wallet:
         self._priv = priv
         self._pub = priv.public_key()
 
-    def get_public_key(self, ctx, args, originator: str):
+    def get_public_key(self, args=None, originator=None):
         class R: pass
         r = R()
         r.public_key = self._pub
         return r
 
-    def create_signature(self, ctx, args, originator: str):
+    def create_signature(self, args=None, originator=None):
         class R: pass
         r = R()
         r.signature = self._priv.sign(args.get("data", b""))
