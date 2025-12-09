@@ -44,8 +44,8 @@ class MasterCertificate(Certificate):
             encrypt_args = {
                 "protocolID": protocol_id,
                 "keyID": key_id,
-                "counterparty": certifier_or_subject,
-                "privileged": privileged,
+                    "counterparty": certifier_or_subject,
+                    "privileged": privileged,
                 "privilegedReason": privileged_reason,
                 "plaintext": symmetric_key,
             }
@@ -203,8 +203,8 @@ class MasterCertificate(Certificate):
         decrypt_args = {
             "protocolID": protocol_id,
             "keyID": key_id,
-            "counterparty": counterparty,
-            "privileged": privileged,
+                "counterparty": counterparty,
+                "privileged": privileged,
             "privilegedReason": privileged_reason,
             "ciphertext": encrypted_key_bytes,
         }
@@ -287,8 +287,8 @@ class MasterCertificate(Certificate):
             encrypt_args = {
                 "protocolID": protocol_id,
                 "keyID": key_id,
-                "counterparty": verifier,
-                "privileged": privileged,
+                    "counterparty": verifier,
+                    "privileged": privileged,
                 "privilegedReason": privileged_reason,
                 "plaintext": field_revelation_key,
             }
