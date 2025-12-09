@@ -52,7 +52,7 @@ class TestAuthFetchPeerCreation:
                         
                         with patch.object(auth_fetch, 'serialize_request', return_value=b"data"):
                             try:
-                                auth_fetch.fetch(None, "https://example.com/api")
+                                auth_fetch.fetch("https://example.com/api")
                             except Exception:
                                 pass
                 
@@ -80,7 +80,7 @@ class TestAuthFetchPeerCreation:
                 
                 with patch.object(auth_fetch, 'serialize_request', return_value=b"data"):
                     try:
-                        auth_fetch.fetch(None, "https://example.com/other")
+                        auth_fetch.fetch("https://example.com/other")
                     except Exception:
                         pass
         
@@ -102,7 +102,7 @@ class TestAuthFetchPeerCreation:
                     with patch('threading.Event'):
                         with patch.object(auth_fetch, 'serialize_request', return_value=b"data"):
                             try:
-                                auth_fetch.fetch(None, "https://test.com/endpoint")
+                                auth_fetch.fetch("https://test.com/endpoint")
                             except Exception:
                                 pass
                 
@@ -136,7 +136,7 @@ class TestAuthFetchCallbacks:
             with patch('threading.Event'):
                 with patch.object(auth_fetch, 'serialize_request', return_value=b"data"):
                     try:
-                        auth_fetch.fetch(None, "https://example.com/test")
+                        auth_fetch.fetch("https://example.com/test")
                     except Exception:
                         pass
         
@@ -201,7 +201,7 @@ class TestAuthFetchFallbackHTTP:
         mock_response.status_code = 200
         
         with patch.object(auth_fetch, 'handle_fetch_and_validate', return_value=mock_response):
-            result = auth_fetch.fetch(None, "https://example.com/api")
+            result = auth_fetch.fetch("https://example.com/api")
             assert result == mock_response
 
 
@@ -241,7 +241,7 @@ class TestAuthFetchErrorHandling:
             with patch('threading.Event'):
                 with patch.object(auth_fetch, 'serialize_request', return_value=b"data"):
                     try:
-                        auth_fetch.fetch(None, "https://example.com/test")
+                        auth_fetch.fetch("https://example.com/test")
                     except Exception:
                         pass
     
@@ -264,7 +264,7 @@ class TestAuthFetchErrorHandling:
                 with patch.object(auth_fetch, 'serialize_request', return_value=b"data"):
                     with patch.object(auth_fetch, 'handle_fetch_and_validate', return_value=mock_response):
                         try:
-                            auth_fetch.fetch(None, "https://example.com/test")
+                            auth_fetch.fetch("https://example.com/test")
                         except Exception:
                             pass
 
@@ -395,8 +395,8 @@ class TestAuthFetchPaymentHandling:
         
         with patch.object(auth_fetch, 'handle_fetch_and_validate', return_value=mock_response):
             with patch.object(auth_fetch, 'handle_payment_and_retry', return_value=mock_payment_response):
-                result = auth_fetch.fetch(None, "https://example.com/api")
-                assert result == mock_payment_response
+                result = auth_fetch.fetch("https://example.com/api")
+            assert result == mock_payment_response
 
 
 class TestAuthFetchBuildResponse:
@@ -547,7 +547,7 @@ class TestAuthFetchCompleteFlow:
                         
                         with patch.object(auth_fetch, 'serialize_request', return_value=b"serialized"):
                             try:
-                                auth_fetch.fetch(None, "https://api.example.com/endpoint")
+                                auth_fetch.fetch("https://api.example.com/endpoint")
                             except RuntimeError:
                                 pass  # Expected when no response is provided
                 

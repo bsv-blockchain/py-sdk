@@ -21,7 +21,7 @@ def test_acquire_certificate_basic(wallet):
         "keyringForSubject": {"subject": "public_key_data"},
         "fields": {"name": "John Doe", "expiry": "2025-12-31"}
     }
-    result = wallet.acquire_certificate(None, args, "test")
+    result = wallet.acquire_certificate(args, "test")
     
     assert result == {}
     assert len(wallet._certificates) == 1
@@ -30,7 +30,7 @@ def test_acquire_certificate_basic(wallet):
 def test_acquire_multiple_certificates(wallet):
     """Test acquiring multiple certificates."""
     # Add first certificate
-    wallet.acquire_certificate(None, {
+    wallet.acquire_certificate({
         "type": b"passport",
         "serialNumber": b"PP111",
         "certifier": "gov",
@@ -38,7 +38,7 @@ def test_acquire_multiple_certificates(wallet):
     }, "test")
     
     # Add second certificate
-    wallet.acquire_certificate(None, {
+    wallet.acquire_certificate({
         "type": b"license",
         "serialNumber": b"LIC222",
         "certifier": "state",
@@ -50,7 +50,7 @@ def test_acquire_multiple_certificates(wallet):
 
 def test_list_certificates_empty(wallet):
     """Test listing certificates when none exist."""
-    result = wallet.list_certificates(None, {}, "test")
+    result = wallet.list_certificates({}, "test")
     assert "certificates" in result
     assert result["certificates"] == []
 
@@ -59,21 +59,21 @@ def test_list_certificates_with_data(wallet):
     """Test listing certificates with data."""
     # Add multiple certificates
     for i in range(3):
-        wallet.acquire_certificate(None, {
+        wallet.acquire_certificate({
             "type": b"cert_type",
             "serialNumber": f"SN{i}".encode(),
             "certifier": f"authority_{i}",
             "fields": {"index": i}
         }, "test")
     
-    result = wallet.list_certificates(None, {}, "test")
+    result = wallet.list_certificates({}, "test")
     assert len(result["certificates"]) == 3
 
 
 def test_prove_certificate(wallet):
     """Test proving a certificate."""
     # First acquire a certificate
-    wallet.acquire_certificate(None, {
+    wallet.acquire_certificate({
         "type": b"identity",
         "serialNumber": b"ID123",
         "certifier": "issuer",
@@ -91,7 +91,7 @@ def test_prove_certificate(wallet):
         "fieldsToReveal": ["verified"],
         "verifier": "verifier_pubkey"
     }
-    result = wallet.prove_certificate(None, args, "test")
+    result = wallet.prove_certificate(args, "test")
     
     # Should return empty dict or proof data
     assert isinstance(result, dict)
@@ -100,7 +100,7 @@ def test_prove_certificate(wallet):
 def test_relinquish_certificate(wallet):
     """Test relinquishing a certificate."""
     # First acquire a certificate
-    wallet.acquire_certificate(None, {
+    wallet.acquire_certificate({
         "type": b"temp_cert",
         "serialNumber": b"TEMP001",
         "certifier": "temp_authority",
@@ -115,10 +115,10 @@ def test_relinquish_certificate(wallet):
         "serialNumber": b"TEMP001",
         "certifier": "temp_authority"
     }
-    _ = wallet.relinquish_certificate(None, args, "test")
+    _ = wallet.relinquish_certificate(args, "test")
     
     # Certificate should be removed
-    remaining = wallet.list_certificates(None, {}, "test")
+    remaining = wallet.list_certificates({}, "test")
     assert len(remaining["certificates"]) == 0
 
 
@@ -129,7 +129,7 @@ def test_acquire_certificate_with_empty_fields(wallet):
         "serialNumber": b"MIN001",
         "certifier": "minimal_issuer"
     }
-    result = wallet.acquire_certificate(None, args, "test")
+    result = wallet.acquire_certificate(args, "test")
     
     assert result == {}
     assert len(wallet._certificates) == 1
@@ -160,7 +160,7 @@ def test_acquire_certificate_with_complex_fields(wallet):
         "certifier": "complex_issuer",
         "fields": complex_fields
     }
-    result = wallet.acquire_certificate(None, args, "test")
+    result = wallet.acquire_certificate(args, "test")
     
     assert result == {}
     cert = wallet._certificates[0]
@@ -172,14 +172,14 @@ def test_list_certificates_preserves_order(wallet):
     serials = [f"SN{i:03d}".encode() for i in range(5)]
     
     for serial in serials:
-        wallet.acquire_certificate(None, {
+        wallet.acquire_certificate({
             "type": b"ordered",
             "serialNumber": serial,
             "certifier": "issuer",
             "fields": {}
         }, "test")
     
-    result = wallet.list_certificates(None, {}, "test")
+    result = wallet.list_certificates({}, "test")
     certs = result["certificates"]
     
     # Verify order is preserved
@@ -195,7 +195,7 @@ def test_certificate_keyring_storage(wallet):
         "metadata": {"created": "2024-01-01"}
     }
     
-    wallet.acquire_certificate(None, {
+    wallet.acquire_certificate({
         "type": b"keyring_cert",
         "serialNumber": b"KR001",
         "certifier": "issuer",
@@ -213,7 +213,7 @@ def test_certificate_match_tuple_storage(wallet):
     serial = b"MATCH001"
     certifier = "match_issuer"
     
-    wallet.acquire_certificate(None, {
+    wallet.acquire_certificate({
         "type": cert_type,
         "serialNumber": serial,
         "certifier": certifier,
@@ -228,14 +228,14 @@ def test_certificate_match_tuple_storage(wallet):
 def test_discover_by_attributes(wallet):
     """Test discovering certificates by attributes."""
     # Add certificates with searchable attributes
-    wallet.acquire_certificate(None, {
+    wallet.acquire_certificate({
         "type": b"searchable",
         "serialNumber": b"SEARCH001",
         "certifier": "issuer",
         "fields": {"category": "education", "level": "bachelor"}
     }, "test")
     
-    wallet.acquire_certificate(None, {
+    wallet.acquire_certificate({
         "type": b"searchable",
         "serialNumber": b"SEARCH002",
         "certifier": "issuer",
@@ -246,7 +246,7 @@ def test_discover_by_attributes(wallet):
     args = {
         "attributes": {"category": "education"}
     }
-    result = wallet.discover_by_attributes(None, args, "test")
+    result = wallet.discover_by_attributes(args, "test")
     
     assert isinstance(result, dict)
 
@@ -257,7 +257,7 @@ def test_discover_by_identity_key(wallet):
         "identityKey": wallet.public_key.hex(),
         "limit": 10
     }
-    result = wallet.discover_by_identity_key(None, args, "test")
+    result = wallet.discover_by_identity_key(args, "test")
     
     assert isinstance(result, dict)
 

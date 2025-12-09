@@ -150,7 +150,7 @@ class RegistryClient:
         self._resolver = LookupResolver()
 
     def register_definition(self, ctx: Any, data: DefinitionData) -> Dict[str, Any]:
-        pub = self.wallet.get_public_key(ctx, {"identityKey": True}, self.originator) or {}
+        pub = self.wallet.get_public_key({"identityKey": True}, self.originator) or {}
         operator = cast(str, pub.get("publicKey") or "")
 
         _ = _map_definition_type_to_wallet_protocol(data.definitionType)  # Reserved for future use
@@ -165,7 +165,6 @@ class RegistryClient:
         # Create transaction
         randomize_outputs = False
         ca_res = self.wallet.create_action(
-            ctx,
             {
                 "description": f"Register a new {data.definitionType} item",
                 "outputs": [
@@ -189,7 +188,6 @@ class RegistryClient:
         include_tags = True
         include_labels = True
         lo = self.wallet.list_outputs(
-            ctx,
             {
                 "basket": _map_definition_type_to_basket_name(definition_type),
                 "include": "entire transactions",
@@ -239,7 +237,7 @@ class RegistryClient:
 
     def revoke_own_registry_entry(self, ctx: Any, record: Dict[str, Any]) -> Dict[str, Any]:  # NOSONAR - Complexity (26), requires refactoring
         # Owner check: ensure this wallet controls the registry operator key
-        me = self.wallet.get_public_key(ctx, {"identityKey": True}, self.originator) or {}
+        me = self.wallet.get_public_key({"identityKey": True}, self.originator) or {}
         my_pub = cast(str, me.get("publicKey") or "")
         operator = cast(str, record.get("registryOperator") or "")
         if operator and my_pub and operator.lower() != my_pub.lower():
@@ -254,7 +252,6 @@ class RegistryClient:
 
         # Create partial transaction that spends the registry UTXO
         ca_res = self.wallet.create_action(
-            ctx,
             {
                 "description": f"Revoke {record.get('definitionType', 'registry')} item",
                 "inputBEEF": beef,
@@ -290,11 +287,10 @@ class RegistryClient:
             prev_satoshis=satoshis,
             prev_locking_script=bytes.fromhex(cast(str, record.get("lockingScript", ""))) if record.get("lockingScript") else None,
         )
-        unlocking_script = unlocker.sign(ctx, partial_tx, 0)
+        unlocking_script = unlocker.sign(partial_tx, 0)
 
         spends = {0: {"unlockingScript": unlocking_script}}
         sign_res = self.wallet.sign_action(
-            ctx,
             {
                 "reference": reference,
                 "spends": spends,

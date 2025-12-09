@@ -23,13 +23,13 @@ def test_list_outputs_retention_filter_excludes_expired():
     kv.set(None, "rk", "rv", {"use_woc": False})
 
     # Without filter, output should be present
-    res = wallet.list_outputs(None, {"basket": context, "use_woc": False}, "org")
+    res = wallet.list_outputs({"basket": context, "use_woc": False}, "org")
     outs = res.get("outputs") or []
     assert len(outs) >= 1
 
     # With excludeExpired and future nowEpoch, output should be filtered out
     future = int(time.time()) + 60
-    res2 = wallet.list_outputs(None, {"basket": context, "excludeExpired": True, "nowEpoch": future, "use_woc": False}, "org")
+    res2 = wallet.list_outputs({"basket": context, "excludeExpired": True, "nowEpoch": future, "use_woc": False}, "org")
     outs2 = res2.get("outputs") or []
     assert len(outs2) == 0
 
@@ -46,7 +46,7 @@ def test_list_outputs_retention_filter_keeps_unbounded():
 
     kv.set(None, "uk", "uv", {"use_woc": False})
     future = int(time.time()) + 60
-    res = wallet.list_outputs(None, {"basket": context, "excludeExpired": True, "nowEpoch": future, "use_woc": False}, "org")
+    res = wallet.list_outputs({"basket": context, "excludeExpired": True, "nowEpoch": future, "use_woc": False}, "org")
     outs = res.get("outputs") or []
     assert len(outs) >= 1
 

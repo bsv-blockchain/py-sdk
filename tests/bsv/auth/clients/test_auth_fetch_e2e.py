@@ -96,7 +96,7 @@ async def test_authfetch_e2e(auth_server):
         with patch.object(requests.Session, 'post', lambda self, url, **kwargs: original_request(self, 'POST', url, **{**kwargs, 'verify': False})):
             print(f"[test] calling fetch to {base}/authfetch")
             resp = await asyncio.wait_for(
-                asyncio.to_thread(auth_fetch.fetch, None, f"{base}/authfetch", config),
+                asyncio.to_thread(auth_fetch.fetch, f"{base}/authfetch", config),
                 timeout=10,
             )
     

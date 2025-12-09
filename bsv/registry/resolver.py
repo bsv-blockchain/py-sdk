@@ -48,7 +48,6 @@ class WalletWireResolver:
 
     def query(self, ctx: Any, definition_type: DefinitionType, query: Dict[str, Any] = None) -> List[Dict[str, Any]]:  # NOSONAR - query parameter reserved for future filtering capability
         lo = self.wallet.list_outputs(
-            ctx,
             {
                 "basket": _basket_name(definition_type),
                 "include": "entire transactions",

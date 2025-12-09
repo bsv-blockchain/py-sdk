@@ -171,7 +171,7 @@ class TestAuthFetchRetry:
         config = SimplifiedFetchRequestOptions(retry_counter=0)
         
         with pytest.raises(RetryError):
-            auth_fetch.fetch(None, "https://example.com", config)
+            auth_fetch.fetch("https://example.com", config)
     
     def test_retry_error_message(self):
         """Test RetryError message content."""
@@ -182,7 +182,7 @@ class TestAuthFetchRetry:
         config = SimplifiedFetchRequestOptions(retry_counter=0)
         
         with pytest.raises(RetryError, match="maximum number of retries"):
-            auth_fetch.fetch(None, "https://example.com", config)
+            auth_fetch.fetch("https://example.com", config)
 
 
 class TestAuthFetchHelpers:

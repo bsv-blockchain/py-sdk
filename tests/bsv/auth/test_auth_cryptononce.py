@@ -10,7 +10,7 @@ class DummyWallet(WalletImpl):
         self.fail_hmac = fail_hmac
         self.hmac_valid = hmac_valid
         self._hmac_map = {}
-    def create_hmac(self, ctx=None, args=None, originator=None):
+    def create_hmac(self, args=None, originator=None):
         if self.fail_hmac:
             raise RuntimeError('Failed to create HMAC')
         data = args.get('data')
@@ -20,7 +20,7 @@ class DummyWallet(WalletImpl):
         print(f"[DummyWallet] create_hmac: data={data.hex()} hmac={hmac.hex()}")
         self._hmac_map[data] = hmac
         return {'hmac': hmac}
-    def verify_hmac(self, ctx=None, args=None, originator=None):
+    def verify_hmac(self, args=None, originator=None):
         if not self.hmac_valid:
             return {'valid': False}
         data = args.get('data')

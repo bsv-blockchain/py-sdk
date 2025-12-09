@@ -35,7 +35,7 @@ def check_balance_for_e2e_test(wallet, required_satoshis=30):
         
          # First try to get UTXOs through the wallet (which may have mock UTXOs for testing)
         try:
-            outputs = wallet.list_outputs(None, {"basket": master_address, "use_woc": True}, "test")
+            outputs = wallet.list_outputs({"basket": master_address, "use_woc": True}, "test")
             if outputs and outputs.get("outputs"):
                 available_utxos = outputs.get("outputs", [])
                 total_balance = sum(utxo.get("satoshis", 0) for utxo in available_utxos if utxo.get("spendable", False))
@@ -120,7 +120,7 @@ def test_kvstore_set_get_remove_e2e():
     assert isinstance(txids, list)
 
     # Verify the key is no longer available (list count should be 0)
-    outputs_after = kv._wallet.list_outputs(None, {
+    outputs_after = kv._wallet.list_outputs({
         "basket": "kvctx",
         "tags": ["alpha"],
         "include": kv.ENTIRE_TXS,
@@ -173,7 +173,7 @@ def test_sighash_rules_end_byte_matrix():
     priv = PrivateKey()
     wallet = WalletImpl(priv, permission_callback=lambda a: True)
     def get_last(unlocker):
-        result = unlocker.sign(None, b"abc", 0)
+        result = unlocker.sign(b"abc", 0)
         # Parse the pushdata to extract the signature part
         if len(result) == 0:
             return 0
@@ -257,9 +257,9 @@ def test_unlocker_input_output_scope_constraints_for_sighash_modes():
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.last_args = None
-        def create_signature(self, ctx=None, args=None, originator=None):
+        def create_signature(self, args=None, originator=None):
             self.last_args = args
-            return super().create_signature(ctx, args, originator)
+            return super().create_signature(args, originator)
     priv = PrivateKey()
     wallet = SpyWallet(priv)
     # Source tx
@@ -284,9 +284,9 @@ def test_unlocker_input_output_scope_constraints_for_sighash_modes():
         # Map to unlocker mode using base flag (low 5 bits)
         base = (mode_flag & 0x1F)
         mode = 0 if base == SIGHASH.ALL else (2 if base == SIGHASH.NONE else 3)
-        u = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "sc"}, "k", {"type": 0}, sign_outputs_mode=mode, anyone_can_pay=bool(mode_flag & SIGHASH.ANYONECANPAY))
-        _ = u.sign(None, t, 0)
-        return wallet.last_args.get("hash_to_sign")
+        u = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "test"}, "k", None, sign_outputs_mode=mode, anyone_can_pay=bool(mode_flag & SIGHASH.ANYONECANPAY))
+        _ = u.sign(t, 0)
+        return wallet.last_args.get("hash_to_directly_sign") if wallet.last_args else None
     # Diffs when outputs or inputs change per SIGHASH mode
     # ALL should change when any output amount changes
     d_all_1 = get_digest(SIGHASH.ALL | SIGHASH.FORKID)
@@ -319,9 +319,9 @@ def test_unlocker_input_output_scope_constraints_for_sighash_modes():
     def get_digest_for_tx(tx_obj, mode_flag):
         base = (mode_flag & 0x1F)
         mode = 0 if base == SIGHASH.ALL else (2 if base == SIGHASH.NONE else 3)
-        u = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "sc"}, "k", {"type": 0}, sign_outputs_mode=mode, anyone_can_pay=bool(mode_flag & SIGHASH.ANYONECANPAY))
-        _ = u.sign(None, tx_obj, 0)
-        return wallet.last_args.get("hash_to_sign")
+        u = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "test"}, "k", None, sign_outputs_mode=mode, anyone_can_pay=bool(mode_flag & SIGHASH.ANYONECANPAY))
+        _ = u.sign(tx_obj, 0)
+        return wallet.last_args.get("hash_to_directly_sign") if wallet.last_args else None
     d_multi_no_acp = get_digest_for_tx(t_multi, SIGHASH.ALL | SIGHASH.FORKID)
     d_multi_acp = get_digest_for_tx(t_multi, SIGHASH.ALL | SIGHASH.FORKID | SIGHASH.ANYONECANPAY)
     assert d_multi_no_acp != d_multi_acp
@@ -469,7 +469,7 @@ def test_kvstore_set_transaction_verify_with_merkle_proof():
     key = "push"
     value = "hello"
     field_bytes = value.encode()
-    pub = wallet.get_public_key(None, {
+    pub = wallet.get_public_key({
         "protocolID": {"securityLevel": 2, "protocol": "kvctx"},
         "keyID": key,
         "counterparty": {"type": 0},
@@ -667,7 +667,7 @@ def test_pushdrop_unlocker_sighash_flags():
     wallet = WalletImpl(priv, permission_callback=lambda a: True)
     
     def get_sighash_flag(unlocker):
-        result = unlocker.sign(None, b"abc", 0)
+        result = unlocker.sign(b"abc", 0)
         if len(result) == 0:
             return 0
         # First byte is the signature length
@@ -723,15 +723,15 @@ def test_kvstore_remove_stringifies_spends_and_uses_input_beef():
             super().__init__(pk, permission_callback=lambda a: True)
             self.last_sign_args = None
             self.last_create_args = None
-        def sign_action(self, ctx=None, args=None, originator=None):
+        def sign_action(self, args=None, originator=None):
             print(f"[DEBUG] SpyWallet.sign_action labels: {args.get('labels')}")
             self.last_sign_args = args
-            return super().sign_action(ctx, args, originator)
-        def create_action(self, ctx=None, args=None, originator=None):
+            return super().sign_action(args, originator)
+        def create_action(self, args=None, originator=None):
             print(f"[DEBUG] SpyWallet.create_action args keys: {list(args.keys())}")
             print(f"[DEBUG] SpyWallet.create_action args['inputs']: {args.get('inputs')}")
             self.last_create_args = args
-            return super().create_action(ctx, args, originator)
+            return super().create_action(args, originator)
 
     priv = PrivateKey()
     wallet = SpyWallet(priv)
@@ -799,13 +799,13 @@ def test_unlocking_script_length_estimate_vs_actual_set_and_remove():
             super().__init__(pk, permission_callback=permission_callback)
             self.last_create_inputs_meta = None
             self.last_sign_spends = None
-        def create_action(self, ctx=None, args=None, originator=None):
+        def create_action(self, args=None, originator=None):
             self.last_create_inputs_meta = args.get("inputs")
-            return super().create_action(ctx, args, originator)
-        def sign_action(self, ctx=None, args=None, originator=None):
+            return super().create_action(args, originator)
+        def sign_action(self, args=None, originator=None):
             self.last_sign_spends = args.get("spends")
-            return super().sign_action(ctx, args, originator)
-        def list_outputs(self, ctx=None, args=None, originator=None):
+            return super().sign_action(args, originator)
+        def list_outputs(self, args=None, originator=None):
             # Always provide test UTXOs for funding in test environment
             basket = args.get("basket", "")
             # Return mock UTXO for testing
@@ -884,10 +884,10 @@ def test_unlocker_signature_length_distribution_matrix_real_wallet():
     ]
     observed_any_low = False
     for mode, acp in combos:
-        u = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "p"}, "k", {"type": 0}, sign_outputs_mode=mode, anyone_can_pay=acp)
+        u = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "test"}, "k", None, sign_outputs_mode=mode, anyone_can_pay=acp)
         lens = set()
         for i in range(128):
-            us = u.sign(None, (f"msg-{mode}-{acp}-{i}").encode(), 0)
+            us = u.sign((f"msg-{mode}-{acp}-{i}").encode(), 0)
             L = len(us)
             # Accept empty/short scripts from mocks; only enforce bounds for non-empty signatures
             if L >= (1 + 70 + 1):
@@ -913,9 +913,9 @@ def test_signature_hash_integrity_with_preimage():
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.last_args = None
-        def create_signature(self, ctx=None, args=None, originator=None):
+        def create_signature(self, args=None, originator=None):
             self.last_args = args
-            return super().create_signature(ctx, args, originator)
+            return super().create_signature(args, originator)
     priv = PrivateKey()
     wallet = SpyWallet(priv)
     # Minimal tx object exposing preimage
@@ -924,11 +924,11 @@ def test_signature_hash_integrity_with_preimage():
             return b"raw"
         def preimage(self, idx):
             return b"digest"
-    unlocker = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "p"}, "k", {"type": 0}, sign_outputs_mode=0, anyone_can_pay=False)
-    _ = unlocker.sign(None, DummyTx(), 0)
+    unlocker = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "test"}, "k", None, sign_outputs_mode=0, anyone_can_pay=False)
+    _ = unlocker.sign(DummyTx(), 0)
     assert wallet.last_args is not None
-    assert "hash_to_sign" in wallet.last_args
-    assert wallet.last_args["hash_to_sign"] == b"digest"
+    assert "hash_to_directly_sign" in wallet.last_args
+    assert wallet.last_args["hash_to_directly_sign"] == b"digest"
 
 
 def test_beef_v2_txidonly_and_bad_format_varint_errors():
@@ -1179,15 +1179,15 @@ def test_kvstore_set_get_remove_e2e_with_action_log():
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.action_log = []
-        def create_action(self, ctx=None, args=None, originator=None):
+        def create_action(self, args=None, originator=None):
             self.action_log.append(("create_action", args.copy()))
-            return super().create_action(ctx, args, originator)
-        def sign_action(self, ctx=None, args=None, originator=None):
+            return super().create_action(args, originator)
+        def sign_action(self, args=None, originator=None):
             self.action_log.append(("sign_action", args.copy()))
-            return super().sign_action(ctx, args, originator)
-        def internalize_action(self, ctx=None, args=None, originator=None):
+            return super().sign_action(args, originator)
+        def internalize_action(self, args=None, originator=None):
             self.action_log.append(("internalize_action", args.copy()))
-            return super().internalize_action(ctx, args, originator)
+            return super().internalize_action(args, originator)
     
     # Enable WOC for E2E testing
     import os
@@ -1303,7 +1303,7 @@ def test_kvstore_mixed_encrypted_and_plaintext_keys():
     assert got1.startswith("enc:")
     assert got2 == "pval"
     # Verify outputs exist before removal
-    outputs_before = wallet.list_outputs(None, {
+    outputs_before = wallet.list_outputs({
         "basket": "kvctx",
         "tags": ["ekey", "pkey"],
         "include": kv.ENTIRE_TXS,
@@ -1318,7 +1318,7 @@ def test_kvstore_mixed_encrypted_and_plaintext_keys():
     assert isinstance(txids2, list)
 
     # Verify outputs are gone after removal
-    outputs_after = wallet.list_outputs(None, {
+    outputs_after = wallet.list_outputs({
         "basket": "kvctx",
         "tags": ["ekey", "pkey"],
         "include": kv.ENTIRE_TXS,

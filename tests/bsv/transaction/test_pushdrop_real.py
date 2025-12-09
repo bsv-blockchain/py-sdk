@@ -67,7 +67,6 @@ def test_pushdrop_lock_method(mock_wallet):
     
     # Test the REAL lock() method
     result = pd.lock(
-        ctx=None,
         fields=[b'field1', b'field2'],
         protocol_id="test_protocol",
         key_id="test_key",
@@ -89,7 +88,6 @@ def test_pushdrop_lock_without_signature(mock_wallet):
     pd = PushDrop(wallet=mock_wallet)
     
     result = pd.lock(
-        ctx=None,
         fields=[b'data'],
         protocol_id="protocol",
         key_id="key",
@@ -105,7 +103,6 @@ def test_pushdrop_lock_with_empty_fields(mock_wallet):
     pd = PushDrop(wallet=mock_wallet)
     
     result = pd.lock(
-        ctx=None,
         fields=[],
         protocol_id="protocol",
         key_id="key",
@@ -120,7 +117,6 @@ def test_pushdrop_lock_for_self(mock_wallet):
     pd = PushDrop(wallet=mock_wallet)
     
     result = pd.lock(
-        ctx=None,
         fields=[b'self_data'],
         protocol_id="protocol",
         key_id="key",
@@ -136,7 +132,6 @@ def test_pushdrop_lock_position_after(mock_wallet):
     pd = PushDrop(wallet=mock_wallet)
     
     result = pd.lock(
-        ctx=None,
         fields=[b'data'],
         protocol_id="protocol",
         key_id="key",
@@ -247,7 +242,6 @@ def test_pushdrop_lock_with_large_fields(mock_wallet):
     large_field = b'x' * 1000
     
     result = pd.lock(
-        ctx=None,
         fields=[large_field],
         protocol_id="protocol",
         key_id="key",
@@ -264,7 +258,6 @@ def test_pushdrop_lock_with_multiple_fields(mock_wallet):
     fields = [f'field{i}'.encode() for i in range(10)]
     
     result = pd.lock(
-        ctx=None,
         fields=fields,
         protocol_id="protocol",
         key_id="key",
@@ -281,7 +274,6 @@ def test_pushdrop_without_originator(mock_wallet):
     assert pd.originator is None
     
     result = pd.lock(
-        ctx=None,
         fields=[b'data'],
         protocol_id="protocol",
         key_id="key",
@@ -301,7 +293,6 @@ def test_pushdrop_lock_with_dict_protocol_id(mock_wallet):
     }
     
     result = pd.lock(
-        ctx=None,
         fields=[b'data'],
         protocol_id=protocol_dict,
         key_id="key",
@@ -319,7 +310,6 @@ def test_pushdrop_lock_wallet_error_handling(mock_wallet):
     pd = PushDrop(wallet=mock_wallet)
     
     result = pd.lock(
-        ctx=None,
         fields=[b'data'],
         protocol_id="protocol",
         key_id="key",
@@ -339,7 +329,6 @@ def test_pushdrop_lock_signature_error_handling(mock_wallet):
     
     # Should handle gracefully
     result = pd.lock(
-        ctx=None,
         fields=[b'data'],
         protocol_id="protocol",
         key_id="key",
