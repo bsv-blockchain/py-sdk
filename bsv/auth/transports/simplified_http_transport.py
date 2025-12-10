@@ -19,8 +19,13 @@ class SimplifiedHTTPTransport(Transport):
         self._on_data_funcs: List[Callable[[Any, AuthMessage], Optional[Exception]]] = []
         self._lock = threading.Lock()
 
-    def send(self, ctx: Any, message: AuthMessage) -> Optional[Exception]:
-        """Send an AuthMessage via HTTP"""
+    def send(self, message: AuthMessage, ctx: Any = None) -> Optional[Exception]:
+        """Send an AuthMessage via HTTP
+        
+        Args:
+            message: AuthMessage to send
+            ctx: Optional context (for backward compatibility)
+        """
         # Check if any handlers are registered
         with self._lock:
             if not self._on_data_funcs:
@@ -127,7 +132,14 @@ class SimplifiedHTTPTransport(Transport):
             # Step 4: Build AuthMessage from response
             response_msg = self._auth_message_from_general_response(request_id_bytes, resp)
             if response_msg is None:
-                return Exception("Failed to parse response")
+                # If no auth headers in response, check for error status codes
+                # This handles cases where server returns error without auth headers
+                if resp.status_code == 401:
+                    return Exception(f"Authentication failed: {resp.status_code} - {resp.text[:200]}")
+                elif resp.status_code >= 400:
+                    return Exception(f"Server error: {resp.status_code} - {resp.text[:200]}")
+                else:
+                    return Exception("Failed to parse response: missing auth headers")
             
             return self._notify_handlers(ctx, response_msg)
             
@@ -149,17 +161,28 @@ class SimplifiedHTTPTransport(Transport):
         # Read request ID (32 bytes)
         request_id = reader.read(32)
         
+        NEG_ONE = 0xFFFFFFFFFFFFFFFF
+        
         # Read method
         method_length = self._read_varint(reader)
-        method = reader.read(method_length).decode('utf-8') if method_length > 0 else 'GET'
+        if method_length == 0 or method_length == NEG_ONE:
+            method = 'GET'
+        else:
+            method = reader.read(method_length).decode('utf-8')
         
         # Read path
         path_length = self._read_varint(reader)
-        path = reader.read(path_length).decode('utf-8') if path_length > 0 else '/'
+        if path_length == 0 or path_length == NEG_ONE:
+            path = '/'
+        else:
+            path = reader.read(path_length).decode('utf-8')
         
         # Read search (query string)
         search_length = self._read_varint(reader)
-        search = reader.read(search_length).decode('utf-8') if search_length > 0 else ''
+        if search_length == 0 or search_length == NEG_ONE:
+            search = ''
+        else:
+            search = reader.read(search_length).decode('utf-8')
         
         # Read headers
         headers = {}
@@ -172,8 +195,13 @@ class SimplifiedHTTPTransport(Transport):
             headers[key] = value
         
         # Read body
+        # Note: 0xFFFFFFFFFFFFFFFF represents -1 (no body)
         body_length = self._read_varint(reader)
-        body = reader.read(body_length) if body_length > 0 else None
+        NEG_ONE = 0xFFFFFFFFFFFFFFFF
+        if body_length == 0 or body_length == NEG_ONE:
+            body = None
+        else:
+            body = reader.read(body_length)
         
         return request_id, method, path, search, headers, body
     
@@ -324,9 +352,27 @@ class SimplifiedHTTPTransport(Transport):
             handlers = list(self._on_data_funcs)
         for handler in handlers:
             try:
-                err = handler(ctx, message)
+                # Try calling with just message first (Peer.on_data signature)
+                # Fall back to (ctx, message) for backward compatibility
+                import inspect
+                sig = inspect.signature(handler)
+                param_count = len(sig.parameters)
+                
+                if param_count == 1:
+                    err = handler(message)
+                else:
+                    err = handler(ctx, message)
+                    
                 if err:
                     return err
+            except TypeError:
+                # Fallback: try the other signature
+                try:
+                    err = handler(message)
+                    if err:
+                        return err
+                except Exception as e2:
+                    return Exception(f"Handler failed: {e2}")
             except Exception as e:
                 return Exception(f"Handler failed: {e}")
         return None

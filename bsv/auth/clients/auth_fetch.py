@@ -373,7 +373,25 @@ class AuthFetch:
             self._write_varint(buf, 0xFFFFFFFFFFFFFFFF)  # -1
 
     def _write_varint(self, writer: bytearray, value: int):
-        writer.extend(struct.pack('<Q', value))
+        """Write Bitcoin-style variable-length integer.
+        
+        Special case: 0xFFFFFFFFFFFFFFFF represents -1 (no value/empty).
+        """
+        # Handle special -1 case (represented as max uint64)
+        if value == 0xFFFFFFFFFFFFFFFF or value < 0:
+            writer.append(0xFF)
+            writer.extend(struct.pack('<Q', 0xFFFFFFFFFFFFFFFF))
+        elif value < 0xFD:
+            writer.append(value)
+        elif value <= 0xFFFF:
+            writer.append(0xFD)
+            writer.extend(struct.pack('<H', value))
+        elif value <= 0xFFFFFFFF:
+            writer.append(0xFE)
+            writer.extend(struct.pack('<I', value))
+        else:
+            writer.append(0xFF)
+            writer.extend(struct.pack('<Q', value))
 
     def _write_bytes(self, writer: bytearray, b: bytes):
         writer.extend(b)
