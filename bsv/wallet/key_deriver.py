@@ -92,19 +92,24 @@ class KeyDeriver:
     # Derivation core
     # ------------------------------------------------------------------
     def _branch_scalar(self, invoice_number: str, cp_pub: PublicKey) -> int:
-        """Deterministic branch scalar from HMAC(ECDH_x(self_priv, cp_pub), invoice_number).
-        ECDH_x uses the 32-byte x-coordinate of the shared point (TS/Go parity).
+        """Deterministic branch scalar from HMAC(sharedSecret.encode(true), invoiceNumber).
         
-        This implementation now matches TypeScript/Go SDK behavior by using invoiceNumber
-        directly instead of generating a seed internally.
+        This implementation matches TypeScript/Go SDK behavior:
+        - TS SDK: sha256hmac(sharedSecret.encode(true), invoiceNumberBin)
+        - sharedSecret.encode(true) returns compressed public key (33 bytes)
+        
+        Reference: ts-sdk/src/primitives/PublicKey.ts deriveChild()
         """
         invoice_number_bin = invoice_number.encode('utf-8')
-        shared = cp_pub.derive_shared_secret(self._root_private_key)
-        # Our derive_shared_secret returns compressed public key (33 bytes). Take x-coordinate.
-        if isinstance(shared, (bytes, bytearray)) and len(shared) >= 33:
-            shared_key = bytes(shared)[1:33]
+        # derive_shared_secret returns compressed public key (33 bytes)
+        shared_secret = cp_pub.derive_shared_secret(self._root_private_key)
+        
+        # Use the full compressed point (33 bytes) as HMAC key, matching TS SDK
+        if isinstance(shared_secret, (bytes, bytearray)):
+            shared_key = bytes(shared_secret)
         else:
-            shared_key = shared
+            shared_key = shared_secret
+        
         branch = hmac_sha256(shared_key, invoice_number_bin)
         scalar = int.from_bytes(branch, 'big') % CURVE_ORDER
         if os.getenv("BSV_DEBUG", "0") == "1":
@@ -154,19 +159,38 @@ class KeyDeriver:
         return PublicKey(new_point)
 
     def derive_symmetric_key(self, protocol: Protocol, key_id: str, counterparty: Counterparty) -> bytes:
-        """Symmetric 32-byte key: HMAC-SHA256(ECDH(self_root_priv, counterparty_pub), invoice_number).
+        """Derive a symmetric key based on protocol ID, key ID, and counterparty.
         
-        This implementation now matches TypeScript/Go SDK behavior by using invoiceNumber.
+        This implementation matches TypeScript/Go SDK behavior:
+        1. Derive public key and private key for the given protocol/keyID/counterparty
+        2. Compute shared secret between derived private key and derived public key
+        3. Return the X coordinate of the shared secret point (32 bytes)
+        
+        Reference: ts-sdk KeyDeriver.deriveSymmetricKey, go-sdk KeyDeriver.DeriveSymmetricKey
         """
-        invoice_number = self.compute_invoice_number(protocol, key_id)
-        invoice_number_bin = invoice_number.encode('utf-8')
-        cp_pub = counterparty.to_public_key(self._root_public_key)
-        shared = cp_pub.derive_shared_secret(self._root_private_key)
-        if isinstance(shared, (bytes, bytearray)) and len(shared) >= 33:
-            shared_key = bytes(shared)[1:33]
+        # If counterparty is 'anyone', use the anyone public key
+        if counterparty.type == CounterpartyType.ANYONE:
+            counterparty = Counterparty(CounterpartyType.OTHER, PrivateKey(1).public_key())
+        
+        # Derive both public and private keys
+        derived_public_key = self.derive_public_key(protocol, key_id, counterparty, for_self=False)
+        derived_private_key = self.derive_private_key(protocol, key_id, counterparty)
+        
+        # Compute shared secret: derived_private_key.deriveSharedSecret(derived_public_key)
+        # This matches TS SDK: derivedPrivateKey.deriveSharedSecret(derivedPublicKey)
+        shared_secret = derived_private_key.derive_shared_secret(derived_public_key)
+        
+        # The shared secret is a compressed public key (33 bytes)
+        # Extract the X coordinate (bytes 1-32) - this matches TS/Go behavior
+        if isinstance(shared_secret, (bytes, bytearray)) and len(shared_secret) >= 33:
+            x_coordinate = bytes(shared_secret)[1:33]
         else:
-            shared_key = shared
-        return hmac_sha256(shared_key, invoice_number_bin)
+            # Fallback: pad to 32 bytes if needed
+            x_coordinate = bytes(shared_secret)[:32]
+            if len(x_coordinate) < 32:
+                x_coordinate = bytes(32 - len(x_coordinate)) + x_coordinate
+        
+        return x_coordinate
 
     # Identity key (root public)
     def identity_key(self) -> PublicKey:
@@ -176,10 +200,16 @@ class KeyDeriver:
     # Additional helpers required by tests / higher layers
     # ------------------------------------------------------------------
     def compute_invoice_number(self, protocol: Protocol, key_id: str) -> str:
-        """Return a string invoice number: "<security>-<protocol>-<key_id>" with validation."""
+        """Return a string invoice number: "<security>-<protocol>-<key_id>" with validation.
+        
+        Protocol names are converted to lowercase and trimmed, matching TS/Go SDK behavior.
+        Reference: go-sdk/wallet/key_deriver.go computeInvoiceNumber
+        """
         self._validate_protocol(protocol)
         self._validate_key_id(key_id)
-        return f"{protocol.security_level}-{protocol.protocol}-{key_id}"
+        # Normalize protocol name: lowercase and trim whitespace (matches Go/TS SDK)
+        protocol_name = protocol.protocol.strip().lower()
+        return f"{protocol.security_level}-{protocol_name}-{key_id}"
 
     def normalize_counterparty(self, cp: Any) -> PublicKey:
         """Normalize various counterparty representations to a PublicKey.
@@ -196,3 +226,64 @@ class KeyDeriver:
         if isinstance(cp, (bytes, str)):
             return PublicKey(cp)
         raise ValueError("Invalid counterparty configuration")
+
+    # ------------------------------------------------------------------
+    # Reveal methods for key linkage (matches TS/Go SDK)
+    # ------------------------------------------------------------------
+    def reveal_counterparty_secret(self, counterparty: Counterparty) -> bytes:
+        """Reveals the shared secret between the root key and the counterparty.
+        
+        Note: This should not be used for 'self'.
+        
+        Args:
+            counterparty: The counterparty's public key or a predefined value.
+            
+        Returns:
+            The shared secret as compressed public key bytes (33 bytes).
+            
+        Raises:
+            ValueError: If attempting to reveal a shared secret for 'self'.
+            
+        Reference: ts-sdk KeyDeriver.revealCounterpartySecret, go-sdk KeyDeriver.RevealCounterpartySecret
+        """
+        if counterparty.type == CounterpartyType.SELF:
+            raise ValueError("Counterparty secrets cannot be revealed for counterparty=self.")
+        
+        counterparty_key = counterparty.to_public_key(self._root_public_key)
+        
+        # Double-check to ensure not revealing the secret for 'self'
+        self_key = self._root_public_key
+        key_derived_by_self = self._root_private_key.derive_child(self_key, "test")
+        key_derived_by_counterparty = self._root_private_key.derive_child(counterparty_key, "test")
+        
+        if key_derived_by_self.hex() == key_derived_by_counterparty.hex():
+            raise ValueError("Counterparty secrets cannot be revealed if counterparty key is self.")
+        
+        # Return the shared secret as compressed public key
+        shared_secret = self._root_private_key.derive_shared_secret(counterparty_key)
+        return shared_secret
+
+    def reveal_specific_secret(self, counterparty: Counterparty, protocol: Protocol, key_id: str) -> bytes:
+        """Reveals the specific key association for a given protocol ID, key ID, and counterparty.
+        
+        Args:
+            counterparty: The counterparty's public key or a predefined value.
+            protocol: The protocol ID including a security level and protocol name.
+            key_id: The key identifier.
+            
+        Returns:
+            The specific key association as HMAC-SHA256 bytes (32 bytes).
+            
+        Reference: ts-sdk KeyDeriver.revealSpecificSecret, go-sdk KeyDeriver.RevealSpecificSecret
+        """
+        counterparty_key = counterparty.to_public_key(self._root_public_key)
+        
+        # Compute shared secret
+        shared_secret = self._root_private_key.derive_shared_secret(counterparty_key)
+        
+        # Compute invoice number
+        invoice_number = self.compute_invoice_number(protocol, key_id)
+        invoice_number_bin = invoice_number.encode('utf-8')
+        
+        # Compute HMAC-SHA256 using compressed shared secret as key
+        return hmac_sha256(shared_secret, invoice_number_bin)

@@ -121,31 +121,123 @@ class ProtoWallet(WalletInterface):
             return {"error": f"get_public_key: {e}"}
 
     def encrypt(self, args: Dict = None, originator: str = None) -> Dict:
+        """Encrypt data using AES-GCM with a derived symmetric key.
+        
+        This implementation matches TS/Go SDK ProtoWallet.encrypt:
+        1. Derive symmetric key from protocol_id, key_id, counterparty
+        2. Encrypt using AES-GCM (SymmetricKey.encrypt)
+        3. Return ciphertext in format: IV (32 bytes) || ciphertext || authTag (16 bytes)
+        
+        Args format (matches TS SDK WalletEncryptArgs):
+            - plaintext: The data to encrypt (bytes or list of ints)
+            - protocol_id / protocolID: The protocol ID [security_level, protocol_name]
+            - key_id / keyID: The key identifier string
+            - counterparty: The counterparty (optional, defaults to 'self')
+        """
         try:
-            encryption_args = args.get("encryption_args", {})
+            from bsv.primitives.symmetric_key import SymmetricKey
+            
+            # Support both flat args (TS style) and nested encryption_args (legacy)
+            encryption_args = args.get("encryption_args", args)
+            
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.encrypt] enc_args keys={list(encryption_args.keys())}")  # Do not log originator or sensitive argument values
+                print(f"[DEBUG ProtoWallet.encrypt] enc_args keys={list(encryption_args.keys())}")
+            
             self._maybe_seek_permission("Encrypt", encryption_args)
+            
+            # Get plaintext
             plaintext = args.get("plaintext")
             if plaintext is None:
                 return {"error": "encrypt: plaintext is required"}
-            pubkey = self._resolve_encryption_public_key(encryption_args)
-            ciphertext = pubkey.encrypt(plaintext)
-            return {"ciphertext": ciphertext}
+            
+            # Normalize plaintext to bytes
+            if isinstance(plaintext, list):
+                plaintext = bytes(plaintext)
+            elif isinstance(plaintext, str):
+                plaintext = plaintext.encode('utf-8')
+            
+            # Get protocol parameters (support both camelCase and snake_case)
+            protocol_id = encryption_args.get("protocol_id") or encryption_args.get("protocolID")
+            key_id = encryption_args.get("key_id") or encryption_args.get("keyID")
+            counterparty = encryption_args.get("counterparty")
+            
+            if protocol_id is None or key_id is None:
+                return {"error": "encrypt: protocol_id and key_id are required"}
+            
+            # Normalize protocol and counterparty
+            protocol = self._normalize_protocol(protocol_id)
+            cp = self._normalize_counterparty(counterparty)
+            
+            # Derive symmetric key (TS/Go compatible)
+            symmetric_key_bytes = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
+            symmetric_key = SymmetricKey(symmetric_key_bytes)
+            
+            # Encrypt using AES-GCM
+            ciphertext = symmetric_key.encrypt(plaintext)
+            
+            # Return as list of ints (matching TS SDK)
+            return {"ciphertext": list(ciphertext)}
         except Exception as e:
             return {"error": f"encrypt: {e}"}
 
     def decrypt(self, args: Dict = None, originator: str = None) -> Dict:
+        """Decrypt data using AES-GCM with a derived symmetric key.
+        
+        This implementation matches TS/Go SDK ProtoWallet.decrypt:
+        1. Derive symmetric key from protocol_id, key_id, counterparty
+        2. Decrypt using AES-GCM (SymmetricKey.decrypt)
+        3. Expects ciphertext format: IV (32 bytes) || ciphertext || authTag (16 bytes)
+        
+        Args format (matches TS SDK WalletDecryptArgs):
+            - ciphertext: The encrypted data (bytes or list of ints)
+            - protocol_id / protocolID: The protocol ID [security_level, protocol_name]
+            - key_id / keyID: The key identifier string
+            - counterparty: The counterparty (optional, defaults to 'self')
+        """
         try:
-            encryption_args = args.get("encryption_args", {})
+            from bsv.primitives.symmetric_key import SymmetricKey
+            
+            # Support both flat args (TS style) and nested encryption_args (legacy)
+            encryption_args = args.get("encryption_args", args)
+            
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.decrypt] enc_args keys={list(encryption_args.keys())}")  # Do not log originator or sensitive argument values
+                print(f"[DEBUG ProtoWallet.decrypt] enc_args keys={list(encryption_args.keys())}")
+            
             self._maybe_seek_permission("Decrypt", encryption_args)
+            
+            # Get ciphertext
             ciphertext = args.get("ciphertext")
             if ciphertext is None:
                 return {"error": "decrypt: ciphertext is required"}
-            plaintext = self._perform_decrypt_with_args(encryption_args, ciphertext)
-            return {"plaintext": plaintext}
+            
+            # Normalize ciphertext to bytes
+            if isinstance(ciphertext, list):
+                ciphertext = bytes(ciphertext)
+            elif isinstance(ciphertext, str):
+                # Assume hex encoding for strings
+                ciphertext = bytes.fromhex(ciphertext)
+            
+            # Get protocol parameters (support both camelCase and snake_case)
+            protocol_id = encryption_args.get("protocol_id") or encryption_args.get("protocolID")
+            key_id = encryption_args.get("key_id") or encryption_args.get("keyID")
+            counterparty = encryption_args.get("counterparty")
+            
+            if protocol_id is None or key_id is None:
+                return {"error": "decrypt: protocol_id and key_id are required"}
+            
+            # Normalize protocol and counterparty
+            protocol = self._normalize_protocol(protocol_id)
+            cp = self._normalize_counterparty(counterparty)
+            
+            # Derive symmetric key (TS/Go compatible)
+            symmetric_key_bytes = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
+            symmetric_key = SymmetricKey(symmetric_key_bytes)
+            
+            # Decrypt using AES-GCM
+            plaintext = symmetric_key.decrypt(ciphertext)
+            
+            # Return as list of ints (matching TS SDK)
+            return {"plaintext": list(plaintext)}
         except Exception as e:
             return {"error": f"decrypt: {e}"}
 
@@ -197,6 +289,33 @@ class ProtoWallet(WalletInterface):
             )
         else:
             return protocol_id
+
+    def _to_public_key(self, arg) -> PublicKey:
+        """Convert various representations to a PublicKey."""
+        if isinstance(arg, PublicKey):
+            return arg
+        elif isinstance(arg, bytes):
+            return PublicKey(arg)
+        elif isinstance(arg, str):
+            return PublicKey(arg)
+        elif isinstance(arg, dict):
+            # Handle counterparty dict format
+            cp = arg.get("counterparty")
+            if cp is not None:
+                return self._to_public_key(cp)
+            raise ValueError(f"Cannot convert dict to PublicKey: {arg}")
+        else:
+            raise ValueError(f"Cannot convert {type(arg)} to PublicKey")
+
+    def _encode_point(self, point) -> bytes:
+        """Encode a curve point as a compressed public key (33 bytes)."""
+        if point is None:
+            return b'\x00' * 33
+        x, y = point
+        # Compressed format: 0x02 or 0x03 prefix + 32-byte x coordinate
+        prefix = 0x02 if (y % 2 == 0) else 0x03
+        x_bytes = x.to_bytes(32, 'big')
+        return bytes([prefix]) + x_bytes
 
     def _debug_log_verify_params(self, protocol_id, key_id, for_self, cp, pub):
         """Log verification parameters if debug is enabled."""
@@ -308,23 +427,53 @@ class ProtoWallet(WalletInterface):
             return {"error": f"verify_signature: {e}"}
 
     def create_hmac(self, args: Dict = None, originator: str = None) -> Dict:
+        """Create HMAC using a derived symmetric key.
+        
+        This implementation matches TS/Go SDK ProtoWallet.CreateHMAC:
+        1. Derive symmetric key from protocol_id, key_id, counterparty
+        2. Use the derived key to compute HMAC-SHA256 of the data
+        
+        Args format (supports both flat and nested):
+            - data: The data to HMAC (bytes)
+            - protocol_id / protocolID: The protocol ID
+            - key_id / keyID: The key identifier
+            - counterparty: The counterparty (optional, defaults to 'self')
+            - encryption_args: Alternative nested format (legacy)
+            
+        Reference: go-sdk/wallet/proto_wallet.go CreateHMAC
+        """
         try:
-            encryption_args = args.get("encryption_args", {})
-            protocol_id = encryption_args.get("protocol_id")
-            key_id = encryption_args.get("key_id")
+            # Support both flat args (TS/Go style) and nested encryption_args (legacy)
+            encryption_args = args.get("encryption_args", args)
+            
+            # Get protocol parameters (support both camelCase and snake_case)
+            protocol_id = encryption_args.get("protocol_id") or encryption_args.get("protocolID")
+            key_id = encryption_args.get("key_id") or encryption_args.get("keyID")
             counterparty = encryption_args.get("counterparty")
+            
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.create_hmac] enc_args={encryption_args}")
+                print(f"[DEBUG ProtoWallet.create_hmac] protocol_id={protocol_id} key_id={key_id}")
+            
             if protocol_id is None or key_id is None:
                 return {"error": "create_hmac: protocol_id and key_id are required"}
-            if isinstance(protocol_id, dict):
-                protocol = SimpleNamespace(security_level=int(protocol_id.get("securityLevel", 0)), protocol=str(protocol_id.get("protocol", "")))
-            else:
-                protocol = protocol_id
+            
+            # Normalize protocol (supports both camelCase and snake_case)
+            protocol = self._normalize_protocol(protocol_id)
+            
+            # Normalize counterparty (default to 'self' for HMAC, matching Go SDK)
             cp = self._normalize_counterparty(counterparty)
-            shared_secret = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
+            
+            # Derive symmetric key (TS/Go compatible)
+            symmetric_key = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
+            
+            # Get data
             data = args.get("data", b"")
-            hmac_value = hmac.new(shared_secret, data, hashlib.sha256).digest()
+            if isinstance(data, list):
+                data = bytes(data)
+            
+            # Create HMAC using the derived key
+            hmac_value = hmac.new(symmetric_key, data, hashlib.sha256).digest()
+            
             return {"hmac": hmac_value}
         except Exception as e:
             return {"error": f"create_hmac: {e}"}
@@ -1334,45 +1483,207 @@ class ProtoWallet(WalletInterface):
         return {}
     def reveal_counterparty_key_linkage(self, args: Dict = None, originator: str = None) -> Dict:
         """Reveal linkage information between our keys and a counterparty's key.
-
-        The mock implementation does **not** actually compute any linkage bytes. The goal is
-        simply to provide enough behaviour for the unit-tests:
-
-        1. If `seekPermission` is truthy we call the standard `_check_permission` helper which
-           may raise a `PermissionError` that we surface back to the caller as an `error` dict.
-        2. On success we just return an empty dict – the serializer for linkage results does
-           not expect any payload (it always returns an empty `bytes` string).
+        
+        This creates a cryptographic proof that can be verified by a third party.
+        
+        Args format:
+            - counterparty: The counterparty's public key (required)
+            - verifier: The verifier's public key (required)
+            - seekPermission/seek_permission: Whether to ask for permission
+            
+        Returns:
+            - prover: Prover's public key
+            - counterparty: Counterparty's public key
+            - verifier: Verifier's public key
+            - revelation_time: Timestamp of revelation
+            - encrypted_linkage: Encrypted linkage (list of ints)
+            - encrypted_linkage_proof: Encrypted Schnorr proof (list of ints)
+            
+        Reference: go-sdk/wallet/proto_wallet_reveal.go RevealCounterpartyKeyLinkage
         """
         try:
+            from bsv.primitives.schnorr import Schnorr
+            from datetime import datetime, timezone
+            
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.reveal_counterparty_key_linkage] originator={originator} seek_permission={seek_permission} args={args}")
+                print(f"[DEBUG ProtoWallet.reveal_counterparty_key_linkage] originator={originator}")
 
             if seek_permission:
-                # Ask the user (or callback) for permission
                 self._check_permission("Reveal counterparty key linkage")
 
-            # Real implementation would compute and return linkage data here. For test purposes
-            # we return an empty dict which the serializer converts to an empty payload.
-            return {}
+            # Validate inputs
+            counterparty_arg = args.get("counterparty")
+            verifier_arg = args.get("verifier")
+            
+            if counterparty_arg is None:
+                return {"error": "reveal_counterparty_key_linkage: counterparty public key is required"}
+            if verifier_arg is None:
+                return {"error": "reveal_counterparty_key_linkage: verifier public key is required"}
+            
+            # Normalize to PublicKey
+            counterparty_pubkey = self._to_public_key(counterparty_arg)
+            verifier_pubkey = self._to_public_key(verifier_arg)
+            
+            # Get the identity key (root key)
+            identity_key = self.key_deriver._root_private_key
+            prover_public_key = self.key_deriver._root_public_key
+            
+            # Get the shared secret (linkage) as bytes
+            counterparty_obj = Counterparty(CounterpartyType.OTHER, counterparty_pubkey)
+            linkage_bytes = self.key_deriver.reveal_counterparty_secret(counterparty_obj)
+            
+            # Parse linkage as a Point for Schnorr proof
+            linkage_point = PublicKey(linkage_bytes).point()
+            
+            # Generate Schnorr proof
+            schnorr = Schnorr()
+            proof = schnorr.generate_proof(identity_key, prover_public_key, counterparty_pubkey, linkage_point)
+            
+            # Serialize the proof components
+            # Format: R compressed (33 bytes) || S' compressed (33 bytes) || z (32 bytes) = 98 bytes total
+            r_bytes = self._encode_point(proof['R'])
+            s_prime_bytes = self._encode_point(proof['SPrime'])
+            z_bytes = proof['z'].to_bytes(32, 'big')
+            proof_bytes = r_bytes + s_prime_bytes + z_bytes
+            
+            # Create revelation time
+            revelation_time = datetime.now(timezone.utc).isoformat()
+            
+            # Encrypt the linkage for the verifier
+            encrypt_result = self.encrypt({
+                "plaintext": list(linkage_bytes),
+                "protocol_id": {"security_level": 2, "protocol": "counterparty linkage revelation"},
+                "key_id": revelation_time,
+                "counterparty": {"type": CounterpartyType.OTHER, "counterparty": verifier_pubkey}
+            }, originator)
+            
+            if "error" in encrypt_result:
+                return {"error": f"reveal_counterparty_key_linkage: failed to encrypt linkage: {encrypt_result['error']}"}
+            
+            # Encrypt the proof for the verifier
+            encrypt_proof_result = self.encrypt({
+                "plaintext": list(proof_bytes),
+                "protocol_id": {"security_level": 2, "protocol": "counterparty linkage revelation"},
+                "key_id": revelation_time,
+                "counterparty": {"type": CounterpartyType.OTHER, "counterparty": verifier_pubkey}
+            }, originator)
+            
+            if "error" in encrypt_proof_result:
+                return {"error": f"reveal_counterparty_key_linkage: failed to encrypt proof: {encrypt_proof_result['error']}"}
+            
+            return {
+                "prover": prover_public_key.serialize(),
+                "counterparty": counterparty_pubkey.serialize(),
+                "verifier": verifier_pubkey.serialize(),
+                "revelation_time": revelation_time,
+                "encrypted_linkage": encrypt_result["ciphertext"],
+                "encrypted_linkage_proof": encrypt_proof_result["ciphertext"]
+            }
         except Exception as e:
             return {"error": f"reveal_counterparty_key_linkage: {e}"}
 
     def reveal_specific_key_linkage(self, args: Dict = None, originator: str = None) -> Dict:
         """Reveal linkage information for a *specific* derived key.
-
-        Mimics `reveal_counterparty_key_linkage` with the addition of protocol/key parameters
-        but, for this mock implementation, does not actually use them.
+        
+        Args format:
+            - counterparty: The counterparty's public key (required)
+            - verifier: The verifier's public key (required)
+            - protocol_id / protocolID: The protocol ID (required)
+            - key_id / keyID: The key identifier (required)
+            - seekPermission/seek_permission: Whether to ask for permission
+            
+        Returns:
+            - prover: Prover's public key
+            - counterparty: Counterparty's public key
+            - verifier: Verifier's public key
+            - protocol_id: Protocol ID
+            - key_id: Key ID
+            - encrypted_linkage: Encrypted linkage (list of ints)
+            - encrypted_linkage_proof: Encrypted proof (list of ints)
+            - proof_type: Proof type (0 = no proof for specific linkage)
+            
+        Reference: go-sdk/wallet/proto_wallet_reveal.go RevealSpecificKeyLinkage
         """
         try:
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.reveal_specific_key_linkage] originator={originator} seek_permission={seek_permission} args={args}")
+                print(f"[DEBUG ProtoWallet.reveal_specific_key_linkage] originator={originator}")
 
             if seek_permission:
                 self._check_permission("Reveal specific key linkage")
 
-            return {}
+            # Validate inputs
+            verifier_arg = args.get("verifier")
+            if verifier_arg is None:
+                return {"error": "reveal_specific_key_linkage: verifier public key is required"}
+            
+            # Get protocol and key parameters
+            protocol_id = args.get("protocol_id") or args.get("protocolID")
+            key_id = args.get("key_id") or args.get("keyID")
+            counterparty_arg = args.get("counterparty")
+            
+            if protocol_id is None or key_id is None:
+                return {"error": "reveal_specific_key_linkage: protocol_id and key_id are required"}
+            if counterparty_arg is None:
+                return {"error": "reveal_specific_key_linkage: counterparty is required"}
+            
+            # Normalize protocol
+            protocol = self._normalize_protocol(protocol_id)
+            
+            # Normalize to PublicKey
+            verifier_pubkey = self._to_public_key(verifier_arg)
+            counterparty_pubkey = self._to_public_key(counterparty_arg)
+            
+            # Get the identity key (root key)
+            prover_public_key = self.key_deriver._root_public_key
+            
+            # Get the specific secret (linkage)
+            counterparty_obj = Counterparty(CounterpartyType.OTHER, counterparty_pubkey)
+            linkage = self.key_deriver.reveal_specific_secret(
+                counterparty_obj,
+                Protocol(protocol.security_level, protocol.protocol),
+                key_id
+            )
+            
+            # For specific key linkage, we use proof type 0 (no proof)
+            proof_bytes = bytes([0])
+            
+            # Create the special protocol ID for specific linkage revelation
+            encrypt_protocol_name = f"specific linkage revelation {protocol.security_level} {protocol.protocol.strip().lower()}"
+            
+            # Encrypt the linkage for the verifier
+            encrypt_result = self.encrypt({
+                "plaintext": list(linkage),
+                "protocol_id": {"security_level": 2, "protocol": encrypt_protocol_name},
+                "key_id": key_id,
+                "counterparty": {"type": CounterpartyType.OTHER, "counterparty": verifier_pubkey}
+            }, originator)
+            
+            if "error" in encrypt_result:
+                return {"error": f"reveal_specific_key_linkage: failed to encrypt linkage: {encrypt_result['error']}"}
+            
+            # Encrypt the proof for the verifier
+            encrypt_proof_result = self.encrypt({
+                "plaintext": list(proof_bytes),
+                "protocol_id": {"security_level": 2, "protocol": encrypt_protocol_name},
+                "key_id": key_id,
+                "counterparty": {"type": CounterpartyType.OTHER, "counterparty": verifier_pubkey}
+            }, originator)
+            
+            if "error" in encrypt_proof_result:
+                return {"error": f"reveal_specific_key_linkage: failed to encrypt proof: {encrypt_proof_result['error']}"}
+            
+            return {
+                "prover": prover_public_key.serialize(),
+                "counterparty": counterparty_pubkey.serialize(),
+                "verifier": verifier_pubkey.serialize(),
+                "protocol_id": {"security_level": protocol.security_level, "protocol": protocol.protocol},
+                "key_id": key_id,
+                "encrypted_linkage": encrypt_result["ciphertext"],
+                "encrypted_linkage_proof": encrypt_proof_result["ciphertext"],
+                "proof_type": 0
+            }
         except Exception as e:
             return {"error": f"reveal_specific_key_linkage: {e}"}
 
