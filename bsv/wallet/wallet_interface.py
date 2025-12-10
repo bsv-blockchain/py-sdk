@@ -35,11 +35,130 @@ AtomicBEEF = List[int]
 OriginatorDomainNameStringUnder250Bytes = str
 """Fully qualified domain name (FQDN) of the application that originates the request."""
 
-WalletProtocol = List[Union[int, str]]
-"""Security level and protocol identifier: [SecurityLevel, ProtocolID]"""
 
-WalletCounterparty = Union[PubKeyHex, str]
-"""Counterparty identifier: PubKeyHex | 'self' | 'anyone'"""
+# ============================================================================
+# SecurityLevel (matching go-sdk/ts-sdk)
+# ============================================================================
+
+SecurityLevel = int
+"""
+Security level for wallet operations.
+
+Values:
+    0 = Silently grants the request with no user interaction.
+    1 = Requires user approval for every application.
+    2 = Requires user approval per counterparty per application.
+
+Reference: go-sdk/wallet/wallet.go (SecurityLevel)
+"""
+
+SECURITY_LEVEL_SILENT = 0
+"""Silently grants the request with no user interaction."""
+
+SECURITY_LEVEL_EVERY_APP = 1
+"""Requires user approval for every application."""
+
+SECURITY_LEVEL_EVERY_APP_AND_COUNTERPARTY = 2
+"""Requires user approval per counterparty per application."""
+
+
+# ============================================================================
+# WalletProtocol (matching go-sdk Protocol struct)
+# ============================================================================
+
+class WalletProtocol(TypedDict):
+    """Protocol definition with security level and protocol name.
+
+    This matches go-sdk's Protocol struct:
+        type Protocol struct {
+            SecurityLevel SecurityLevel
+            Protocol      string
+        }
+
+    Attributes:
+        securityLevel: Access control level (0, 1, or 2).
+        protocol: Protocol identifier string (5-400 bytes).
+
+    Example:
+        >>> protocol: WalletProtocol = {
+        ...     "securityLevel": 2,
+        ...     "protocol": "my protocol"
+        ... }
+    """
+
+    securityLevel: SecurityLevel
+    protocol: str
+
+
+# Legacy type alias for backwards compatibility with list format
+WalletProtocolLegacy = List[Union[int, str]]
+"""Legacy format: [SecurityLevel, ProtocolID]. Use WalletProtocol dict instead."""
+
+
+# ============================================================================
+# CounterpartyType (matching go-sdk)
+# ============================================================================
+
+CounterpartyType = int
+"""
+Type of counterparty in a cryptographic operation.
+
+Values:
+    0 = Uninitialized (default/unknown state)
+    1 = Anyone (special constant for 'anyone' counterparty)
+    2 = Self (derive vs self)
+    3 = Other (explicit public key provided)
+
+Reference: go-sdk/wallet/wallet.go (CounterpartyType)
+"""
+
+COUNTERPARTY_UNINITIALIZED = 0
+"""Uninitialized/default state."""
+
+COUNTERPARTY_TYPE_ANYONE = 1
+"""Special constant for 'anyone' counterparty."""
+
+COUNTERPARTY_TYPE_SELF = 2
+"""Derive vs self."""
+
+COUNTERPARTY_TYPE_OTHER = 3
+"""Explicit public key provided."""
+
+
+class WalletCounterparty(TypedDict, total=False):
+    """Counterparty in a cryptographic operation.
+
+    This matches go-sdk's Counterparty struct:
+        type Counterparty struct {
+            Type         CounterpartyType
+            Counterparty *ec.PublicKey
+        }
+
+    Attributes:
+        type: Counterparty type (0=uninitialized, 1=anyone, 2=self, 3=other).
+        counterparty: Public key hex string (required when type=3/other).
+
+    Example:
+        >>> # Self counterparty
+        >>> cp: WalletCounterparty = {"type": 2}
+        >>>
+        >>> # Anyone counterparty
+        >>> cp: WalletCounterparty = {"type": 1}
+        >>>
+        >>> # Specific counterparty with public key
+        >>> cp: WalletCounterparty = {
+        ...     "type": 3,
+        ...     "counterparty": "02abc123..."
+        ... }
+    """
+
+    type: CounterpartyType
+    counterparty: PubKeyHex
+
+
+# Legacy type alias for backwards compatibility with string format
+WalletCounterpartyLegacy = Union[PubKeyHex, str]
+"""Legacy format: PubKeyHex | 'self' | 'anyone'. Use WalletCounterparty dict instead."""
 
 
 # ============================================================================
@@ -197,6 +316,257 @@ class RevealSpecificKeyLinkageResult(TypedDict):
 
 
 # ============================================================================
+# Args Types (matching ts-sdk)
+# ============================================================================
+
+
+class WalletEncryptionArgs(TypedDict, total=False):
+    """Base arguments for encryption-related operations.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts (WalletEncryptionArgs)
+
+    Attributes:
+        protocolID: Security level and protocol string [SecurityLevel, ProtocolString].
+        keyID: Key identifier string (max 800 bytes).
+        counterparty: Counterparty identifier ('self', 'anyone', or PubKeyHex).
+        privileged: Whether this is a privileged operation. Default False.
+        privilegedReason: Reason for privileged access (5-50 bytes).
+        seekPermission: Whether to seek user permission. Default True.
+    """
+
+    protocolID: WalletProtocol
+    keyID: str
+    counterparty: WalletCounterparty
+    privileged: bool
+    privilegedReason: str
+    seekPermission: bool
+
+
+class GetPublicKeyArgs(TypedDict, total=False):
+    """Arguments for getPublicKey method.
+
+    When identityKey is True, WalletEncryptionArgs fields are not required.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts (GetPublicKeyArgs)
+
+    Attributes:
+        identityKey: If True, returns the wallet's identity key.
+        protocolID: Security level and protocol string [SecurityLevel, ProtocolString].
+        keyID: Key identifier string.
+        counterparty: Counterparty identifier.
+        forSelf: Whether to derive key for self. Default False.
+        privileged: Whether this is a privileged operation.
+        privilegedReason: Reason for privileged access.
+        seekPermission: Whether to seek user permission.
+    """
+
+    identityKey: bool
+    protocolID: WalletProtocol
+    keyID: str
+    counterparty: WalletCounterparty
+    forSelf: bool
+    privileged: bool
+    privilegedReason: str
+    seekPermission: bool
+
+
+class CreateSignatureArgs(TypedDict, total=False):
+    """Arguments for createSignature method.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts (CreateSignatureArgs)
+
+    Attributes:
+        data: Data to sign (bytes or List[int]).
+        hashToDirectlySign: Pre-hashed data to sign directly.
+        protocolID: Security level and protocol string.
+        keyID: Key identifier string.
+        counterparty: Counterparty identifier.
+        forSelf: Whether to sign for self.
+        privileged: Whether this is a privileged operation.
+        privilegedReason: Reason for privileged access.
+        seekPermission: Whether to seek user permission.
+    """
+
+    data: bytes
+    hashToDirectlySign: bytes
+    protocolID: WalletProtocol
+    keyID: str
+    counterparty: WalletCounterparty
+    forSelf: bool
+    privileged: bool
+    privilegedReason: str
+    seekPermission: bool
+
+
+class VerifySignatureArgs(TypedDict, total=False):
+    """Arguments for verifySignature method.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts (VerifySignatureArgs)
+
+    Attributes:
+        data: Original data that was signed.
+        hashToDirectlyVerify: Pre-hashed data to verify against.
+        signature: The DER-encoded ECDSA signature to verify.
+        protocolID: Security level and protocol string.
+        keyID: Key identifier string.
+        counterparty: Counterparty identifier.
+        forSelf: Whether the signature was created for self.
+        privileged: Whether this is a privileged operation.
+        privilegedReason: Reason for privileged access.
+        seekPermission: Whether to seek user permission.
+    """
+
+    data: bytes
+    hashToDirectlyVerify: bytes
+    signature: bytes
+    protocolID: WalletProtocol
+    keyID: str
+    counterparty: WalletCounterparty
+    forSelf: bool
+    privileged: bool
+    privilegedReason: str
+    seekPermission: bool
+
+
+class EncryptArgs(TypedDict, total=False):
+    """Arguments for encrypt method.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts (WalletEncryptArgs)
+
+    Attributes:
+        plaintext: Data to encrypt.
+        protocolID: Security level and protocol string.
+        keyID: Key identifier string.
+        counterparty: Counterparty identifier.
+        privileged: Whether this is a privileged operation.
+        privilegedReason: Reason for privileged access.
+        seekPermission: Whether to seek user permission.
+    """
+
+    plaintext: bytes
+    protocolID: WalletProtocol
+    keyID: str
+    counterparty: WalletCounterparty
+    privileged: bool
+    privilegedReason: str
+    seekPermission: bool
+
+
+class DecryptArgs(TypedDict, total=False):
+    """Arguments for decrypt method.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts (WalletDecryptArgs)
+
+    Attributes:
+        ciphertext: Data to decrypt.
+        protocolID: Security level and protocol string.
+        keyID: Key identifier string.
+        counterparty: Counterparty identifier.
+        privileged: Whether this is a privileged operation.
+        privilegedReason: Reason for privileged access.
+        seekPermission: Whether to seek user permission.
+    """
+
+    ciphertext: bytes
+    protocolID: WalletProtocol
+    keyID: str
+    counterparty: WalletCounterparty
+    privileged: bool
+    privilegedReason: str
+    seekPermission: bool
+
+
+class CreateHmacArgs(TypedDict, total=False):
+    """Arguments for createHmac method.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts (CreateHmacArgs)
+
+    Attributes:
+        data: Data to create HMAC for.
+        protocolID: Security level and protocol string.
+        keyID: Key identifier string.
+        counterparty: Counterparty identifier.
+        privileged: Whether this is a privileged operation.
+        privilegedReason: Reason for privileged access.
+        seekPermission: Whether to seek user permission.
+    """
+
+    data: bytes
+    protocolID: WalletProtocol
+    keyID: str
+    counterparty: WalletCounterparty
+    privileged: bool
+    privilegedReason: str
+    seekPermission: bool
+
+
+class VerifyHmacArgs(TypedDict, total=False):
+    """Arguments for verifyHmac method.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts (VerifyHmacArgs)
+
+    Attributes:
+        data: Original data.
+        hmac: HMAC to verify.
+        protocolID: Security level and protocol string.
+        keyID: Key identifier string.
+        counterparty: Counterparty identifier.
+        privileged: Whether this is a privileged operation.
+        privilegedReason: Reason for privileged access.
+        seekPermission: Whether to seek user permission.
+    """
+
+    data: bytes
+    hmac: bytes
+    protocolID: WalletProtocol
+    keyID: str
+    counterparty: WalletCounterparty
+    privileged: bool
+    privilegedReason: str
+    seekPermission: bool
+
+
+class RevealCounterpartyKeyLinkageArgs(TypedDict, total=False):
+    """Arguments for revealCounterpartyKeyLinkage method.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts
+
+    Attributes:
+        counterparty: Public key of the counterparty.
+        verifier: Public key of the verifier.
+        privileged: Whether this is a privileged operation.
+        privilegedReason: Reason for privileged access.
+    """
+
+    counterparty: PubKeyHex
+    verifier: PubKeyHex
+    privileged: bool
+    privilegedReason: str
+
+
+class RevealSpecificKeyLinkageArgs(TypedDict, total=False):
+    """Arguments for revealSpecificKeyLinkage method.
+
+    Reference: ts-sdk/src/wallet/Wallet.interfaces.ts
+
+    Attributes:
+        counterparty: Counterparty identifier.
+        verifier: Public key of the verifier.
+        protocolID: Security level and protocol string.
+        keyID: Key identifier string.
+        privileged: Whether this is a privileged operation.
+        privilegedReason: Reason for privileged access.
+    """
+
+    counterparty: WalletCounterparty
+    verifier: PubKeyHex
+    protocolID: WalletProtocol
+    keyID: str
+    privileged: bool
+    privilegedReason: str
+
+
+# ============================================================================
 # WalletInterface Protocol
 # ============================================================================
 
@@ -262,7 +632,7 @@ class WalletInterface(Protocol):
     
     def get_public_key(
         self,
-        args: Dict[str, Any],
+        args: GetPublicKeyArgs,
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> GetPublicKeyResult:
         """
@@ -312,7 +682,7 @@ class WalletInterface(Protocol):
     
     def create_signature(
         self,
-        args: Dict[str, Any],
+        args: CreateSignatureArgs,
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> CreateSignatureResult:
         """
@@ -474,39 +844,39 @@ class WalletInterface(Protocol):
     
     def encrypt(
         self,
-        args: Dict[str, Any],
+        args: EncryptArgs,
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> EncryptResult:
         """Encrypt data using derived keys."""
         ...
-    
+
     def decrypt(
         self,
-        args: Dict[str, Any],
+        args: DecryptArgs,
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> DecryptResult:
         """Decrypt data using derived keys."""
         ...
-    
+
     def create_hmac(
         self,
-        args: Dict[str, Any],
+        args: CreateHmacArgs,
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> CreateHmacResult:
         """Create HMAC for data authentication."""
         ...
-    
+
     def verify_signature(
         self,
-        args: Dict[str, Any],
+        args: VerifySignatureArgs,
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> VerifySignatureResult:
         """Verify a digital signature."""
         ...
-    
+
     def verify_hmac(
         self,
-        args: Dict[str, Any],
+        args: VerifyHmacArgs,
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> VerifyHmacResult:
         """Verify an HMAC."""
@@ -602,15 +972,15 @@ class WalletInterface(Protocol):
     
     def reveal_counterparty_key_linkage(
         self,
-        args: Dict[str, Any],
+        args: RevealCounterpartyKeyLinkageArgs,
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> RevealCounterpartyKeyLinkageResult:
         """Reveal key linkage between ourselves and a counterparty."""
         ...
-    
+
     def reveal_specific_key_linkage(
         self,
-        args: Dict[str, Any],
+        args: RevealSpecificKeyLinkageArgs,
         originator: Optional[OriginatorDomainNameStringUnder250Bytes] = None
     ) -> RevealSpecificKeyLinkageResult:
         """Reveal specific key linkage for a protocol and key combination."""
@@ -707,7 +1077,7 @@ def is_wallet_interface(obj: Any) -> bool:
 __all__ = [
     # Protocol
     'WalletInterface',
-    
+
     # Type Aliases
     'HexString',
     'PubKeyHex',
@@ -715,9 +1085,32 @@ __all__ = [
     'Base64String',
     'AtomicBEEF',
     'OriginatorDomainNameStringUnder250Bytes',
+    'SecurityLevel',
+    'SECURITY_LEVEL_SILENT',
+    'SECURITY_LEVEL_EVERY_APP',
+    'SECURITY_LEVEL_EVERY_APP_AND_COUNTERPARTY',
     'WalletProtocol',
+    'WalletProtocolLegacy',
+    'CounterpartyType',
+    'COUNTERPARTY_UNINITIALIZED',
+    'COUNTERPARTY_TYPE_ANYONE',
+    'COUNTERPARTY_TYPE_SELF',
+    'COUNTERPARTY_TYPE_OTHER',
     'WalletCounterparty',
-    
+    'WalletCounterpartyLegacy',
+
+    # Args Types
+    'WalletEncryptionArgs',
+    'GetPublicKeyArgs',
+    'CreateSignatureArgs',
+    'VerifySignatureArgs',
+    'EncryptArgs',
+    'DecryptArgs',
+    'CreateHmacArgs',
+    'VerifyHmacArgs',
+    'RevealCounterpartyKeyLinkageArgs',
+    'RevealSpecificKeyLinkageArgs',
+
     # Result Types
     'GetPublicKeyResult',
     'CreateSignatureResult',
@@ -744,7 +1137,7 @@ __all__ = [
     'GetVersionResult',
     'RevealCounterpartyKeyLinkageResult',
     'RevealSpecificKeyLinkageResult',
-    
+
     # Helpers
     'is_wallet_interface',
 ]

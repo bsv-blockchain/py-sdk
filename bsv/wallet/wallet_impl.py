@@ -1,7 +1,18 @@
 from typing import Any, Dict, Optional, List
 from types import SimpleNamespace
 import os
-from .wallet_interface import WalletInterface
+from .wallet_interface import (
+    WalletInterface,
+    GetPublicKeyArgs,
+    CreateSignatureArgs,
+    VerifySignatureArgs,
+    EncryptArgs,
+    DecryptArgs,
+    CreateHmacArgs,
+    VerifyHmacArgs,
+    RevealCounterpartyKeyLinkageArgs,
+    RevealSpecificKeyLinkageArgs,
+)
 from .key_deriver import KeyDeriver, Protocol, Counterparty, CounterpartyType
 from bsv.keys import PrivateKey, PublicKey
 import hashlib
@@ -92,7 +103,7 @@ class ProtoWallet(WalletInterface):
         # None or unknown -> self
         return Counterparty(CounterpartyType.SELF)
 
-    def get_public_key(self, args: Dict = None, originator: str = None) -> Dict:
+    def get_public_key(self, args: GetPublicKeyArgs = None, originator: str = None) -> Dict:
         try:
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
@@ -112,6 +123,9 @@ class ProtoWallet(WalletInterface):
                 return {"error": "get_public_key: protocolID and keyID are required for derived key"}
             if isinstance(protocol_id, dict):
                 protocol = SimpleNamespace(security_level=int(protocol_id.get("securityLevel", 0)), protocol=str(protocol_id.get("protocol", "")))
+            elif isinstance(protocol_id, (list, tuple)):
+                # Handle list/tuple format: [security_level, protocol_name]
+                protocol = SimpleNamespace(security_level=int(protocol_id[0]), protocol=str(protocol_id[1]))
             else:
                 protocol = protocol_id
             cp = self._normalize_counterparty(counterparty)
@@ -120,7 +134,7 @@ class ProtoWallet(WalletInterface):
         except Exception as e:
             return {"error": f"get_public_key: {e}"}
 
-    def encrypt(self, args: Dict = None, originator: str = None) -> Dict:
+    def encrypt(self, args: EncryptArgs = None, originator: str = None) -> Dict:
         """Encrypt data using AES-GCM with a derived symmetric key.
         
         This implementation matches TS/Go SDK ProtoWallet.encrypt:
@@ -180,7 +194,7 @@ class ProtoWallet(WalletInterface):
         except Exception as e:
             return {"error": f"encrypt: {e}"}
 
-    def decrypt(self, args: Dict = None, originator: str = None) -> Dict:
+    def decrypt(self, args: DecryptArgs = None, originator: str = None) -> Dict:
         """Decrypt data using AES-GCM with a derived symmetric key.
         
         This implementation matches TS/Go SDK ProtoWallet.decrypt:
@@ -241,7 +255,7 @@ class ProtoWallet(WalletInterface):
         except Exception as e:
             return {"error": f"decrypt: {e}"}
 
-    def create_signature(self, args: Dict = None, originator: str = None) -> Dict:
+    def create_signature(self, args: CreateSignatureArgs = None, originator: str = None) -> Dict:
         try:
             # BRC-100 compliant flat structure (Python snake_case)
             protocol_id = args.get("protocol_id")
@@ -381,7 +395,7 @@ class ProtoWallet(WalletInterface):
             except Exception as e:
                 print(f"[WALLET VERIFY] Signature format check error: {e}")
 
-    def verify_signature(self, args: Dict = None, originator: str = None) -> Dict:
+    def verify_signature(self, args: VerifySignatureArgs = None, originator: str = None) -> Dict:
         try:
             # Extract and validate parameters
             protocol_id = args.get("protocol_id")
@@ -426,7 +440,7 @@ class ProtoWallet(WalletInterface):
         except Exception as e:
             return {"error": f"verify_signature: {e}"}
 
-    def create_hmac(self, args: Dict = None, originator: str = None) -> Dict:
+    def create_hmac(self, args: CreateHmacArgs = None, originator: str = None) -> Dict:
         """Create HMAC using a derived symmetric key.
         
         This implementation matches TS/Go SDK ProtoWallet.CreateHMAC:
@@ -498,7 +512,7 @@ class ProtoWallet(WalletInterface):
             except Exception as dbg_e:
                 print(f"[DEBUG ProtoWallet.verify_hmac] cp normalization error: {dbg_e}")
 
-    def verify_hmac(self, args: Dict = None, originator: str = None) -> Dict:
+    def verify_hmac(self, args: VerifyHmacArgs = None, originator: str = None) -> Dict:
         try:
             # Extract parameters
             encryption_args, protocol_id, key_id, counterparty, data, hmac_value = self._extract_hmac_params(args)
@@ -1481,7 +1495,9 @@ class ProtoWallet(WalletInterface):
         return {}
     def relinquish_output(self, args: Dict = None, originator: str = None) -> Dict:
         return {}
-    def reveal_counterparty_key_linkage(self, args: Dict = None, originator: str = None) -> Dict:
+    def reveal_counterparty_key_linkage(
+        self, args: RevealCounterpartyKeyLinkageArgs = None, originator: str = None
+    ) -> Dict:
         """Reveal linkage information between our keys and a counterparty's key.
         
         This creates a cryptographic proof that can be verified by a third party.
@@ -1583,7 +1599,9 @@ class ProtoWallet(WalletInterface):
         except Exception as e:
             return {"error": f"reveal_counterparty_key_linkage: {e}"}
 
-    def reveal_specific_key_linkage(self, args: Dict = None, originator: str = None) -> Dict:
+    def reveal_specific_key_linkage(
+        self, args: RevealSpecificKeyLinkageArgs = None, originator: str = None
+    ) -> Dict:
         """Reveal linkage information for a *specific* derived key.
         
         Args format:

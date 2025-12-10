@@ -36,14 +36,28 @@ def counterparty():
 
 @pytest.mark.parametrize("plain", [b"hello", b"test123", "秘密".encode("utf-8")])
 def test_encrypt_decrypt_identity(wallet, plain):
-    # identityKeyで暗号化・復号
+    # Encrypt/decrypt with protocol_id and key_id (required by TS/Go SDK)
     args = {
-        "encryption_args": {},
+        "encryption_args": {
+            "protocol_id": {"securityLevel": 1, "protocol": "test"},
+            "key_id": "default",
+            "forSelf": True
+        },
         "plaintext": plain
     }
     enc = wallet.encrypt(args, TEST_PASSPHRASE)
-    dec = wallet.decrypt({"encryption_args": {}, "ciphertext": enc["ciphertext"]}, TEST_PASSPHRASE)
-    assert dec["plaintext"] == plain
+    assert "ciphertext" in enc, f"Expected ciphertext, got: {enc}"
+    
+    dec = wallet.decrypt({
+        "encryption_args": {
+            "protocol_id": {"securityLevel": 1, "protocol": "test"},
+            "key_id": "default",
+            "forSelf": True
+        },
+        "ciphertext": enc["ciphertext"]
+    }, TEST_PASSPHRASE)
+    # Result is List[int] (matching TS SDK Byte[] format)
+    assert dec["plaintext"] == list(plain)
 
 
 def test_get_public_key_identity(wallet):
@@ -69,7 +83,7 @@ def test_encrypt_decrypt_with_protocol_two_parties():
     # Encrypt with Alice for Bob; decrypt with Bob
     alice = ProtoWallet(PrivateKey(1001), permission_callback=lambda a: True)
     bob = ProtoWallet(PrivateKey(1002), permission_callback=lambda a: True)
-    protocol = Protocol(1, "testprotocol")
+    protocol = Protocol(1, "testprotocol")  # noqa: F841
     key_id = "key1"
     plain = b"abcxyz"
 
@@ -92,7 +106,8 @@ def test_encrypt_decrypt_with_protocol_two_parties():
         "ciphertext": enc["ciphertext"],
     }
     dec = bob.decrypt(dec_args, TEST_PASSPHRASE)
-    assert dec["plaintext"] == plain
+    # Result is List[int] (matching TS SDK Byte[] format)
+    assert dec["plaintext"] == list(plain)
 
 
 def test_seek_permission_prompt(monkeypatch):
@@ -518,7 +533,8 @@ def test_encrypt_decrypt_with_forself(wallet):
         "ciphertext": encrypted["ciphertext"]
     }
     decrypted = wallet.decrypt(dec_args, TEST_PASSPHRASE)
-    assert decrypted["plaintext"] == plain
+    # Result is List[int] (matching TS SDK Byte[] format)
+    assert decrypted["plaintext"] == list(plain)
 
 
 def test_wallet_initialization_with_woc_api_key():
