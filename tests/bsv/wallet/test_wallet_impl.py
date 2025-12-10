@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from bsv.keys import PrivateKey, PublicKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.wallet.key_deriver import Protocol
 
 
@@ -28,7 +28,7 @@ TEST_PASSPHRASE = "test"  # NOSONAR - Test passphrase for unit tests only
 @pytest.fixture
 def wallet():
     priv = PrivateKey()
-    return WalletImpl(priv, permission_callback=lambda action: True)
+    return ProtoWallet(priv, permission_callback=lambda action: True)
 
 @pytest.fixture
 def counterparty():
@@ -67,8 +67,8 @@ def test_get_public_key_identity(wallet):
 
 def test_encrypt_decrypt_with_protocol_two_parties():
     # Encrypt with Alice for Bob; decrypt with Bob
-    alice = WalletImpl(PrivateKey(1001), permission_callback=lambda a: True)
-    bob = WalletImpl(PrivateKey(1002), permission_callback=lambda a: True)
+    alice = ProtoWallet(PrivateKey(1001), permission_callback=lambda a: True)
+    bob = ProtoWallet(PrivateKey(1002), permission_callback=lambda a: True)
     protocol = Protocol(1, "testprotocol")
     key_id = "key1"
     plain = b"abcxyz"
@@ -99,7 +99,7 @@ def test_seek_permission_prompt(monkeypatch):
     """Test that wallet prompts for permission via input() when no callback is provided."""
     priv = PrivateKey()
     # permission_callback=None uses input() for permission
-    wallet = WalletImpl(priv)
+    wallet = ProtoWallet(priv)
     called = {}
     
     def fake_input(prompt):
@@ -133,7 +133,7 @@ def test_seek_permission_prompt(monkeypatch):
 def test_seek_permission_denied_returns_error_dict():
     """Test that wallet returns error dict when permission callback denies access."""
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda action: False)
+    wallet = ProtoWallet(priv, permission_callback=lambda action: False)
     
     args = {"seekPermission": True, "identityKey": True}
     res = wallet.get_public_key(args, TEST_PASSPHRASE)
@@ -471,7 +471,7 @@ def test_get_network(wallet):
     """Test get_network returns mocknet by default."""
     result = wallet.get_network({}, TEST_PASSPHRASE)
     assert "network" in result
-    # WalletImpl returns "mocknet" by default
+    # ProtoWallet returns "mocknet" by default
     assert result["network"] in ["mocknet", "mainnet"]
 
 
@@ -525,7 +525,7 @@ def test_wallet_initialization_with_woc_api_key():
     """Test wallet initialization with WhatsOnChain API key."""
     priv = PrivateKey()
     api_key = os.getenv('WOC_API_KEY', 'test_woc_api_key_fallback')  # noqa: S105  # NOSONAR
-    wallet = WalletImpl(priv, woc_api_key=api_key)
+    wallet = ProtoWallet(priv, woc_api_key=api_key)
     assert wallet._woc_api_key == api_key
 
 
@@ -533,5 +533,5 @@ def test_wallet_initialization_with_load_env():
     """Test wallet initialization with load_env flag."""
     priv = PrivateKey()
     # Should not raise even if dotenv is not available
-    wallet = WalletImpl(priv, load_env=True)
+    wallet = ProtoWallet(priv, load_env=True)
     assert hasattr(wallet, 'create_action')

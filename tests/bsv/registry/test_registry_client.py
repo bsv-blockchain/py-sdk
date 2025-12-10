@@ -2,7 +2,7 @@ import unittest
 from typing import Any, Dict, List
 
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.registry.client import RegistryClient
 from bsv.registry.types import (
     BasketDefinitionData,
@@ -14,7 +14,7 @@ from bsv.registry.resolver import WalletWireResolver
 
 class TestRegistryClient(unittest.TestCase):
     def setUp(self) -> None:
-        self.wallet = WalletImpl(PrivateKey())
+        self.wallet = ProtoWallet(PrivateKey())
         self.client = RegistryClient(self.wallet, originator="test-registry")
 
     def test_register_and_list_basket(self):

@@ -1,7 +1,7 @@
 import base64
 
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.keystore.interfaces import KVStoreConfig
 from bsv.keystore.local_kv_store import LocalKVStore
 
@@ -21,7 +21,7 @@ def load_or_create_wallet_for_e2e():
         save_private_key_to_file(priv, wallet_path)
         print(f"[E2E] Saved to {wallet_path}")
     
-    return WalletImpl(priv, permission_callback=lambda a: True)
+    return ProtoWallet(priv, permission_callback=lambda a: True)
 
 
 def check_balance_for_e2e_test(wallet, required_satoshis=30):
@@ -131,7 +131,7 @@ def test_kvstore_set_get_remove_e2e():
 
 def test_kvstore_remove_multiple_outputs_looping():
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=False, fee_rate=2))
 
     # Simulate multiple set() calls for the same key resulting in multiple outputs
@@ -146,7 +146,7 @@ def test_kvstore_remove_multiple_outputs_looping():
 
 def test_kvstore_remove_paging_and_relinquish_path():
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=False, fee_rate=2))
     for i in range(5):
         kv.set(None, "pg", f"v{i}")
@@ -171,7 +171,7 @@ def test_sighash_rules_end_byte_matrix():
     # Verify end byte matrix for ALL/NONE/SINGLE × ACP
     from bsv.transaction.pushdrop import PushDropUnlocker
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     def get_last(unlocker):
         result = unlocker.sign(b"abc", 0)
         # Parse the pushdata to extract the signature part
@@ -253,7 +253,7 @@ def test_unlocker_input_output_scope_constraints_for_sighash_modes():
     from bsv.script.script import Script
     from bsv.transaction.pushdrop import PushDropUnlocker
     from bsv.constants import SIGHASH
-    class SpyWallet(WalletImpl):
+    class SpyWallet(ProtoWallet):
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.last_args = None
@@ -464,7 +464,7 @@ def test_kvstore_set_transaction_verify_with_merkle_proof():
     from bsv.transaction.pushdrop import build_lock_before_pushdrop
     from bsv.merkle_path import MerklePath
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     _ = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=False, fee_rate=2))
     key = "push"
     value = "hello"
@@ -664,7 +664,7 @@ def test_vectors_dir_verify_full_generic():
 def test_pushdrop_unlocker_sighash_flags():
     from bsv.transaction.pushdrop import PushDropUnlocker
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     
     def get_sighash_flag(unlocker):
         result = unlocker.sign(b"abc", 0)
@@ -691,7 +691,7 @@ def test_pushdrop_unlocker_sighash_flags():
 def test_kvstore_get_uses_beef_when_available():
     """Verify that get operation uses BEEF data when available from wallet."""
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=False, fee_rate=2))
 
     # Set to create outputs with BEEF data
@@ -718,7 +718,7 @@ def test_kvstore_get_uses_beef_when_available():
 # Production code should guard against broadcasting or signing empty-output transactions.
 def test_kvstore_remove_stringifies_spends_and_uses_input_beef():
     # Spy wallet to observe sign_action args and create_action inputBEEF
-    class SpyWallet(WalletImpl):
+    class SpyWallet(ProtoWallet):
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.last_sign_args = None
@@ -793,8 +793,8 @@ def _check_remove_unlocking_script_length(wallet, kv):  # NOSONAR - Complexity (
 
 def test_unlocking_script_length_estimate_vs_actual_set_and_remove():
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
-    class SpyWallet(WalletImpl):
+    from bsv.wallet import ProtoWallet
+    class SpyWallet(ProtoWallet):
         def __init__(self, pk, permission_callback):
             super().__init__(pk, permission_callback=permission_callback)
             self.last_create_inputs_meta = None
@@ -845,11 +845,11 @@ def test_der_low_s_distribution_bounds_with_estimate():
     # Validate that actual unlockingScript length respects estimate bounds across many signatures
     # We cannot force specific DER length, but across attempts we should observe lengths within [72, 75]
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
+    from bsv.wallet import ProtoWallet
     from bsv.keystore.interfaces import KVStoreConfig
     from bsv.keystore.local_kv_store import LocalKVStore
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kvctx", originator="org", encrypt=False, fee_rate=2))
     lengths = []
     for i in range(10):
@@ -870,10 +870,10 @@ def test_der_low_s_distribution_bounds_with_estimate():
 def test_unlocker_signature_length_distribution_matrix_real_wallet():
     # Strengthen distribution checks across SIGHASH base modes × ACP
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
+    from bsv.wallet import ProtoWallet
     from bsv.transaction.pushdrop import PushDropUnlocker
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     combos = [
         (0, False),  # ALL
         (0, True),   # ALL|ACP
@@ -909,7 +909,7 @@ def test_unlocker_signature_length_distribution_matrix_real_wallet():
 def test_signature_hash_integrity_with_preimage():
     # Ensure PushDropUnlocker invokes wallet.create_signature with hash_to_sign when preimage() exists
     from bsv.transaction.pushdrop import PushDropUnlocker
-    class SpyWallet(WalletImpl):
+    class SpyWallet(ProtoWallet):
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.last_args = None
@@ -1004,7 +1004,7 @@ def test_unlocker_histogram_with_transaction_preimage_optional():
         import pytest
         pytest.skip("UNLOCKER_HISTO not enabled")
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
+    from bsv.wallet import ProtoWallet
     from bsv.transaction import Transaction, TransactionInput, TransactionOutput
     from bsv.script.script import Script
     from bsv.constants import SIGHASH
@@ -1026,7 +1026,7 @@ def test_unlocker_histogram_with_transaction_preimage_optional():
     t.inputs = [inp]
     t.outputs = [TransactionOutput(Script(b"\x51"), 400)]
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     combos = [
         (SIGHASH.ALL | SIGHASH.FORKID, False),
         (SIGHASH.ALL | SIGHASH.FORKID | SIGHASH.ANYONECANPAY, True),
@@ -1175,7 +1175,7 @@ def test_kvstore_set_get_remove_e2e_with_action_log():
     E2E test for set→get→remove flow, verifying that create_action, sign_action, internalize_action are called in order.
     Checks that the wallet action log records expected calls and txids, following Go/TS style.
     """
-    class SpyWallet(WalletImpl):
+    class SpyWallet(ProtoWallet):
         def __init__(self, pk):
             super().__init__(pk, permission_callback=lambda a: True)
             self.action_log = []
@@ -1236,7 +1236,7 @@ def test_kvstore_cross_sdk_encryption_compat():
     """Test that values encrypted by Go/TS SDK can be decrypted by py-sdk and vice versa."""
     import base64
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
+    from bsv.wallet import ProtoWallet
     from bsv.keystore.interfaces import KVStoreConfig
     from bsv.keystore.local_kv_store import LocalKVStore
     # Example: value encrypted by Go/TS (simulate with known ciphertext)
@@ -1275,7 +1275,7 @@ def test_kvstore_cross_sdk_encryption_compat():
 def test_kvstore_mixed_encrypted_and_plaintext_keys():
     """Test that KVStore can handle a mix of encrypted and plaintext values, and round-trip both."""
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
+    from bsv.wallet import ProtoWallet
     from bsv.keystore.interfaces import KVStoreConfig
     from bsv.keystore.local_kv_store import LocalKVStore
     import os
@@ -1330,7 +1330,7 @@ def test_kvstore_mixed_encrypted_and_plaintext_keys():
 def test_kvstore_beef_edge_case_vectors():
     """Test KVStore set/get/remove with edge-case BEEF/PushDrop flows (e.g., only TxIDOnly, deep nesting, invalid bumps)."""
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
+    from bsv.wallet import ProtoWallet
     from bsv.keystore.interfaces import KVStoreConfig
     from bsv.keystore.local_kv_store import LocalKVStore
     import os

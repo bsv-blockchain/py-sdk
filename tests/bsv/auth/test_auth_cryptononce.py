@@ -1,10 +1,10 @@
 import pytest
 import base64
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.auth.utils import create_nonce, verify_nonce
 
-class DummyWallet(WalletImpl):
+class DummyWallet(ProtoWallet):
     def __init__(self, priv=None, fail_hmac=False, hmac_valid=True):
         super().__init__(priv or PrivateKey())
         self.fail_hmac = fail_hmac
@@ -70,7 +70,7 @@ def test_verify_nonce_success():
 
 def test_real_wallet_success():
     priv = PrivateKey()
-    wallet = WalletImpl(priv)
+    wallet = ProtoWallet(priv)
     nonce = create_nonce(wallet)
     assert verify_nonce(nonce, wallet)
 
@@ -78,8 +78,8 @@ def test_serial_number_use_case():
     # TypeScript版と完全一致：相互nonceを作成・検証し、シリアル番号をHMACで生成・検証
     client_priv = PrivateKey()
     server_priv = PrivateKey()
-    client_wallet = WalletImpl(client_priv)
-    server_wallet = WalletImpl(server_priv)
+    client_wallet = ProtoWallet(client_priv)
+    server_wallet = ProtoWallet(server_priv)
     
     # Get identity keys (TypeScript版と同じ方式)
     client_identity_result = client_wallet.get_public_key({'identityKey': True}, '')

@@ -1,15 +1,15 @@
 """
-Comprehensive tests for certificate management in WalletImpl.
+Comprehensive tests for certificate management in ProtoWallet.
 """
 import pytest
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 
 
 @pytest.fixture
 def wallet():
     priv = PrivateKey()
-    return WalletImpl(priv, permission_callback=lambda action: True)
+    return ProtoWallet(priv, permission_callback=lambda action: True)
 
 
 def test_acquire_certificate_basic(wallet):

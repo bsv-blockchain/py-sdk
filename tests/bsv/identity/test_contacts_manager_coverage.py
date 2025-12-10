@@ -33,7 +33,7 @@ def test_manager_init_with_wallet(mock_wallet):
 
 def test_manager_init_without_wallet():
     """Test initialization without wallet creates default."""
-    with patch('bsv.wallet.wallet_impl.WalletImpl') as mock_wallet_impl:
+    with patch('bsv.wallet.wallet_impl.ProtoWallet') as mock_wallet_impl:
         mock_wallet_impl.return_value = Mock()
         manager = ContactsManager(wallet=None)
         assert manager.wallet is not None

@@ -2,14 +2,14 @@ import pytest
 
 from bsv.wallet.substrates.wallet_wire_processor import WalletWireProcessor
 from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.wallet.key_deriver import CounterpartyType
 from bsv.keys import PrivateKey
 
 
 @pytest.fixture
 def transceiver():
-    wallet = WalletImpl(PrivateKey(1234), permission_callback=lambda a: True)
+    wallet = ProtoWallet(PrivateKey(1234), permission_callback=lambda a: True)
     processor = WalletWireProcessor(wallet)
     return WalletWireTransceiver(processor)
 
@@ -62,14 +62,14 @@ def test_reveal_specific_key_linkage(transceiver):
 
 def test_get_public_key_error_frame_permission_denied():
     # permission denied triggers ERROR frame via PermissionError
-    wallet = WalletImpl(PrivateKey(4321), permission_callback=lambda a: False)
+    wallet = ProtoWallet(PrivateKey(4321), permission_callback=lambda a: False)
     t = WalletWireTransceiver(WalletWireProcessor(wallet))
     with pytest.raises(RuntimeError, match=r"get_public_key: Operation 'Get public key' was not permitted by the user."):
         t.get_public_key(None, {"identityKey": True, "seekPermission": True}, "origin")
 
 
 def test_reveal_counterparty_key_linkage_error_frame_permission_denied():
-    wallet = WalletImpl(PrivateKey(4321), permission_callback=lambda a: False)
+    wallet = ProtoWallet(PrivateKey(4321), permission_callback=lambda a: False)
     t = WalletWireTransceiver(WalletWireProcessor(wallet))
     with pytest.raises(RuntimeError, match=r"reveal_counterparty_key_linkage: Operation 'Reveal counterparty key linkage' was not permitted by the user."):
         t.reveal_counterparty_key_linkage(None, {

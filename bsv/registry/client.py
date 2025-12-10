@@ -271,7 +271,7 @@ class RegistryClient:
 
         # Build a real unlocker and sign the partial transaction input
         # signableTransaction.tx is expected to be raw tx bytes (WalletWire signable), not BEEF
-        # signable["tx"] holds raw transaction bytes; use from_reader for consistency with WalletImpl
+        # signable["tx"] holds raw transaction bytes; use from_reader for consistency with ProtoWallet
         from bsv.utils import Reader
         tx_bytes = cast(bytes, signable.get("tx") or b"")
         partial_tx = Transaction.from_reader(Reader(tx_bytes)) if tx_bytes else Transaction()

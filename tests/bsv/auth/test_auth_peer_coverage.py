@@ -8,13 +8,13 @@ import pytest
 from unittest.mock import Mock, MagicMock, patch
 from bsv.keys import PrivateKey
 from bsv.auth.peer import Peer, PeerOptions
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 
 
 @pytest.fixture
 def wallet():
     """Create a test wallet."""
-    return WalletImpl(PrivateKey(), permission_callback=lambda a: True)
+    return ProtoWallet(PrivateKey(), permission_callback=lambda a: True)
 
 
 @pytest.fixture

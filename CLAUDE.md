@@ -14,11 +14,13 @@ The BSV SDK is a comprehensive Python library for developing scalable applicatio
 ## Development Commands
 
 ### Installation
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### Testing
+
 ```bash
 # Run full test suite with coverage
 pytest --cov=bsv --cov-report=html
@@ -31,6 +33,7 @@ pytest tests/bsv/auth/test_auth_peer_basic.py
 ```
 
 ### Building the Package
+
 ```bash
 # Build distribution packages (requires python3 -m build)
 make build
@@ -40,6 +43,7 @@ python3 -m build
 ```
 
 ### Publishing (Maintainers Only)
+
 ```bash
 make upload_test  # Upload to TestPyPI
 make upload       # Upload to PyPI
@@ -52,27 +56,32 @@ make upload       # Upload to PyPI
 The `bsv` package is organized into functional submodules:
 
 - **Core Transaction Components** (`bsv/transaction.py`, `bsv/transaction_input.py`, `bsv/transaction_output.py`)
+
   - `Transaction`: Main transaction class with serialization, signing, fee calculation, and broadcasting
   - Supports BEEF (Bitcoin Encapsulated Format) and EF (Extended Format) serialization
   - SPV validation through merkle paths
 
 - **Script System** (`bsv/script/`)
+
   - `ScriptTemplate`: Abstract base for locking/unlocking scripts
   - Built-in templates: `P2PKH`, `P2PK`, `OpReturn`, `BareMultisig`, `RPuzzle`
   - `Script`: Low-level script operations
   - `Spend`: Script validation engine
 
 - **Keys & Cryptography** (`bsv/keys.py`, `bsv/curve.py`, `bsv/hash.py`)
+
   - `PrivateKey`, `PublicKey`: ECDSA key management
   - Support for compressed/uncompressed keys
   - WIF format support
 
 - **HD Wallets** (`bsv/hd/`)
+
   - Full BIP32/39/44 implementation
   - Hierarchical deterministic key derivation
   - Mnemonic phrase support (multiple languages via `hd/wordlist/`)
 
 - **Authentication** (`bsv/auth/`)
+
   - `Peer`: Central authentication protocol implementation
   - `Certificate`: Certificate handling and verification
   - `SessionManager`: Session lifecycle management
@@ -80,31 +89,38 @@ The `bsv` package is organized into functional submodules:
   - PKI-based authentication between peers
 
 - **Wallet** (`bsv/wallet/`)
+
   - `WalletInterface`: Abstract wallet interface
-  - `WalletImpl`: Full wallet implementation
+  - `ProtoWallet`: Core wallet implementation providing cryptographic operations (TS/Go parity)
+  - `WalletImpl`: Deprecated alias for ProtoWallet (backward compatibility)
   - `KeyDeriver`: Protocol-based key derivation
   - `CachedKeyDeriver`: Optimized key derivation with caching
 
 - **Broadcasting** (`bsv/broadcasters/`)
+
   - `Broadcaster`: Interface for transaction broadcasting
   - `arc.py`: ARC broadcaster implementation
   - `whatsonchain.py`: WhatsOnChain broadcaster
   - `default_broadcaster.py`: Default broadcaster selection
 
 - **Chain Tracking** (`bsv/chaintrackers/`)
+
   - `ChainTracker`: Interface for chain state verification
   - `whatsonchain.py`: WhatsOnChain chain tracker
   - `default.py`: Default chain tracker
 
 - **Storage** (`bsv/storage/`)
+
   - `Uploader`, `Downloader`: File upload/download utilities
   - Integration with blockchain storage
 
 - **Keystore** (`bsv/keystore/`)
+
   - Key persistence and retention management
   - Local key-value store implementation
 
 - **BEEF Support** (`bsv/beef/`)
+
   - `build_beef_v2_from_raw_hexes`: BEEF format construction
   - Transaction validation with merkle proofs
 
@@ -116,18 +132,21 @@ The `bsv` package is organized into functional submodules:
 ### Important Design Patterns
 
 **Lazy Imports**: The `bsv/__init__.py` is intentionally minimal to avoid circular imports. Import specific modules where needed:
+
 ```python
 from bsv.keys import PrivateKey
 from bsv.transaction import Transaction
 ```
 
 **Async Operations**: Transaction broadcasting and verification are async:
+
 ```python
 await tx.broadcast()
 await tx.verify(chaintracker)
 ```
 
 **Template Pattern**: Script types use templates that provide `lock()` and `unlock()` methods:
+
 ```python
 script_template = P2PKH()
 locking_script = script_template.lock(address)
@@ -141,10 +160,12 @@ unlocking_template = script_template.unlock(private_key)
 ## Testing Structure
 
 Tests are organized in two locations:
+
 1. **Root-level tests** (`tests/`): Classic test structure with direct imports
 2. **Nested tests** (`tests/bsv/`): Mirror the `bsv/` package structure
 
 Test organization by feature:
+
 - `tests/bsv/primitives/`: Core cryptographic primitives
 - `tests/bsv/transaction/`: Transaction building and validation
 - `tests/bsv/auth/`: Full authentication protocol test suite
@@ -153,6 +174,7 @@ Test organization by feature:
 - `tests/bsv/broadcasters/`: Broadcaster integration tests
 
 **Running single test**: Use standard pytest patterns:
+
 ```bash
 pytest tests/bsv/auth/test_auth_peer_basic.py::test_function_name
 pytest -k "test_pattern"
@@ -178,18 +200,21 @@ The SDK implements Assembly (ASM) representation of Bitcoin Script via `Script.f
 **BRC-106 Standard**: https://github.com/bitcoin-sv/BRCs/blob/master/scripts/0106.md
 
 Key requirements from BRC-106:
+
 - Use full English names for op-codes (e.g., "OP_FALSE" not "OP_0")
 - Output should always use the most human-readable format
 - Multiple input names should parse to the same hex value
 - Ensure deterministic translation across different SDKs (Py-SDK, TS-SDK, Go-SDK)
 
 **Current Implementation** (bsv/script/script.py:140-191):
+
 - `from_asm()`: Accepts both "OP_FALSE" and "OP_0", converts to b'\x00'
 - `to_asm()`: Currently outputs "OP_0" for b'\x00' (see OPCODE_VALUE_NAME_DICT override at constants.py:343)
 
 **Note**: The current `to_asm()` output may need adjustment to fully comply with BRC-106's human-readability requirement (should output "OP_FALSE" instead of "OP_0").
 
 ### Working with ASM
+
 ```python
 # Parse ASM string to Script
 script = Script.from_asm("OP_DUP OP_HASH160 abcd1234 OP_EQUALVERIFY OP_CHECKSIG")
@@ -214,6 +239,7 @@ for chunk in script.chunks:
 ## Common Patterns
 
 ### Creating and Broadcasting a Transaction
+
 ```python
 priv_key = PrivateKey(wif_string)
 source_tx = Transaction.from_hex(hex_string)
@@ -237,6 +263,7 @@ await tx.broadcast()  # Broadcast to network
 ```
 
 ### Working with BEEF Format
+
 ```python
 # Parse BEEF
 tx = Transaction.from_beef(beef_hex)
@@ -246,6 +273,7 @@ beef_bytes = tx.to_beef()
 ```
 
 ### Script Templates
+
 ```python
 # P2PKH
 p2pkh = P2PKH()

@@ -1,16 +1,16 @@
 """
-Comprehensive tests for action creation and management in WalletImpl.
+Comprehensive tests for action creation and management in ProtoWallet.
 """
 import pytest
 from bsv.keys import PrivateKey, PublicKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.script.type import P2PKH
 
 
 @pytest.fixture
 def wallet():
     priv = PrivateKey()
-    return WalletImpl(priv, permission_callback=lambda action: True)
+    return ProtoWallet(priv, permission_callback=lambda action: True)
 
 
 def test_create_action_simple_output(wallet):

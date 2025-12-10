@@ -24,7 +24,7 @@ class TestIdentityClientInit:
     
     def test_init_without_wallet(self):
         """Test initialization without wallet creates default wallet."""
-        with patch('bsv.wallet.wallet_impl.WalletImpl') as mock_wallet_impl, \
+        with patch('bsv.wallet.wallet_impl.ProtoWallet') as mock_wallet_impl, \
              patch('bsv.keys.PrivateKey') as mock_private_key:
             mock_key = Mock()
             mock_private_key.return_value = mock_key

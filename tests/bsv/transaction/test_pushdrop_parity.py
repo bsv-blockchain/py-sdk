@@ -1,5 +1,5 @@
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.transaction.pushdrop import PushDrop, decode_lock_before_pushdrop
 import pytest
 from bsv.transaction.pushdrop import make_pushdrop_unlocker, SignOutputsMode
@@ -7,7 +7,7 @@ from bsv.transaction.pushdrop import make_pushdrop_unlocker, SignOutputsMode
 
 def test_pushdrop_lock_includes_signature_by_default():
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     pd = PushDrop(wallet)
     fields = [b"a", b"b"]
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
@@ -22,7 +22,7 @@ def test_pushdrop_lock_includes_signature_by_default():
 def test_pushdrop_decode_restores_small_ints():
     from bsv.transaction.pushdrop import build_lock_before_pushdrop
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     _ = PushDrop(wallet)
     # fields: 0, 1, 2, 0x81 (-1)
     fields = [b"\x00", b"\x01", b"\x02", b"\x81"]
@@ -39,7 +39,7 @@ def test_pushdrop_decode_restores_small_ints():
 
 def test_pushdrop_lock_after_and_decode():
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     pd = PushDrop(wallet)
     fields = [b"x", b"y", b"z"]
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
@@ -51,7 +51,7 @@ def test_pushdrop_lock_after_and_decode():
 
 def test_pushdrop_include_signature_flag_changes_field_count():
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     pd = PushDrop(wallet)
     fields = [b"d1", b"d2"]
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
@@ -65,7 +65,7 @@ def test_pushdrop_include_signature_flag_changes_field_count():
 
 def test_pushdrop_unlock_sign_and_estimate():
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     pd = PushDrop(wallet)
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
     fields = [b"val"]
@@ -80,7 +80,7 @@ def test_pushdrop_unlock_sign_and_estimate():
 
 def test_pushdrop_sighash_modes_match_range():
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     pd = PushDrop(wallet)
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
     fields = [b"val"]
@@ -94,7 +94,7 @@ def test_pushdrop_sighash_modes_match_range():
 def test_pushdrop_sighash_flag_values_and_anyonecanpay():
     from bsv.utils import read_script_chunks
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     pd = PushDrop(wallet)
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
     fields = [b"val"]
@@ -118,7 +118,7 @@ def test_pushdrop_sighash_flag_values_and_anyonecanpay():
 
 def test_pushdrop_unlock_lock_after_sign_and_estimate():
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     pd = PushDrop(wallet)
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
     fields = [b"val"]
@@ -137,7 +137,7 @@ def test_sign_action_sighash_bip143_acp_parity():
     PushDropUnlocker経由の署名・txidがGo/TSと一致するかを明示的にテスト。
     """
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     pd = PushDrop(wallet)
     proto = {"securityLevel": 2, "protocol": "pushdrop"}
     fields = [b"val"]

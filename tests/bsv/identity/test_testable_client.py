@@ -25,7 +25,7 @@ class TestTestableIdentityClient(unittest.TestCase):
 
     def test_initialization_without_wallet(self):
         """Test initialization without providing a wallet."""
-        with patch('bsv.wallet.wallet_impl.WalletImpl'), \
+        with patch('bsv.wallet.wallet_impl.ProtoWallet'), \
              patch('bsv.keys.PrivateKey'):
             client = TestableIdentityClient()
             self.assertIsNotNone(client.wallet)

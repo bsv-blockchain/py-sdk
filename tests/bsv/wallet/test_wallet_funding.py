@@ -2,10 +2,10 @@ import os
 from typing import Optional
 
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 
 
-def _latest_action(wallet: WalletImpl) -> dict:
+def _latest_action(wallet: ProtoWallet) -> dict:
     assert wallet._actions, "expected at least one action recorded"
     return wallet._actions[-1]
 
@@ -22,7 +22,7 @@ def test_funding_adds_inputs_and_change_low_fee():
     os.environ.pop("USE_WOC", None)
 
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda _: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda _: True)
 
     # Request an output small enough to leave change from the mock 1000-sat UTXO
     # Use very low feeRate so change is certainly >= dust (546)
@@ -54,7 +54,7 @@ def test_fee_rate_affects_change_amount():
     os.environ.pop("USE_WOC", None)
 
     # Low fee wallet
-    w1 = WalletImpl(PrivateKey(), permission_callback=lambda _: True)
+    w1 = ProtoWallet(PrivateKey(), permission_callback=lambda _: True)
     args = {
         "labels": ["test", "funding"],
         "description": "funding low fee",
@@ -67,7 +67,7 @@ def test_fee_rate_affects_change_amount():
     c1 = int(chg1.get("satoshis", 0))
 
     # Higher fee wallet
-    w2 = WalletImpl(PrivateKey(), permission_callback=lambda _: True)
+    w2 = ProtoWallet(PrivateKey(), permission_callback=lambda _: True)
     args2 = {
         "labels": ["test", "funding"],
         "description": "funding high fee",
@@ -85,7 +85,7 @@ def test_fee_rate_affects_change_amount():
 def test_no_change_when_dust():
     os.environ.pop("USE_WOC", None)
 
-    wallet = WalletImpl(PrivateKey(), permission_callback=lambda _: True)
+    wallet = ProtoWallet(PrivateKey(), permission_callback=lambda _: True)
     # Ask for large output so remaining change (1000 - out - fee) is very small
     args = {
         "labels": ["test", "funding"],

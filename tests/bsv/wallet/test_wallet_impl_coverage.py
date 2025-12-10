@@ -8,7 +8,7 @@ import pytest
 import os
 from unittest.mock import patch, MagicMock
 from bsv.keys import PrivateKey, PublicKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.wallet.key_deriver import Protocol, Counterparty, CounterpartyType
 
 
@@ -16,14 +16,14 @@ from bsv.wallet.key_deriver import Protocol, Counterparty, CounterpartyType
 def wallet():
     """Wallet with automatic permission approval."""
     priv = PrivateKey()
-    return WalletImpl(priv, permission_callback=lambda action: True)
+    return ProtoWallet(priv, permission_callback=lambda action: True)
 
 
 @pytest.fixture
 def wallet_no_callback():
     """Wallet without permission callback (uses input)."""
     priv = PrivateKey()
-    return WalletImpl(priv)
+    return ProtoWallet(priv)
 
 
 # ========================================================================
@@ -33,26 +33,26 @@ def wallet_no_callback():
 def test_wallet_init_with_env_loading_success():
     """Test wallet initialization with successful dotenv loading."""
     priv = PrivateKey()
-    with patch('bsv.wallet.wallet_impl.WalletImpl._dotenv_loaded', False):
-        wallet = WalletImpl(priv, load_env=True)
+    with patch('bsv.wallet.wallet_impl.ProtoWallet._dotenv_loaded', False):
+        wallet = ProtoWallet(priv, load_env=True)
         assert wallet  # Verify object creation succeeds
 
 
 def test_wallet_init_with_env_loading_failure():
     """Test wallet initialization when dotenv loading fails (exception path)."""
     priv = PrivateKey()
-    WalletImpl._dotenv_loaded = False
+    ProtoWallet._dotenv_loaded = False
     # Import will fail but should be caught
-    wallet = WalletImpl(priv, load_env=True)
+    wallet = ProtoWallet(priv, load_env=True)
     assert hasattr(wallet, 'create_action')
-    assert WalletImpl._dotenv_loaded is True
+    assert ProtoWallet._dotenv_loaded is True
 
 
 def test_wallet_init_woc_api_key_from_env():
     """Test WOC API key loaded from environment."""
     priv = PrivateKey()
     with patch.dict(os.environ, {"WOC_API_KEY": "test_env_key"}):
-        wallet = WalletImpl(priv)
+        wallet = ProtoWallet(priv)
         assert wallet._woc_api_key == "test_env_key"
 
 
@@ -60,7 +60,7 @@ def test_wallet_init_woc_api_key_explicit_overrides_env():
     """Test explicit WOC API key overrides environment."""
     priv = PrivateKey()
     with patch.dict(os.environ, {"WOC_API_KEY": "env_key"}):
-        wallet = WalletImpl(priv, woc_api_key="explicit_key")  # noqa: S106  # NOSONAR - Mock API key for tests
+        wallet = ProtoWallet(priv, woc_api_key="explicit_key")  # noqa: S106  # NOSONAR - Mock API key for tests
         assert wallet._woc_api_key == "explicit_key"
 
 
@@ -68,7 +68,7 @@ def test_wallet_init_woc_api_key_empty_default():
     """Test WOC API key defaults to empty string."""
     priv = PrivateKey()
     with patch.dict(os.environ, {}, clear=True):
-        wallet = WalletImpl(priv)
+        wallet = ProtoWallet(priv)
         assert wallet._woc_api_key == ""
 
 
@@ -81,7 +81,7 @@ def test_check_permission_with_debug_enabled(wallet, capsys):
     with patch.dict(os.environ, {"BSV_DEBUG": "1"}):
         wallet._check_permission("Test Action")
         captured = capsys.readouterr()
-        assert "DEBUG WalletImpl._check_permission" in captured.out
+        assert "DEBUG ProtoWallet._check_permission" in captured.out
         assert "Test Action" in captured.out
         assert "allowed=True" in captured.out
 
@@ -92,7 +92,7 @@ def test_get_public_key_with_debug_enabled(wallet, capsys):
     with patch.dict(os.environ, {"BSV_DEBUG": "1"}):
         _ = wallet.get_public_key(args, "test_originator")
         captured = capsys.readouterr()
-        assert "DEBUG WalletImpl.get_public_key" in captured.out
+        assert "DEBUG ProtoWallet.get_public_key" in captured.out
         assert "originator=<redacted>" in captured.out  # Sensitive info is redacted
 
 
@@ -105,7 +105,7 @@ def test_encrypt_with_debug_enabled(wallet, capsys):
     with patch.dict(os.environ, {"BSV_DEBUG": "1"}):
         _ = wallet.encrypt(args, "test")
         captured = capsys.readouterr()
-        assert "DEBUG WalletImpl.encrypt" in captured.out
+        assert "DEBUG ProtoWallet.encrypt" in captured.out
 
 
 def test_decrypt_with_debug_enabled(wallet, capsys):
@@ -120,7 +120,7 @@ def test_decrypt_with_debug_enabled(wallet, capsys):
     with patch.dict(os.environ, {"BSV_DEBUG": "1"}):
         _ = wallet.decrypt(args, "test")
         captured = capsys.readouterr()
-        assert "DEBUG WalletImpl.decrypt" in captured.out
+        assert "DEBUG ProtoWallet.decrypt" in captured.out
 
 
 # ========================================================================

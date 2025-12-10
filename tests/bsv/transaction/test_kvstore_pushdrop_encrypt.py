@@ -1,7 +1,7 @@
 import base64
 
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.wallet.key_deriver import CounterpartyType
 from bsv.keystore.interfaces import KVStoreConfig
 from bsv.keystore.local_kv_store import LocalKVStore
@@ -11,7 +11,7 @@ from bsv.transaction.pushdrop import build_lock_before_pushdrop, decode_lock_bef
 def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
     # Wallet
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda action: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda action: True)
 
     # KV with proper protocol configuration
     default_ca = {
@@ -36,7 +36,7 @@ def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
 
 def test_pushdrop_multiple_fields():
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
+    from bsv.wallet import ProtoWallet
     from bsv.transaction.pushdrop import build_lock_before_pushdrop, decode_lock_before_pushdrop, read_script_chunks
     priv = PrivateKey()
     pubkey = priv.public_key().serialize()
@@ -54,7 +54,7 @@ def test_pushdrop_multiple_fields():
 
 def test_pushdrop_with_signature():
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
+    from bsv.wallet import ProtoWallet
     from bsv.transaction.pushdrop import build_lock_before_pushdrop, decode_lock_before_pushdrop, read_script_chunks
     priv = PrivateKey()
     pubkey = priv.public_key().serialize()
@@ -74,7 +74,7 @@ def test_pushdrop_with_signature():
 
 def test_pushdrop_lock_after():
     from bsv.keys import PrivateKey
-    from bsv.wallet.wallet_impl import WalletImpl
+    from bsv.wallet import ProtoWallet
     from bsv.transaction.pushdrop import build_lock_before_pushdrop, decode_lock_before_pushdrop, read_script_chunks
     priv = PrivateKey()
     pubkey = priv.public_key().serialize()

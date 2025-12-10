@@ -3,7 +3,7 @@ import uuid
 import os
 
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.keystore.interfaces import KVStoreConfig
 from bsv.keystore.local_kv_store import LocalKVStore
 
@@ -13,7 +13,7 @@ def test_list_outputs_retention_filter_excludes_expired():
     os.environ.pop("USE_WOC", None)
     context = f"kvctx_{uuid.uuid4()}"
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     cfg = KVStoreConfig(wallet=wallet, context=context, originator="org", encrypt=False)
     # Inject retention period (seconds)
     setattr(cfg, "retention_period", 1)
@@ -39,7 +39,7 @@ def test_list_outputs_retention_filter_keeps_unbounded():
     os.environ.pop("USE_WOC", None)
     context = f"kvctx_{uuid.uuid4()}"
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     cfg = KVStoreConfig(wallet=wallet, context=context, originator="org", encrypt=False)
     # No retention period => unbounded
     kv = LocalKVStore(cfg)

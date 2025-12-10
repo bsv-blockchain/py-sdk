@@ -1,15 +1,15 @@
 """
-Comprehensive tests for output management in WalletImpl.
+Comprehensive tests for output management in ProtoWallet.
 """
 import pytest
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 
 
 @pytest.fixture
 def wallet():
     priv = PrivateKey()
-    return WalletImpl(priv, permission_callback=lambda action: True)
+    return ProtoWallet(priv, permission_callback=lambda action: True)
 
 
 def test_list_outputs_empty(wallet):
@@ -132,7 +132,7 @@ def test_relinquish_output_multiple(wallet):
 
 def test_output_expiration_check():
     """Test output expiration logic."""
-    wallet = WalletImpl(PrivateKey(), permission_callback=lambda a: True)
+    wallet = ProtoWallet(PrivateKey(), permission_callback=lambda a: True)
     
     import time
     now = int(time.time())
@@ -161,7 +161,7 @@ def test_output_expiration_check():
 
 def test_find_outputs_for_basket():
     """Test finding outputs for a specific basket."""
-    wallet = WalletImpl(PrivateKey(), permission_callback=lambda a: True)
+    wallet = ProtoWallet(PrivateKey(), permission_callback=lambda a: True)
     
     args = {"basket": "test_basket", "limit": 20}
     outputs = wallet._find_outputs_for_basket("test_basket", args)
@@ -171,7 +171,7 @@ def test_find_outputs_for_basket():
 
 def test_format_outputs_result():
     """Test formatting outputs result."""
-    wallet = WalletImpl(PrivateKey(), permission_callback=lambda a: True)
+    wallet = ProtoWallet(PrivateKey(), permission_callback=lambda a: True)
     
     outputs = [
         {
@@ -189,7 +189,7 @@ def test_format_outputs_result():
 
 def test_build_beef_for_outputs():
     """Test building BEEF for outputs."""
-    wallet = WalletImpl(PrivateKey(), permission_callback=lambda a: True)
+    wallet = ProtoWallet(PrivateKey(), permission_callback=lambda a: True)
     
     outputs = [
         {

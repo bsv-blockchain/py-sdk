@@ -38,9 +38,9 @@ class ContactsManager:
             wallet: Wallet interface for blockchain operations
         """
         if wallet is None:
-            from bsv.wallet.wallet_impl import WalletImpl
+            from bsv.wallet import ProtoWallet
             from bsv.keys import PrivateKey
-            wallet = WalletImpl(PrivateKey())
+            wallet = ProtoWallet(PrivateKey())
         self.wallet = wallet
         self._cache: Dict[str, str] = {}
 

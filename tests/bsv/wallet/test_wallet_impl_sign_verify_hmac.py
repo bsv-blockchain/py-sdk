@@ -1,12 +1,12 @@
 import pytest
 
 from bsv.keys import PrivateKey
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 
 
 @pytest.fixture
 def wallet():
-    return WalletImpl(PrivateKey(123), permission_callback=lambda action: True)
+    return ProtoWallet(PrivateKey(123), permission_callback=lambda action: True)
 
 
 def test_create_and_verify_signature_identity(wallet):

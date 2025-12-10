@@ -3,7 +3,7 @@ import pytest
 from bsv.wallet.substrates.wallet_wire import WalletWire
 from bsv.wallet.substrates.wallet_wire_processor import WalletWireProcessor
 from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.keys import PrivateKey
 from bsv.wallet.key_deriver import Protocol
 from bsv.keys import PublicKey
@@ -11,7 +11,7 @@ from bsv.keys import PublicKey
 
 @pytest.fixture
 def transceiver():
-    wallet = WalletImpl(PrivateKey(1001), permission_callback=lambda a: True)
+    wallet = ProtoWallet(PrivateKey(1001), permission_callback=lambda a: True)
     processor = WalletWireProcessor(wallet)
     return WalletWireTransceiver(processor)
 

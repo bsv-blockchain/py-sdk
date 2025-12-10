@@ -1,4 +1,4 @@
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.keys import PrivateKey
 from bsv.keystore.local_kv_store import LocalKVStore
 from bsv.keystore.interfaces import KVStoreConfig
@@ -6,7 +6,7 @@ from bsv.keystore.interfaces import KVStoreConfig
 
 def _make_kv(encrypt=False, lock_position="before"):
     priv = PrivateKey()
-    wallet = WalletImpl(priv, permission_callback=lambda a: True)
+    wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     cfg = KVStoreConfig(wallet=wallet, context="ctx", originator="org", encrypt=encrypt)
     # inject optional attributes expected in LocalKVStore
     setattr(cfg, "lock_position", lock_position)

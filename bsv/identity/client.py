@@ -9,10 +9,10 @@ from bsv.wallet.wallet_interface import WalletInterface
 class IdentityClient:
     def __init__(self, wallet: Optional[WalletInterface] = None, options: Optional[IdentityClientOptions] = None, originator: OriginatorDomainNameStringUnder250Bytes = ""):
         if wallet is None:
-            from bsv.wallet.wallet_impl import WalletImpl
+            from bsv.wallet import ProtoWallet
             from bsv.keys import PrivateKey
             private_key = PrivateKey()  # Generates a random private key
-            wallet = WalletImpl(private_key)
+            wallet = ProtoWallet(private_key)
         self.wallet = wallet
         self.options = options or IdentityClientOptions()
         self.originator = originator
@@ -70,7 +70,7 @@ class IdentityClient:
     def publicly_reveal_attributes(self, ctx: Any, certificate: Any, fields_to_reveal: List[CertificateFieldNameUnder50Bytes]):
         """
         Reveals some specified certificate attributes publicly (generates transaction, broadcast, etc.).
-        Simplified: Extracts specified fields as plaintext, formats them as transaction output metadata, and sends (mock WalletImpl compatible).
+        Simplified: Extracts specified fields as plaintext, formats them as transaction output metadata, and sends (mock ProtoWallet compatible).
         In the future: PushDrop scripting and integration with encryption/certificate workflows.
         """
         if self.wallet is None:
@@ -85,7 +85,7 @@ class IdentityClient:
                 revealed = self._reveal_fields_from_dict(certificate, fields_to_reveal)
         except Exception:
             pass
-        # 2) Create action → sign → internalize (mock WalletImpl compatible)
+        # 2) Create action → sign → internalize (mock ProtoWallet compatible)
         labels, description, outputs = self._build_outputs_for_reveal(revealed)
         create_args = {"labels": labels, "description": description, "outputs": outputs}
         _ = self.wallet.create_action(ctx, create_args, self.originator)
@@ -123,7 +123,7 @@ class IdentityClient:
         try:
             # Call via Wallet wire transceiver
             from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
-            # In most implementations, wallet is expected to have direct methods (WalletImpl standard). If not, can switch to transceiver as fallback.
+            # In most implementations, wallet is expected to have direct methods (ProtoWallet standard). If not, can switch to transceiver as fallback.
             if hasattr(self.wallet, 'discover_by_identity_key'):
                 result = self.wallet.discover_by_identity_key(ctx, args, self.originator)
             else:

@@ -12,7 +12,15 @@ from bsv.utils.address import validate_address
 from bsv.fee_models.satoshis_per_kilobyte import SatoshisPerKilobyte
 from bsv.chaintrackers import WhatsOnChainTracker
 
-class WalletImpl(WalletInterface):
+class ProtoWallet(WalletInterface):
+    """Core wallet implementation providing cryptographic operations.
+    
+    ProtoWallet provides the fundamental cryptographic operations that higher-level
+    wallet implementations delegate to. This matches the TS/Go SDK architecture
+    where ProtoWallet handles key derivation, signing, encryption, and HMAC operations.
+    
+    Reference: ts-sdk ProtoWallet, go-sdk wallet.ProtoWallet
+    """
     _dotenv_loaded: bool = False
 
     def __init__(self, private_key: PrivateKey, permission_callback=None, woc_api_key: Optional[str] = None, load_env: bool = False):
@@ -24,13 +32,13 @@ class WalletImpl(WalletInterface):
         self._actions: List[Dict[str, Any]] = []
         self._certificates: List[Dict[str, Any]] = []
         # Optionally load .env once at initialization time
-        if load_env and not WalletImpl._dotenv_loaded:
+        if load_env and not ProtoWallet._dotenv_loaded:
             try:
                 from dotenv import load_dotenv  # type: ignore
                 load_dotenv()
             except Exception:
                 pass
-            WalletImpl._dotenv_loaded = True
+            ProtoWallet._dotenv_loaded = True
         # WhatsOnChain API key (TS parity: WhatsOnChainConfig.apiKey)
         self._woc_api_key: str = (woc_api_key or os.environ.get("WOC_API_KEY") or "")
 
@@ -42,7 +50,7 @@ class WalletImpl(WalletInterface):
             resp = input(f"[Wallet] Allow {action}? [y/N]: ")
             allowed = resp.strip().lower() in ("y", "yes")
         if os.getenv("BSV_DEBUG", "0") == "1":
-            print(f"[DEBUG WalletImpl._check_permission] action={action!r} allowed={allowed}")
+            print(f"[DEBUG ProtoWallet._check_permission] action={action!r} allowed={allowed}")
         if not allowed:
             raise PermissionError(f"Operation '{action}' was not permitted by the user.")
 
@@ -88,7 +96,7 @@ class WalletImpl(WalletInterface):
         try:
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.get_public_key] originator=<redacted> seek_permission={seek_permission} args=<redacted>")  # Sensitive info omitted for security
+                print(f"[DEBUG ProtoWallet.get_public_key] originator=<redacted> seek_permission={seek_permission} args=<redacted>")  # Sensitive info omitted for security
             if seek_permission:
                 self._check_permission("Get public key")
             if args.get("identityKey", False):
@@ -116,7 +124,7 @@ class WalletImpl(WalletInterface):
         try:
             encryption_args = args.get("encryption_args", {})
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.encrypt] enc_args keys={list(encryption_args.keys())}")  # Do not log originator or sensitive argument values
+                print(f"[DEBUG ProtoWallet.encrypt] enc_args keys={list(encryption_args.keys())}")  # Do not log originator or sensitive argument values
             self._maybe_seek_permission("Encrypt", encryption_args)
             plaintext = args.get("plaintext")
             if plaintext is None:
@@ -131,7 +139,7 @@ class WalletImpl(WalletInterface):
         try:
             encryption_args = args.get("encryption_args", {})
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.decrypt] enc_args keys={list(encryption_args.keys())}")  # Do not log originator or sensitive argument values
+                print(f"[DEBUG ProtoWallet.decrypt] enc_args keys={list(encryption_args.keys())}")  # Do not log originator or sensitive argument values
             self._maybe_seek_permission("Decrypt", encryption_args)
             ciphertext = args.get("ciphertext")
             if ciphertext is None:
@@ -149,7 +157,7 @@ class WalletImpl(WalletInterface):
             counterparty = args.get("counterparty")
             
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.create_signature] protocol_id={protocol_id}, key_id={key_id}")
+                print(f"[DEBUG ProtoWallet.create_signature] protocol_id={protocol_id}, key_id={key_id}")
             
             if protocol_id is None or key_id is None:
                 return {"error": "create_signature: protocol_id and key_id are required"}
@@ -195,9 +203,9 @@ class WalletImpl(WalletInterface):
         if os.getenv("BSV_DEBUG", "0") == "1":
             try:
                 proto_dbg = protocol_id if not isinstance(protocol_id, dict) else protocol_id.get('protocol')
-                print(f"[DEBUG WalletImpl.verify_signature] protocol={proto_dbg} key_id={key_id} for_self={for_self}")
+                print(f"[DEBUG ProtoWallet.verify_signature] protocol={proto_dbg} key_id={key_id} for_self={for_self}")
                 cp_pub_dbg = cp.to_public_key(self.public_key)
-                print(f"[DEBUG WalletImpl.verify_signature] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()} derived.pub={pub.hex()}")
+                print(f"[DEBUG ProtoWallet.verify_signature] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()} derived.pub={pub.hex()}")
             except Exception:
                 pass
 
@@ -215,8 +223,8 @@ class WalletImpl(WalletInterface):
         """Log verification data if debug is enabled."""
         if os.getenv("BSV_DEBUG", "0") == "1":
             try:
-                print(f"[DEBUG WalletImpl.verify_signature] data_len={len(data)} sha256={to_verify.hex()[:32]}.. sig_len={len(signature)}")
-                print(f"[DEBUG WalletImpl.verify_signature] pub.hex={pub.hex()}")
+                print(f"[DEBUG ProtoWallet.verify_signature] data_len={len(data)} sha256={to_verify.hex()[:32]}.. sig_len={len(signature)}")
+                print(f"[DEBUG ProtoWallet.verify_signature] pub.hex={pub.hex()}")
             except Exception:
                 pass
 
@@ -293,7 +301,7 @@ class WalletImpl(WalletInterface):
             self._log_verification_result(valid, signature)
             
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.verify_signature] valid={valid}")
+                print(f"[DEBUG ProtoWallet.verify_signature] valid={valid}")
             
             return {"valid": valid}
         except Exception as e:
@@ -306,7 +314,7 @@ class WalletImpl(WalletInterface):
             key_id = encryption_args.get("key_id")
             counterparty = encryption_args.get("counterparty")
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.create_hmac] enc_args={encryption_args}")
+                print(f"[DEBUG ProtoWallet.create_hmac] enc_args={encryption_args}")
             if protocol_id is None or key_id is None:
                 return {"error": "create_hmac: protocol_id and key_id are required"}
             if isinstance(protocol_id, dict):
@@ -334,12 +342,12 @@ class WalletImpl(WalletInterface):
     def _debug_log_hmac_params(self, encryption_args: dict, cp):
         """Log HMAC parameters if debug is enabled."""
         if os.getenv("BSV_DEBUG", "0") == "1":
-            print(f"[DEBUG WalletImpl.verify_hmac] enc_args={encryption_args}")
+            print(f"[DEBUG ProtoWallet.verify_hmac] enc_args={encryption_args}")
             try:
                 cp_pub_dbg = cp.to_public_key(self.public_key)
-                print(f"[DEBUG WalletImpl.verify_hmac] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()}")
+                print(f"[DEBUG ProtoWallet.verify_hmac] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()}")
             except Exception as dbg_e:
-                print(f"[DEBUG WalletImpl.verify_hmac] cp normalization error: {dbg_e}")
+                print(f"[DEBUG ProtoWallet.verify_hmac] cp normalization error: {dbg_e}")
 
     def verify_hmac(self, args: Dict = None, originator: str = None) -> Dict:
         try:
@@ -1299,14 +1307,14 @@ class WalletImpl(WalletInterface):
             cp = self._normalize_counterparty(counterparty)
             derived_priv = self.key_deriver.derive_private_key(protocol, key_id, cp)
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.decrypt] derived_priv int={derived_priv.int():x} ciphertext_len={len(ciphertext)}")
+                print(f"[DEBUG ProtoWallet.decrypt] derived_priv int={derived_priv.int():x} ciphertext_len={len(ciphertext)}")
             try:
                 plaintext = derived_priv.decrypt(ciphertext)
                 if os.getenv("BSV_DEBUG", "0") == "1":
-                    print(f"[DEBUG WalletImpl.decrypt] decrypt success, plaintext={plaintext.hex()}")
+                    print(f"[DEBUG ProtoWallet.decrypt] decrypt success, plaintext={plaintext.hex()}")
             except Exception as dec_err:
                 if os.getenv("BSV_DEBUG", "0") == "1":
-                    print(f"[DEBUG WalletImpl.decrypt] decrypt failed with derived key: {dec_err}")
+                    print(f"[DEBUG ProtoWallet.decrypt] decrypt failed with derived key: {dec_err}")
                 plaintext = b""
             return plaintext
         # Fallback path
@@ -1338,7 +1346,7 @@ class WalletImpl(WalletInterface):
         try:
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.reveal_counterparty_key_linkage] originator={originator} seek_permission={seek_permission} args={args}")
+                print(f"[DEBUG ProtoWallet.reveal_counterparty_key_linkage] originator={originator} seek_permission={seek_permission} args={args}")
 
             if seek_permission:
                 # Ask the user (or callback) for permission
@@ -1359,7 +1367,7 @@ class WalletImpl(WalletInterface):
         try:
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
             if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG WalletImpl.reveal_specific_key_linkage] originator={originator} seek_permission={seek_permission} args={args}")
+                print(f"[DEBUG ProtoWallet.reveal_specific_key_linkage] originator={originator} seek_permission={seek_permission} args={args}")
 
             if seek_permission:
                 self._check_permission("Reveal specific key linkage")

@@ -1,7 +1,7 @@
 import pytest
 from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 from bsv.wallet.substrates.wallet_wire_processor import WalletWireProcessor
-from bsv.wallet.wallet_impl import WalletImpl
+from bsv.wallet import ProtoWallet
 from bsv.keys import PrivateKey
 from bsv.wallet.key_deriver import Protocol
 
@@ -17,11 +17,11 @@ def counterparty_key():
 
 @pytest.fixture
 def user_wallet(user_key):
-    return WalletWireTransceiver(WalletWireProcessor(WalletImpl(user_key, permission_callback=lambda a: True)))
+    return WalletWireTransceiver(WalletWireProcessor(ProtoWallet(user_key, permission_callback=lambda a: True)))
 
 @pytest.fixture
 def counterparty_wallet(counterparty_key):
-    return WalletWireTransceiver(WalletWireProcessor(WalletImpl(counterparty_key, permission_callback=lambda a: True)))
+    return WalletWireTransceiver(WalletWireProcessor(ProtoWallet(counterparty_key, permission_callback=lambda a: True)))
 
 
 def test_encrypt_decrypt(user_wallet, counterparty_wallet, user_key, counterparty_key):
