@@ -197,7 +197,8 @@ class LocalKVStore(KVStoreInterface):
                         or pd_opts.get("key_id")
                         or pd_opts.get("keyID")
                     )
-                    counterparty = ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 0}
+                    # CounterpartyType: SELF=2, ANYONE=1, OTHER=3, UNINITIALIZED=0
+                    counterparty = ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 2}  # Default to SELF (2)
                     dec_res = self._wallet.decrypt(
                         ctx,
                         {
@@ -678,7 +679,8 @@ class LocalKVStore(KVStoreInterface):
                 or ca_args.get("keyID")
                 or key
             )
-            counterparty = ca_args.get("counterparty") or {"type": 0}
+            # CounterpartyType: SELF=2, ANYONE=1, OTHER=3, UNINITIALIZED=0
+            counterparty = ca_args.get("counterparty") or {"type": 2}  # Default to SELF (2)
 
             if protocol_id and key_id:
                 # Encrypt the value using wallet.encrypt
@@ -695,7 +697,14 @@ class LocalKVStore(KVStoreInterface):
                 }
                 encrypt_result = self._wallet.encrypt(encrypt_args, self._originator)
                 if "ciphertext" in encrypt_result:
-                    field_bytes = encrypt_result["ciphertext"]
+                    ciphertext = encrypt_result["ciphertext"]
+                    # Convert list of ints to bytes if needed (wallet.encrypt returns list)
+                    if isinstance(ciphertext, list):
+                        field_bytes = bytes(ciphertext)
+                    elif isinstance(ciphertext, (bytes, bytearray)):
+                        field_bytes = bytes(ciphertext)
+                    else:
+                        field_bytes = value.encode('utf-8')
                 else:
                     # Fallback to plaintext if encryption fails
                     field_bytes = value.encode('utf-8')

@@ -19,12 +19,12 @@ class SimplifiedHTTPTransport(Transport):
         self._on_data_funcs: List[Callable[[Any, AuthMessage], Optional[Exception]]] = []
         self._lock = threading.Lock()
 
-    def send(self, message: AuthMessage, ctx: Any = None) -> Optional[Exception]:
+    def send(self, ctx: Any, message: AuthMessage) -> Optional[Exception]:
         """Send an AuthMessage via HTTP
         
         Args:
+            ctx: Context (can be None)
             message: AuthMessage to send
-            ctx: Optional context (for backward compatibility)
         """
         # Check if any handlers are registered
         with self._lock:
