@@ -256,11 +256,13 @@ def test_create_and_verify_signature(wallet):
     protocol_id = {"securityLevel": 1, "protocol": "test"}  # Fixed: removed " protocol" suffix
     key_id = "signing key 1"
     
-    # Create signature
+    # Create signature - use explicit counterparty for consistency
+    # TS defaults: create='anyone', verify='self' which would use different keys
     sign_args = {
         "protocol_id": protocol_id,
         "key_id": key_id,
-        "data": data
+        "data": data,
+        "counterparty": "self"
     }
     sign_result = wallet.create_signature(sign_args, TEST_PASSPHRASE)
     assert "signature" in sign_result
@@ -270,7 +272,8 @@ def test_create_and_verify_signature(wallet):
         "protocol_id": protocol_id,
         "key_id": key_id,
         "data": data,
-        "signature": sign_result["signature"]
+        "signature": sign_result["signature"],
+        "counterparty": "self"
     }
     verify_result = wallet.verify_signature(verify_args, TEST_PASSPHRASE)
     assert "valid" in verify_result

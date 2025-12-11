@@ -96,7 +96,15 @@ class ProtoWallet(WalletInterface):
                 inner = PublicKey(inner)
             ctype = self._parse_counterparty_type(counterparty.get("type", CounterpartyType.SELF))
             return Counterparty(ctype, inner)
-        if isinstance(counterparty, (bytes, str)):
+        if isinstance(counterparty, str):
+            # Handle special string values (TS/Go parity)
+            if counterparty == "self":
+                return Counterparty(CounterpartyType.SELF)
+            if counterparty == "anyone":
+                return Counterparty(CounterpartyType.ANYONE)
+            # Otherwise treat as hex public key
+            return Counterparty(CounterpartyType.OTHER, PublicKey(counterparty))
+        if isinstance(counterparty, bytes):
             return Counterparty(CounterpartyType.OTHER, PublicKey(counterparty))
         if isinstance(counterparty, PublicKey):
             return Counterparty(CounterpartyType.OTHER, counterparty)
@@ -112,8 +120,9 @@ class ProtoWallet(WalletInterface):
                 self._check_permission("Get public key")
             if args.get("identityKey", False):
                 return {"publicKey": self.public_key.hex()}
-            protocol_id = args.get("protocolID")
-            key_id = args.get("keyID")
+            # Support both camelCase (TS style) and snake_case
+            protocol_id = args.get("protocolID") or args.get("protocol_id")
+            key_id = args.get("keyID") or args.get("key_id")
             counterparty = args.get("counterparty")
             for_self = args.get("forSelf", False)
             if protocol_id is None or key_id is None:
@@ -257,9 +266,9 @@ class ProtoWallet(WalletInterface):
 
     def create_signature(self, args: CreateSignatureArgs = None, originator: str = None) -> Dict:
         try:
-            # BRC-100 compliant flat structure (Python snake_case)
-            protocol_id = args.get("protocol_id")
-            key_id = args.get("key_id")
+            # Support both camelCase (TS style) and snake_case
+            protocol_id = args.get("protocol_id") or args.get("protocolID")
+            key_id = args.get("key_id") or args.get("keyID")
             counterparty = args.get("counterparty")
             
             if os.getenv("BSV_DEBUG", "0") == "1":
@@ -271,14 +280,21 @@ class ProtoWallet(WalletInterface):
             # Normalize protocol_id (supports both camelCase and snake_case)
             protocol = self._normalize_protocol(protocol_id)
             
+            # Default counterparty to 'anyone' for signatures (TS parity)
+            if counterparty is None:
+                counterparty = "anyone"
             cp = self._normalize_counterparty(counterparty)
             priv = self.key_deriver.derive_private_key(protocol, key_id, cp)
             
             # Get data or hash to sign
             data = args.get("data", b"")
-            hash_to_sign = args.get("hash_to_directly_sign")
+            if isinstance(data, list):
+                data = bytes(data)
+            hash_to_sign = args.get("hash_to_directly_sign") or args.get("hashToDirectlySign")
             
             if hash_to_sign:
+                if isinstance(hash_to_sign, list):
+                    hash_to_sign = bytes(hash_to_sign)
                 to_sign = hash_to_sign
             else:
                 to_sign = hashlib.sha256(data).digest()
@@ -311,12 +327,23 @@ class ProtoWallet(WalletInterface):
         elif isinstance(arg, bytes):
             return PublicKey(arg)
         elif isinstance(arg, str):
+            # Handle special string values
+            if arg == "anyone":
+                return PrivateKey(1).public_key()
+            if arg == "self":
+                return self.public_key
             return PublicKey(arg)
         elif isinstance(arg, dict):
             # Handle counterparty dict format
             cp = arg.get("counterparty")
             if cp is not None:
                 return self._to_public_key(cp)
+            # Handle type-only dict (e.g., {'type': 1} for 'anyone')
+            cp_type = arg.get("type")
+            if cp_type == CounterpartyType.ANYONE or cp_type == 1:
+                return PrivateKey(1).public_key()
+            if cp_type == CounterpartyType.SELF or cp_type == 2:
+                return self.public_key
             raise ValueError(f"Cannot convert dict to PublicKey: {arg}")
         else:
             raise ValueError(f"Cannot convert {type(arg)} to PublicKey")
@@ -397,17 +424,21 @@ class ProtoWallet(WalletInterface):
 
     def verify_signature(self, args: VerifySignatureArgs = None, originator: str = None) -> Dict:
         try:
-            # Extract and validate parameters
-            protocol_id = args.get("protocol_id")
-            key_id = args.get("key_id")
+            # Extract and validate parameters (support both camelCase and snake_case)
+            protocol_id = args.get("protocol_id") or args.get("protocolID")
+            key_id = args.get("key_id") or args.get("keyID")
             counterparty = args.get("counterparty")
-            for_self = args.get("for_self", False)
+            for_self = args.get("for_self", False) or args.get("forSelf", False)
             
             if protocol_id is None or key_id is None:
                 return {"error": "verify_signature: protocol_id and key_id are required"}
             
             # Normalize protocol and derive public key
             protocol = self._normalize_protocol(protocol_id)
+            # Default counterparty to 'self' for verify_signature (TS parity)
+            # TS ProtoWallet.verifySignature: args.counterparty ?? 'self'
+            if counterparty is None:
+                counterparty = "self"
             cp = self._normalize_counterparty(counterparty)
             pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self)
             
@@ -493,13 +524,26 @@ class ProtoWallet(WalletInterface):
             return {"error": f"create_hmac: {e}"}
 
     def _extract_hmac_params(self, args: Dict) -> tuple:
-        """Extract HMAC verification parameters from args."""
-        encryption_args = args.get("encryption_args", {})
-        protocol_id = encryption_args.get("protocol_id")
-        key_id = encryption_args.get("key_id")
+        """Extract HMAC verification parameters from args.
+        
+        Supports both flat args (TS/Go style) and nested encryption_args (legacy).
+        """
+        # Support both flat args and nested encryption_args
+        encryption_args = args.get("encryption_args", args)
+        
+        # Get protocol parameters (support both camelCase and snake_case)
+        protocol_id = encryption_args.get("protocol_id") or encryption_args.get("protocolID")
+        key_id = encryption_args.get("key_id") or encryption_args.get("keyID")
         counterparty = encryption_args.get("counterparty")
+        
         data = args.get("data", b"")
+        if isinstance(data, list):
+            data = bytes(data)
+            
         hmac_value = args.get("hmac")
+        if isinstance(hmac_value, list):
+            hmac_value = bytes(hmac_value)
+            
         return encryption_args, protocol_id, key_id, counterparty, data, hmac_value
 
     def _debug_log_hmac_params(self, encryption_args: dict, cp):

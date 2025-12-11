@@ -147,15 +147,29 @@ class KeyDeriver:
     ) -> PublicKey:
         """Derives a public key based on protocol ID, key ID, and counterparty.
         
-        This implementation now matches TypeScript/Go SDK behavior by using invoiceNumber.
+        This implementation matches TypeScript/Go SDK behavior:
+        - forSelf=True: rootKey.deriveChild(counterparty, invoice).toPublicKey()
+        - forSelf=False: counterparty.deriveChild(rootKey, invoice)
+        
+        Note: This means derive_public_key(forSelf=False) != derive_private_key().public_key()
+        This is intentional and matches TS/Go SDK behavior for asymmetric key derivation.
         """
         invoice_number = self.compute_invoice_number(protocol, key_id)
         # Determine counterparty pub used for tweak
         cp_pub = counterparty.to_public_key(self._root_public_key) if not for_self else self._root_public_key
         delta = self._branch_scalar(invoice_number, cp_pub)
-        # tweaked public = cp_pub + delta*G
-        delta_point = curve_multiply(delta, curve.g)
-        new_point = curve_add(cp_pub.point(), delta_point)
+        
+        if for_self:
+            # forSelf=True: derived from root's perspective
+            # tweaked public = root_pub + delta*G
+            delta_point = curve_multiply(delta, curve.g)
+            new_point = curve_add(self._root_public_key.point(), delta_point)
+        else:
+            # forSelf=False: derived from counterparty's perspective
+            # tweaked public = cp_pub + delta*G
+            delta_point = curve_multiply(delta, curve.g)
+            new_point = curve_add(cp_pub.point(), delta_point)
+        
         return PublicKey(new_point)
 
     def derive_symmetric_key(self, protocol: Protocol, key_id: str, counterparty: Counterparty) -> bytes:

@@ -110,11 +110,20 @@ def test_encrypt_with_debug_enabled(wallet, capsys):
 
 def test_decrypt_with_debug_enabled(wallet, capsys):
     """Test decrypt with BSV_DEBUG=1."""
-    # First encrypt
-    enc_result = wallet.encrypt({"encryption_args": {}, "plaintext": b"test"}, "test")
+    # First encrypt - need protocol_id and key_id
+    enc_args = {
+        "plaintext": b"test",
+        "protocol_id": {"securityLevel": 1, "protocol": "test"},
+        "key_id": "key1",
+        "counterparty": "self"
+    }
+    enc_result = wallet.encrypt(enc_args, "test")
+    assert "ciphertext" in enc_result, f"encrypt failed: {enc_result}"
     
     args = {
-        "encryption_args": {},
+        "protocol_id": {"securityLevel": 1, "protocol": "test"},
+        "key_id": "key1",
+        "counterparty": "self",
         "ciphertext": enc_result["ciphertext"]
     }
     with patch.dict(os.environ, {"BSV_DEBUG": "1"}):
@@ -284,11 +293,12 @@ def test_verify_signature_with_hash_to_directly_verify(wallet):
     data = b"test data"
     data_hash = hashlib.sha256(data).digest()
     
-    # Create signature
+    # Create signature - use explicit counterparty for consistency
     sign_args = {
         "protocol_id": {"securityLevel": 1, "protocol": "test"},
         "key_id": "key1",
-        "data": data
+        "data": data,
+        "counterparty": "self"
     }
     sign_result = wallet.create_signature(sign_args, "test")
     
@@ -297,7 +307,8 @@ def test_verify_signature_with_hash_to_directly_verify(wallet):
         "protocol_id": {"securityLevel": 1, "protocol": "test"},
         "key_id": "key1",
         "hash_to_directly_verify": data_hash,
-        "signature": sign_result["signature"]
+        "signature": sign_result["signature"],
+        "counterparty": "self"
     }
     result = wallet.verify_signature(verify_args, "test")
     assert "valid" in result
