@@ -219,3 +219,4 @@ class SymmetricKey:
     def __repr__(self) -> str:
         """Return a string representation (key hidden for security)."""
         return f"SymmetricKey(key=<{len(self._key)} bytes>)"
+

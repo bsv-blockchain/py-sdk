@@ -248,3 +248,4 @@ class TestProtoWalletLegacyArgs:
         decrypted = bytes(decrypt_result["plaintext"])
         
         assert decrypted == plaintext
+

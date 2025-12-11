@@ -284,3 +284,4 @@ class TestSymmetricKeyEdgeCases:
         decrypted = key.decrypt(ciphertext_hex)
         
         assert decrypted == plaintext
+

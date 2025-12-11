@@ -19,11 +19,10 @@ class SimplifiedHTTPTransport(Transport):
         self._on_data_funcs: List[Callable[[Any, AuthMessage], Optional[Exception]]] = []
         self._lock = threading.Lock()
 
-    def send(self, ctx: Any, message: AuthMessage) -> Optional[Exception]:
+    def send(self, message: AuthMessage) -> Optional[Exception]:
         """Send an AuthMessage via HTTP
         
         Args:
-            ctx: Context (can be None)
             message: AuthMessage to send
         """
         # Check if any handlers are registered
@@ -33,9 +32,9 @@ class SimplifiedHTTPTransport(Transport):
         
         try:
             if getattr(message, 'message_type', None) == 'general':
-                return self._send_general_message(ctx, message)
+                return self._send_general_message(message)
             else:
-                return self._send_non_general_message(ctx, message)
+                return self._send_non_general_message(message)
         except Exception as e:
             return Exception(f"Failed to send AuthMessage: {e}")
 
@@ -52,7 +51,7 @@ class SimplifiedHTTPTransport(Transport):
                 return None, Exception("no handlers registered")
             return self._on_data_funcs[0], None
 
-    def _send_non_general_message(self, ctx: Any, message: AuthMessage) -> Optional[Exception]:
+    def _send_non_general_message(self, message: AuthMessage) -> Optional[Exception]:
         """
         Send non-general AuthMessage (initialRequest, initialResponse, etc.)
         Reference: go-sdk/auth/transports/simplified_http_transport.go:94-117
@@ -89,14 +88,14 @@ class SimplifiedHTTPTransport(Transport):
             if resp.content and len(resp.content) > 0:
                 response_data = json.loads(resp.content.decode('utf-8'))
                 response_msg = self._auth_message_from_dict(response_data)
-                return self._notify_handlers(ctx, response_msg)
+                return self._notify_handlers(response_msg)
             else:
                 return Exception("Empty response body")
                 
         except Exception as e:
             return Exception(f"Failed to send non-general message: {e}")
     
-    def _send_general_message(self, ctx: Any, message: AuthMessage) -> Optional[Exception]:
+    def _send_general_message(self, message: AuthMessage) -> Optional[Exception]:
         """
         Send general AuthMessage (authenticated HTTP request)
         Reference: go-sdk/auth/transports/simplified_http_transport.go:147-177
@@ -141,7 +140,7 @@ class SimplifiedHTTPTransport(Transport):
                 else:
                     return Exception("Failed to parse response: missing auth headers")
             
-            return self._notify_handlers(ctx, response_msg)
+            return self._notify_handlers(response_msg)
             
         except Exception as e:
             return Exception(f"Failed to send general message: {e}")
@@ -347,26 +346,17 @@ class SimplifiedHTTPTransport(Transport):
         else:  # 0xFF
             return struct.unpack('<Q', reader.read(8))[0]
     
-    def _notify_handlers(self, ctx: Any, message: AuthMessage) -> Optional[Exception]:
+    def _notify_handlers(self, message: AuthMessage) -> Optional[Exception]:
         with self._lock:
             handlers = list(self._on_data_funcs)
         for handler in handlers:
             try:
-                # Try calling with just message first (Peer.on_data signature)
-                # Fall back to (ctx, message) for backward compatibility
-                import inspect
-                sig = inspect.signature(handler)
-                param_count = len(sig.parameters)
-                
-                if param_count == 1:
-                    err = handler(message)
-                else:
-                    err = handler(ctx, message)
-                    
+                # Call handler with just message (Peer.on_data signature)
+                err = handler(message)
                 if err:
                     return err
-            except TypeError:
-                # Fallback: try the other signature
+            except TypeError as te:
+                # Log the error but continue
                 try:
                     err = handler(message)
                     if err:
