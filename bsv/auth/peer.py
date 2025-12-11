@@ -167,7 +167,7 @@ class Peer:
         Sets the _transport_ready flag to indicate whether transport setup succeeded.
         This can be checked by applications to verify peer health.
         """
-        def on_data(message):
+        def on_data(ctx, message):
             return self.handle_incoming_message(message)
         
         try:
@@ -532,7 +532,7 @@ class Peer:
         if sig_result is None or not hasattr(sig_result, 'signature'):
             return Exception("failed to sign initial response")
         response.signature = sig_result.signature
-        err = self.transport.send(response)
+        err = self.transport.send(None, response)
         if err is not None:
             return Exception(f"failed to send initial response: {err}")
         return None
@@ -1318,14 +1318,23 @@ class Peer:
         self.session_manager.add_session(session)
         # Get our identity key to include in the initial request
         identity_key_result = self.wallet.get_public_key({'identityKey': True}, "auth-peer")
-        if identity_key_result is None or not hasattr(identity_key_result, 'public_key'):
+        if identity_key_result is None:
+            return None
+        # Handle both dict and object responses
+        if isinstance(identity_key_result, dict):
+            identity_key = identity_key_result.get('publicKey')
+        elif hasattr(identity_key_result, 'public_key'):
+            identity_key = identity_key_result.public_key
+        else:
+            return None
+        if identity_key is None:
             return None
         # Create and send the initial request message
         from .auth_message import AuthMessage
         initial_request = AuthMessage(
             version=AUTH_VERSION,
             message_type=MessageTypeInitialRequest,
-            identity_key=identity_key_result.public_key,
+            identity_key=identity_key,
             initial_nonce=session_nonce,
             requested_certificates=self.certificates_to_request
         )
@@ -1348,7 +1357,7 @@ class Peer:
             'session_nonce': session_nonce
         }
         # Send the initial request
-        err = self.transport.send(initial_request)
+        err = self.transport.send(None, initial_request)
         if err is not None:
             del self.on_initial_response_received_callbacks[callback_id]
             return None
@@ -1429,7 +1438,7 @@ class Peer:
         self.session_manager.update_session(peer_session)
         if self.auto_persist_last_session:
             self.last_interacted_with_peer = peer_session.peer_identity_key
-        err = self.transport.send(general_message)
+        err = self.transport.send(None, general_message)
         if err is not None:
             return Exception(f"failed to send message to peer {peer_session.peer_identity_key}: {err}")
         return None
@@ -1479,7 +1488,7 @@ class Peer:
             return Exception("failed to sign certificate request")
         cert_request.signature = sig_result.signature
         # Send the request
-        err = self.transport.send(cert_request)
+        err = self.transport.send(None, cert_request)
         if err is not None:
             return Exception(f"failed to send certificate request: {err}")
         # Update session timestamp
@@ -1535,7 +1544,7 @@ class Peer:
             return Exception("failed to sign certificate response")
         cert_response.signature = sig_result.signature
         # Send the response
-        err = self.transport.send(cert_response)
+        err = self.transport.send(None, cert_response)
         if err is not None:
             return Exception(f"failed to send certificate response: {err}")
         # Update session timestamp

@@ -31,8 +31,8 @@ class LocalTransport:
         # For these tests we directly call our own handler to emulate delivery
         if self._on_data_callback is None:
             return Exception("No handler")
-        # Note: peer.py callback expects just (message), not (ctx, message)
-        return self._on_data_callback(msg)
+        # Note: peer.py callback expects (ctx, message)
+        return self._on_data_callback(None, msg)
 
 
 class MockSigResult:

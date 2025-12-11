@@ -111,11 +111,11 @@ class LocalTransport:
             # Called as send(ctx, message) - first arg is ctx, second is message
             msg = message
         self.sent_messages.append(msg)
-        # Note: peer.py callback expects just (message), not (ctx, message)
+        # Note: peer.py callback expects (ctx, message)
         if self.peer and self.peer._on_data_callback:
-            return self.peer._on_data_callback(msg)
+            return self.peer._on_data_callback(None, msg)
         elif self._on_data_callback is not None:
-            return self._on_data_callback(msg)
+            return self._on_data_callback(None, msg)
         return None
 
 

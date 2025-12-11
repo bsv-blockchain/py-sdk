@@ -28,9 +28,9 @@ class CaptureTransport:
             msg = message
         self.sent.append(msg)
         # loopback to update timestamps safely
-        # Note: peer.py callback expects just (message), not (ctx, message)
+        # Note: peer.py callback expects (ctx, message)
         if self._on_data_callback is not None:
-            return self._on_data_callback(msg)
+            return self._on_data_callback(None, msg)
         return None
 
 
