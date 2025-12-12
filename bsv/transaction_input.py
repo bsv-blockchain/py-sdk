@@ -64,7 +64,11 @@ class TransactionInput:
 
     @classmethod
     def from_hex(cls, stream: Union[str, bytes, Reader]) -> Optional["TransactionInput"]:
-        with suppress(Exception):
+        """Parse a transaction input from hex string, bytes, or Reader.
+
+        Returns None if data is invalid or incomplete.
+        """
+        try:
             stream = (
                 stream
                 if isinstance(stream, Reader)
@@ -72,15 +76,30 @@ class TransactionInput:
                     stream if isinstance(stream, bytes) else bytes.fromhex(stream)
                 )
             )
-            txid = stream.read_bytes(32)[::-1]
-            assert len(txid) == 32
+        except ValueError:
+            return None
+
+        try:
+            txid = stream.read_bytes(32)
+            if len(txid) != 32:
+                return None
+            txid = txid[::-1]  # Reverse for display
+
             vout = stream.read_int(4)
-            assert vout is not None
+            if vout is None:
+                return None
+
             script_length = stream.read_var_int_num()
-            assert script_length is not None
+            if script_length is None:
+                return None
+
             unlocking_script_bytes = stream.read_bytes(script_length)
+            if len(unlocking_script_bytes) < script_length:
+                return None
+
             sequence = stream.read_int(4)
-            assert sequence is not None
+            if sequence is None:
+                return None
 
             return TransactionInput(
                 source_txid=txid.hex(),
@@ -88,5 +107,5 @@ class TransactionInput:
                 unlocking_script=Script(unlocking_script_bytes),
                 sequence=sequence,
             )
-
-        return None
+        except ValueError:
+            return None
