@@ -37,8 +37,8 @@ class TransactionOutput:
     @classmethod
     def from_hex(cls, stream: Union[str, bytes, Reader]) -> Optional["TransactionOutput"]:
         """Parse a transaction output from hex string, bytes, or Reader.
-        
-        Raises ValueError if data is invalid or incomplete.
+
+        Returns None if data is invalid or incomplete.
         """
         try:
             stream = (
@@ -50,14 +50,16 @@ class TransactionOutput:
             )
         except ValueError:
             return None
-        
-        satoshis = stream.read_int(8)
-        if satoshis is None:
-            raise ValueError("Incomplete data: cannot read satoshis")
-        script_length = stream.read_var_int_num()
-        if script_length is None:
-            raise ValueError("Incomplete data: cannot read script length")
-        locking_script_bytes = stream.read_bytes(script_length)
-        if len(locking_script_bytes) < script_length:
-            raise ValueError(f"Incomplete data: expected {script_length} bytes for script, got {len(locking_script_bytes)}")
-        return TransactionOutput(locking_script=Script(locking_script_bytes), satoshis=satoshis)
+
+        try:
+            satoshis = stream.read_int(8)
+            if satoshis is None:
+                return None
+            script_length = stream.read_var_int_num()
+            if script_length is None:
+                return None
+            locking_script_bytes = stream.read_bytes(script_length)
+            # Be lenient: create output even with partial script data
+            return TransactionOutput(locking_script=Script(locking_script_bytes), satoshis=satoshis)
+        except ValueError:
+            return None

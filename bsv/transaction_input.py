@@ -65,8 +65,8 @@ class TransactionInput:
     @classmethod
     def from_hex(cls, stream: Union[str, bytes, Reader]) -> Optional["TransactionInput"]:
         """Parse a transaction input from hex string, bytes, or Reader.
-        
-        Raises ValueError if data is invalid or incomplete.
+
+        Returns None if data is invalid or incomplete.
         """
         try:
             stream = (
@@ -78,31 +78,34 @@ class TransactionInput:
             )
         except ValueError:
             return None
-        
-        txid = stream.read_bytes(32)
-        if len(txid) != 32:
-            raise ValueError(f"Incomplete data: expected 32 bytes for txid, got {len(txid)}")
-        txid = txid[::-1]  # Reverse for display
-        
-        vout = stream.read_int(4)
-        if vout is None:
-            raise ValueError("Incomplete data: cannot read vout")
-        
-        script_length = stream.read_var_int_num()
-        if script_length is None:
-            raise ValueError("Incomplete data: cannot read script length")
-        
-        unlocking_script_bytes = stream.read_bytes(script_length)
-        if len(unlocking_script_bytes) < script_length:
-            raise ValueError(f"Incomplete data: expected {script_length} bytes for script, got {len(unlocking_script_bytes)}")
-        
-        sequence = stream.read_int(4)
-        if sequence is None:
-            raise ValueError("Incomplete data: cannot read sequence")
 
-        return TransactionInput(
-            source_txid=txid.hex(),
-            source_output_index=vout,
-            unlocking_script=Script(unlocking_script_bytes),
-            sequence=sequence,
-        )
+        try:
+            txid = stream.read_bytes(32)
+            if len(txid) != 32:
+                return None
+            txid = txid[::-1]  # Reverse for display
+
+            vout = stream.read_int(4)
+            if vout is None:
+                return None
+
+            script_length = stream.read_var_int_num()
+            if script_length is None:
+                return None
+
+            unlocking_script_bytes = stream.read_bytes(script_length)
+            if len(unlocking_script_bytes) < script_length:
+                return None
+
+            sequence = stream.read_int(4)
+            if sequence is None:
+                return None
+
+            return TransactionInput(
+                source_txid=txid.hex(),
+                source_output_index=vout,
+                unlocking_script=Script(unlocking_script_bytes),
+                sequence=sequence,
+            )
+        except ValueError:
+            return None
