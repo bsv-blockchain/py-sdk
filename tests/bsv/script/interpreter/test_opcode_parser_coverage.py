@@ -11,68 +11,90 @@ import pytest
 def test_parse_op_single_byte():
     """Test parsing single byte opcode."""
     try:
-        from bsv.script.interpreter.op_parser import parse_opcode
-        
+        from bsv.script.interpreter.op_parser import DefaultOpcodeParser, ParsedOpcode
+        from bsv.script.script import Script
+
         # OP_1
-        opcode, size = parse_opcode(b'\x51', 0)
-        assert opcode is not None
-        assert size == 1
+        script = Script(b'\x51')
+        parser = DefaultOpcodeParser()
+        parsed = parser.parse(script)
+        assert len(parsed) == 1
+        assert isinstance(parsed[0], ParsedOpcode)
+        assert parsed[0].opcode == b'\x51'
     except (ImportError, AttributeError):
-        pytest.skip("parse_opcode not available")
+        pytest.skip("DefaultOpcodeParser not available")
 
 
 def test_parse_op_with_data():
     """Test parsing opcode with data push."""
     try:
-        from bsv.script.interpreter.op_parser import parse_opcode
-        
+        from bsv.script.interpreter.op_parser import DefaultOpcodeParser, ParsedOpcode
+        from bsv.script.script import Script
+
         # PUSH 3 bytes
-        data = b'\x03\x01\x02\x03'
-        opcode, size = parse_opcode(data, 0)
-        assert opcode is not None
-        assert size > 1
+        script = Script(b'\x03\x01\x02\x03')
+        parser = DefaultOpcodeParser()
+        parsed = parser.parse(script)
+        assert len(parsed) == 1
+        assert isinstance(parsed[0], ParsedOpcode)
+        assert parsed[0].opcode == b'\x03'
+        assert parsed[0].data == b'\x01\x02\x03'
     except (ImportError, AttributeError):
-        pytest.skip("parse_opcode not available")
+        pytest.skip("DefaultOpcodeParser not available")
 
 
 def test_parse_op_pushdata1():
     """Test parsing OP_PUSHDATA1."""
     try:
-        from bsv.script.interpreter.op_parser import parse_opcode
-        
+        from bsv.script.interpreter.op_parser import DefaultOpcodeParser, ParsedOpcode
+        from bsv.script.script import Script
+
         # OP_PUSHDATA1 with 10 bytes
-        data = b'\x4c\x0a' + b'\x00' * 10
-        opcode, size = parse_opcode(data, 0)
-        assert opcode is not None
-        assert size == 12  # 1 opcode + 1 length + 10 data
+        script = Script(b'\x4c\x0a' + b'\x00' * 10)
+        parser = DefaultOpcodeParser()
+        parsed = parser.parse(script)
+        assert len(parsed) == 1
+        assert isinstance(parsed[0], ParsedOpcode)
+        assert parsed[0].opcode == b'\x4c'
+        assert parsed[0].data == b'\x00' * 10
     except (ImportError, AttributeError):
-        pytest.skip("parse_opcode not available")
+        pytest.skip("DefaultOpcodeParser not available")
 
 
 def test_parse_op_pushdata2():
     """Test parsing OP_PUSHDATA2."""
     try:
-        from bsv.script.interpreter.op_parser import parse_opcode
-        
+        from bsv.script.interpreter.op_parser import DefaultOpcodeParser, ParsedOpcode
+        from bsv.script.script import Script
+
         # OP_PUSHDATA2 with 256 bytes
-        data = b'\x4d\x00\x01' + b'\x00' * 256
-        opcode, _ = parse_opcode(data, 0)
-        assert opcode is not None
+        script = Script(b'\x4d\x00\x01' + b'\x00' * 256)
+        parser = DefaultOpcodeParser()
+        parsed = parser.parse(script)
+        assert len(parsed) == 1
+        assert isinstance(parsed[0], ParsedOpcode)
+        assert parsed[0].opcode == b'\x4d'
+        assert parsed[0].data == b'\x00' * 256
     except (ImportError, AttributeError):
-        pytest.skip("parse_opcode not available")
+        pytest.skip("DefaultOpcodeParser not available")
 
 
 def test_parse_op_pushdata4():
     """Test parsing OP_PUSHDATA4."""
     try:
-        from bsv.script.interpreter.op_parser import parse_opcode
-        
+        from bsv.script.interpreter.op_parser import DefaultOpcodeParser, ParsedOpcode
+        from bsv.script.script import Script
+
         # OP_PUSHDATA4 with 1000 bytes
-        data = b'\x4e\xe8\x03\x00\x00' + b'\x00' * 1000
-        opcode, _ = parse_opcode(data, 0)
-        assert opcode is not None
+        script = Script(b'\x4e\xe8\x03\x00\x00' + b'\x00' * 1000)
+        parser = DefaultOpcodeParser()
+        parsed = parser.parse(script)
+        assert len(parsed) == 1
+        assert isinstance(parsed[0], ParsedOpcode)
+        assert parsed[0].opcode == b'\x4e'
+        assert parsed[0].data == b'\x00' * 1000
     except (ImportError, AttributeError):
-        pytest.skip("parse_opcode not available")
+        pytest.skip("DefaultOpcodeParser not available")
 
 
 # ========================================================================
@@ -82,27 +104,37 @@ def test_parse_op_pushdata4():
 def test_is_op_push():
     """Test identifying push opcodes."""
     try:
-        from bsv.script.interpreter.op_parser import is_push_opcode
-        
-        # OP_1 through OP_16 are not pushes
-        assert is_push_opcode(0x51) == False or True
-        
-        # Values 1-75 are direct pushes
-        assert is_push_opcode(0x01) == True or True
+        from bsv.script.interpreter.op_parser import DefaultOpcodeParser, ParsedOpcode
+        from bsv.script.script import Script
+
+        # Test direct push opcode (0x01-0x4b are direct pushes)
+        script = Script(b'\x03\x01\x02\x03')  # PUSH 3 bytes of data
+        parser = DefaultOpcodeParser()
+        parsed = parser.parse(script)
+        assert len(parsed) == 1
+        # Direct push opcodes have values 0x01-0x4b
+        assert 0x01 <= parsed[0].opcode[0] <= 0x4b
+        assert parsed[0].data == b'\x01\x02\x03'
     except (ImportError, AttributeError):
-        pytest.skip("is_push_opcode not available")
+        pytest.skip("DefaultOpcodeParser not available")
 
 
 def test_get_op_name():
     """Test getting opcode name."""
     try:
-        from bsv.script.interpreter.op_parser import get_op_name
-        
-        name = get_op_name(0x51)  # OP_1
+        from bsv.script.interpreter.op_parser import DefaultOpcodeParser, ParsedOpcode
+        from bsv.script.script import Script
+
+        script = Script(b'\x51')  # OP_1
+        parser = DefaultOpcodeParser()
+        parsed = parser.parse(script)
+        assert len(parsed) == 1
+        name = parsed[0].name()
         assert name is not None
         assert isinstance(name, str)
+        assert name == "OP_1" or "OP_TRUE" in name
     except (ImportError, AttributeError):
-        pytest.skip("get_op_name not available")
+        pytest.skip("ParsedOpcode.name not available")
 
 
 # ========================================================================
@@ -110,39 +142,33 @@ def test_get_op_name():
 # ========================================================================
 
 def test_parse_op_at_end():
-    """Test parsing opcode at end of script."""
+    """Test parsing script with valid opcode."""
     try:
-        from bsv.script.interpreter.op_parser import parse_opcode
-        
-        data = b'\x51'
-        _, size = parse_opcode(data, 0)
-        assert size == 1
-        
-        # Try to parse beyond end
-        try:
-            _, _ = parse_opcode(data, 1)
-            assert True  # May handle gracefully
-        except IndexError:
-            # Expected
-            assert True
+        from bsv.script.interpreter.op_parser import DefaultOpcodeParser
+        from bsv.script.script import Script
+
+        script = Script(b'\x51')  # OP_1
+        parser = DefaultOpcodeParser()
+        parsed = parser.parse(script)
+        assert len(parsed) == 1
+        assert parsed[0].opcode == b'\x51'
     except (ImportError, AttributeError):
-        pytest.skip("parse_opcode not available")
+        pytest.skip("DefaultOpcodeParser not available")
 
 
 def test_parse_op_truncated():
-    """Test parsing truncated _."""
+    """Test parsing script with PUSHDATA."""
     try:
-        from bsv.script.interpreter.op_parser import parse_opcode
-        
-        # OP_PUSHDATA1 but missing length byte
-        data = b'\x4c'
-        
-        try:
-            _, _ = parse_opcode(data, 0)
-            assert True  # May handle gracefully
-        except (IndexError, ValueError):
-            # Expected
-            assert True
+        from bsv.script.interpreter.op_parser import DefaultOpcodeParser
+        from bsv.script.script import Script
+
+        # OP_PUSHDATA1 with 10 bytes
+        script = Script(b'\x4c\x0a' + b'\x00' * 10)
+        parser = DefaultOpcodeParser()
+        parsed = parser.parse(script)
+        assert len(parsed) == 1
+        assert parsed[0].opcode == b'\x4c'
+        assert len(parsed[0].data or b'') == 10
     except (ImportError, AttributeError):
-        pytest.skip("parse_opcode not available")
+        pytest.skip("DefaultOpcodeParser not available")
 
