@@ -249,3 +249,4 @@ class TestProtoWalletLegacyArgs:
         
         assert decrypted == plaintext
 
+

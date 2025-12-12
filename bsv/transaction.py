@@ -242,13 +242,19 @@ class Transaction:
 
     @classmethod
     def from_hex(cls, stream: Union[str, bytes, Reader]) -> Optional["Transaction"]:
-        with suppress(Exception):
+        """Parse a transaction from hex string, bytes, or Reader.
+        
+        Returns None only for invalid hex format, raises exception for parse errors.
+        """
+        try:
             if isinstance(stream, str):
                 return cls.from_reader(Reader(bytes.fromhex(stream)))
             elif isinstance(stream, bytes):
                 return cls.from_reader(Reader(stream))
             return cls.from_reader(stream)
-        return None
+        except ValueError:
+            # Invalid hex string
+            return None
 
     @classmethod
     def from_beef(cls, stream: Union[str, bytes, Reader]) -> "Transaction":
@@ -387,23 +393,39 @@ class Transaction:
 
     @classmethod
     def from_reader(cls, reader: Reader) -> 'Transaction':
+        """Parse a transaction from a Reader.
+        
+        Raises ValueError if data is invalid or incomplete.
+        """
         t = cls()
         t.version = reader.read_uint32_le()
-        assert t.version is not None
+        if t.version is None:
+            raise ValueError("Incomplete data: cannot read transaction version")
+        
         inputs_count = reader.read_var_int_num()
-        assert inputs_count is not None
-        for _ in range(inputs_count):
+        if inputs_count is None:
+            raise ValueError("Incomplete data: cannot read inputs count")
+        
+        for i in range(inputs_count):
             _input = TransactionInput.from_hex(reader)
-            assert _input is not None
+            if _input is None:
+                raise ValueError(f"Failed to parse input {i}")
             t.inputs.append(_input)
+        
         outputs_count = reader.read_var_int_num()
-        assert outputs_count is not None
-        for _ in range(outputs_count):
+        if outputs_count is None:
+            raise ValueError("Incomplete data: cannot read outputs count")
+        
+        for i in range(outputs_count):
             _output = TransactionOutput.from_hex(reader)
-            assert _output is not None
+            if _output is None:
+                raise ValueError(f"Failed to parse output {i}")
             t.outputs.append(_output)
+        
         t.locktime = reader.read_uint32_le()
-        assert t.locktime is not None
+        if t.locktime is None:
+            raise ValueError("Incomplete data: cannot read locktime")
+        
         return t
 
     async def verify(self, chaintracker: Optional[ChainTracker] = default_chain_tracker(), scripts_only=False) -> bool:

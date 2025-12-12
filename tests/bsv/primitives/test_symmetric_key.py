@@ -285,3 +285,4 @@ class TestSymmetricKeyEdgeCases:
         
         assert decrypted == plaintext
 
+
