@@ -20,17 +20,7 @@ class WhatsOnChainTracker(ChainTracker):
         self.api_key = api_key
 
     async def is_valid_root_for_height(self, root: str, height: int) -> bool:
-        # NOTE:
-        #   Use the base class' get_headers implementation directly to avoid
-        #   being affected by subclasses that may overload `get_headers`
-        #   with a different signature (e.g. wallet-toolbox's Chaintracks
-        #   adapter, which adds height/count parameters).
-        #   Calling WhatsOnChainTracker.get_headers(self) guarantees we
-        #   always get the HTTP header dict expected here.
-        request_options = {
-            "method": "GET",
-            "headers": WhatsOnChainTracker.get_headers(self),
-        }
+        request_options = {"method": "GET", "headers": self.get_headers()}
 
         response = await self.http_client.fetch(
             f"{self.URL}/block/{height}/header", request_options
@@ -50,14 +40,7 @@ class WhatsOnChainTracker(ChainTracker):
         
         Implements ChainTracker.current_height() from SDK.
         """
-        # See note in is_valid_root_for_height(): we intentionally call the
-        # base-class implementation of get_headers() so that subclasses
-        # are free to introduce their own Chaintracks-style `get_headers`
-        # without breaking this SDK tracker.
-        request_options = {
-            "method": "GET",
-            "headers": WhatsOnChainTracker.get_headers(self),
-        }
+        request_options = {"method": "GET", "headers": self.get_headers()}
 
         response = await self.http_client.fetch(f"{self.URL}/chain/info", request_options)
         if response.ok:
