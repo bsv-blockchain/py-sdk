@@ -1169,14 +1169,14 @@ def test_normalize_protocol_with_dict_snake_case(wallet):
 
 def test_resolve_woc_api_key_from_args(wallet):
     """Test _resolve_woc_api_key from args."""
-    args = {"apiKey": "test_key_from_args"}
+    args = {"apiKey": "test_key_from_args"}  # NOSONAR - Test value, not a real API key
     result = wallet._resolve_woc_api_key(args)
     assert result == "test_key_from_args"
 
 
 def test_resolve_woc_api_key_from_woc_nested(wallet):
     """Test _resolve_woc_api_key from nested woc.apiKey."""
-    args = {"woc": {"apiKey": "test_key_nested"}}
+    args = {"woc": {"apiKey": "test_key_nested"}}  # NOSONAR - Test value, not a real API key
     result = wallet._resolve_woc_api_key(args)
     assert result == "test_key_nested"
 

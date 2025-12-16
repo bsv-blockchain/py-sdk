@@ -173,7 +173,7 @@ async def test_auth_fetch_certificate_exchange(auth_server):
     }
     
     # This should trigger the certificate request flow
-    certs = auth_fetch.send_certificate_request(None, base_url, certificates_to_request)
+    certs = auth_fetch.send_certificate_request(base_url, certificates_to_request)
     
     # Verify we received certificates
     assert certs is not None, "Expected certificates to be returned"

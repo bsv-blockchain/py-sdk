@@ -130,12 +130,10 @@ class OverlayAdminTokenTemplate:
 
         # Create locking script using PushDrop
         locking_script_hex = pushdrop.lock(
-            None,  # ctx
             fields,
             protocol_info,
             "1",  # key_id
             "self",  # counterparty
-            for_self=True,
             include_signature=False  # For advertisements, we don't need signatures
         )
 

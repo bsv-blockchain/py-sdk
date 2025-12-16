@@ -198,7 +198,7 @@ class TestDownloaderErrorHandling:
     def test_timeout_with_custom_settings(self):
         """Test timeout behavior with custom downloader settings."""
         custom_downloader = Downloader(network='mainnet', timeout=5.0, max_retries=2)
-        assert custom_downloader.timeout == 5.0
+        assert abs(custom_downloader.timeout - 5.0) < 0.0001  # Use approximate comparison for floats
         assert custom_downloader.max_retries == 2
 
         with patch.object(custom_downloader, 'resolve', return_value=['https://test.com/file']):
@@ -230,7 +230,7 @@ class TestDownloaderErrorHandling:
     def test_different_retry_delays(self):
         """Test custom retry delay."""
         custom_downloader = Downloader(network='mainnet', retry_delay=2.0)
-        assert custom_downloader.retry_delay == 2.0
+        assert abs(custom_downloader.retry_delay - 2.0) < 0.0001  # Use approximate comparison for floats
 
         with patch.object(custom_downloader, 'resolve', return_value=['https://test.com/file']):
             import requests

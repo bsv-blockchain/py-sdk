@@ -991,7 +991,7 @@ def _run_histogram_for_combo(wallet, t, base_flag, acp):
     hist = {}
     for i in range(256):
         t.outputs[0].satoshis = 400 + (i % 3)
-        us = u.sign(None, t, 0)
+        us = u.sign(t, 0)
         L = len(us)
         hist[L] = hist.get(L, 0) + 1
         if L > (1 + 73 + 1):

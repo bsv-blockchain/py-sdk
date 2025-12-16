@@ -179,7 +179,7 @@ class AuthFetch:
         # Handle payment if needed
         try:
             if getattr(resp_obj, 'status_code', None) == 402:
-                return self.handle_payment_and_retry(None, url_str, config, resp_obj)
+                return self.handle_payment_and_retry(url_str, config, resp_obj)
         except Exception:
             pass
         
