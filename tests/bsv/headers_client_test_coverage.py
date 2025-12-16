@@ -76,9 +76,10 @@ def test_gullible_headers_client_init():
     """Test gullible headers client initialization."""
     try:
         from bsv.spv.gullible_headers_client import GullibleHeadersClient
-        
+
         client = GullibleHeadersClient()
-        assert hasattr(client, 'get_header')
+        assert hasattr(client, 'current_height')
+        assert hasattr(client, 'is_valid_root_for_height')
     except (ImportError, AttributeError):
         pytest.skip(SKIP_GULLIBLE_HEADERS_CLIENT)
 

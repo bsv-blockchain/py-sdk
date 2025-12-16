@@ -10,46 +10,32 @@ import pytest
 
 def test_overlay_lookup_init():
     """Test overlay lookup initialization."""
-    try:
-        from bsv.overlay.lookup import OverlayLookup
-        
-        lookup = OverlayLookup()
-        assert lookup is not None
-    except (ImportError, AttributeError):
-        pytest.skip("OverlayLookup not available")
+    from bsv.overlay.lookup import LookupResolver
+
+    lookup = LookupResolver()
+    assert lookup is not None
 
 
 def test_overlay_lookup_query():
     """Test overlay lookup query."""
-    try:
-        from bsv.overlay.lookup import OverlayLookup
+    from bsv.overlay.lookup import LookupResolver, LookupQuestion
         
-        lookup = OverlayLookup()
-        
-        if hasattr(lookup, 'query'):
-            try:
-                _ = lookup.query('test')
-                assert True
-            except Exception:
-                # Expected without overlay network
-                pytest.skip("Requires overlay network")
-    except (ImportError, AttributeError):
-        pytest.skip("OverlayLookup not available")
+    lookup = LookupResolver()
+    
+    # LookupResolver.query requires a LookupQuestion object
+    question = LookupQuestion(service='test', query={})
+    result = lookup.query(None, question)
+    assert result is not None
+    assert result.type == 'output-list'
 
 
 def test_overlay_lookup_with_protocol():
     """Test overlay lookup with protocol."""
-    try:
-        from bsv.overlay.lookup import OverlayLookup
-        
-        try:
-            lookup = OverlayLookup(protocol='SLAP')
-            assert lookup is not None
-        except TypeError:
-            # May not accept protocol parameter
-            pytest.skip("OverlayLookup doesn't accept protocol")
-    except (ImportError, AttributeError):
-        pytest.skip("OverlayLookup not available")
+    from bsv.overlay.lookup import LookupResolver
+
+    # LookupResolver doesn't accept protocol parameter, only backend
+    lookup = LookupResolver()
+    assert lookup is not None
 
 
 # ========================================================================
@@ -58,18 +44,14 @@ def test_overlay_lookup_with_protocol():
 
 def test_overlay_lookup_empty_query():
     """Test overlay lookup with empty query."""
-    try:
-        from bsv.overlay.lookup import OverlayLookup
-        
-        lookup = OverlayLookup()
-        
-        if hasattr(lookup, 'query'):
-            try:
-                _ = lookup.query('')
-                assert True
-            except (ValueError, Exception):  # NOSONAR - Intentional exception handling pattern for testing
-                # Expected
-                assert True
-    except (ImportError, AttributeError):
-        pytest.skip("OverlayLookup not available")
+    from bsv.overlay.lookup import LookupResolver, LookupQuestion
+
+    lookup = LookupResolver()
+
+    if hasattr(lookup, 'query'):
+        # Query requires a LookupQuestion object
+        question = LookupQuestion(service='test', query={})
+        result = lookup.query(None, question)
+        assert result is not None
+        assert result.type == 'output-list'
 

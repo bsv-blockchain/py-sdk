@@ -23,18 +23,12 @@ def test_drbg_init():
 
 def test_drbg_init_with_entropy():
     """Test DRBG with entropy."""
-    try:
-        from bsv.primitives.drbg import DRBG
-        
-        entropy = b'\x01' * 48
-        try:
-            drbg = DRBG(entropy=entropy)
-            assert drbg is not None
-        except TypeError:
-            # Constructor may have different signature
-            pytest.skip("DRBG constructor signature different")
-    except ImportError:
-        pytest.skip("DRBG not available")
+    from bsv.primitives.drbg import DRBG
+
+    entropy = b'\x01' * 48
+    nonce = b'\x02' * 16
+    drbg = DRBG(entropy, nonce)
+    assert drbg is not None
 
 
 # ========================================================================

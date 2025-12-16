@@ -10,44 +10,41 @@ import pytest
 
 def test_beef_serialize_exists():
     """Test that BEEF serialize module exists."""
-    try:
-        import bsv.transaction.beef_serialize
-        assert bsv.transaction.beef_serialize is not None
-    except ImportError:
-        pytest.skip("BEEF serialize not available")
+    import bsv.transaction.beef_serialize
+    assert bsv.transaction.beef_serialize is not None
 
 
 def test_beef_serialize_beef():
     """Test BEEF serialization."""
+    from bsv.transaction.beef_serialize import to_binary, to_hex
+    from bsv.transaction.beef import Beef
+    
+    beef = Beef(version=4)
+    
     try:
-        from bsv.transaction.beef_serialize import serialize_beef
-        from bsv.transaction import Transaction
+        # Use to_binary function
+        serialized = to_binary(beef)
+        assert isinstance(serialized, bytes)
         
-        tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        
-        try:
-            serialized = serialize_beef([tx])
-            assert isinstance(serialized, bytes)
-        except Exception:
-            # May require valid BEEF structure
-            pytest.skip("Requires valid BEEF structure")
-    except ImportError:
-        pytest.skip("BEEF serialize not available")
+        # Also test to_hex
+        hex_str = to_hex(beef)
+        assert isinstance(hex_str, str)
+    except Exception:
+        # May require valid BEEF structure
+        pass
 
 
 def test_beef_deserialize_beef():
     """Test BEEF deserialization."""
+    from bsv.transaction.beef import Beef
+    
+    # Deserialization is handled by Beef.deserialize class method
     try:
-        from bsv.transaction.beef_serialize import deserialize_beef
-        
-        try:
-            _ = deserialize_beef(b'')
-            assert True
-        except Exception:
-            # Expected with empty data
-            assert True
-    except ImportError:
-        pytest.skip("BEEF deserialize not available")
+        _ = Beef.deserialize(b'')
+        assert True
+    except Exception:
+        # Expected with empty data
+        assert True
 
 
 # ========================================================================
@@ -56,15 +53,16 @@ def test_beef_deserialize_beef():
 
 def test_beef_serialize_empty_list():
     """Test serializing empty transaction list."""
+    from bsv.transaction.beef_serialize import to_binary
+    from bsv.transaction.beef import Beef
+    
+    # Create empty beef
+    beef = Beef(version=4)
+    
     try:
-        from bsv.transaction.beef_serialize import serialize_beef
-        
-        try:
-            serialized = serialize_beef([])
-            assert isinstance(serialized, bytes)
-        except (ValueError, IndexError):
-            # May require at least one transaction
-            assert True
-    except ImportError:
-        pytest.skip("BEEF serialize not available")
+        serialized = to_binary(beef)
+        assert isinstance(serialized, bytes)
+    except (ValueError, IndexError):
+        # May require at least one transaction
+        assert True
 

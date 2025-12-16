@@ -22,25 +22,23 @@ def test_script_engine_init():
 
 def test_script_engine_with_flags():
     """Test script engine with verification flags."""
-    try:
-        from bsv.script.interpreter import Engine
-        from bsv.script.interpreter import with_flags
-        from bsv.script.interpreter.scriptflag import Flag
+    from bsv.script.interpreter.engine import Engine
+    from bsv.script.interpreter.options import with_flags
+    from bsv.script.interpreter.scriptflag.scriptflag import Flag
 
-        engine = Engine()
-        script = Script(b'\x51')
-        unlocking_script = Script(b'')
-        try:
-            result = engine.execute(
-                with_flags(Flag(0)),
-                with_scripts(script, unlocking_script)
-            )
-            assert result is None or hasattr(result, 'code')
-        except Exception:
-            # May require transaction context
-            pytest.skip("Requires transaction context")
-    except (ImportError, AttributeError):
-        pytest.skip("Engine not available")
+    engine = Engine()
+    script = Script(b'\x51')
+    unlocking_script = Script(b'')
+    try:
+        from bsv.script.interpreter.options import with_scripts
+        result = engine.execute(
+            with_flags(Flag(0)),
+            with_scripts(script, unlocking_script)
+        )
+        assert result is None or hasattr(result, 'code')
+    except Exception:
+        # May require transaction context
+        pytest.skip("Requires transaction context")
 
 
 # ========================================================================
@@ -92,36 +90,24 @@ def test_script_engine_step():
 
 def test_script_engine_get_stack():
     """Test getting script stack."""
-    try:
-        from bsv.script.interpreter import Engine
+    from bsv.script.interpreter.engine import Engine
 
-        engine = Engine()
+    engine = Engine()
 
-        if hasattr(engine, 'get_stack'):
-            stack = engine.get_stack()
-            assert stack is not None
-        else:
-            # Engine doesn't provide direct stack access
-            pytest.skip("Engine doesn't provide direct stack access")
-    except (ImportError, AttributeError):
-        pytest.skip("Engine get_stack not available")
+    # Engine doesn't provide direct stack access methods
+    assert not hasattr(engine, 'get_stack')
+    assert hasattr(engine, 'execute')  # But it does have execute
 
 
 def test_script_engine_get_alt_stack():
     """Test getting alt stack."""
-    try:
-        from bsv.script.interpreter import Engine
+    from bsv.script.interpreter.engine import Engine
 
-        engine = Engine()
+    engine = Engine()
 
-        if hasattr(engine, 'get_alt_stack'):
-            alt_stack = engine.get_alt_stack()
-            assert alt_stack is not None or True
-        else:
-            # Engine doesn't provide direct alt stack access
-            pytest.skip("Engine doesn't provide direct alt stack access")
-    except (ImportError, AttributeError):
-        pytest.skip("Engine get_alt_stack not available")
+    # Engine doesn't provide direct alt stack access methods
+    assert not hasattr(engine, 'get_alt_stack')
+    assert hasattr(engine, 'execute')  # But it does have execute
 
 
 # ========================================================================

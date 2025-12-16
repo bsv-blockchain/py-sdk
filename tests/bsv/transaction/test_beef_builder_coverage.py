@@ -13,13 +13,15 @@ from bsv.script.script import Script
 # ========================================================================
 
 def test_beef_builder_init():
-    """Test BEEF Builder initialization."""
-    try:
-        from bsv.transaction.beef_builder import BeefBuilder
-        builder = BeefBuilder()
-        assert builder is not None
-    except ImportError:
-        pytest.skip("BeefBuilder not available")
+    """Test BEEF Builder functions availability."""
+    from bsv.transaction.beef_builder import merge_transaction, merge_beef
+    from bsv.transaction.beef import Beef
+    
+    # beef_builder module has functions, not a class
+    beef = Beef(version=4)
+    assert beef is not None
+    assert callable(merge_transaction)
+    assert callable(merge_beef)
 
 
 # ========================================================================
@@ -28,34 +30,31 @@ def test_beef_builder_init():
 
 def test_beef_builder_add_transaction():
     """Test adding transaction to BEEF."""
-    try:
-        from bsv.transaction.beef_builder import BeefBuilder
-        
-        builder = BeefBuilder()
-        tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        
-        if hasattr(builder, 'add_transaction'):
-            builder.add_transaction(tx)
-            assert True
-    except ImportError:
-        pytest.skip("BeefBuilder not available")
+    from bsv.transaction.beef_builder import merge_transaction
+    from bsv.transaction.beef import Beef
+    
+    beef = Beef(version=4)
+    tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
+    
+    # Use merge_transaction function
+    beef_tx = merge_transaction(beef, tx)
+    assert beef_tx is not None
 
 
 def test_beef_builder_add_multiple_transactions():
     """Test adding multiple transactions."""
-    try:
-        from bsv.transaction.beef_builder import BeefBuilder
-        
-        builder = BeefBuilder()
-        tx1 = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        tx2 = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        
-        if hasattr(builder, 'add_transaction'):
-            builder.add_transaction(tx1)
-            builder.add_transaction(tx2)
-            assert True
-    except ImportError:
-        pytest.skip("BeefBuilder not available")
+    from bsv.transaction.beef_builder import merge_transaction
+    from bsv.transaction.beef import Beef
+    
+    beef = Beef(version=4)
+    tx1 = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
+    tx2 = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
+    
+    # Use merge_transaction function for multiple transactions
+    beef_tx1 = merge_transaction(beef, tx1)
+    beef_tx2 = merge_transaction(beef, tx2)
+    assert beef_tx1 is not None
+    assert beef_tx2 is not None
 
 
 # ========================================================================
@@ -64,46 +63,41 @@ def test_beef_builder_add_multiple_transactions():
 
 def test_beef_builder_build():
     """Test building BEEF."""
-    try:
-        from bsv.transaction.beef_builder import BeefBuilder
-        
-        builder = BeefBuilder()
-        
-        if hasattr(builder, 'build'):
-            beef = builder.build()
-            assert beef is not None
-    except ImportError:
-        pytest.skip("BeefBuilder not available")
+    from bsv.transaction.beef import Beef
+    
+    # Beef is created directly, not via a builder
+    beef = Beef(version=4)
+    assert beef is not None
+    assert hasattr(beef, 'to_binary')
+    assert hasattr(beef, 'to_hex')
 
 
 def test_beef_builder_build_with_transactions():
     """Test building BEEF with transactions."""
-    try:
-        from bsv.transaction.beef_builder import BeefBuilder
-        
-        builder = BeefBuilder()
-        tx = Transaction(
-            version=1,
-            tx_inputs=[
-                TransactionInput(
-                    source_txid='0' * 64,
-                    source_output_index=0,
-                    unlocking_script=Script(b''),
-                    sequence=0xFFFFFFFF
-                )
-            ],
-            tx_outputs=[
-                TransactionOutput(satoshis=1000, locking_script=Script(b''))
-            ],
-            locktime=0
-        )
-        
-        if hasattr(builder, 'add_transaction') and hasattr(builder, 'build'):
-            builder.add_transaction(tx)
-            beef = builder.build()
-            assert beef is not None
-    except ImportError:
-        pytest.skip("BeefBuilder not available")
+    from bsv.transaction.beef_builder import merge_transaction
+    from bsv.transaction.beef import Beef
+    
+    beef = Beef(version=4)
+    tx = Transaction(
+        version=1,
+        tx_inputs=[
+            TransactionInput(
+                source_txid='0' * 64,
+                source_output_index=0,
+                unlocking_script=Script(b''),
+                sequence=0xFFFFFFFF
+            )
+        ],
+        tx_outputs=[
+            TransactionOutput(satoshis=1000, locking_script=Script(b''))
+        ],
+        locktime=0
+    )
+    
+    # Use merge_transaction to add tx to beef
+    beef_tx = merge_transaction(beef, tx)
+    assert beef_tx is not None
+    assert beef is not None
 
 
 # ========================================================================
@@ -112,34 +106,25 @@ def test_beef_builder_build_with_transactions():
 
 def test_beef_builder_empty():
     """Test building empty BEEF."""
-    try:
-        from bsv.transaction.beef_builder import BeefBuilder
-        
-        builder = BeefBuilder()
-        
-        if hasattr(builder, 'build'):
-            try:
-                beef = builder.build()
-                assert beef is not None or True
-            except (ValueError, IndexError):
-                # May require at least one transaction
-                assert True
-    except ImportError:
-        pytest.skip("BeefBuilder not available")
+    from bsv.transaction.beef import Beef
+    
+    # Beef can be created empty
+    beef = Beef(version=4)
+    assert beef is not None
+    assert hasattr(beef, 'txs')
 
 
 def test_beef_builder_reset():
     """Test resetting BEEF builder."""
-    try:
-        from bsv.transaction.beef_builder import BeefBuilder
-        
-        builder = BeefBuilder()
-        tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        
-        if hasattr(builder, 'add_transaction') and hasattr(builder, 'reset'):
-            builder.add_transaction(tx)
-            builder.reset()
-            assert True
-    except ImportError:
-        pytest.skip("BeefBuilder not available")
+    from bsv.transaction.beef_builder import merge_transaction, remove_existing_txid
+    from bsv.transaction.beef import Beef
+    
+    beef = Beef(version=4)
+    tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
+    
+    # Add transaction and then remove it (reset-like operation)
+    beef_tx = merge_transaction(beef, tx)
+    if beef_tx:
+        remove_existing_txid(beef, beef_tx.txid)
+    assert True
 

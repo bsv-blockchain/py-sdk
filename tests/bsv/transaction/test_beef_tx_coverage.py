@@ -10,42 +10,33 @@ import pytest
 
 def test_beef_tx_init():
     """Test BEEF transaction initialization."""
-    try:
-        from bsv.transaction.beef import BeefTx
-        from bsv.transaction import Transaction
-        tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        beef_tx = BeefTx(txid="0"*64, tx_obj=tx)
-        assert beef_tx  # Verify object creation succeeds
-    except ImportError:
-        pytest.skip("BeefTx not available")
+    from bsv.transaction.beef import BeefTx
+    from bsv.transaction import Transaction
+    tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
+    beef_tx = BeefTx(txid="0"*64, tx_obj=tx)
+    assert beef_tx  # Verify object creation succeeds
 
 
 def test_beef_tx_from_transaction():
     """Test creating BEEF tx from transaction."""
-    try:
-        from bsv.transaction.beef import BeefTx
-        from bsv.transaction import Transaction
-        
-        tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        beef_tx = BeefTx(txid=tx.txid(), tx_obj=tx)
-        assert hasattr(beef_tx, 'txid')
-    except ImportError:
-        pytest.skip("BeefTx not available")
+    from bsv.transaction.beef import BeefTx
+    from bsv.transaction import Transaction
+    
+    tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
+    beef_tx = BeefTx(txid=tx.txid(), tx_obj=tx)
+    assert hasattr(beef_tx, 'txid')
 
 
 def test_beef_tx_serialize():
     """Test BEEF transaction serialization."""
-    try:
-        from bsv.transaction.beef import BeefTx
-        from bsv.transaction import Transaction
-        
-        tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        beef_tx = BeefTx(txid="0"*64, tx_obj=tx)
-        
-        # BeefTx is a dataclass, not expected to have serialize
-        assert hasattr(beef_tx, 'txid')
-    except ImportError:
-        pytest.skip("BeefTx not available")
+    from bsv.transaction.beef import BeefTx
+    from bsv.transaction import Transaction
+    
+    tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
+    beef_tx = BeefTx(txid="0"*64, tx_obj=tx)
+    
+    # BeefTx is a dataclass, not expected to have serialize
+    assert hasattr(beef_tx, 'txid')
 
 
 # ========================================================================
@@ -54,15 +45,12 @@ def test_beef_tx_serialize():
 
 def test_beef_tx_deserialize():
     """Test BEEF transaction deserialization."""
-    try:
-        from bsv.transaction.beef import BeefTx
-        from bsv.transaction import Transaction
-        
-        # BeefTx is a dataclass, test field access
-        tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        beef_tx = BeefTx(txid="0"*64, tx_obj=tx)
-        assert beef_tx.txid == "0"*64
-        assert beef_tx.tx_obj == tx
-    except ImportError:
-        pytest.skip("BeefTx not available")
+    from bsv.transaction.beef import BeefTx
+    from bsv.transaction import Transaction
+    
+    # BeefTx is a dataclass, test field access
+    tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
+    beef_tx = BeefTx(txid="0"*64, tx_obj=tx)
+    assert beef_tx.txid == "0"*64
+    assert beef_tx.tx_obj == tx
 
