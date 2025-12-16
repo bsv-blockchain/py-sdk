@@ -393,3 +393,208 @@ def test_read_script_chunks_op_push_boundary_76():
     except ImportError:
         pytest.skip("read_script_chunks not available")
 
+
+# ========================================================================
+# Missing coverage: serialize_chunks with data
+# ========================================================================
+
+def test_serialize_chunks_with_direct_push_data():
+    """Test serialize_chunks with direct push opcodes (op <= 75)."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks
+
+        # Direct push with 5 bytes
+        chunks = [ScriptChunk(op=5, data=b'\x01\x02\x03\x04\x05')]
+        result = serialize_chunks(chunks)
+        assert result == b'\x05\x01\x02\x03\x04\x05'
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+def test_serialize_chunks_direct_push_wrong_length():
+    """Test serialize_chunks with direct push opcode but wrong data length."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks
+
+        # Opcode says 5 bytes but data is 3 bytes
+        chunks = [ScriptChunk(op=5, data=b'\x01\x02\x03')]
+        with pytest.raises(ValueError, match="Direct push opcode 5 requires data length 5"):
+            serialize_chunks(chunks)
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+def test_serialize_chunks_with_pushdata1():
+    """Test serialize_chunks with OP_PUSHDATA1."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks
+
+        # OP_PUSHDATA1 with 100 bytes
+        data = b'\x00' * 100
+        chunks = [ScriptChunk(op=0x4C, data=data)]
+        result = serialize_chunks(chunks)
+        assert result == b'\x4c\x64' + data  # 0x64 = 100
+        assert len(result) == 1 + 1 + 100
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+def test_serialize_chunks_pushdata1_too_long():
+    """Test serialize_chunks with OP_PUSHDATA1 data too long."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks
+
+        # OP_PUSHDATA1 can only handle up to 255 bytes
+        data = b'\x00' * 256
+        chunks = [ScriptChunk(op=0x4C, data=data)]
+        with pytest.raises(ValueError, match="OP_PUSHDATA1 data too long"):
+            serialize_chunks(chunks)
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+def test_serialize_chunks_with_pushdata2():
+    """Test serialize_chunks with OP_PUSHDATA2."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks
+
+        # OP_PUSHDATA2 with 300 bytes
+        data = b'\x00' * 300
+        chunks = [ScriptChunk(op=0x4D, data=data)]
+        result = serialize_chunks(chunks)
+        assert result == b'\x4d' + (300).to_bytes(2, 'little') + data
+        assert len(result) == 1 + 2 + 300
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+def test_serialize_chunks_pushdata2_too_long():
+    """Test serialize_chunks with OP_PUSHDATA2 data too long."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks
+
+        # OP_PUSHDATA2 can only handle up to 65535 bytes
+        data = b'\x00' * 65536
+        chunks = [ScriptChunk(op=0x4D, data=data)]
+        with pytest.raises(ValueError, match="OP_PUSHDATA2 data too long"):
+            serialize_chunks(chunks)
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+def test_serialize_chunks_with_pushdata4():
+    """Test serialize_chunks with OP_PUSHDATA4."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks
+
+        # OP_PUSHDATA4 with 1000 bytes
+        data = b'\x00' * 1000
+        chunks = [ScriptChunk(op=0x4E, data=data)]
+        result = serialize_chunks(chunks)
+        assert result == b'\x4e' + (1000).to_bytes(4, 'little') + data
+        assert len(result) == 1 + 4 + 1000
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+def test_serialize_chunks_pushdata4_too_long():
+    """Test serialize_chunks with OP_PUSHDATA4 data too long."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks
+
+        # OP_PUSHDATA4 can only handle up to 4294967295 bytes
+        data = b'\x00' * (4294967296)  # One byte too many
+        chunks = [ScriptChunk(op=0x4E, data=data)]
+        with pytest.raises(ValueError, match="OP_PUSHDATA4 data too long"):
+            serialize_chunks(chunks)
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+def test_serialize_chunks_non_push_with_data():
+    """Test serialize_chunks with non-push opcode that has data (invalid)."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks
+
+        # OP_1 (non-push) with data - should raise error
+        chunks = [ScriptChunk(op=0x51, data=b'\x01')]
+        with pytest.raises(ValueError, match="Non-push opcode 81 should not have data"):
+            serialize_chunks(chunks)
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+def test_serialize_chunks_mixed():
+    """Test serialize_chunks with mixed chunk types."""
+    try:
+        from bsv.utils.script_chunks import ScriptChunk, serialize_chunks, read_script_chunks
+
+        # Create chunks manually
+        chunks = [
+            ScriptChunk(op=0x51, data=None),  # OP_1
+            ScriptChunk(op=5, data=b'\x01\x02\x03\x04\x05'),  # Direct push
+            ScriptChunk(op=0x52, data=None),  # OP_2
+        ]
+        result = serialize_chunks(chunks)
+        
+        # Verify round-trip
+        parsed = read_script_chunks(result)
+        assert len(parsed) == 3
+        assert parsed[0].op == 0x51
+        assert parsed[1].op == 5
+        assert parsed[1].data == b'\x01\x02\x03\x04\x05'
+        assert parsed[2].op == 0x52
+    except ImportError:
+        pytest.skip("serialize_chunks not available")
+
+
+# ========================================================================
+# Missing coverage: truncated PUSHDATA scenarios
+# ========================================================================
+
+def test_read_script_chunks_pushdata1_truncated_data():
+    """Test OP_PUSHDATA1 with truncated data (triggers break on line 38)."""
+    try:
+        from bsv.utils.script_chunks import read_script_chunks
+
+        # OP_PUSHDATA1 says 100 bytes but only 50 available
+        script = b'\x4c\x64' + b'\x00' * 50  # Length=100, but only 50 bytes
+        chunks = read_script_chunks(script)
+        assert isinstance(chunks, list)
+        # Should break early and not add incomplete chunk
+        assert len(chunks) == 0
+    except ImportError:
+        pytest.skip("read_script_chunks not available")
+
+
+def test_read_script_chunks_pushdata2_truncated_data():
+    """Test OP_PUSHDATA2 with truncated data (triggers break on line 48)."""
+    try:
+        from bsv.utils.script_chunks import read_script_chunks
+
+        # OP_PUSHDATA2 says 300 bytes but only 100 available
+        data_len = 300
+        script = b'\x4d' + data_len.to_bytes(2, 'little') + b'\x00' * 100
+        chunks = read_script_chunks(script)
+        assert isinstance(chunks, list)
+        # Should break early and not add incomplete chunk
+        assert len(chunks) == 0
+    except ImportError:
+        pytest.skip("read_script_chunks not available")
+
+
+def test_read_script_chunks_pushdata4_truncated_data():
+    """Test OP_PUSHDATA4 with truncated data (triggers break on line 58)."""
+    try:
+        from bsv.utils.script_chunks import read_script_chunks
+
+        # OP_PUSHDATA4 says 1000 bytes but only 500 available
+        data_len = 1000
+        script = b'\x4e' + data_len.to_bytes(4, 'little') + b'\x00' * 500
+        chunks = read_script_chunks(script)
+        assert isinstance(chunks, list)
+        # Should break early and not add incomplete chunk
+        assert len(chunks) == 0
+    except ImportError:
+        pytest.skip("read_script_chunks not available")
+

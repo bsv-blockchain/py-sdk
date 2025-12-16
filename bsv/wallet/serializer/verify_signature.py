@@ -62,6 +62,65 @@ def deserialize_verify_signature_args(data: bytes) -> Dict[str, Any]:
     return out
 
 
+def verify_signature(wallet: Any, args: Dict[str, Any], origin: str) -> Dict[str, Any]:
+    """
+    Verify a signature using the wallet.
+
+    This function acts as a wrapper around wallet.verify_signature(),
+    extracting the necessary parameters from the args dict and calling
+    the wallet method.
+
+    Args:
+        wallet: Wallet instance with verify_signature method
+        args: Arguments dict containing signature verification data
+        origin: Origin identifier
+
+    Returns:
+        Dict containing verification result, typically {"valid": bool}
+
+    Raises:
+        AttributeError: If wallet doesn't have verify_signature method
+    """
+    if not hasattr(wallet, 'verify_signature'):
+        raise AttributeError("Wallet must have verify_signature method")
+
+    # Extract signature verification parameters
+    data = args.get("data")
+    signature = args.get("signature")
+    protocol_id = args.get("protocolID")
+    key_id = args.get("keyID")
+    counterparty = args.get("counterparty")
+    hash_to_verify = args.get("hashToDirectlyVerify")
+
+    # Call wallet.verify_signature
+    # The exact parameters may vary depending on wallet implementation
+    try:
+        if data is not None:
+            result = wallet.verify_signature(
+                data=data,
+                signature=signature,
+                protocol_id=protocol_id,
+                key_id=key_id,
+                counterparty=counterparty
+            )
+        elif hash_to_verify is not None:
+            result = wallet.verify_signature(
+                hash_to_verify=hash_to_verify,
+                signature=signature,
+                protocol_id=protocol_id,
+                key_id=key_id,
+                counterparty=counterparty
+            )
+        else:
+            # Fallback - try calling with all available args
+            result = wallet.verify_signature(**args)
+
+        return result
+    except Exception:
+        # Return invalid result if verification fails
+        return {"valid": False}
+
+
 def serialize_verify_signature_result(result: Any) -> bytes:
     if isinstance(result, (bytes, bytearray)):
         return bytes(result)

@@ -146,8 +146,10 @@ class TestLocalKVStoreSetGet:
         pytest.skip("Value size validation implementation-dependent")
     
     def test_get_nonexistent_key(self, store):
-        """Test getting non-existent key - skipped as WIP."""
-        pytest.skip("LocalKVStore.get requires blockchain implementation")
+        """Test getting non-existent key."""
+        # Should return default value for non-existent key
+        result = store.get(None, "nonexistent_key", "default")
+        assert result == "default"
 
 
 class TestLocalKVStoreRemove:
@@ -173,8 +175,10 @@ class TestLocalKVStoreRemove:
         pytest.skip("LocalKVStore.remove requires blockchain implementation")
     
     def test_remove_nonexistent_key(self, store):
-        """Test removing non-existent key - skipped as WIP."""
-        pytest.skip("LocalKVStore.remove requires blockchain implementation")
+        """Test removing non-existent key."""
+        # Should return empty list for non-existent key
+        result = store.remove(None, "nonexistent_key")
+        assert result == []
 
 
 class TestLocalKVStoreList:

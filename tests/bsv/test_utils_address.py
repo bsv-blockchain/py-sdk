@@ -224,6 +224,41 @@ class TestDecodeWIF:
         """Test that empty WIF raises exception."""
         with pytest.raises(Exception):
             decode_wif("")
+    
+    def test_decode_wif_unknown_prefix_raises(self):
+        """Test that WIF with unknown prefix raises ValueError."""
+        # Create a WIF with valid base58 but unknown prefix
+        # This tests the ValueError for unknown WIF prefix
+        from bsv.utils.address import decode_wif as decode_wif_direct
+        from bsv.base58 import base58check_encode
+        
+        # Create a WIF with an invalid prefix byte
+        invalid_prefix = b'\xFF'  # Not in WIF_PREFIX_NETWORK_DICT
+        privkey = b'\x00' * 32
+        invalid_wif = base58check_encode(invalid_prefix + privkey)
+        
+        with pytest.raises(ValueError, match="unknown WIF prefix"):
+            decode_wif_direct(invalid_wif)
+    
+    def test_decode_wif_from_address_module(self):
+        """Test decode_wif imported directly from address module."""
+        from bsv.utils.address import decode_wif as decode_wif_direct
+        
+        wif = "L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1"
+        privkey, compressed, network = decode_wif_direct(wif)
+        assert isinstance(privkey, bytes)
+        assert len(privkey) == 32
+        assert compressed is True
+        assert network == Network.MAINNET
+    
+    def test_address_to_public_key_hash_from_address_module(self):
+        """Test address_to_public_key_hash imported directly from address module."""
+        from bsv.utils.address import address_to_public_key_hash as addr_to_hash_direct
+        
+        address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+        pubkey_hash = addr_to_hash_direct(address)
+        assert isinstance(pubkey_hash, bytes)
+        assert len(pubkey_hash) == 20
 
 
 class TestAddressRoundTrip:

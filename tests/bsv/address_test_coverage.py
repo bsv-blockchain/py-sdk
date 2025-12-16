@@ -279,3 +279,139 @@ def test_address_validate_with_network_mismatch():
     except ImportError:
         pytest.skip(SKIP_VALIDATE_ADDRESS)
 
+
+# ========================================================================
+# Direct address.py function testing (not legacy versions)
+# ========================================================================
+
+def test_address_to_public_key_hash_direct():
+    """Test address_to_public_key_hash from address.py directly."""
+    try:
+        from bsv.utils.address import address_to_public_key_hash
+        from bsv.keys import PrivateKey
+
+        priv = PrivateKey()
+        address = priv.public_key().address()
+        pkh = address_to_public_key_hash(address)
+        assert isinstance(pkh, bytes)
+        assert len(pkh) == 20
+    except ImportError:
+        pytest.skip("address_to_public_key_hash not available in address.py")
+
+
+def test_decode_wif_direct():
+    """Test decode_wif from address.py directly."""
+    try:
+        from bsv.utils.address import decode_wif
+        from bsv.keys import PrivateKey
+
+        # Test compressed WIF
+        priv = PrivateKey()
+        priv.compressed = True
+        wif = priv.wif()
+        private_key, compressed, network = decode_wif(wif)
+        assert isinstance(private_key, bytes)
+        assert compressed is True
+        assert len(private_key) == 32
+
+        # Test uncompressed WIF
+        priv.compressed = False
+        wif = priv.wif()
+        private_key, compressed, network = decode_wif(wif)
+        assert isinstance(private_key, bytes)
+        assert compressed is False
+        assert len(private_key) == 32
+    except ImportError:
+        pytest.skip("decode_wif not available in address.py")
+
+
+def test_decode_wif_unknown_prefix():
+    """Test decode_wif with unknown prefix (address.py version)."""
+    try:
+        from bsv.utils.address import decode_wif
+        from bsv.base58 import base58check_encode
+
+        # Create WIF data with invalid prefix
+        invalid_prefix = b'\xff'  # Invalid prefix
+        private_key_data = b'\x01' * 32
+        compressed_flag = b'\x01'
+
+        payload = invalid_prefix + private_key_data + compressed_flag
+        invalid_wif = base58check_encode(payload)
+
+        # This should raise ValueError for unknown prefix
+        with pytest.raises(ValueError, match="unknown WIF prefix"):
+            decode_wif(invalid_wif)
+    except ImportError:
+        pytest.skip("decode_wif not available in address.py")
+
+
+def test_decode_wif_uncompressed_path():
+    """Test decode_wif uncompressed return path."""
+    try:
+        from bsv.utils.address import decode_wif
+        from bsv.keys import PrivateKey
+
+        # Create uncompressed WIF (51 characters, not 52)
+        priv = PrivateKey()
+        priv.compressed = False
+        wif = priv.wif()
+
+        # Should return uncompressed path (len(wif) != 52 or decoded[-1] != 1)
+        private_key, compressed, network = decode_wif(wif)
+        assert isinstance(private_key, bytes)
+        assert compressed is False
+        assert len(private_key) == 32
+    except ImportError:
+        pytest.skip("decode_wif not available in address.py")
+
+
+def test_decode_address_function():
+    """Test decode_address function directly."""
+    try:
+        from bsv.utils.address import decode_address
+        from bsv.keys import PrivateKey
+
+        priv = PrivateKey()
+        address = priv.public_key().address()
+        pkh, network = decode_address(address)
+        assert isinstance(pkh, bytes)
+        assert len(pkh) == 20
+        assert network is not None
+    except ImportError:
+        pytest.skip("decode_address not available in address.py")
+
+
+def test_decode_address_invalid_format():
+    """Test decode_address with invalid format."""
+    try:
+        from bsv.utils.address import decode_address
+
+        # Invalid format - doesn't match regex
+        with pytest.raises(ValueError, match="invalid P2PKH address"):
+            decode_address("invalid_address")
+    except ImportError:
+        pytest.skip("decode_address not available in address.py")
+
+
+def test_validate_address_function():
+    """Test validate_address function from address.py."""
+    try:
+        from bsv.utils.address import validate_address
+        from bsv.keys import PrivateKey
+        from bsv.constants import Network
+
+        priv = PrivateKey()
+        address = priv.public_key().address()
+
+        # Test valid address
+        assert validate_address(address) == True
+
+        # Test invalid address
+        assert validate_address("invalid") == False
+
+        # Test with network parameter
+        assert isinstance(validate_address(address, Network.MAINNET), bool)
+    except ImportError:
+        pytest.skip("validate_address not available in address.py")
+

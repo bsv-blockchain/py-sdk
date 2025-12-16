@@ -8,11 +8,11 @@ This package contains various utility functions for BSV blockchain operations.
 from bsv.utils.base58_utils import from_base58, to_base58, from_base58_check, to_base58_check
 from bsv.utils.binary import to_hex, from_hex, unsigned_to_varint, varint_to_unsigned, to_utf8, encode, to_base64
 from bsv.utils.encoding import BytesList, BytesHex, Bytes32Base64, Bytes33Hex, StringBase64, Signature
-from bsv.utils.pushdata import encode_pushdata, get_pushdata_code
-from bsv.utils.script_chunks import read_script_chunks
+from bsv.utils.pushdata import encode_pushdata, decode_pushdata, get_pushdata_code
+from bsv.utils.script_chunks import read_script_chunks, serialize_chunks
 from bsv.utils.reader import Reader
 from bsv.utils.writer import Writer
-from bsv.utils.misc import randbytes, bytes_to_bits, bits_to_bytes
+from bsv.utils.misc import randbytes, bytes_to_bits, bits_to_bytes, ensure_bytes, ensure_string, pad_bytes
 from bsv.hash import hash256
 from bsv.utils.address import decode_address, validate_address
 
@@ -31,6 +31,8 @@ from bsv.utils.legacy import (
     to_bytes,
     reverse_hex_byte_order,
     serialize_ecdsa_recoverable,
+    to_legacy_script,
+    to_legacy_transaction,
 )
 
 __all__ = [

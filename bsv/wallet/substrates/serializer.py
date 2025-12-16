@@ -450,14 +450,8 @@ def deserialize_create_action_args(data: bytes) -> dict:
     return {"description": description, "inputBEEF": input_beef, "raw_rest": r.data[r.pos:]}  # pragma: no cover
 
 
-# TODO: Implement additional serializers below. For now they are placeholders.
-
-
-def serialize_sign_action_args(args: dict) -> bytes:
-    raise NotImplementedError("serialize_sign_action_args not yet ported")
-
-def deserialize_sign_action_args(data: bytes) -> dict:
-    raise NotImplementedError("deserialize_sign_action_args not yet ported")
+# Import implemented serializers from their respective modules
+from bsv.wallet.serializer.sign_action_args import serialize_sign_action_args, deserialize_sign_action_args
 
 def serialize_abort_action_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_abort_action_args not yet ported")
@@ -465,11 +459,7 @@ def serialize_abort_action_args(args: dict) -> bytes:
 def deserialize_abort_action_args(data: bytes) -> dict:
     raise NotImplementedError("deserialize_abort_action_args not yet ported")
 
-def serialize_list_actions_args(args: dict) -> bytes:
-    raise NotImplementedError("serialize_list_actions_args not yet ported")
-
-def deserialize_list_actions_args(data: bytes) -> dict:
-    raise NotImplementedError("deserialize_list_actions_args not yet ported")
+from bsv.wallet.serializer.list_actions import serialize_list_actions_args, deserialize_list_actions_args
 
 def serialize_internalize_action_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_internalize_action_args not yet ported")

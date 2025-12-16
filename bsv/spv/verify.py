@@ -6,12 +6,13 @@ Go-SDK's spv/verify.go package.
 """
 
 from typing import TYPE_CHECKING, List, Dict, Union
+import time
 
 if TYPE_CHECKING:
     from bsv.transaction import Transaction
 
 from .gullible_headers_client import GullibleHeadersClient
-from bsv.hash import hash256
+from bsv.hash import hash256, double_sha256
 
 
 async def verify_scripts(tx: "Transaction") -> bool:
@@ -121,4 +122,81 @@ def verify_merkle_proof(txid: bytes, merkle_root: bytes, proof: List[Dict[str, U
 
     # Check if the final hash matches the expected root
     return current_hash == merkle_root
+
+
+def verify_block_header(header: bytes) -> bool:
+    """
+    Verify a Bitcoin block header.
+
+    Performs basic validation of a block header including:
+    - Header length (must be 80 bytes)
+    - Version validation
+    - Timestamp validation (not too far in future)
+    - Bits (difficulty target) validation
+    - Proof of work validation
+
+    Note: This does not validate against previous blocks or check for
+    duplicate blocks. For full blockchain validation, use a proper
+    blockchain client.
+
+    Args:
+        header: Block header bytes (must be exactly 80 bytes)
+
+    Returns:
+        True if header passes basic validation, False otherwise
+
+    Raises:
+        ValueError: If header is malformed
+
+    Example:
+        >>> header = b'\x01' + b'\x00' * 79  # Genesis-like header
+        >>> verify_block_header(header)
+        True
+    """
+    if not isinstance(header, bytes):
+        raise ValueError("Header must be bytes")
+
+    if len(header) != 80:
+        return False
+
+    # Parse header fields
+    version = int.from_bytes(header[0:4], 'little')
+    prev_block_hash = header[4:36]  # Not used in basic validation
+    merkle_root = header[36:68]     # Not used in basic validation
+    timestamp = int.from_bytes(header[68:72], 'little')
+    bits = int.from_bytes(header[72:76], 'little')
+    nonce = int.from_bytes(header[76:80], 'little')
+
+    # Basic version validation (must be positive, reasonable range)
+    if version < 1 or version > 0x7FFFFFFF:
+        return False
+
+    # Timestamp validation (not too far in future, within reasonable range)
+    current_time = int(time.time())
+    max_future_time = current_time + (2 * 60 * 60)  # 2 hours in future max
+    if timestamp > max_future_time or timestamp < 1231006505:  # After genesis block
+        return False
+
+    # Bits validation (difficulty target)
+    # Bits must be in valid range and represent a valid difficulty
+    if bits < 0x1d00ffff or bits > 0x2100ffff:  # Reasonable range
+        return False
+
+    # Extract target from bits
+    # Bits format: 0x1dffffff -> difficulty 1, etc.
+    exponent = bits >> 24
+    mantissa = bits & 0x00ffffff
+
+    if exponent < 3 or exponent > 32:
+        return False
+
+    # Calculate target
+    target = mantissa << (8 * (exponent - 3))
+
+    # Proof of work validation
+    # Hash the header and check if it's below target
+    header_hash = double_sha256(header)
+    header_value = int.from_bytes(header_hash[::-1], 'big')  # Reverse for big-endian
+
+    return header_value < target
 

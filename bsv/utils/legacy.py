@@ -304,3 +304,33 @@ def reverse_hex_byte_order(hex_str: str) -> str:
     Reverse the byte order of a hex string (little-endian <-> big-endian view).
     """
     return bytes.fromhex(hex_str)[::-1].hex()
+
+
+def to_legacy_script(script: bytes) -> bytes:
+    """
+    Convert script to legacy format.
+
+    Args:
+        script: Script bytes to convert
+
+    Returns:
+        Legacy format script bytes
+    """
+    # For now, just return the script as-is
+    # This is a placeholder implementation
+    return script
+
+
+def to_legacy_transaction(tx: "Transaction") -> bytes:
+    """
+    Convert transaction to legacy format.
+
+    Args:
+        tx: Transaction object to convert
+
+    Returns:
+        Legacy format transaction bytes
+    """
+    # For now, just return the transaction hex
+    # This is a placeholder implementation
+    return tx.to_hex()

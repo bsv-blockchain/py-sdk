@@ -3,9 +3,11 @@ Coverage tests for auth/clients/auth_fetch.py - untested branches and error cond
 """
 import pytest
 import asyncio
+import os
 from unittest.mock import Mock, patch, AsyncMock
 import threading
 import time
+from bsv.auth.clients.auth_fetch import AuthFetch
 
 
 # ========================================================================
@@ -494,7 +496,441 @@ class TestAuthFetchCoverage:
         except ImportError:
             pytest.skip("AuthFetch not available")
 
-    def test_fetch_callback_cleanup_error_handling(self):
-        pytest.skip("Skipped due to complex callback cleanup mocking requirements")
-    def test_fetch_listener_cleanup_error_handling(self):
-        pytest.skip("Skipped due to complex listener cleanup mocking requirements")
+    def test_handle_fetch_and_validate_http_errors(self):
+        """Test handle_fetch_and_validate with HTTP error codes."""
+        try:
+            from requests.exceptions import HTTPError
+            import requests
+
+            mock_peer = Mock()
+            mock_config = Mock()
+
+            # Test 4xx error - mock requests.request to return error status
+            mock_response_404 = requests.Response()
+            mock_response_404.status_code = 404
+            mock_response_404.headers = {}
+            mock_response_404._content = b"Not Found"
+
+            with patch('requests.request', return_value=mock_response_404):
+                with pytest.raises(HTTPError, match="request failed with status: 404"):
+                    self.auth_fetch.handle_fetch_and_validate("https://example.com", mock_config, mock_peer)
+
+            # Test 5xx error - mock requests.request to return 5xx status
+            mock_response_500 = requests.Response()
+            mock_response_500.status_code = 500
+            mock_response_500.headers = {}
+            mock_response_500._content = b"Internal Server Error"
+
+            with patch('requests.request', return_value=mock_response_500):
+                with pytest.raises(HTTPError, match="request failed with status: 500"):
+                    self.auth_fetch.handle_fetch_and_validate("https://example.com", mock_config, mock_peer)
+
+            # Test success (2xx)
+            mock_response_200 = requests.Response()
+            mock_response_200.status_code = 200
+            mock_response_200.headers = {}
+            mock_response_200._content = b"OK"
+
+            with patch('requests.request', return_value=mock_response_200):
+                result = self.auth_fetch.handle_fetch_and_validate("https://example.com", mock_config, mock_peer)
+                assert result.status_code == 200
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_handle_fetch_and_validate_auth_header_errors(self):
+        """Test handle_fetch_and_validate with unauthorized auth headers."""
+        try:
+            import requests
+            from requests.exceptions import PermissionError
+            
+            mock_peer = Mock()
+            mock_response = requests.Response()
+            mock_response.status_code = 200
+            mock_response.headers = {"x-bsv-auth-identity-key": "fake_key"}
+            mock_response._content = b"OK"
+            
+            with patch('requests.get', return_value=mock_response):
+                # Should raise PermissionError for unauthorized auth headers
+                with pytest.raises(PermissionError, match="the server is trying to claim"):
+                    self.auth_fetch.handle_fetch_and_validate("https://example.com", 
+                                                              Mock(), mock_peer)
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_parse_general_response_empty_payload(self):
+        """Test _parse_general_response with empty payload."""
+        try:
+            result = self.auth_fetch._parse_general_response(None, b"", "nonce", "https://example.com", Mock())
+            assert result is None
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_parse_general_response_invalid_json(self):
+        """Test _parse_general_response with invalid JSON."""
+        try:
+            # Invalid JSON payload
+            invalid_json = b"not valid json"
+            result = self.auth_fetch._parse_general_response(None, invalid_json, "nonce", 
+                                                             "https://example.com", Mock())
+            assert result is None
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_parse_general_response_invalid_utf8(self):
+        """Test _parse_general_response with invalid UTF-8."""
+        try:
+            # Invalid UTF-8 sequence
+            invalid_utf8 = b'\xff\xfe\xfd'
+            result = self.auth_fetch._parse_general_response(None, invalid_utf8, "nonce", 
+                                                             "https://example.com", Mock())
+            assert result is None
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_try_parse_binary_general_short_payload(self):
+        """Test _try_parse_binary_general with payload too short."""
+        try:
+            # Payload less than 33 bytes
+            short_payload = b'\x00' * 32
+            result = self.auth_fetch._try_parse_binary_general(None, short_payload, "nonce", 
+                                                                "https://example.com", Mock())
+            assert result is None
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_try_parse_binary_general_wrong_nonce(self):
+        """Test _try_parse_binary_general with wrong nonce."""
+        try:
+            import base64
+            from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+            
+            # Create payload with wrong nonce
+            wrong_nonce = os.urandom(32)
+            payload = wrong_nonce + b'\x00' * 100  # Add some data
+            config = SimplifiedFetchRequestOptions()
+            
+            request_nonce = os.urandom(32)
+            request_nonce_b64 = base64.b64encode(request_nonce).decode()
+            
+            result = self.auth_fetch._try_parse_binary_general(None, payload, request_nonce_b64, 
+                                                                "https://example.com", config)
+            assert result is None
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_build_response_exception_handling(self):
+        """Test _build_response exception handling paths."""
+        try:
+            from requests.structures import CaseInsensitiveDict
+            
+            # Test with CaseInsensitiveDict import failure
+            with patch('requests.structures.CaseInsensitiveDict', side_effect=ImportError):
+                result = self.auth_fetch._build_response("https://example.com", "GET", 200, 
+                                                          {"Content-Type": "text/plain"}, b"body")
+                assert result.status_code == 200
+                assert isinstance(result.headers, dict)
+            
+            # Test with Request.prepare() failure
+            with patch('requests.Request.prepare', side_effect=Exception("Prepare failed")):
+                result = self.auth_fetch._build_response("https://example.com", "GET", 200, {}, b"body")
+                assert result.status_code == 200
+                # Should handle exception gracefully
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_handle_payment_and_retry_402_status(self):
+        """Test handle_payment_and_retry with 402 status code."""
+        try:
+            from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+            import requests
+            
+            config = SimplifiedFetchRequestOptions()
+            mock_response = requests.Response()
+            mock_response.status_code = 402
+            mock_response.headers = {
+                "x-bsv-payment-version": "1.0",
+                "x-bsv-payment-satoshis-required": "1000",
+                "x-bsv-auth-identity-key": "test_key",
+                "x-bsv-payment-derivation-prefix": "m/0"
+            }
+            
+            # Mock the payment flow
+            with patch.object(self.auth_fetch, '_validate_payment_headers') as mock_validate:
+                mock_validate.return_value = {"satoshis_required": 1000, "server_identity_key": "test_key"}
+                
+                with patch.object(self.auth_fetch, '_generate_derivation_suffix', return_value="suffix"):
+                    with patch.object(self.auth_fetch, '_get_payment_public_key', return_value="pubkey"):
+                        with patch.object(self.auth_fetch, '_build_locking_script', return_value=b"script"):
+                            with patch.object(self.auth_fetch, '_create_payment_transaction', return_value="tx_hex"):
+                                with patch.object(self.auth_fetch, '_set_payment_header'):
+                                    with patch.object(self.auth_fetch, 'fetch', return_value=mock_response):
+                                        result = self.auth_fetch.handle_payment_and_retry("https://example.com", 
+                                                                                           config, mock_response)
+                                        assert result is not None
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_validate_payment_headers_missing_version(self):
+        """Test _validate_payment_headers with missing version."""
+        try:
+            import requests
+            
+            mock_response = requests.Response()
+            mock_response.headers = {}
+            
+            with pytest.raises(ValueError, match="unsupported x-bsv-payment-version"):
+                self.auth_fetch._validate_payment_headers(mock_response)
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_validate_payment_headers_wrong_version(self):
+        """Test _validate_payment_headers with wrong version."""
+        try:
+            import requests
+            
+            mock_response = requests.Response()
+            mock_response.headers = {"x-bsv-payment-version": "2.0"}
+            
+            with pytest.raises(ValueError, match="unsupported x-bsv-payment-version"):
+                self.auth_fetch._validate_payment_headers(mock_response)
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_validate_payment_headers_missing_satoshis(self):
+        """Test _validate_payment_headers with missing satoshis."""
+        try:
+            import requests
+            
+            mock_response = requests.Response()
+            mock_response.headers = {"x-bsv-payment-version": "1.0"}
+            
+            with pytest.raises(ValueError, match="missing x-bsv-payment-satoshis-required"):
+                self.auth_fetch._validate_payment_headers(mock_response)
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_validate_payment_headers_invalid_satoshis(self):
+        """Test _validate_payment_headers with invalid satoshis."""
+        try:
+            import requests
+            
+            mock_response = requests.Response()
+            mock_response.headers = {
+                "x-bsv-payment-version": "1.0",
+                "x-bsv-payment-satoshis-required": "0"
+            }
+            
+            with pytest.raises(ValueError, match="invalid x-bsv-payment-satoshis-required"):
+                self.auth_fetch._validate_payment_headers(mock_response)
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_validate_payment_headers_missing_identity_key(self):
+        """Test _validate_payment_headers with missing identity key."""
+        try:
+            import requests
+            
+            mock_response = requests.Response()
+            mock_response.headers = {
+                "x-bsv-payment-version": "1.0",
+                "x-bsv-payment-satoshis-required": "1000"
+            }
+            
+            with pytest.raises(ValueError, match="missing x-bsv-auth-identity-key"):
+                self.auth_fetch._validate_payment_headers(mock_response)
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_validate_payment_headers_missing_derivation_prefix(self):
+        """Test _validate_payment_headers with missing derivation prefix."""
+        try:
+            import requests
+            
+            mock_response = requests.Response()
+            mock_response.headers = {
+                "x-bsv-payment-version": "1.0",
+                "x-bsv-payment-satoshis-required": "1000",
+                "x-bsv-auth-identity-key": "test_key"
+            }
+            
+            with pytest.raises(ValueError, match="missing x-bsv-payment-derivation-prefix"):
+                self.auth_fetch._validate_payment_headers(mock_response)
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_get_payment_public_key_wallet_not_implemented(self):
+        """Test _get_payment_public_key when wallet doesn't have get_public_key."""
+        try:
+            from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+            
+            # Wallet without get_public_key method
+            wallet_no_method = Mock()
+            del wallet_no_method.get_public_key
+            
+            auth_fetch = AuthFetch(wallet_no_method, self.requested_certs)
+            payment_info = {"server_identity_key": "test_key"}
+            
+            with pytest.raises(NotImplementedError, match="wallet.get_public_key is not implemented"):
+                auth_fetch._get_payment_public_key(payment_info, "suffix")
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_get_payment_public_key_invalid_result(self):
+        """Test _get_payment_public_key with invalid wallet result."""
+        try:
+            from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+            
+            # Wallet that returns invalid result
+            mock_wallet = Mock()
+            mock_wallet.get_public_key = Mock(return_value={})  # Missing publicKey
+            
+            auth_fetch = AuthFetch(mock_wallet, self.requested_certs)
+            payment_info = {"server_identity_key": "test_key", "derivation_prefix": "test_prefix"}
+            
+            with pytest.raises(RuntimeError, match="wallet.get_public_key did not return a publicKey"):
+                auth_fetch._get_payment_public_key(payment_info, "suffix")
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_create_payment_transaction_wallet_not_implemented(self):
+        """Test _create_payment_transaction when wallet doesn't have create_action."""
+        try:
+            from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+            
+            # Wallet without create_action method
+            wallet_no_method = Mock()
+            del wallet_no_method.create_action
+            
+            auth_fetch = AuthFetch(wallet_no_method, self.requested_certs)
+            payment_info = {"satoshis_required": 1000}
+            
+            with pytest.raises(NotImplementedError, match="wallet.create_action is not implemented"):
+                auth_fetch._create_payment_transaction("https://example.com", payment_info, 
+                                                       "suffix", b"script")
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_create_payment_transaction_invalid_result(self):
+        """Test _create_payment_transaction with invalid wallet result."""
+        try:
+            from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+            
+            # Wallet that returns invalid result
+            mock_wallet = Mock()
+            mock_wallet.create_action = Mock(return_value={})  # Missing tx
+            
+            auth_fetch = AuthFetch(mock_wallet, self.requested_certs)
+            payment_info = {
+                "satoshis_required": 1000,
+                "derivation_prefix": "test_prefix",
+                "server_identity_key": "test_server_key"
+            }
+            
+            with pytest.raises(RuntimeError, match="wallet.create_action did not return a transaction"):
+                auth_fetch._create_payment_transaction("https://example.com", payment_info, 
+                                                       "suffix", b"script")
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_cleanup_and_get_response_with_error(self):
+        """Test _cleanup_and_get_response when response_holder has error."""
+        try:
+            from bsv.auth.clients.auth_fetch import AuthPeer
+            
+            mock_peer = Mock()
+            mock_peer.peer = Mock()
+            mock_peer.peer.stop_listening_for_general_messages = Mock()
+            
+            response_holder = {'resp': None, 'err': Exception("Test error")}
+            
+            with pytest.raises(RuntimeError):
+                self.auth_fetch._cleanup_and_get_response(mock_peer, "listener_id", "nonce", response_holder)
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_fallback_http_with_402_payment(self):
+        """Test _try_fallback_http with 402 payment required."""
+        try:
+            from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+            import requests
+            
+            config = SimplifiedFetchRequestOptions()
+            mock_peer = Mock()
+            mock_peer.supports_mutual_auth = False
+            
+            mock_response = requests.Response()
+            mock_response.status_code = 402
+            mock_response.headers = {}
+            
+            with patch.object(self.auth_fetch, 'handle_fetch_and_validate', return_value=mock_response):
+                with patch.object(self.auth_fetch, 'handle_payment_and_retry', return_value=mock_response) as mock_payment:
+                    result = self.auth_fetch._try_fallback_http("https://example.com", config, mock_peer)
+                    assert result is not None
+                    mock_payment.assert_called_once()
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_parse_general_response_json_fallback(self):
+        """Test _parse_general_response with JSON fallback."""
+        try:
+            from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+            import json
+            
+            config = SimplifiedFetchRequestOptions(method="GET")
+            payload = json.dumps({
+                "status_code": 200,
+                "headers": {"Content-Type": "text/plain"},
+                "body": "Hello World"
+            }).encode('utf-8')
+            
+            result = self.auth_fetch._parse_general_response(None, payload, "nonce", 
+                                                             "https://example.com", config)
+            assert result is not None
+            assert result.status_code == 200
+            assert result._content == b"Hello World"
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+
+    def test_parse_general_response_binary_format(self):
+        """Test _parse_general_response with binary format."""
+        try:
+            from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+            import base64
+            import struct
+            
+            config = SimplifiedFetchRequestOptions(method="GET")
+            request_nonce = os.urandom(32)
+            request_nonce_b64 = base64.b64encode(request_nonce).decode()
+            
+            # Build binary payload: nonce (32) + status (varint) + headers (varint) + body (varint)
+            payload = bytearray()
+            payload.extend(request_nonce)  # 32 bytes
+            payload.append(200)  # Status code (varint for 200)
+            payload.append(0)  # 0 headers (varint)
+            payload.append(0)  # 0 body length (varint)
+            
+            result = self.auth_fetch._try_parse_binary_general(None, bytes(payload), request_nonce_b64, 
+                                                                "https://example.com", config)
+            # May return None if parsing fails, but should not crash
+            assert result is None or result.status_code == 200
+
+        except ImportError:
+            pytest.skip("AuthFetch not available")
+

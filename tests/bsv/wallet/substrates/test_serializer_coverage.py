@@ -210,7 +210,6 @@ def test_create_action_roundtrip():
     assert "description" in deserialized
 
 
-@pytest.mark.skip(reason="serialize_sign_action_args not yet implemented")
 def test_sign_action_roundtrip():
     """Test serialize/deserialize sign_action_args roundtrip."""
     args = {"spends": {}}
@@ -219,7 +218,6 @@ def test_sign_action_roundtrip():
     assert "spends" in deserialized
 
 
-@pytest.mark.skip(reason="serialize_list_actions_args not yet implemented")
 def test_list_actions_roundtrip():
     """Test serialize/deserialize list_actions_args roundtrip."""
     args = {}

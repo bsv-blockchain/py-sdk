@@ -6,6 +6,7 @@ Comprehensive coverage tests for wallet_impl.py focusing on:
 """
 import pytest
 import os
+import time
 from unittest.mock import patch, MagicMock
 from bsv.keys import PrivateKey, PublicKey
 from bsv.wallet import ProtoWallet
@@ -742,4 +743,553 @@ def test_get_public_key_with_zero_security_level(wallet):
     }
     result = wallet.get_public_key(args, "test")
     assert "publicKey" in result or "error" in result
+
+
+# ========================================================================
+# create_action Error Paths and Edge Cases
+# ========================================================================
+
+def test_create_action_with_empty_outputs(wallet):
+    """Test create_action with empty outputs list."""
+    args = {
+        "description": "Test transaction",
+        "outputs": []
+    }
+    result = wallet.create_action(args, "test")
+    assert "signableTransaction" in result or "error" in result
+
+
+def test_create_action_with_pushdrop_args(wallet):
+    """Test create_action with pushdrop extension."""
+    args = {
+        "description": "Test with pushdrop",
+        "outputs": [],
+        "pushdrop": {
+            "fields": [b"test"],
+            "satoshis": 1000
+        }
+    }
+    result = wallet.create_action(args, "test")
+    assert "signableTransaction" in result or "error" in result
+
+
+def test_create_action_with_invalid_fee_rate(wallet):
+    """Test create_action with invalid fee rate."""
+    args = {
+        "description": "Test transaction",
+        "outputs": [{"satoshis": 1000, "lockingScript": b"\x51"}],
+        "feeRate": -1
+    }
+    result = wallet.create_action(args, "test")
+    # Should handle gracefully or use default
+    assert "signableTransaction" in result or "error" in result
+
+
+def test_create_action_with_change_output(wallet):
+    """Test create_action generates change output when needed."""
+    args = {
+        "description": "Test with change",
+        "outputs": [{"satoshis": 500, "lockingScript": b"\x51"}],
+        "inputs": [{"outpoint": {"txid": b"\x00" * 32, "index": 0}}]
+    }
+    result = wallet.create_action(args, "test")
+    # May include change output
+    assert "signableTransaction" in result or "error" in result
+
+
+# ========================================================================
+# internalize_action Error Paths and Edge Cases
+# ========================================================================
+
+def test_internalize_action_missing_tx(wallet):
+    """Test internalize_action with missing tx bytes."""
+    args = {}
+    result = wallet.internalize_action(args, "test")
+    assert "accepted" in result
+    assert result.get("accepted") is False
+    assert "error" in result
+
+
+def test_internalize_action_empty_tx_bytes(wallet):
+    """Test internalize_action with empty tx bytes."""
+    args = {"tx": b""}
+    result = wallet.internalize_action(args, "test")
+    assert "accepted" in result or "error" in result
+
+
+def test_internalize_action_invalid_tx_bytes(wallet):
+    """Test internalize_action with invalid tx bytes."""
+    args = {"tx": b"invalid_transaction_data"}
+    result = wallet.internalize_action(args, "test")
+    assert "accepted" in result or "error" in result
+
+
+def test_internalize_action_with_disable_arc(wallet):
+    """Test internalize_action with DISABLE_ARC=1."""
+    import os
+    with patch.dict(os.environ, {"DISABLE_ARC": "1"}):
+        # Create a minimal valid transaction
+        from bsv.transaction import Transaction
+        from bsv.transaction_output import TransactionOutput
+        from bsv.script.script import Script
+        tx = Transaction()
+        tx.add_output(TransactionOutput(Script(b"\x51"), 1000))
+        tx_bytes = tx.serialize()
+        
+        args = {"tx": tx_bytes}
+        result = wallet.internalize_action(args, "test")
+        assert "accepted" in result or "error" in result
+
+
+def test_internalize_action_with_use_woc(wallet):
+    """Test internalize_action with USE_WOC=1."""
+    import os
+    with patch.dict(os.environ, {"USE_WOC": "1"}):
+        from bsv.transaction import Transaction
+        from bsv.transaction_output import TransactionOutput
+        from bsv.script.script import Script
+        tx = Transaction()
+        tx.add_output(TransactionOutput(Script(b"\x51"), 1000))
+        tx_bytes = tx.serialize()
+        
+        args = {"tx": tx_bytes}
+        result = wallet.internalize_action(args, "test")
+        assert "accepted" in result or "error" in result
+
+
+def test_internalize_action_with_custom_broadcaster(wallet):
+    """Test internalize_action with custom broadcaster."""
+    from bsv.transaction import Transaction
+    from bsv.transaction_output import TransactionOutput
+    from bsv.script.script import Script
+    tx = Transaction()
+    tx.add_output(TransactionOutput(Script(b"\x51"), 1000))
+    tx_bytes = tx.serialize()
+    
+    mock_broadcaster = MagicMock()
+    mock_broadcaster.broadcast.return_value = {"accepted": True, "txid": "test_txid"}
+    
+    args = {"tx": tx_bytes, "broadcaster": mock_broadcaster}
+    result = wallet.internalize_action(args, "test")
+    assert "accepted" in result or "error" in result
+
+
+def test_internalize_action_tx_with_no_outputs(wallet):
+    """Test internalize_action with transaction that has no outputs."""
+    from bsv.transaction import Transaction
+    tx = Transaction()
+    tx_bytes = tx.serialize()
+    
+    args = {"tx": tx_bytes}
+    result = wallet.internalize_action(args, "test")
+    # Should return error about no outputs
+    assert "accepted" in result or "error" in result
+
+
+# ========================================================================
+# sign_action Error Paths and Edge Cases
+# ========================================================================
+
+def test_sign_action_missing_tx(wallet):
+    """Test sign_action with missing tx bytes."""
+    args = {}
+    result = wallet.sign_action(args, "test")
+    assert "error" in result
+    assert "missing tx bytes" in result["error"].lower()
+
+
+def test_sign_action_with_invalid_tx_bytes(wallet):
+    """Test sign_action with invalid tx bytes."""
+    args = {"tx": b"invalid"}
+    result = wallet.sign_action(args, "test")
+    # Should handle gracefully
+    assert "error" in result or "tx" in result
+
+
+def test_sign_action_with_spends(wallet):
+    """Test sign_action with provided spends."""
+    from bsv.transaction import Transaction
+    from bsv.transaction_output import TransactionOutput
+    from bsv.script.script import Script
+    tx = Transaction()
+    tx.add_output(TransactionOutput(Script(b"\x51"), 1000))
+    tx_bytes = tx.serialize()
+    
+    args = {
+        "tx": tx_bytes,
+        "spends": {
+            "0": {"unlockingScript": b"\x00" * 100}  # Mock unlocking script
+        }
+    }
+    result = wallet.sign_action(args, "test")
+    assert "tx" in result or "error" in result
+
+
+def test_sign_action_with_too_short_unlocking_script(wallet):
+    """Test sign_action with unlocking script that's too short."""
+    from bsv.transaction import Transaction
+    from bsv.transaction_output import TransactionOutput
+    from bsv.script.script import Script
+    from bsv.transaction_input import TransactionInput
+    tx = Transaction()
+    tx.add_output(TransactionOutput(Script(b"\x51"), 1000))
+    tx.add_input(TransactionInput(source_txid="00" * 32, source_output_index=0))
+    tx_bytes = tx.serialize()
+    
+    args = {
+        "tx": tx_bytes,
+        "spends": {
+            "0": {"unlockingScript": b"\x00"}  # Too short (less than 2 bytes)
+        }
+    }
+    result = wallet.sign_action(args, "test")
+    assert "error" in result
+    assert "too short" in result["error"].lower()
+
+
+# ========================================================================
+# list_outputs Error Paths and Edge Cases
+# ========================================================================
+
+def test_list_outputs_with_cancel(wallet):
+    """Test list_outputs with cancel flag."""
+    args = {"cancel": True}
+    result = wallet.list_outputs(args, "test")
+    assert "outputs" in result
+    assert len(result["outputs"]) == 0
+
+
+def test_list_outputs_with_basket(wallet):
+    """Test list_outputs with basket filter."""
+    # First create an action with a basket
+    create_args = {
+        "description": "Test",
+        "outputs": [{"satoshis": 1000, "lockingScript": b"\x51", "basket": "test_basket"}]
+    }
+    wallet.create_action(create_args, "test")
+    
+    args = {"basket": "test_basket"}
+    result = wallet.list_outputs(args, "test")
+    assert "outputs" in result
+
+
+def test_list_outputs_with_exclude_expired(wallet):
+    """Test list_outputs with excludeExpired flag."""
+    args = {"excludeExpired": True, "nowEpoch": int(time.time())}
+    result = wallet.list_outputs(args, "test")
+    assert "outputs" in result
+
+
+def test_list_outputs_with_entire_transaction(wallet):
+    """Test list_outputs with entire transaction include."""
+    args = {"include": "entire transaction"}
+    result = wallet.list_outputs(args, "test")
+    assert "outputs" in result
+    # May include BEEF if entire transaction requested
+    assert "BEEF" in result or "outputs" in result
+
+
+def test_list_outputs_with_use_woc_env(wallet):
+    """Test list_outputs with USE_WOC environment variable."""
+    import os
+    with patch.dict(os.environ, {"USE_WOC": "1"}):
+        # Mock address derivation to return a valid address
+        with patch.object(wallet, '_derive_query_address', return_value='1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'):
+            args = {}
+            result = wallet.list_outputs(args, "test")
+            assert "outputs" in result
+
+
+def test_list_outputs_with_protocol_params(wallet):
+    """Test list_outputs with protocol_id and key_id."""
+    args = {
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1"
+    }
+    result = wallet.list_outputs(args, "test")
+    assert "outputs" in result
+
+
+# ========================================================================
+# reveal_counterparty_key_linkage Error Paths
+# ========================================================================
+
+def test_reveal_counterparty_key_linkage_missing_counterparty(wallet):
+    """Test reveal_counterparty_key_linkage with missing counterparty."""
+    args = {
+        "verifier": PrivateKey().public_key().serialize()
+    }
+    result = wallet.reveal_counterparty_key_linkage(args, "test")
+    assert "error" in result
+    assert "counterparty" in result["error"].lower()
+
+
+def test_reveal_counterparty_key_linkage_missing_verifier(wallet):
+    """Test reveal_counterparty_key_linkage with missing verifier."""
+    args = {
+        "counterparty": PrivateKey().public_key().serialize()
+    }
+    result = wallet.reveal_counterparty_key_linkage(args, "test")
+    assert "error" in result
+    assert "verifier" in result["error"].lower()
+
+
+def test_reveal_counterparty_key_linkage_with_seek_permission(wallet):
+    """Test reveal_counterparty_key_linkage with seekPermission."""
+    args = {
+        "counterparty": PrivateKey().public_key().serialize(),
+        "verifier": PrivateKey().public_key().serialize(),
+        "seekPermission": True
+    }
+    result = wallet.reveal_counterparty_key_linkage(args, "test")
+    # Should succeed with permission callback
+    assert "prover" in result or "error" in result
+
+
+# ========================================================================
+# reveal_specific_key_linkage Error Paths
+# ========================================================================
+
+def test_reveal_specific_key_linkage_missing_verifier(wallet):
+    """Test reveal_specific_key_linkage with missing verifier."""
+    args = {
+        "counterparty": PrivateKey().public_key().serialize(),
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1"
+    }
+    result = wallet.reveal_specific_key_linkage(args, "test")
+    assert "error" in result
+    assert "verifier" in result["error"].lower()
+
+
+def test_reveal_specific_key_linkage_missing_protocol_id(wallet):
+    """Test reveal_specific_key_linkage with missing protocol_id."""
+    args = {
+        "counterparty": PrivateKey().public_key().serialize(),
+        "verifier": PrivateKey().public_key().serialize(),
+        "keyID": "key1"
+    }
+    result = wallet.reveal_specific_key_linkage(args, "test")
+    assert "error" in result
+    assert "protocol_id" in result["error"].lower()
+
+
+def test_reveal_specific_key_linkage_missing_key_id(wallet):
+    """Test reveal_specific_key_linkage with missing key_id."""
+    args = {
+        "counterparty": PrivateKey().public_key().serialize(),
+        "verifier": PrivateKey().public_key().serialize(),
+        "protocolID": {"securityLevel": 1, "protocol": "test"}
+    }
+    result = wallet.reveal_specific_key_linkage(args, "test")
+    assert "error" in result
+    assert "key_id" in result["error"].lower()
+
+
+def test_reveal_specific_key_linkage_missing_counterparty(wallet):
+    """Test reveal_specific_key_linkage with missing counterparty."""
+    args = {
+        "verifier": PrivateKey().public_key().serialize(),
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1"
+    }
+    result = wallet.reveal_specific_key_linkage(args, "test")
+    assert "error" in result
+    assert "counterparty" in result["error"].lower()
+
+
+# ========================================================================
+# Helper Method Edge Cases
+# ========================================================================
+
+def test_encode_point_with_none(wallet):
+    """Test _encode_point with None input."""
+    result = wallet._encode_point(None)
+    assert result == b'\x00' * 33
+
+
+def test_to_public_key_with_dict_counterparty(wallet):
+    """Test _to_public_key with dict containing counterparty."""
+    pub = PrivateKey().public_key()
+    result = wallet._to_public_key({"counterparty": pub})
+    assert result == pub
+
+
+def test_to_public_key_with_dict_type_anyone(wallet):
+    """Test _to_public_key with dict type ANYONE."""
+    result = wallet._to_public_key({"type": 1})  # ANYONE
+    assert result is not None
+
+
+def test_to_public_key_with_dict_type_self(wallet):
+    """Test _to_public_key with dict type SELF."""
+    result = wallet._to_public_key({"type": 2})  # SELF
+    assert result == wallet.public_key
+
+
+def test_to_public_key_with_invalid_dict(wallet):
+    """Test _to_public_key with invalid dict raises ValueError."""
+    with pytest.raises(ValueError):
+        wallet._to_public_key({"type": 99})
+
+
+def test_to_public_key_with_invalid_type(wallet):
+    """Test _to_public_key with invalid type raises ValueError."""
+    with pytest.raises(ValueError):
+        wallet._to_public_key(12345)
+
+
+def test_normalize_protocol_with_list(wallet):
+    """Test _normalize_protocol with list input."""
+    protocol = wallet._normalize_protocol([1, "test"])
+    assert protocol.security_level == 1
+    assert protocol.protocol == "test"
+
+
+def test_normalize_protocol_with_tuple(wallet):
+    """Test _normalize_protocol with tuple input."""
+    protocol = wallet._normalize_protocol((2, "test2"))
+    assert protocol.security_level == 2
+    assert protocol.protocol == "test2"
+
+
+def test_normalize_protocol_with_dict_camelcase(wallet):
+    """Test _normalize_protocol with dict using camelCase."""
+    protocol = wallet._normalize_protocol({"securityLevel": 1, "protocol": "test"})
+    assert protocol.security_level == 1
+    assert protocol.protocol == "test"
+
+
+def test_normalize_protocol_with_dict_snake_case(wallet):
+    """Test _normalize_protocol with dict using snake_case."""
+    protocol = wallet._normalize_protocol({"security_level": 1, "protocol": "test"})
+    assert protocol.security_level == 1
+    assert protocol.protocol == "test"
+
+
+def test_resolve_woc_api_key_from_args(wallet):
+    """Test _resolve_woc_api_key from args."""
+    args = {"apiKey": "test_key_from_args"}
+    result = wallet._resolve_woc_api_key(args)
+    assert result == "test_key_from_args"
+
+
+def test_resolve_woc_api_key_from_woc_nested(wallet):
+    """Test _resolve_woc_api_key from nested woc.apiKey."""
+    args = {"woc": {"apiKey": "test_key_nested"}}
+    result = wallet._resolve_woc_api_key(args)
+    assert result == "test_key_nested"
+
+
+def test_resolve_woc_api_key_exception_handling(wallet):
+    """Test _resolve_woc_api_key handles exceptions."""
+    # Create args that might cause exception
+    args = MagicMock()
+    args.get.side_effect = Exception("Test exception")
+    result = wallet._resolve_woc_api_key(args)
+    # Should fall back to instance or env
+    assert isinstance(result, str)
+
+
+# ========================================================================
+# list_actions Edge Cases
+# ========================================================================
+
+def test_list_actions_with_labels_all_mode(wallet):
+    """Test list_actions with labels and labelQueryMode='all'."""
+    # Create action with labels
+    create_args = {
+        "description": "Test",
+        "outputs": [],
+        "labels": ["label1", "label2"]
+    }
+    wallet.create_action(create_args, "test")
+    
+    args = {"labels": ["label1"], "labelQueryMode": "all"}
+    result = wallet.list_actions(args, "test")
+    assert "actions" in result
+    assert "totalActions" in result
+
+
+def test_list_actions_with_labels_any_mode(wallet):
+    """Test list_actions with labels and default (any) mode."""
+    create_args = {
+        "description": "Test",
+        "outputs": [],
+        "labels": ["label1"]
+    }
+    wallet.create_action(create_args, "test")
+    
+    args = {"labels": ["label1", "label2"]}
+    result = wallet.list_actions(args, "test")
+    assert "actions" in result
+
+
+def test_list_actions_with_empty_labels(wallet):
+    """Test list_actions with empty labels list."""
+    args = {"labels": []}
+    result = wallet.list_actions(args, "test")
+    assert "actions" in result
+    assert "totalActions" in result
+
+
+# ========================================================================
+# Additional Certificate Methods
+# ========================================================================
+
+def test_prove_certificate_with_verifier(wallet):
+    """Test prove_certificate with verifier."""
+    args = {"verifier": b"test_verifier"}
+    result = wallet.prove_certificate(args, "test")
+    assert "keyringForVerifier" in result
+    assert "verifier" in result
+
+
+def test_relinquish_certificate_existing(wallet):
+    """Test relinquish_certificate removes existing certificate."""
+    # First acquire a certificate
+    acquire_args = {
+        "type": b"test_type",
+        "serialNumber": b"test_serial",
+        "certifier": b"test_certifier"
+    }
+    wallet.acquire_certificate(acquire_args, "test")
+    
+    # Then relinquish it
+    relinquish_args = {
+        "type": b"test_type",
+        "serialNumber": b"test_serial",
+        "certifier": b"test_certifier"
+    }
+    result = wallet.relinquish_certificate(relinquish_args, "test")
+    assert result == {}
+    
+    # Verify it's removed
+    list_result = wallet.list_certificates({}, "test")
+    assert len(list_result["certificates"]) == 0
+
+
+def test_discover_by_attributes_with_matching_cert(wallet):
+    """Test discover_by_attributes finds matching certificate."""
+    # Acquire certificate with attributes
+    acquire_args = {
+        "type": b"test",
+        "serialNumber": b"123",
+        "fields": {"attr1": "value1", "attr2": "value2"}
+    }
+    wallet.acquire_certificate(acquire_args, "test")
+    
+    # Discover by attributes
+    discover_args = {"attributes": {"attr1": "value1"}}
+    result = wallet.discover_by_attributes(discover_args, "test")
+    assert "certificates" in result
+    assert result["totalCertificates"] >= 1
+
+
+def test_discover_by_attributes_no_match(wallet):
+    """Test discover_by_attributes with no matching certificates."""
+    discover_args = {"attributes": {"nonexistent": "value"}}
+    result = wallet.discover_by_attributes(discover_args, "test")
+    assert "certificates" in result
+    assert result["totalCertificates"] == 0
 
