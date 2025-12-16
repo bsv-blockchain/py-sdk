@@ -284,9 +284,13 @@ class AuthFetch:
         # コールバック用イベントと結果格納
         cert_event = threading.Event()
         cert_holder = {'certs': None, 'err': None}
-        def on_certificates_received(sender_public_key, certs):
-            cert_holder['certs'] = certs
-            cert_event.set()
+        def on_certificates_received(*args):
+            try:
+                cert_holder['certs'] = args[-1] if args else None
+            except Exception as e:
+                cert_holder['err'] = e
+            finally:
+                cert_event.set()
         callback_id = peer_to_use.peer.listen_for_certificates_received(on_certificates_received)
         try:
             err = peer_to_use.peer.request_certificates(None, certificates_to_request, 30000)

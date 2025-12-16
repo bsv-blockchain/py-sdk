@@ -542,7 +542,6 @@ class TestAuthFetchCoverage:
         """Test handle_fetch_and_validate with unauthorized auth headers."""
         try:
             import requests
-            from requests.exceptions import PermissionError
             
             mock_peer = Mock()
             mock_response = requests.Response()
@@ -550,7 +549,7 @@ class TestAuthFetchCoverage:
             mock_response.headers = {"x-bsv-auth-identity-key": "fake_key"}
             mock_response._content = b"OK"
             
-            with patch('requests.get', return_value=mock_response):
+            with patch('requests.request', return_value=mock_response):
                 # Should raise PermissionError for unauthorized auth headers
                 with pytest.raises(PermissionError, match="the server is trying to claim"):
                     self.auth_fetch.handle_fetch_and_validate("https://example.com", 

@@ -163,7 +163,7 @@ class Peer:
     def start(self):
         """
         Initializes the peer by setting up the transport's message handler.
-        
+
         Sets the _transport_ready flag to indicate whether transport setup succeeded.
         This can be checked by applications to verify peer health.
         """

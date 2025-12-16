@@ -75,7 +75,7 @@ def test_transport_init_with_path():
 
 def test_send_without_handler_registered(transport, mock_message):
     """Test send without handler registered returns error."""
-    result = transport.send(mock_message)
+    result = transport.send(None, mock_message)
     assert result is not None
     assert isinstance(result, Exception)
     assert "No handler registered" in str(result)
@@ -95,7 +95,7 @@ def test_send_with_general_message(transport, mock_message):
         mock_response.content = b'{"status": "ok"}'
         mock_post.return_value = mock_response
         
-        result = transport.send(mock_message)
+        result = transport.send(None, mock_message)
         # Should succeed or return None
         assert result is None or isinstance(result, Exception)
 
@@ -114,7 +114,7 @@ def test_send_with_non_general_message(transport, mock_message):
         mock_response.json.return_value = {"status": "ok"}
         mock_post.return_value = mock_response
         
-        result = transport.send(mock_message)
+        result = transport.send(None, mock_message)
         # Should succeed or return None
         assert result is None or isinstance(result, Exception)
 
@@ -131,7 +131,7 @@ def test_send_with_http_error_status(transport, mock_message):
         mock_response.text = "Internal Server Error"
         mock_post.return_value = mock_response
         
-        result = transport.send(mock_message)
+        result = transport.send(None, mock_message)
         # Should return error
         assert isinstance(result, Exception)
 
@@ -145,7 +145,7 @@ def test_send_with_connection_error(transport, mock_message):
     with patch.object(transport.client, 'post') as mock_post:
         mock_post.side_effect = Exception("Connection failed")
         
-        result = transport.send(mock_message)
+        result = transport.send(None, mock_message)
         assert isinstance(result, Exception)
         assert "Connection failed" in str(result) or "Failed to send" in str(result)
 
@@ -164,7 +164,7 @@ def test_send_with_empty_payload(transport, mock_message):
         mock_response.content = b'ok'
         mock_post.return_value = mock_response
         
-        result = transport.send(mock_message)
+        result = transport.send(None, mock_message)
         assert result is None or isinstance(result, Exception)
 
 
@@ -182,7 +182,7 @@ def test_send_with_none_payload(transport, mock_message):
         mock_response.content = b'ok'
         mock_post.return_value = mock_response
         
-        result = transport.send(mock_message)
+        result = transport.send(None, mock_message)
         assert result is None or isinstance(result, Exception)
 
 

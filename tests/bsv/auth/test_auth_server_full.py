@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from aiohttp import web
 import logging
+from bsv.keys import PrivateKey
 
 # Add parent directory to path for imports
 test_dir = Path(__file__).parent
@@ -58,7 +59,8 @@ class AuthServer:
     
     def __init__(self):
         self.sessions: Dict[str, AuthSession] = {}  # key: client_identity_key
-        self.server_identity_key = "03a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0123456789a"  # Mock server key
+        self._private_key = PrivateKey()
+        self.server_identity_key = self._private_key.public_key().hex()
         
     def generate_nonce(self) -> str:
         """Generate a 32-byte random nonce, base64 encoded"""
@@ -120,7 +122,7 @@ class AuthServer:
         mock_certificates = [
             {
                 "type": "test-certificate",
-                "subject": client_identity_key,
+                "subject": self.server_identity_key,
                 "certifier": self.server_identity_key,
                 "serialNumber": "12345",
                 "fields": {"name": "Test User", "role": "developer"},
@@ -304,6 +306,7 @@ def create_app():
     
     # Add routes
     app.router.add_post("/auth", handle_auth_message)
+    app.router.add_post("/.well-known/auth", handle_auth_message)
     app.router.add_get("/health", handle_health_check)
     app.router.add_get("/", handle_health_check)
     

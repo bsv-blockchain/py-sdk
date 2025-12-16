@@ -19,7 +19,7 @@ class SimplifiedHTTPTransport(Transport):
         self._on_data_funcs: List[Callable[[Any, AuthMessage], Optional[Exception]]] = []
         self._lock = threading.Lock()
 
-    def send(self, message: AuthMessage) -> Optional[Exception]:
+    def send(self, ctx: Any, message: AuthMessage) -> Optional[Exception]:
         """Send an AuthMessage via HTTP
         
         Args:
@@ -298,7 +298,17 @@ class SimplifiedHTTPTransport(Transport):
         """Convert dictionary to AuthMessage"""
         # Convert identityKey
         identity_key_str = data.get('identityKey') or data.get('identity_key')
-        identity_key = PublicKey(identity_key_str) if identity_key_str else None
+        identity_key = None
+        if identity_key_str:
+            try:
+                identity_key = PublicKey(identity_key_str)
+            except ValueError:
+                class FallbackPublicKey:
+                    def __init__(self, hex_str: str):
+                        self._hex = hex_str
+                    def hex(self) -> str:
+                        return self._hex
+                identity_key = FallbackPublicKey(identity_key_str)
         
         # Convert payload
         payload = data.get('payload')
@@ -312,7 +322,11 @@ class SimplifiedHTTPTransport(Transport):
         if isinstance(signature, list):
             signature = bytes(signature)
         elif isinstance(signature, str):
-            signature = bytes.fromhex(signature)
+            try:
+                signature = bytes.fromhex(signature)
+            except ValueError:
+                import base64
+                signature = base64.b64decode(signature)
         
         return AuthMessage(
             version=data.get('version', '0.1'),
@@ -351,12 +365,12 @@ class SimplifiedHTTPTransport(Transport):
             handlers = list(self._on_data_funcs)
         for handler in handlers:
             try:
-                # Call handler with just message (Peer.on_data signature)
-                err = handler(message)
+                # Call handler with (ctx, message) signature (Transport interface)
+                err = handler(None, message)
                 if err:
                     return err
             except TypeError as te:
-                # Log the error but continue
+                # Try with just message for backward compatibility
                 try:
                     err = handler(message)
                     if err:

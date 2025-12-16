@@ -1,7 +1,20 @@
 import types
+import pytest
 
 from bsv.keys import PrivateKey
 from bsv.wallet import ProtoWallet
+from bsv.chaintrackers.whatsonchain import WhatsOnChainTracker
+
+
+@pytest.fixture(autouse=True)
+def restore_real_whatsonchain_tracker(monkeypatch):
+    """Restore the real WhatsOnChainTracker for these tests."""
+    import bsv.chaintrackers as chaintrackers
+    import bsv.chaintrackers.whatsonchain as whatsonchain_module
+
+    # Patch back the real WhatsOnChainTracker
+    monkeypatch.setattr(chaintrackers, "WhatsOnChainTracker", WhatsOnChainTracker, raising=False)
+    monkeypatch.setattr(whatsonchain_module, "WhatsOnChainTracker", WhatsOnChainTracker, raising=False)
 
 
 class _Resp:
