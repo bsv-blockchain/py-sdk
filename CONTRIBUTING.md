@@ -54,7 +54,7 @@ contributors to adhere to.
 
 2. **Commit Your Changes**: Make your changes and commit them. Commit messages should be clear and concise to explain what was done.
 
-3. **Run Tests**: Ensure all tests pass using Jest: `pytest --cov=bsv --cov-report=html`.
+3. **Run Tests**: Ensure all tests pass and check coverage: `pytest --cov=bsv --cov-branch --cov-report=html`.
 
 4. **Documentation**: All code must be fully annotated with comments.
 
@@ -79,8 +79,11 @@ contributors to adhere to.
 
 - **Documentation**: Update the documentation whenever you add or modify the code.
 
-- **Testing**: We use Jest for all tests. Write comprehensive tests, ensuring edge cases are covered. All PRs should maintain or improve the
+- **Testing**: We use pytest for all tests. Write comprehensive tests, ensuring edge cases are covered. All PRs should maintain or improve the
   current test coverage.
+
+- **Branch Coverage**: We measure both line and branch coverage. For critical modules (wallet, auth, crypto), aim for 70%+ branch coverage.
+  Include tests for both branches of conditional statements. Run `pytest --cov=bsv --cov-branch --cov-report=html` to check branch coverage.
 
 ## Contact & Support
 

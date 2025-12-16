@@ -35,23 +35,25 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=140 --statistics
       - name: Test with pytest and coverage
         run: |
-          pytest --cov=bsv --cov-report=html --cov-report=term --cov-report=xml
+          pytest --cov=bsv --cov-branch --cov-report=html --cov-report=term --cov-report=xml
       - name: Extract coverage percentage
         if: matrix.python-version == '3.11'
         id: coverage
         run: |
-          COVERAGE=$(python -c "import xml.etree.ElementTree as ET; root = ET.parse('coverage.xml').getroot(); print(f\"{float(root.attrib['line-rate'])*100:.1f}\")")
-          echo "coverage_percentage=$COVERAGE" >> $GITHUB_OUTPUT
+          LINE_COVERAGE=$(python -c "import xml.etree.ElementTree as ET; root = ET.parse('coverage.xml').getroot(); print(f\"{float(root.attrib['line-rate'])*100:.1f}\")")
+          BRANCH_COVERAGE=$(python -c "import xml.etree.ElementTree as ET; root = ET.parse('coverage.xml').getroot(); print(f\"{float(root.attrib['branch-rate'])*100:.1f}\")")
+          echo "line_coverage_percentage=$LINE_COVERAGE" >> $GITHUB_OUTPUT
+          echo "branch_coverage_percentage=$BRANCH_COVERAGE" >> $GITHUB_OUTPUT
       - name: Update README with coverage
         if: matrix.python-version == '3.11' && github.ref == 'refs/heads/master' && github.event_name == 'push'
         run: |
-          python update_coverage.py ${{ steps.coverage.outputs.coverage_percentage }}
+          python update_coverage.py ${{ steps.coverage.outputs.line_coverage_percentage }}
       - name: Commit coverage update
         if: matrix.python-version == '3.11' && github.ref == 'refs/heads/master' && github.event_name == 'push'
         # Pin to specific commit SHA for security - v9.1.4
         uses: EndBug/add-and-commit@777a761e0f8293b7b051170404976d7cf10611cb  # v9.1.4
         with:
           add: README.md
-          message: "Update coverage badge to ${{ steps.coverage.outputs.coverage_percentage }}%"
+          message: "Update coverage badge to ${{ steps.coverage.outputs.line_coverage_percentage }}%"
           author_name: github-actions[bot]
           author_email: github-actions[bot]@users.noreply.github.com

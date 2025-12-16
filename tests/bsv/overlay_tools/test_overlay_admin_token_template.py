@@ -201,7 +201,7 @@ class TestLock:
             await template.lock("SHIP", "test.com", "topic")
             
             call_args = mock_pushdrop.lock.call_args
-            protocol_info = call_args[0][1]  # Second positional arg (protocol_id)
+            protocol_info = call_args.args[1]  # Second positional arg (protocol_id)
             assert protocol_info["securityLevel"] == 0
             assert "Service Host Interconnect" in protocol_info["protocol"]
     
@@ -223,7 +223,7 @@ class TestLock:
             await template.lock("SLAP", "test.com", "service")
             
             call_args = mock_pushdrop.lock.call_args
-            protocol_info = call_args[0][1]  # Second positional arg (protocol_id)
+            protocol_info = call_args.args[1]  # Second positional arg (protocol_id)
             assert protocol_info["securityLevel"] == 0
             assert "Service Lookup Availability" in protocol_info["protocol"]
 

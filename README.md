@@ -196,8 +196,8 @@ pip install -e .[test]
 # Run all tests
 pytest
 
-# Run tests with coverage analysis
-pytest --cov=bsv --cov-report=html --cov-report=term
+# Run tests with coverage analysis (includes branch coverage)
+pytest --cov=bsv --cov-branch --cov-report=html --cov-report=term
 
 # View detailed coverage report
 xdg-open htmlcov/index.html
