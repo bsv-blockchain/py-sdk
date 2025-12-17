@@ -81,8 +81,21 @@ class ErrorCode(IntEnum):
     ERR_SIG_HASHTYPE = 54
     ERR_SIG_INVALID = 55
 
+    # ErrNotPushOnly is returned when a script that must only push data performs other ops.
+    # (Used by VERIFY_SIG_PUSH_ONLY / SIGPUSHONLY vectors.)
+    ERR_NOT_PUSH_ONLY = 56
+
+    # ErrDiscourageUpgradableNOPs is returned when DISCOURAGE_UPGRADABLE_NOPS is set
+    # and an upgradable NOP is encountered.
+    ERR_DISCOURAGE_UPGRADABLE_NOPS = 57
+
+    # ErrSigNullDummy is returned when STRICT_MULTISIG/NULLDUMMY is set and the multisig dummy is non-empty.
+    ERR_SIG_NULLDUMMY = 58
+
     # Failures related to CHECKLOCKTIMEVERIFY.
     ERR_UNSATISFIED_LOCKTIME = 41
+    ERR_NEGATIVE_LOCKTIME = 62
+    ERR_ILLEGAL_FORKID = 63
 
     # Failures related to CHECKSEQUENCEVERIFY.
     ERR_UNSATISFIED_LOCKTIME_SEQUENCE = 42
@@ -90,8 +103,13 @@ class ErrorCode(IntEnum):
     # Failures related to number parsing.
     ERR_NUMBER_OVERFLOW = 43
     ERR_MINIMAL_DATA = 44
+    ERR_MINIMAL_IF = 64
     ERR_INVALID_NUMBER_RANGE = 45
     ERR_NUMBER_TOO_BIG = 46
+    ERR_NUMBER_TOO_SMALL = 60
+
+    # ErrInvalidInputLength is returned when an opcode requires operands of the same length.
+    ERR_INVALID_INPUT_LENGTH = 61
     ERR_DIVIDE_BY_ZERO = 47
 
     # Failures related to verification operations.

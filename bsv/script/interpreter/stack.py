@@ -138,8 +138,10 @@ class Stack:
         self.debug.after_stack_pop(data)
         return data
 
-    def pop_int(self, require_minimal: bool = True) -> ScriptNumber:
+    def pop_int(self, require_minimal: Optional[bool] = None) -> ScriptNumber:
         """Pop a ScriptNumber off the stack."""
+        if require_minimal is None:
+            require_minimal = self.verify_minimal_data
         data = self.pop_byte_array()
         return ScriptNumber.from_bytes(data, self.max_num_length, require_minimal)
 
@@ -154,8 +156,10 @@ class Stack:
             raise ValueError(f"invalid stack index: {idx}")
         return self.stk[-(idx + 1)]
 
-    def peek_int(self, idx: int, require_minimal: bool = True) -> ScriptNumber:
+    def peek_int(self, idx: int, require_minimal: Optional[bool] = None) -> ScriptNumber:
         """Peek at a ScriptNumber at the given index."""
+        if require_minimal is None:
+            require_minimal = self.verify_minimal_data
         data = self.peek_byte_array(idx)
         return ScriptNumber.from_bytes(data, self.max_num_length, require_minimal)
 

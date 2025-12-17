@@ -8,12 +8,14 @@ from .chaintracker import ChainTracker
 from .chaintrackers import default_chain_tracker
 from .fee_models import LivePolicy
 from .constants import (
+    SIGHASH,
     TRANSACTION_VERSION,
     TRANSACTION_LOCKTIME,
     TRANSACTION_FEE_RATE,
 )
 from .hash import hash256
 from .merkle_path import MerklePath
+from .script.script import Script
 from .script.type import P2PKH
 from .transaction_input import TransactionInput
 from .transaction_output import TransactionOutput
@@ -102,6 +104,163 @@ class Transaction:
                 0 <= index < len(self.inputs)
         ), f"index out of range [0, {len(self.inputs)})"
         return tx_preimage(index, self.inputs, self.outputs, self.version, self.locktime)
+
+    def calc_input_signature_hash(self, input_index: int, hash_type: int, script_code: Script, prev_satoshis: int = 0) -> bytes:
+        """
+        Calculate the signature hash for a specific input using the appropriate algorithm.
+
+        :param input_index: Index of the input to calculate the signature hash for
+        :param hash_type: 32-bit unsigned integer specifying the hash type (including ForkID bit)
+        :param script_code: The script code to use for hashing
+        :param prev_satoshis: The satoshis value of the previous output (for BIP143)
+        :returns: The signature hash digest (32 bytes)
+        """
+        # Ensure hash_type is treated as uint32
+        hash_type = hash_type & 0xFFFFFFFF
+
+        # Choose algorithm based on ForkID bit
+        if hash_type & int(SIGHASH.FORKID):
+            # Use BIP143/ForkID algorithm
+            preimage = self._calc_input_preimage_bip143(input_index, hash_type, script_code, prev_satoshis)
+            return hash256(preimage)
+        else:
+            # Use legacy algorithm
+            preimage = self._calc_input_preimage_legacy(input_index, hash_type)
+            return hash256(preimage)
+
+    def _calc_input_preimage_bip143(self, input_index: int, hash_type: int, script_code: Script, prev_satoshis: int) -> bytes:
+        """
+        Calculate BIP143/ForkID preimage for signature hashing.
+        Uses tx_input.locking_script as the script_code.
+        """
+        """
+        Calculate BIP143/ForkID preimage for signature hashing.
+        """
+        from io import BytesIO
+        from .utils import unsigned_to_varint
+
+        # Get the input
+        tx_input = self.inputs[input_index]
+
+        # Calculate hashPrevouts (32-byte hash)
+        if hash_type & int(SIGHASH.ANYONECANPAY):
+            hash_prevouts = b"\x00" * 32
+        else:
+            prevouts_data = b""
+            for inp in self.inputs:
+                prevouts_data += bytes.fromhex(inp.source_txid)[::-1]
+                prevouts_data += inp.source_output_index.to_bytes(4, "little")
+            hash_prevouts = hash256(prevouts_data)
+
+        # Calculate hashSequence (32-byte hash)
+        if hash_type & int(SIGHASH.ANYONECANPAY) or (hash_type & 0x1F) == int(SIGHASH.SINGLE) or (hash_type & 0x1F) == int(SIGHASH.NONE):
+            hash_sequence = b"\x00" * 32
+        else:
+            sequence_data = b""
+            for inp in self.inputs:
+                sequence_data += inp.sequence.to_bytes(4, "little")
+            hash_sequence = hash256(sequence_data)
+
+        # Calculate hashOutputs (32-byte hash)
+        if (hash_type & 0x1F) == int(SIGHASH.SINGLE) and input_index < len(self.outputs):
+            hash_outputs = hash256(self.outputs[input_index].serialize())
+        elif (hash_type & 0x1F) == int(SIGHASH.NONE):
+            hash_outputs = b"\x00" * 32
+        else:
+            outputs_data = b""
+            for out in self.outputs:
+                outputs_data += out.serialize()
+            hash_outputs = hash256(outputs_data)
+
+        # Build the preimage
+        stream = BytesIO()
+        # 1. nVersion (4-byte little endian)
+        stream.write(self.version.to_bytes(4, "little"))
+        # 2. hashPrevouts (32 bytes)
+        stream.write(hash_prevouts)
+        # 3. hashSequence (32 bytes)
+        stream.write(hash_sequence)
+        # 4. outpoint (32-byte hash + 4-byte little endian)
+        stream.write(bytes.fromhex(tx_input.source_txid)[::-1])
+        stream.write(tx_input.source_output_index.to_bytes(4, "little"))
+        # 5. scriptCode (varint length + bytes)
+        script_bytes = tx_input.locking_script.serialize()
+        stream.write(unsigned_to_varint(len(script_bytes)))
+        stream.write(script_bytes)
+        # 6. value of output (8-byte little endian)
+        prev_sats = prev_satoshis if prev_satoshis != 0 else (tx_input.satoshis or 0)
+        stream.write(prev_sats.to_bytes(8, "little"))
+        # 7. nSequence of input (4-byte little endian)
+        stream.write(tx_input.sequence.to_bytes(4, "little"))
+        # 8. hashOutputs (32 bytes)
+        stream.write(hash_outputs)
+        # 9. nLocktime (4-byte little endian)
+        stream.write(self.locktime.to_bytes(4, "little"))
+        # 10. sighash type (4-byte little endian) - full uint32
+        stream.write(hash_type.to_bytes(4, "little"))
+
+        return stream.getvalue()
+
+    def _calc_input_preimage_legacy(self, input_index: int, hash_type: int) -> bytes:
+        """
+        Calculate legacy preimage for signature hashing.
+        Implements the original Bitcoin signature hashing algorithm with SIGHASH_SINGLE bug.
+        """
+        from io import BytesIO
+
+        # Handle SIGHASH_SINGLE out-of-range bug
+        if (hash_type & 0x1F) == int(SIGHASH.SINGLE) and input_index >= len(self.outputs):
+            # Return the special "1" hash as uint256 little endian
+            return b"\x01" + (b"\x00" * 31)
+
+        # Create a copy of the transaction for modification
+        tx_copy = Transaction(
+            tx_inputs=[inp.__class__(
+                source_transaction=inp.source_transaction,
+                source_txid=inp.source_txid,
+                source_output_index=inp.source_output_index,
+                unlocking_script=Script.from_bytes(b""),  # Clear unlocking scripts
+                sequence=inp.sequence
+            ) for inp in self.inputs],
+            version=self.version,
+            locktime=self.locktime
+        )
+        tx_copy.outputs = self.outputs.copy()
+
+        # Set the script for the input we're signing
+        tx_copy.inputs[input_index].unlocking_script = self.inputs[input_index].locking_script
+
+        # Apply SIGHASH_NONE
+        if hash_type & int(SIGHASH.NONE):
+            tx_copy.outputs.clear()
+            # Clear sequences for other inputs
+            for i, inp in enumerate(tx_copy.inputs):
+                if i != input_index:
+                    inp.sequence = 0
+
+        # Apply SIGHASH_SINGLE
+        elif hash_type & int(SIGHASH.SINGLE):
+            tx_copy.outputs = tx_copy.outputs[:input_index + 1]
+            # Null out outputs before the input index
+            for i in range(input_index):
+                tx_copy.outputs[i].satoshis = 0xFFFFFFFFFFFFFFFF  # -1 as underflow
+                tx_copy.outputs[i].locking_script = Script.from_bytes(b"")
+            # Clear sequences for other inputs
+            for i, inp in enumerate(tx_copy.inputs):
+                if i != input_index:
+                    inp.sequence = 0
+
+        # Apply ANYONECANPAY
+        if hash_type & int(SIGHASH.ANYONECANPAY):
+            # Only keep the input we're signing
+            tx_copy.inputs = [tx_copy.inputs[input_index]]
+
+        # Serialize and append hash type
+        stream = BytesIO()
+        stream.write(tx_copy.serialize())
+        stream.write(hash_type.to_bytes(4, "little"))
+
+        return stream.getvalue()
 
     def sign(self, bypass: bool = True) -> "Transaction":  # pragma: no cover
         """

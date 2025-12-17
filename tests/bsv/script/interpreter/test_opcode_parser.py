@@ -46,20 +46,20 @@ class TestIsDisabled:
         opcode = ParsedOpcode(OpCode.OP_2DIV)
         assert opcode.is_disabled() is True
     
-    def test_op_verif_is_disabled(self):
-        """Test that OP_VERIF is disabled."""
+    def test_op_verif_is_always_illegal(self):
+        """Test that OP_VERIF is always illegal."""
         opcode = ParsedOpcode(OpCode.OP_VERIF)
-        assert opcode.is_disabled() is True
-    
-    def test_op_vernotif_is_disabled(self):
-        """Test that OP_VERNOTIF is disabled."""
+        assert opcode.always_illegal() is True
+
+    def test_op_vernotif_is_always_illegal(self):
+        """Test that OP_VERNOTIF is always illegal."""
         opcode = ParsedOpcode(OpCode.OP_VERNOTIF)
-        assert opcode.is_disabled() is True
-    
-    def test_op_ver_is_disabled(self):
-        """Test that OP_VER is disabled."""
+        assert opcode.always_illegal() is True
+
+    def test_op_ver_is_always_illegal(self):
+        """Test that OP_VER is always illegal."""
         opcode = ParsedOpcode(OpCode.OP_VER)
-        assert opcode.is_disabled() is True
+        assert opcode.always_illegal() is True
     
     def test_regular_op_not_disabled(self):
         """Test that regular opcodes are not disabled."""

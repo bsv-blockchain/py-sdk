@@ -82,19 +82,29 @@ def test_key_deriver_derive_hardened():
 # Public key derivation branches
 # ========================================================================
 
-@pytest.mark.skip(reason="Complex Counterparty API - requires further investigation")
 def test_key_deriver_derive_public_key():
     """Test deriving public key."""
     try:
-        from bsv.wallet.key_deriver import KeyDeriver, Protocol
-        
-        deriver = KeyDeriver(PrivateKey())
-        
+        from bsv.wallet.key_deriver import KeyDeriver, Protocol, Counterparty, CounterpartyType
+
+        # Use deterministic keys to avoid flakiness
+        root = PrivateKey(b"\x01" * 32)
+        cp_priv = PrivateKey(b"\x02" * 32)
+        deriver = KeyDeriver(root)
+
         if hasattr(deriver, 'derive_public_key'):
-            counterparty = PrivateKey().public_key()
+            counterparty = Counterparty(CounterpartyType.OTHER, cp_priv.public_key())
             protocol = Protocol(security_level=0, protocol="test")
-            pub = deriver.derive_public_key(protocol, "testkey", counterparty)
+            pub = deriver.derive_public_key(protocol, "testkey", counterparty, for_self=False)
+
+            # Assert meaningful but stable properties
             assert pub is not None
+            assert hasattr(pub, "hex")
+            assert len(pub.hex()) in (66, 130)  # compressed (66) or uncompressed (130) hex
+
+            # Test determinism - same inputs should produce same output
+            pub2 = deriver.derive_public_key(protocol, "testkey", counterparty, for_self=False)
+            assert pub.hex() == pub2.hex()
     except ImportError:
         pytest.skip("KeyDeriver not available")
 

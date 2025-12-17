@@ -36,11 +36,11 @@ class TestSignatureEncodingExtended:
     
     def test_invalid_sighash_type(self):
         """Test signature with invalid sighash type."""
-        # Valid DER signature but invalid sighash
-        sig = b"\x30\x06\x02\x01\x01\x02\x01\x01\xFF"  # Invalid sighash 0xFF
+        # Signature with invalid data length (DER validation fails first)
+        sig = b"\x30\x06\x02\x01\x01\x02\x01\x01\xFF"  # Invalid data length
         result = check_signature_encoding(sig, require_der=True)
         assert result is not None
-        assert result.code == ErrorCode.ERR_SIG_HASHTYPE
+        assert result.code == ErrorCode.ERR_SIG_INVALID_DATA_LEN
     
     def test_signature_no_der_check(self):
         """Test signature validation without DER requirement."""

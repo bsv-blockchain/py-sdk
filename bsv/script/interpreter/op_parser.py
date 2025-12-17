@@ -8,6 +8,9 @@ from typing import List, Optional
 
 from bsv.script.script import Script, ScriptChunk
 from bsv.constants import OpCode
+from bsv.utils import Reader
+
+from .errs import Error, ErrorCode
 
 
 class ParsedOpcode:
@@ -19,13 +22,13 @@ class ParsedOpcode:
 
     def is_disabled(self) -> bool:
         """Check if opcode is disabled."""
-        return (
-            self.opcode == OpCode.OP_2MUL
-            or self.opcode == OpCode.OP_2DIV
-            or self.opcode == OpCode.OP_VERIF
-            or self.opcode == OpCode.OP_VERNOTIF
-            or self.opcode == OpCode.OP_VER
-        )
+        # Match go-sdk: only OP_2MUL and OP_2DIV are treated as disabled.
+        return self.opcode == OpCode.OP_2MUL or self.opcode == OpCode.OP_2DIV
+
+    def always_illegal(self) -> bool:
+        """Check if opcode is always illegal (reserved) before genesis."""
+        # Match go-sdk: OP_VERIF and OP_VERNOTIF are always illegal before genesis.
+        return self.opcode == OpCode.OP_VERIF or self.opcode == OpCode.OP_VERNOTIF
 
     def is_conditional(self) -> bool:
         """Check if opcode is conditional."""
@@ -34,6 +37,8 @@ class ParsedOpcode:
             or self.opcode == OpCode.OP_NOTIF
             or self.opcode == OpCode.OP_ELSE
             or self.opcode == OpCode.OP_ENDIF
+            or self.opcode == OpCode.OP_VERIF
+            or self.opcode == OpCode.OP_VERNOTIF
         )
 
     def name(self) -> str:  # NOSONAR - Complexity (22), requires refactoring
@@ -119,10 +124,44 @@ class DefaultOpcodeParser:
     def parse(self, script: Script) -> ParsedScript:
         """Parse a script into a list of parsed opcodes."""
         parsed: ParsedScript = []
-        
-        for chunk in script.chunks:
-            opcode = ParsedOpcode(chunk.op, chunk.data)
-            parsed.append(opcode)
-        
+
+        # Use a strict byte parser so malformed pushes are detected (matches go-sdk behavior).
+        reader = Reader(script.serialize())
+        while not reader.eof():
+            op = reader.read_bytes(1)
+            if not op:
+                break
+
+            data: Optional[bytes] = None
+            if b"\x01" <= op <= b"\x4b":
+                n = int.from_bytes(op, "big")
+                data = reader.read_bytes(n)
+                if len(data) != n:
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: not enough bytes")
+            elif op == OpCode.OP_PUSHDATA1:
+                n = reader.read_uint8()
+                if n is None:
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: missing PUSHDATA1 length")
+                data = reader.read_bytes(n)
+                if len(data) != n:
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: not enough bytes")
+            elif op == OpCode.OP_PUSHDATA2:
+                n = reader.read_uint16_le()
+                if n is None:
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: missing PUSHDATA2 length")
+                data = reader.read_bytes(n)
+                if len(data) != n:
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: not enough bytes")
+            elif op == OpCode.OP_PUSHDATA4:
+                n = reader.read_uint32_le()
+                if n is None:
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: missing PUSHDATA4 length")
+                data = reader.read_bytes(n)
+                if len(data) != n:
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: not enough bytes")
+
+            # Append all opcodes, whether they have data or not
+            parsed.append(ParsedOpcode(op, data))
+
         return parsed
 
