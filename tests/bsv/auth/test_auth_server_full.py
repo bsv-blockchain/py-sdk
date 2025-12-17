@@ -66,12 +66,13 @@ class AuthServer:
         """Generate a 32-byte random nonce, base64 encoded"""
         return base64.b64encode(os.urandom(32)).decode()
     
-    def create_signature(self, message_data: str) -> str:
-        """Create a mock signature for the message"""
+    def create_signature(self, message_data: str) -> List[int]:
+        """Create a mock signature for the message as a list of integers"""
         # In a real implementation, this would use the server's private key
         # For testing, we'll create a deterministic mock signature
         hash_obj = hashlib.sha256(message_data.encode())
-        return base64.b64encode(hash_obj.digest()).decode()
+        signature_bytes = hash_obj.digest()
+        return list(signature_bytes)
     
     def handle_initial_request(self, message: Dict) -> Dict:
         """Handle initialRequest message type"""

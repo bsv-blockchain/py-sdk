@@ -181,8 +181,8 @@ class MockHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 
                 # Store session info
                 self.auth_sessions[session_id] = {
-                    'identity_key': auth_data.get('identityKey'),
-                    'initial_nonce': auth_data.get('initialNonce'),
+                    'identityKey': auth_data.get('identityKey'),
+                    'initialNonce': auth_data.get('initialNonce'),
                     'created_at': time.time()
                 }
                 

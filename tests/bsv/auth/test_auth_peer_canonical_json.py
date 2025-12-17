@@ -94,7 +94,7 @@ def test_canonical_certificate_response_json_golden():
         {
             "certificate": {
                 "type": t1,
-                "serial_number": s1.hex(),
+                "serialNumber": s1.hex(),
                 "subject": subj1,
                 "certifier": cert1,
                 "fields": {"x": "y"},

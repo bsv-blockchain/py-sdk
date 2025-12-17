@@ -23,8 +23,8 @@ class TestProtoWalletEncryptDecryptBasic:
         # Encrypt
         encrypt_result = wallet.encrypt({
             "plaintext": list(plaintext),
-            "protocol_id": [2, "test encryption"],
-            "key_id": "test-key-1",
+            "protocolID": [2, "test encryption"],
+            "keyID": "test-key-1",
             "counterparty": None  # self
         })
         
@@ -34,8 +34,8 @@ class TestProtoWalletEncryptDecryptBasic:
         # Decrypt
         decrypt_result = wallet.decrypt({
             "ciphertext": ciphertext,
-            "protocol_id": [2, "test encryption"],
-            "key_id": "test-key-1",
+            "protocolID": [2, "test encryption"],
+            "keyID": "test-key-1",
             "counterparty": None  # self
         })
         
@@ -58,8 +58,8 @@ class TestProtoWalletEncryptDecryptBasic:
         # Alice encrypts for Bob
         encrypt_result = alice_wallet.encrypt({
             "plaintext": list(plaintext),
-            "protocol_id": [2, "secure messaging"],
-            "key_id": "msg-001",
+            "protocolID": {"securityLevel": 2, "protocol": "secure messaging"},
+            "keyID": "msg-001",
             "counterparty": {
                 "type": CounterpartyType.OTHER,
                 "counterparty": bob_priv.public_key()
@@ -72,8 +72,8 @@ class TestProtoWalletEncryptDecryptBasic:
         # Bob decrypts (using Alice as counterparty)
         decrypt_result = bob_wallet.decrypt({
             "ciphertext": ciphertext,
-            "protocol_id": [2, "secure messaging"],
-            "key_id": "msg-001",
+            "protocolID": {"securityLevel": 2, "protocol": "secure messaging"},
+            "keyID": "msg-001",
             "counterparty": {
                 "type": CounterpartyType.OTHER,
                 "counterparty": alice_priv.public_key()
@@ -120,8 +120,8 @@ class TestProtoWalletBRC2Compatibility:
         
         decrypt_result = wallet.decrypt({
             "ciphertext": list(expected_ciphertext),
-            "protocol_id": {"security_level": 2, "protocol": "BRC2 Test"},
-            "key_id": "42",
+            "protocolID": {"securityLevel": 2, "protocol": "BRC2 Test"},
+            "keyID": "42",
             "counterparty": {
                 "type": CounterpartyType.OTHER,
                 "counterparty": counterparty_pub_key
@@ -154,8 +154,8 @@ class TestProtoWalletBRC2Compatibility:
         
         hmac_result = wallet.create_hmac({
             "data": data,
-            "protocol_id": {"security_level": 2, "protocol": "BRC2 Test"},
-            "key_id": "42",
+            "protocolID": {"securityLevel": 2, "protocol": "BRC2 Test"},
+            "keyID": "42",
             "counterparty": {
                 "type": CounterpartyType.OTHER,
                 "counterparty": counterparty_pub_key
@@ -179,8 +179,8 @@ class TestProtoWalletEncryptDecryptFormat:
         
         encrypt_result = wallet.encrypt({
             "plaintext": list(plaintext),
-            "protocol_id": [2, "format test"],
-            "key_id": "key1"
+            "protocolID": {"securityLevel": 2, "protocol": "format test"},
+            "keyID": "key1"
         })
         
         assert "error" not in encrypt_result
@@ -206,8 +206,8 @@ class TestProtoWalletEncryptDecryptFormat:
         wallet = ProtoWallet(PrivateKey(), permission_callback=lambda a: True)
         
         encrypt_result = wallet.encrypt({
-            "protocol_id": [2, "test proto"],
-            "key_id": "key1"
+            "protocolID": {"securityLevel": 2, "protocol": "test proto"},
+            "keyID": "key1"
             # Missing plaintext
         })
         
@@ -227,8 +227,8 @@ class TestProtoWalletLegacyArgs:
         encrypt_result = wallet.encrypt({
             "plaintext": list(plaintext),
             "encryption_args": {
-                "protocol_id": {"security_level": 2, "protocol": "legacy test"},
-                "key_id": "legacy-key"
+                "protocolID": {"securityLevel": 2, "protocol": "legacy test"},
+                "keyID": "legacy-key"
             }
         })
         
@@ -239,8 +239,8 @@ class TestProtoWalletLegacyArgs:
         decrypt_result = wallet.decrypt({
             "ciphertext": ciphertext,
             "encryption_args": {
-                "protocol_id": {"security_level": 2, "protocol": "legacy test"},
-                "key_id": "legacy-key"
+                "protocolID": {"securityLevel": 2, "protocol": "legacy test"},
+                "keyID": "legacy-key"
             }
         })
         

@@ -342,12 +342,21 @@ class Peer:
 
     def _extract_base_fields(self, base: Any):
         if isinstance(base, dict):
+            # Check for forbidden snake_case keys
+            forbidden_keys = {
+                'serial_number': 'serialNumber',
+                'revocation_outpoint': 'revocationOutpoint'
+            }
+            for snake_key, camel_key in forbidden_keys.items():
+                if snake_key in base:
+                    raise ValueError(f"Certificate key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
             return (
                 base.get('type'),
-                base.get('serialNumber') or base.get('serial_number'),
+                base.get('serialNumber'),
                 base.get('subject'),
                 base.get('certifier'),
-                base.get('revocationOutpoint') or base.get('revocation_outpoint'),
+                base.get('revocationOutpoint'),
                 base.get('fields', {}) or {},
             )
         return (

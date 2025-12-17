@@ -205,8 +205,8 @@ class WalletWireTransceiver:
 
     def create_hmac(self, ctx: Any, args: dict, originator: str) -> dict:
         enc = args.get('encryption_args', {})
-        proto = enc.get('protocol_id') or enc.get('protocolID') or {}
-        key_id = enc.get('key_id') or enc.get('keyID') or ''
+        proto = enc.get('protocolID') or {}
+        key_id = enc.get('keyID') or ''
         counterparty = enc.get('counterparty')
         cp_dict = None
         if isinstance(counterparty, (bytes, bytearray)):
@@ -239,8 +239,8 @@ class WalletWireTransceiver:
 
     def verify_hmac(self, ctx: Any, args: dict, originator: str) -> dict:
         enc = args.get('encryption_args', {})
-        proto = enc.get('protocol_id') or enc.get('protocolID') or {}
-        key_id = enc.get('key_id') or enc.get('keyID') or ''
+        proto = enc.get('protocolID') or {}
+        key_id = enc.get('keyID') or ''
         counterparty = enc.get('counterparty')
         cp_dict = None
         if isinstance(counterparty, (bytes, bytearray)):
@@ -274,8 +274,8 @@ class WalletWireTransceiver:
 
     def create_signature(self, ctx: Any, args: dict, originator: str) -> dict:
         enc = args.get('encryption_args', {})
-        proto = enc.get('protocol_id') or enc.get('protocolID') or {}
-        key_id = enc.get('key_id') or enc.get('keyID') or ''
+        proto = enc.get('protocolID') or {}
+        key_id = enc.get('keyID') or ''
         counterparty = enc.get('counterparty')
         cp_dict = None
         if isinstance(counterparty, (bytes, bytearray)):
@@ -309,8 +309,8 @@ class WalletWireTransceiver:
 
     def verify_signature(self, ctx: Any, args: dict, originator: str) -> dict:
         enc = args.get('encryption_args', {})
-        proto = enc.get('protocol_id') or enc.get('protocolID') or {}
-        key_id = enc.get('key_id') or enc.get('keyID') or ''
+        proto = enc.get('protocolID') or {}
+        key_id = enc.get('keyID') or ''
         counterparty = enc.get('counterparty')
         cp_dict = None
         if isinstance(counterparty, (bytes, bytearray)):

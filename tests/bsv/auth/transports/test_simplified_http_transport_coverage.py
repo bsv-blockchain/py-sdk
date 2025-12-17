@@ -263,3 +263,112 @@ def test_transport_with_none_client():
     t = SimplifiedHTTPTransport("https://example.com", client=None)
     assert t.client is not None
 
+
+# ========================================================================
+# AuthMessage JSON validation tests
+# ========================================================================
+
+def test_auth_message_from_dict_rejects_snake_case_keys():
+    """Test that _auth_message_from_dict rejects snake_case keys."""
+    transport = SimplifiedHTTPTransport("https://example.com")
+
+    # Test snake_case identity_key
+    data = {
+        "version": "1.0",
+        "messageType": "initialRequest",
+        "identity_key": "02abc123",  # snake_case
+        "nonce": "test"
+    }
+    with pytest.raises(ValueError, match="AuthMessage key 'identity_key' is not supported"):
+        transport._auth_message_from_dict(data)
+
+    # Test snake_case message_type
+    data = {
+        "version": "1.0",
+        "message_type": "initialRequest",  # snake_case
+        "identityKey": "02abc123",
+        "nonce": "test"
+    }
+    with pytest.raises(ValueError, match="AuthMessage key 'message_type' is not supported"):
+        transport._auth_message_from_dict(data)
+
+
+def test_auth_message_from_dict_rejects_string_payload():
+    """Test that _auth_message_from_dict rejects string payload."""
+    transport = SimplifiedHTTPTransport("https://example.com")
+
+    data = {
+        "version": "1.0",
+        "messageType": "general",
+        "identityKey": "02abc123",
+        "payload": "string_payload"  # string instead of list
+    }
+    with pytest.raises(ValueError, match="AuthMessage payload must be a list of integers or null"):
+        transport._auth_message_from_dict(data)
+
+
+def test_auth_message_from_dict_rejects_string_signature():
+    """Test that _auth_message_from_dict rejects string signature."""
+    transport = SimplifiedHTTPTransport("https://example.com")
+
+    data = {
+        "version": "1.0",
+        "messageType": "general",
+        "identityKey": "02abc123",
+        "signature": "hex_signature"  # string instead of list
+    }
+    with pytest.raises(ValueError, match="AuthMessage signature must be a list of integers or null"):
+        transport._auth_message_from_dict(data)
+
+
+def test_auth_message_from_dict_accepts_list_payload_signature():
+    """Test that _auth_message_from_dict accepts list payload and signature."""
+    transport = SimplifiedHTTPTransport("https://example.com")
+
+    data = {
+        "version": "1.0",
+        "messageType": "general",
+        "identityKey": "02abc123",
+        "nonce": "test",
+        "payload": [72, 101, 108, 108, 111],  # "Hello" as bytes
+        "signature": [1, 2, 3, 4, 5]
+    }
+    msg = transport._auth_message_from_dict(data)
+    assert msg.payload == b"Hello"
+    assert msg.signature == b"\x01\x02\x03\x04\x05"
+
+
+def test_auth_message_from_dict_rejects_invalid_list_values():
+    """Test that _auth_message_from_dict rejects invalid list values."""
+    transport = SimplifiedHTTPTransport("https://example.com")
+
+    # Payload with value out of range
+    data = {
+        "version": "1.0",
+        "messageType": "general",
+        "identityKey": "02abc123",
+        "payload": [255, 256]  # 256 is out of range 0-255
+    }
+    with pytest.raises(ValueError, match="AuthMessage payload must contain integers in range 0-255"):
+        transport._auth_message_from_dict(data)
+
+    # Signature with negative value
+    data = {
+        "version": "1.0",
+        "messageType": "general",
+        "identityKey": "02abc123",
+        "signature": [1, -1]  # -1 is out of range
+    }
+    with pytest.raises(ValueError, match="AuthMessage signature must contain integers in range 0-255"):
+        transport._auth_message_from_dict(data)
+
+    # Payload with non-integer
+    data = {
+        "version": "1.0",
+        "messageType": "general",
+        "identityKey": "02abc123",
+        "payload": [1, "not_int"]  # string in list
+    }
+    with pytest.raises(ValueError, match="AuthMessage payload must contain integers in range 0-255"):
+        transport._auth_message_from_dict(data)
+

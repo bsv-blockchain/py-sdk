@@ -678,8 +678,8 @@ class PushDropUnlocker:
         print(f"[DEBUG] PushDropUnlocker.sign: P2PKH UTXO detected, hash160: {hash160_bytes.hex()}")
         
         create_args = {
-            "protocol_id": self.protocol_id,
-            "key_id": self.key_id,
+            "protocolID": self.protocol_id,
+            "keyID": self.key_id,
             "counterparty": self.counterparty,
             "hash160": hash160_bytes.hex(),
             "data": hash_to_sign,
@@ -726,8 +726,8 @@ class PushDropUnlocker:
         """Create signature using derived key (fallback method)."""
         print(f"[DEBUG] PushDropUnlocker.sign: Fallback to derived public key, protocol_id={self.protocol_id}, key_id={self.key_id}")
         create_args = {
-            "protocol_id": self.protocol_id,
-            "key_id": self.key_id,
+            "protocolID": self.protocol_id,
+            "keyID": self.key_id,
             "counterparty": self.counterparty,
         }
         if used_preimage:

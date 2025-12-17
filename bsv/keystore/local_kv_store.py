@@ -203,8 +203,8 @@ class LocalKVStore(KVStoreInterface):
                         ctx,
                         {
                             "encryption_args": {
-                                "protocol_id": protocol_id,
-                                "key_id": key_id,
+                                "protocolID": protocol_id,
+                                "keyID": key_id,
                                 "counterparty": counterparty,
                             },
                             "ciphertext": ciphertext,
@@ -251,9 +251,9 @@ class LocalKVStore(KVStoreInterface):
             kid = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
             cpty = ca_args.get("counterparty") or pd_opts.get("counterparty")
             if prot is not None:
-                args["protocol_id"] = prot
+                args["protocolID"] = prot
             if kid is not None:
-                args["key_id"] = kid
+                args["keyID"] = kid
             if cpty is not None:
                 args["counterparty"] = cpty
         except Exception:
@@ -688,8 +688,8 @@ class LocalKVStore(KVStoreInterface):
                 is_self = isinstance(counterparty, dict) and counterparty.get("type") == 0
                 encrypt_args = {
                     "encryption_args": {
-                        "protocol_id": protocol_id,
-                        "key_id": key_id,
+                        "protocolID": protocol_id,
+                        "keyID": key_id,
                         "counterparty": counterparty,
                         "forSelf": is_self
                     },

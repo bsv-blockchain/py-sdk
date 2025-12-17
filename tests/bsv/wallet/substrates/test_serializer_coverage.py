@@ -228,7 +228,7 @@ def test_list_actions_roundtrip():
 
 def test_encrypt_roundtrip():
     """Test serialize/deserialize encrypt_args roundtrip."""
-    args = {"plaintext": b'test', "protocolID": [0, "test"], "keyID": "key1"}
+    args = {"plaintext": b'test', "protocolID": {"securityLevel": 0, "protocol": "test"}, "keyID": "key1"}
     serialized = serialize_encrypt_args(args)
     deserialized = deserialize_encrypt_args(serialized)
     assert "plaintext" in deserialized
@@ -236,7 +236,7 @@ def test_encrypt_roundtrip():
 
 def test_decrypt_roundtrip():
     """Test serialize/deserialize decrypt_args roundtrip."""
-    args = {"ciphertext": b'test', "protocolID": [0, "test"], "keyID": "key1"}
+    args = {"ciphertext": b'test', "protocolID": {"securityLevel": 0, "protocol": "test"}, "keyID": "key1"}
     serialized = serialize_decrypt_args(args)
     deserialized = deserialize_decrypt_args(serialized)
     assert "ciphertext" in deserialized

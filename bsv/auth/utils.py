@@ -17,11 +17,11 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None) -> bool:
     hmac = nonce_bytes[16:]
     # Prepare encryption_args for wallet.verify_hmac
     encryption_args = {
-        'protocol_id': {
+        'protocolID': {
             'securityLevel': 1,  # Go version: SecurityLevelEveryApp = 1
             'protocol': 'server hmac'
         },
-        'key_id': data.decode('latin1'),  # Go version: string(randomBytes)
+        'keyID': data.decode('latin1'),  # Go version: string(randomBytes)
         'counterparty': counterparty
     }
     args = {
@@ -47,11 +47,11 @@ def create_nonce(wallet: Any, counterparty: Any = None) -> str:
     first_half = os.urandom(16)
     # Create an sha256 HMAC
     encryption_args = {
-        'protocol_id': {
+        'protocolID': {
             'securityLevel': 1,  # Go version: SecurityLevelEveryApp = 1
             'protocol': 'server hmac'
         },
-        'key_id': first_half.decode('latin1'),  # Go version: string(randomBytes)
+        'keyID': first_half.decode('latin1'),  # Go version: string(randomBytes)
         'counterparty': counterparty
     }
     args = {
@@ -161,8 +161,16 @@ def _normalize_requested_for_utils(req):
         pass
     # dict-like
     if isinstance(req, dict):
+        # Check for forbidden snake_case keys
+        forbidden_keys = {
+            'certificate_types': 'certificateTypes'
+        }
+        for snake_key, camel_key in forbidden_keys.items():
+            if snake_key in req:
+                raise ValueError(f"RequestedCertificateSet key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
         allowed_certifiers = req.get('certifiers') or req.get('Certifiers') or []
-        types_dict = req.get('certificate_types') or req.get('certificateTypes') or req.get('types') or {}
+        types_dict = req.get('certificateTypes') or req.get('types') or {}
         # In utils tests, type keys are simple strings. Keep as-is.
         for k, v in types_dict.items():
             requested_types[str(k)] = list(v or [])
@@ -170,8 +178,12 @@ def _normalize_requested_for_utils(req):
 
 
 def _extract_incoming_fields(incoming):
+    # Check for forbidden snake_case keys
+    if 'serial_number' in incoming:
+        raise ValueError("Certificate key 'serial_number' is not supported. Use 'serialNumber' instead.")
+
     cert_type = incoming.get('type')
-    serial_number = incoming.get('serialNumber') or incoming.get('serial_number')
+    serial_number = incoming.get('serialNumber')
     subject = incoming.get('subject')
     certifier = incoming.get('certifier')
     fields = incoming.get('fields') or {}

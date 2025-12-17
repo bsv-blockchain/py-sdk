@@ -296,8 +296,38 @@ class SimplifiedHTTPTransport(Transport):
     
     def _auth_message_from_dict(self, data: Dict) -> AuthMessage:
         """Convert dictionary to AuthMessage"""
-        # Convert identityKey
-        identity_key_str = data.get('identityKey') or data.get('identity_key')
+        # Validate payload: must be list[int] or None
+        payload = data.get('payload')
+        if payload is not None:
+            if not isinstance(payload, list):
+                raise ValueError("AuthMessage payload must be a list of integers or null")
+            if not all(isinstance(x, int) and 0 <= x <= 255 for x in payload):
+                raise ValueError("AuthMessage payload must contain integers in range 0-255")
+            payload = bytes(payload)
+
+        # Validate signature: must be list[int] or None
+        signature = data.get('signature')
+        if signature is not None:
+            if not isinstance(signature, list):
+                raise ValueError("AuthMessage signature must be a list of integers or null")
+            if not all(isinstance(x, int) and 0 <= x <= 255 for x in signature):
+                raise ValueError("AuthMessage signature must contain integers in range 0-255")
+            signature = bytes(signature)
+
+        # Check for forbidden snake_case keys and provide clear error messages
+        forbidden_keys = {
+            'identity_key': 'identityKey',
+            'message_type': 'messageType',
+            'initial_nonce': 'initialNonce',
+            'your_nonce': 'yourNonce',
+            'requested_certificates': 'requestedCertificates'
+        }
+        for snake_key, camel_key in forbidden_keys.items():
+            if snake_key in data:
+                raise ValueError(f"AuthMessage key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+        # Convert identityKey (camelCase only)
+        identity_key_str = data.get('identityKey')
         identity_key = None
         if identity_key_str:
             try:
@@ -309,34 +339,16 @@ class SimplifiedHTTPTransport(Transport):
                     def hex(self) -> str:
                         return self._hex
                 identity_key = FallbackPublicKey(identity_key_str)
-        
-        # Convert payload
-        payload = data.get('payload')
-        if isinstance(payload, list):
-            payload = bytes(payload)
-        elif isinstance(payload, str):
-            payload = payload.encode('utf-8')
-        
-        # Convert signature
-        signature = data.get('signature')
-        if isinstance(signature, list):
-            signature = bytes(signature)
-        elif isinstance(signature, str):
-            try:
-                signature = bytes.fromhex(signature)
-            except ValueError:
-                import base64
-                signature = base64.b64decode(signature)
-        
+
         return AuthMessage(
             version=data.get('version', '0.1'),
-            message_type=data.get('messageType') or data.get('message_type', 'initialResponse'),
+            message_type=data.get('messageType', 'initialResponse'),
             identity_key=identity_key,
             nonce=data.get('nonce', ''),
-            initial_nonce=data.get('initialNonce') or data.get('initial_nonce', ''),
-            your_nonce=data.get('yourNonce') or data.get('your_nonce', ''),
+            initial_nonce=data.get('initialNonce', ''),
+            your_nonce=data.get('yourNonce', ''),
             certificates=data.get('certificates', []),
-            requested_certificates=data.get('requestedCertificates') or data.get('requested_certificates'),
+            requested_certificates=data.get('requestedCertificates'),
             payload=payload,
             signature=signature,
         )
