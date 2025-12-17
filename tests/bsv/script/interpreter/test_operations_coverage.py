@@ -88,8 +88,8 @@ class TestOperationsUtilityFunctions:
 
     def test_check_signature_encoding_comprehensive(self):
         """Test check_signature_encoding with various inputs."""
-        # Empty signature should pass
-        assert check_signature_encoding(b"") is None
+        # Empty signature should pass when no validation is required
+        assert check_signature_encoding(b"", require_der=False, require_low_s=False, require_strict=False) is None
 
         # Test with different DER requirements
         test_sigs = [b"", b"invalid", b"\x30\x01\x01"]

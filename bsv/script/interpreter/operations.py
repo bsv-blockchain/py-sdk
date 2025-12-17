@@ -94,20 +94,22 @@ def check_signature_encoding(sig: bytes, require_low_s: bool = True, require_der
 
     This implements the same validation as the Go SDK's checkSignatureEncoding.
     """
-    # Allow empty signatures
-    if len(sig) == 0:
+    # Mirror go-sdk: DER validation is required for low S checking
+    require_der = require_der or require_low_s or require_strict
+
+    # Mirror go-sdk: only enforce requirements when any related flags are enabled.
+    if not require_der:
         return None
 
-    # Mirror go-sdk: only enforce DER/low-S/strict requirements when any related flags are enabled.
-    if not (require_der or require_low_s or require_strict):
-        return None
-
-    # Empty signatures are not allowed when validation is required
-    if len(sig) == 0:
-        return Error(ErrorCode.ERR_SIG_TOO_SHORT, f"malformed signature: too short: 0 < 8")
-
-    # Detailed DER signature validation
+    # Basic length checks are performed when validation is required (Go SDK behavior)
     sig_len = len(sig)
+    min_sig_len = 8
+    max_sig_len = 72
+
+    if sig_len < min_sig_len:
+        return Error(ErrorCode.ERR_SIG_TOO_SHORT, f"malformed signature: too short: {sig_len} < {min_sig_len}")
+    if sig_len > max_sig_len:
+        return Error(ErrorCode.ERR_SIG_TOO_LONG, f"malformed signature: too long: {sig_len} > {max_sig_len}")
 
     # Constants from Go SDK
     asn1_sequence_id = 0x30
@@ -196,11 +198,39 @@ def check_signature_encoding(sig: bytes, require_low_s: bool = True, require_der
         if s_len > 1 and sig[s_offset] == 0x00 and sig[s_offset + 1] & 0x80 == 0:
             return Error(ErrorCode.ERR_SIG_TOO_MUCH_S_PADDING, "malformed signature: S value has too much padding")
 
-        # Verify the S value is <= half the order of the curve.
-        if require_low_s:
-            s_value = int.from_bytes(sig[s_offset:s_offset + s_len], byteorder='big')
-            if s_value > curve.n // 2:
+    # Verify the S value is <= half the order of the curve.
+    # Low S checking requires valid DER structure, so only check when DER validation passed
+    if require_low_s and require_der:
+        # Parse S value from the validated DER structure
+        # The DER structure has already been validated, so we can extract S
+        try:
+            # Skip sequence byte, length byte, R type, R length, R data
+            pos = 4  # After 0x30, length, 0x02, r_len
+            r_len = sig[r_len_offset]
+            pos += r_len  # Skip R data
+
+            # Now at S type (0x02)
+            if pos + 2 >= len(sig):
+                return Error(ErrorCode.ERR_SIG_HIGH_S, "invalid DER structure for S extraction")
+
+            s_len = sig[pos + 1]
+            s_start = pos + 2
+            s_end = s_start + s_len
+
+            if s_end > len(sig):
+                return Error(ErrorCode.ERR_SIG_HIGH_S, "invalid DER structure for S extraction")
+
+            s_bytes = sig[s_start:s_end]
+            if len(s_bytes) == 0:
+                return Error(ErrorCode.ERR_SIG_HIGH_S, "empty S value")
+
+            # Convert to integer and check if > curve.n // 2
+            s_value = int.from_bytes(s_bytes, byteorder='big')
+            curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+            if s_value > curve_order // 2:
                 return Error(ErrorCode.ERR_SIG_HIGH_S, "signature is not canonical due to unnecessarily high S value")
+        except (IndexError, ValueError):
+            return Error(ErrorCode.ERR_SIG_HIGH_S, "failed to parse S value from DER signature")
 
     return None
 
@@ -357,12 +387,6 @@ def check_public_key_encoding(octets: bytes) -> Optional[Error]:
         if len(octets) != 33:
             return Error(ErrorCode.ERR_PUBKEY_TYPE, "The compressed public key must be 33 bytes")
     else:
-        return Error(ErrorCode.ERR_PUBKEY_TYPE, "The public key is in an unknown format")
-
-    # Try to parse the public key
-    try:
-        PublicKey(octets)
-    except Exception:
         return Error(ErrorCode.ERR_PUBKEY_TYPE, "The public key is in an unknown format")
 
     return None
