@@ -1269,9 +1269,10 @@ def op_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     pub_key = t.dstack.pop_byte_array()
     sig = t.dstack.pop_byte_array()
 
-    # Handle empty signature - invalid
+    # Handle empty signature - push false (EVAL_FALSE)
     if len(sig) < 1:
-        return Error(ErrorCode.ERR_SIG_TOO_SHORT, "malformed signature: too short")
+        t.dstack.push_byte_array(encode_bool(False))
+        return None
 
     # Extract and validate sighash (strict rules) and split to DER bytes.
     sighash_flag, sig_bytes, err = _extract_sighash_from_signature(t, sig)

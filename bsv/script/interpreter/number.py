@@ -24,13 +24,10 @@ class ScriptNumber:
         # Port of go-sdk minimal encoding rules:
         # - If the most significant byte is 0x00 or 0x80, it is only allowed when needed
         #   to prevent a sign bit conflict with the next-most-significant byte.
-        # - This rejects non-minimal encodings such as {0x80} for -0, but allows {0x00} for 0.
+        # - This rejects non-minimal encodings such as {0x00} for 0, and {0x80} for -0.
         if len(data) == 0:
             return
         if (data[-1] & 0x7F) == 0:
-            # Allow single 0x00 for value 0, but not single 0x80 for -0
-            if len(data) == 1 and data[-1] == 0x00:
-                return
             if len(data) == 1 or (data[-2] & 0x80) == 0:
                 raise ValueError(ERROR_NON_MINIMAL_ENCODING)
 

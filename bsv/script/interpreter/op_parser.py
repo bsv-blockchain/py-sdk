@@ -27,8 +27,8 @@ class ParsedOpcode:
 
     def always_illegal(self) -> bool:
         """Check if opcode is always illegal (reserved) before genesis."""
-        # Match go-sdk: OP_VERIF and OP_VERNOTIF are always illegal before genesis.
-        return self.opcode == OpCode.OP_VERIF or self.opcode == OpCode.OP_VERNOTIF
+        # Match go-sdk: OP_VERIF, OP_VERNOTIF, and OP_VER are always illegal before genesis.
+        return self.opcode == OpCode.OP_VERIF or self.opcode == OpCode.OP_VERNOTIF or self.opcode == OpCode.OP_VER
 
     def is_conditional(self) -> bool:
         """Check if opcode is conditional."""
