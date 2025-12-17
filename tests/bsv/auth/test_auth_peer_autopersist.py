@@ -16,21 +16,10 @@ class CaptureTransport:
         self._on_data_callback = callback
         return None
 
-    def send(self, message_or_ctx, message=None):
-        # Handle both calling patterns:
-        # - send(message) - peer.py calls it this way
-        # - send(ctx, message) - interface defines it this way
-        if message is None:
-            # Called as send(message) - first arg is the message
-            msg = message_or_ctx
-        else:
-            # Called as send(ctx, message) - first arg is ctx, second is message
-            msg = message
-        self.sent.append(msg)
-        # loopback to update timestamps safely
-        # Note: peer.py callback expects (ctx, message)
+    def send(self, message):
+        self.sent.append(message)
         if self._on_data_callback is not None:
-            return self._on_data_callback(None, msg)
+            return self._on_data_callback(message)
         return None
 
 

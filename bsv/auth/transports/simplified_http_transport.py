@@ -19,7 +19,7 @@ class SimplifiedHTTPTransport(Transport):
         self._on_data_funcs: List[Callable[[Any, AuthMessage], Optional[Exception]]] = []
         self._lock = threading.Lock()
 
-    def send(self, ctx: Any, message: AuthMessage) -> Optional[Exception]:
+    def send(self, message: AuthMessage) -> Optional[Exception]:
         """Send an AuthMessage via HTTP
         
         Args:
@@ -365,14 +365,14 @@ class SimplifiedHTTPTransport(Transport):
             handlers = list(self._on_data_funcs)
         for handler in handlers:
             try:
-                # Call handler with (ctx, message) signature (Transport interface)
-                err = handler(None, message)
+                # Call handler with the updated message-only signature first
+                err = handler(message)
                 if err:
                     return err
-            except TypeError as te:
-                # Try with just message for backward compatibility
+            except TypeError:
+                # Fallback to legacy (ctx, message) signature if provided
                 try:
-                    err = handler(message)
+                    err = handler(None, message)
                     if err:
                         return err
                 except Exception as e2:

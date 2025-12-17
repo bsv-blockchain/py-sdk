@@ -10,13 +10,13 @@ class Transport(ABC):
     """
 
     @abstractmethod
-    def send(self, ctx: Any, message: Any) -> Optional[Exception]:
+    def send(self, message: Any) -> Optional[Exception]:
         """Send an AuthMessage to the counterparty. Return an Exception on failure, else None."""
         raise NotImplementedError
 
     @abstractmethod
-    def on_data(self, callback: Callable[[Any, Any], Optional[Exception]]) -> Optional[Exception]:
+    def on_data(self, callback: Callable[[Any], Optional[Exception]]) -> Optional[Exception]:
         """Register a data handler invoked on message receipt. Return an Exception on failure, else None."""
-        raise NotImplementedError 
+        raise NotImplementedError
 
 

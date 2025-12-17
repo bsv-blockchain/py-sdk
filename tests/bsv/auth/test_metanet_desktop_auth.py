@@ -403,16 +403,16 @@ class MockTransport:
         self._on_data_funcs.append(callback)
         return None
     
-    def send(self, ctx, message):
+    def send(self, message):
         """Mock send implementation"""
         # Simulate successful send
         return None
     
-    def _notify_handlers(self, ctx, message):
+    def _notify_handlers(self, message):
         """Notify registered handlers"""
         for callback in self._on_data_funcs:
             try:
-                callback(ctx, message)
+                callback(message)
             except Exception:
                 # Intentional: Network connection attempts may fail - retry loop handles this
                 pass
@@ -721,7 +721,7 @@ class TestMetanetDesktopAuth(unittest.TestCase):
         
         # Test callback registration
         callback_called = False
-        def test_callback(ctx, message):
+        def test_callback(message):
             nonlocal callback_called
             callback_called = True
         
@@ -730,7 +730,7 @@ class TestMetanetDesktopAuth(unittest.TestCase):
         
         # Test send (should not raise exception)
         try:
-            transport.send({}, "test message")
+            transport.send("test message")
             self.assertTrue(True)  # Should reach here
         except Exception:
             self.fail("Mock transport send should not raise exception")

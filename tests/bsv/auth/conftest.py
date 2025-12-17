@@ -14,17 +14,8 @@ class CaptureTransport:
         self._on_data_callback = callback
         return None
 
-    def send(self, message_or_ctx, message=None):
-        # Handle both calling patterns:
-        # - send(message) - peer.py calls it this way
-        # - send(ctx, message) - interface defines it this way
-        if message is None:
-            # Called as send(message) - first arg is the message
-            msg = message_or_ctx
-        else:
-            # Called as send(ctx, message) - first arg is ctx, second is message
-            msg = message
-        self.sent_messages.append(msg)
+    def send(self, message):
+        self.sent_messages.append(message)
         return None
 
 
@@ -100,22 +91,12 @@ class LocalTransport:
         self._on_data_callback = callback
         return None
 
-    def send(self, message_or_ctx, message=None):
-        # Handle both calling patterns:
-        # - send(message) - peer.py calls it this way
-        # - send(ctx, message) - interface defines it this way
-        if message is None:
-            # Called as send(message) - first arg is the message
-            msg = message_or_ctx
-        else:
-            # Called as send(ctx, message) - first arg is ctx, second is message
-            msg = message
-        self.sent_messages.append(msg)
-        # Note: peer.py callback expects (ctx, message)
+    def send(self, message):
+        self.sent_messages.append(message)
         if self.peer and self.peer._on_data_callback:
-            return self.peer._on_data_callback(None, msg)
+            return self.peer._on_data_callback(message)
         elif self._on_data_callback is not None:
-            return self._on_data_callback(None, msg)
+            return self._on_data_callback(message)
         return None
 
 

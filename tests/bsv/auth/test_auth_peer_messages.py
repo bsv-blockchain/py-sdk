@@ -16,23 +16,10 @@ class LocalTransport:
         self._on_data_callback = callback
         return None
 
-    def send(self, message_or_ctx, message=None):
-        # Handle both calling patterns:
-        # - send(message) - peer.py calls it this way
-        # - send(ctx, message) - interface defines it this way
-        if message is None:
-            # Called as send(message) - first arg is the message
-            msg = message_or_ctx
-            ctx_arg = None
-        else:
-            # Called as send(ctx, message) - first arg is ctx, second is message
-            ctx_arg = message_or_ctx
-            msg = message
-        # For these tests we directly call our own handler to emulate delivery
+    def send(self, message):
         if self._on_data_callback is None:
             return Exception("No handler")
-        # Note: peer.py callback expects (ctx, message)
-        return self._on_data_callback(None, msg)
+        return self._on_data_callback(message)
 
 
 class MockSigResult:
