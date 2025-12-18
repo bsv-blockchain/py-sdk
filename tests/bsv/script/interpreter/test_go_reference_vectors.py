@@ -154,7 +154,7 @@ def parse_short_form(script_str: str) -> Script:
     return Script(bytes(out))
 
 
-def parse_script_flags(flag_str: str) -> Flag:
+def parse_script_flags(flag_str: str) -> Flag:  # NOSONAR - Complexity (20), requires refactoring
     flags = Flag(0)
     for f in flag_str.split(","):
         f = f.strip()
@@ -292,11 +292,11 @@ def test_go_script_tests_json(test_idx: int, test_vec: list[Any]) -> None:
     # - Create a coinbase tx with one input (outpoint = 0..:0xffffffff, scriptSig = OP_0 OP_0)
     # - Add one output with the test locking script and amount
     # - Create a spending tx that spends that output, with the test unlocking script
-    TransactionInput = __import__("bsv.transaction_input", fromlist=["TransactionInput"]).TransactionInput
+    transaction_input = __import__("bsv.transaction_input", fromlist=["TransactionInput"]).TransactionInput
 
     coinbase_tx = Transaction()
     coinbase_tx.add_input(
-        TransactionInput(
+        transaction_input(
             source_txid="00" * 32,
             source_output_index=0xFFFFFFFF,
             unlocking_script=Script.from_bytes(b"\x00\x00"),

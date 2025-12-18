@@ -294,7 +294,7 @@ class SimplifiedHTTPTransport(Transport):
         
         return writer.getvalue()
     
-    def _auth_message_from_dict(self, data: Dict) -> AuthMessage:
+    def _auth_message_from_dict(self, data: Dict) -> AuthMessage:  # NOSONAR - Complexity (18), requires refactoring
         """Convert dictionary to AuthMessage"""
         # Validate payload: must be list[int] or None
         payload = data.get('payload')

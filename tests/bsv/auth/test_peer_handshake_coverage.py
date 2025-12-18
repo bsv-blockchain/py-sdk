@@ -187,7 +187,7 @@ def test_peer_stop_listening_for_general_messages():
     peer.stop_listening_for_general_messages(listener_id)
 
     # Verify listener was removed (implementation detail, but should not crash)
-    assert True  # If we get here without exception, it's good
+    # If we get here without exception, the operation succeeded
 
 
 def test_peer_handle_general_message_missing_nonce():

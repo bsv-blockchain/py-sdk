@@ -215,7 +215,7 @@ def _arrange_chunks_by_position(lock_chunks: List[bytes], pushdrop_chunks: List[
         return lock_chunks + pushdrop_chunks
     return pushdrop_chunks + lock_chunks
 
-def _convert_chunks_to_bytes(chunks: List[bytes]) -> List[bytes]:
+def _convert_chunks_to_bytes(chunks: List[bytes]) -> List[bytes]:  # NOSONAR - Complexity (16), requires refactoring
     """Convert all chunks to bytes, handling OpCodes."""
     print(f"[DEBUG] chunks types: {[(type(c), c if isinstance(c, bytes) and len(c) <= 10 else f'bytes[{len(c)}]' if isinstance(c, bytes) else str(c)) for c in chunks]}")
 

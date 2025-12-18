@@ -40,7 +40,7 @@ def _patch_woc_dependencies(monkeypatch):
         def __init__(self, network="main"):
             self.network = network
 
-        async def is_valid_root_for_height(self, root: str, height: int) -> bool:
+        async def is_valid_root_for_height(self, root: str, height: int) -> bool:  # NOSONAR - Mock method matching async interface
             return root == fake_root
     monkeypatch.setattr("bsv.chaintrackers.whatsonchain.WhatsOnChainTracker", DummyTracker)
 
@@ -68,7 +68,7 @@ def _patch_woc_dependencies(monkeypatch):
         return {"plaintext": plaintext}
     monkeypatch.setattr(ProtoWallet, "decrypt", fake_decrypt, raising=False)
 
-    async def fake_verify(self, tracker):
+    async def fake_verify(self, tracker):  # NOSONAR - Mock method matching async interface
         return True
     monkeypatch.setattr(Transaction, "verify", fake_verify)
 

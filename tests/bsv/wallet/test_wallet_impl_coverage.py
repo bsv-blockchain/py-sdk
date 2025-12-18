@@ -137,7 +137,7 @@ def test_decrypt_with_debug_enabled(wallet, capsys):
 # Error Paths and Edge Cases
 # ========================================================================
 
-def test_get_public_key_with_none_protocolID(wallet):
+def test_get_public_key_with_none_protocol_id(wallet):
     """Test get_public_key returns error when protocolID is None."""
     args = {"protocolID": None, "keyID": None}
     result = wallet.get_public_key(args, "test")
@@ -153,7 +153,7 @@ def test_get_public_key_with_forself_true_no_protocol(wallet):
     assert "error" not in result
 
 
-def test_get_public_key_with_non_dict_protocolID(wallet):
+def test_get_public_key_with_non_dict_protocol_id(wallet):
     """Test get_public_key with protocolID as non-dict (tuple/list)."""
     protocol = Protocol(1, "test_protocol")
     args = {
@@ -197,14 +197,14 @@ def test_decrypt_with_none_ciphertext(wallet):
     assert "ciphertext" in result["error"].lower()
 
 
-def test_create_signature_missing_protocolID(wallet):
+def test_create_signature_missing_protocol_id(wallet):
     """Test create_signature returns error when protocolID is missing."""
     args = {"keyID": "key1", "data": b"test"}
     result = wallet.create_signature(args, "test")
     assert "error" in result
 
 
-def test_create_signature_missing_keyID(wallet):
+def test_create_signature_missing_key_id(wallet):
     """Test create_signature returns error when keyID is missing."""
     args = {"protocolID": {"securityLevel": 1, "protocol": "test"}, "data": b"test"}
     result = wallet.create_signature(args, "test")
@@ -267,7 +267,7 @@ def test_verify_signature_missing_key_id(wallet):
     assert "error" in result
 
 
-def test_verify_signature_with_dict_protocolID(wallet):
+def test_verify_signature_with_dict_protocol_id(wallet):
     """Test verify_signature with protocolID as dict."""
     # Create a real signature first
     sign_args = {

@@ -27,9 +27,8 @@ class ScriptNumber:
         # - This rejects non-minimal encodings such as {0x00} for 0, and {0x80} for -0.
         if len(data) == 0:
             return
-        if (data[-1] & 0x7F) == 0:
-            if len(data) == 1 or (data[-2] & 0x80) == 0:
-                raise ValueError(ERROR_NON_MINIMAL_ENCODING)
+        if (data[-1] & 0x7F) == 0 and (len(data) == 1 or (data[-2] & 0x80) == 0):
+            raise ValueError(ERROR_NON_MINIMAL_ENCODING)
 
     @classmethod
     def _decode_little_endian(cls, data: bytes) -> int:

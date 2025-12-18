@@ -30,6 +30,9 @@ opCondFalse = 0
 opCondTrue = 1
 opCondSkip = 2
 
+# Error message constants
+ERR_OP_ELSE_REQUIRES_PRECEDING_OP_IF = "OP_ELSE requires preceding OP_IF"
+
 
 # Helper functions from Spend class
 def cast_to_bool(val: bytes) -> bool:
@@ -432,7 +435,7 @@ def op_1negate(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def op_nop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_nop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSONAR - Complexity (18), requires refactoring
     """Handle OP_NOP."""
     # Match go-sdk: only NOP1..NOP10 (and NOP2/NOP3 aliases) are treated as NOPs.
     # Any higher "NOP" opcodes (e.g. 0xba) are treated as invalid/reserved for interpreter parity.
@@ -560,7 +563,7 @@ def op_checksequenceverify(_: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return _verify_lock_time(tx_seq & lock_time_mask, SEQUENCE_LOCKTIME_IS_SECONDS, sequence & lock_time_mask)
 
 
-def op_if(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_if(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSONAR - Complexity (22), requires refactoring
     """Handle OP_IF."""
     cond_val = opCondFalse
     # Always process conditionals even when not executing to maintain nesting.
@@ -585,7 +588,7 @@ def op_if(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def op_notif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_notif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSONAR - Complexity (22), requires refactoring
     """Handle OP_NOTIF."""
     cond_val = opCondFalse
     if t.should_exec(pop):
@@ -611,13 +614,13 @@ def op_notif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
 def op_else(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_ELSE."""
     if len(t.cond_stack) == 0:
-        return Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, "OP_ELSE requires preceding OP_IF")
+        return Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, ERR_OP_ELSE_REQUIRES_PRECEDING_OP_IF)
     # Enforce only one ELSE per IF after genesis.
     if t.after_genesis:
         if len(t.else_stack) == 0:
-            return Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, "OP_ELSE requires preceding OP_IF")
+            return Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, ERR_OP_ELSE_REQUIRES_PRECEDING_OP_IF)
         if t.else_stack[-1]:
-            return Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, "OP_ELSE requires preceding OP_IF")
+            return Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, ERR_OP_ELSE_REQUIRES_PRECEDING_OP_IF)
         t.else_stack[-1] = True
     else:
         # Pre-genesis: multiple ELSE toggles are permitted.
@@ -629,6 +632,7 @@ def op_else(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     elif t.cond_stack[-1] == opCondFalse:
         t.cond_stack[-1] = opCondTrue
     elif t.cond_stack[-1] == opCondSkip:
+        # Skip branch: do not toggle condition (already in skip state)
         pass
     return None
 
@@ -1357,7 +1361,7 @@ def _extract_sighash_from_signature(t: "Thread", sig: bytes) -> tuple:
     sighash_flag = _sighash_from_int(shf_val)
     return sighash_flag, sig_bytes, None
 
-def _compute_signature_hash(t: "Thread", sig: bytes, sighash_flag) -> Optional[bytes]:
+def _compute_signature_hash(t: "Thread", sig: bytes, sighash_flag) -> Optional[bytes]:  # NOSONAR - Complexity (25), requires refactoring
     """Compute the signature hash digest (32 bytes) for verification."""
     sub_script = t.sub_script()
     
@@ -1478,7 +1482,7 @@ def op_checksig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
+def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSONAR - Complexity (82), requires refactoring
     """Handle OP_CHECKMULTISIG."""
     # Consensus stack handling + (partial) verification semantics aligned to go-sdk.
     #

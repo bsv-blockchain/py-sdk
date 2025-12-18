@@ -459,7 +459,7 @@ class TestCheckSig:
         # Test ALL sighash
         thread = MockThread()
         sig_all = b"dummy_der_sig\x01"  # SIGHASH_ALL
-        sighash, sig_bytes, err = _extract_sighash_from_signature(thread, sig_all)
+        sighash, _, err = _extract_sighash_from_signature(thread, sig_all)
         assert err is None
         assert sighash.value == 1  # SIGHASH_ALL
 

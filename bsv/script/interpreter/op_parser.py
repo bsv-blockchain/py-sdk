@@ -12,6 +12,9 @@ from bsv.utils import Reader
 
 from .errs import Error, ErrorCode
 
+# Error message constants
+ERR_MALFORMED_PUSH_NOT_ENOUGH_BYTES = "malformed push: not enough bytes"
+
 
 class ParsedOpcode:
     """Represents a parsed opcode."""
@@ -121,7 +124,7 @@ class DefaultOpcodeParser:
     def __init__(self, error_on_check_sig: bool = False):
         self.error_on_check_sig = error_on_check_sig
 
-    def parse(self, script: Script) -> ParsedScript:
+    def parse(self, script: Script) -> ParsedScript:  # NOSONAR - Complexity (29), requires refactoring
         """Parse a script into a list of parsed opcodes."""
         parsed: ParsedScript = []
 
@@ -137,28 +140,28 @@ class DefaultOpcodeParser:
                 n = int.from_bytes(op, "big")
                 data = reader.read_bytes(n)
                 if len(data) != n:
-                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: not enough bytes")
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, ERR_MALFORMED_PUSH_NOT_ENOUGH_BYTES)
             elif op == OpCode.OP_PUSHDATA1:
                 n = reader.read_uint8()
                 if n is None:
                     raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: missing PUSHDATA1 length")
                 data = reader.read_bytes(n)
                 if len(data) != n:
-                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: not enough bytes")
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, ERR_MALFORMED_PUSH_NOT_ENOUGH_BYTES)
             elif op == OpCode.OP_PUSHDATA2:
                 n = reader.read_uint16_le()
                 if n is None:
                     raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: missing PUSHDATA2 length")
                 data = reader.read_bytes(n)
                 if len(data) != n:
-                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: not enough bytes")
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, ERR_MALFORMED_PUSH_NOT_ENOUGH_BYTES)
             elif op == OpCode.OP_PUSHDATA4:
                 n = reader.read_uint32_le()
                 if n is None:
                     raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: missing PUSHDATA4 length")
                 data = reader.read_bytes(n)
                 if len(data) != n:
-                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, "malformed push: not enough bytes")
+                    raise Error(ErrorCode.ERR_MALFORMED_PUSH, ERR_MALFORMED_PUSH_NOT_ENOUGH_BYTES)
 
             # Append all opcodes, whether they have data or not
             parsed.append(ParsedOpcode(op, data))

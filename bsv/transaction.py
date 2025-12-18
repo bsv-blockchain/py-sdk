@@ -128,10 +128,10 @@ class Transaction:
             preimage = self._calc_input_preimage_legacy(input_index, hash_type)
             return hash256(preimage)
 
-    def _calc_input_preimage_bip143(self, input_index: int, hash_type: int, script_code: Script, prev_satoshis: int) -> bytes:
+    def _calc_input_preimage_bip143(self, input_index: int, hash_type: int, _script_code: Script, prev_satoshis: int) -> bytes:  # NOSONAR - Complexity (17), requires refactoring
         """
         Calculate BIP143/ForkID preimage for signature hashing.
-        Uses tx_input.locking_script as the script_code.
+        Uses tx_input.locking_script as the script_code (parameter kept for interface compatibility).
         """
         """
         Calculate BIP143/ForkID preimage for signature hashing.
@@ -201,7 +201,7 @@ class Transaction:
 
         return stream.getvalue()
 
-    def _calc_input_preimage_legacy(self, input_index: int, hash_type: int) -> bytes:
+    def _calc_input_preimage_legacy(self, input_index: int, hash_type: int) -> bytes:  # NOSONAR - Complexity (17), requires refactoring
         """
         Calculate legacy preimage for signature hashing.
         Implements the original Bitcoin signature hashing algorithm with SIGHASH_SINGLE bug.

@@ -16,6 +16,9 @@ from .options import ExecutionOptions
 from .scriptflag import Flag
 from .stack import Stack
 
+# Error message constants
+ERR_FALSE_STACK_ENTRY_AT_END = "false stack entry at end of script execution"
+
 
 class Thread:
     """Thread represents a script execution thread."""
@@ -44,7 +47,7 @@ class Thread:
         self.script_parser = DefaultOpcodeParser(error_on_check_sig=(opts.tx is None or opts.previous_tx_out is None))
         self.error_on_check_sig = self.script_parser.error_on_check_sig
 
-    def create(self) -> Optional[Error]:
+    def create(self) -> Optional[Error]:  # NOSONAR - Complexity (31), requires refactoring
         """Create and initialize the thread."""
         # Determine configuration
         if self.flags.has_flag(Flag.UTXO_AFTER_GENESIS):
@@ -80,7 +83,7 @@ class Thread:
 
         # When both scripts are empty, the stack would end empty -> eval-false.
         if len(us_bytes) == 0 and len(ls_bytes) == 0:
-            return Error(ErrorCode.ERR_EVAL_FALSE, "false stack entry at end of script execution")
+            return Error(ErrorCode.ERR_EVAL_FALSE, ERR_FALSE_STACK_ENTRY_AT_END)
 
         # VERIFY_CLEAN_STACK is only valid with BIP16 in go-sdk.
         if self.flags.has_flag(Flag.VERIFY_CLEAN_STACK) and not self.flags.has_flag(Flag.BIP16):
@@ -289,7 +292,7 @@ class Thread:
             )
         return None
     
-    def _check_script_completion(self) -> tuple[bool, Optional[Error]]:
+    def _check_script_completion(self) -> tuple[bool, Optional[Error]]:  # NOSONAR - Complexity (22), requires refactoring
         """Check if current script is complete and prepare for next."""
         if self.script_off < len(self.scripts[self.script_idx]):
             return False, None
@@ -363,7 +366,7 @@ class Thread:
         
         val = self.dstack.pop_bool()
         if not val:
-            return Error(ErrorCode.ERR_EVAL_FALSE, "false stack entry at end of script execution")
+            return Error(ErrorCode.ERR_EVAL_FALSE, ERR_FALSE_STACK_ENTRY_AT_END)
         
         return None
 

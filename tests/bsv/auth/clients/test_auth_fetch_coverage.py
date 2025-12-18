@@ -401,7 +401,6 @@ def test_select_headers_filters_correctly(auth_fetch):
 def test_determine_body_adds_json_for_post(auth_fetch):
     """Test body determination adds empty JSON for POST without body."""
     method = "POST"
-    headers = {"content-type": "application/json"}
     body = b""  # Empty body
 
     result = auth_fetch._determine_body(body, method, [("content-type", "application/json")])

@@ -199,7 +199,7 @@ async def test_auth_fetch_certificate_exchange(auth_server):
             "identityKey": wallet.identity_key,
             "nonce": initial_nonce
         }
-        resp = requests.post(f"{base_url}/auth", json=initial_payload, verify=False, timeout=5)
+        resp = requests.post(f"{base_url}/auth", json=initial_payload, verify=False, timeout=5)  # NOSONAR - Test environment SSL verification disabled; synchronous client used for test simplicity
         assert resp.status_code == 200
         response_data = resp.json()
         server_identity = response_data.get("identityKey")

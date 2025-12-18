@@ -143,7 +143,7 @@ def _extract_message_identity_key(message):
     return getattr(message, 'identityKey', None) or (message.get('identityKey', None) if isinstance(message, dict) else None)
 
 
-def _normalize_requested_for_utils(req):
+def _normalize_requested_for_utils(req):  # NOSONAR - Complexity (17), requires refactoring
     allowed_certifiers = []
     requested_types = {}
     if req is None:
