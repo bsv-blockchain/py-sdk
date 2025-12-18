@@ -72,13 +72,13 @@ def test_parse_binary_general_response_success(auth_fetch):
     sender_public_key=None,
     payload=bytes(payload),
     request_nonce_b64=base64.b64encode(request_nonce).decode(),
-    url_str="http://test.com",
+    url_str="http://test.com",  # NOSONAR - Test URL, not used in production
     config=SimplifiedFetchRequestOptions()
     )
 
     assert result is not None
     assert result.status_code == status_code
-    assert result.url == "http://test.com"
+    assert result.url == "http://test.com"  # NOSONAR - Test URL, not used in production
 
 
 def test_parse_binary_general_response_nonce_mismatch(auth_fetch):
@@ -97,7 +97,7 @@ def test_parse_binary_general_response_nonce_mismatch(auth_fetch):
     sender_public_key=None,
     payload=bytes(payload),
     request_nonce_b64=base64.b64encode(request_nonce).decode(),
-    url_str="http://test.com",
+    url_str="http://test.com",  # NOSONAR - Test URL, not used in production
     config=SimplifiedFetchRequestOptions()
     )
 
@@ -112,7 +112,7 @@ def test_parse_binary_general_response_short_payload(auth_fetch):
     sender_public_key=None,
     payload=short_payload,
     request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
-    url_str="http://test.com",
+    url_str="http://test.com",  # NOSONAR - Test URL, not used in production
     config=SimplifiedFetchRequestOptions()
     )
 
@@ -135,7 +135,7 @@ def test_parse_json_fallback_success(auth_fetch):
     sender_public_key=None,
     payload=json_payload,
     request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
-    url_str="http://test.com",
+    url_str="http://test.com",  # NOSONAR - Test URL, not used in production
     config=SimplifiedFetchRequestOptions()
     )
 
@@ -152,7 +152,7 @@ def test_parse_json_fallback_invalid_json(auth_fetch):
     sender_public_key=None,
     payload=invalid_json,
     request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
-    url_str="http://test.com",
+    url_str="http://test.com",  # NOSONAR - Test URL, not used in production
     config=SimplifiedFetchRequestOptions()
     )
 
@@ -192,14 +192,14 @@ def test_handle_peer_error_session_not_found(auth_fetch, mock_wallet):
     auth_fetch.callbacks = callbacks
 
     # Add a peer to the peers dict so it can be deleted
-    auth_fetch.peers["http://test.com"] = Mock()
+    auth_fetch.peers["http://test.com"] = Mock()  # NOSONAR - Test URL, not used in production
 
     # Mock fetch method to return success
     with patch.object(auth_fetch, 'fetch', return_value='retry_result'):
         auth_fetch._handle_peer_error(
             Exception("Session not found for nonce"),
-            "http://test.com",
-            "http://test.com",
+            "http://test.com",  # NOSONAR - Test URL, not used in production
+            "http://test.com",  # NOSONAR - Test URL, not used in production
             SimplifiedFetchRequestOptions(),
             "test_nonce",
             Mock()
@@ -209,7 +209,7 @@ def test_handle_peer_error_session_not_found(auth_fetch, mock_wallet):
     callbacks['test_nonce']['resolve'].assert_called_once_with('retry_result')
 
     # Should have removed the peer
-    assert "http://test.com" not in auth_fetch.peers
+    assert "http://test.com" not in auth_fetch.peers  # NOSONAR - Test URL, not used in production
 
 
 def test_handle_peer_error_http_auth_failed(auth_fetch):
@@ -230,8 +230,8 @@ def test_handle_peer_error_http_auth_failed(auth_fetch):
     with patch.object(auth_fetch, 'handle_fetch_and_validate', return_value=fallback_response):
         auth_fetch._handle_peer_error(
     Exception("HTTP server failed to authenticate"),
-    "http://test.com",
-    "http://test.com",
+    "http://test.com",  # NOSONAR - Test URL, not used in production
+    "http://test.com",  # NOSONAR - Test URL, not used in production
     SimplifiedFetchRequestOptions(),
     "test_nonce",
     mock_peer
@@ -299,7 +299,7 @@ def test_create_payment_transaction(auth_fetch, mock_wallet):
     auth_fetch._build_locking_script = Mock(return_value=b'mock_script')
 
     result = auth_fetch._create_payment_transaction(
-    "http://test.com",
+    "http://test.com",  # NOSONAR - Test URL, not used in production
     {'satoshis_required': 1000, 'server_identity_key': 'server_key', 'derivation_prefix': 'prefix'},
     'suffix',
     b'mock_script'
@@ -329,7 +329,7 @@ def test_fetch_with_local_server(auth_fetch):
     })()
 
     with patch.object(auth_fetch, '_try_fallback_http', return_value=mock_response):
-        response = auth_fetch.fetch("http://mock-server/health", config)
+        response = auth_fetch.fetch("http://mock-server/health", config)  # NOSONAR - Test URL, not used in production
 
     # The response should be a requests-like object
     assert hasattr(response, 'status_code')
@@ -338,7 +338,7 @@ def test_fetch_with_local_server(auth_fetch):
 
 def test_peer_creation_and_certificates_listener(auth_fetch, mock_wallet):
     """Test peer creation and certificates listener setup."""
-    base_url = "http://test.com"
+    base_url = "http://test.com"  # NOSONAR - Test URL, not used in production
 
     # Initially no peers
     assert base_url not in auth_fetch.peers
