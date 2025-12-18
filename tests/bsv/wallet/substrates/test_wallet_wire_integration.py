@@ -31,8 +31,8 @@ def test_encrypt_decrypt(user_wallet, counterparty_wallet, user_key, counterpart
     # Encrypt with user, decrypt with counterparty
     enc = user_wallet.encrypt(None, {
         'encryption_args': {
-            'protocol_id': {'securityLevel': 2, 'protocol': 'tests'},
-            'key_id': key_id,
+            'protocolID': {'securityLevel': 2, 'protocol': 'tests'},
+            'keyID': key_id,
             'counterparty': counterparty_key.public_key().hex(),
         },
         'plaintext': plaintext
@@ -41,8 +41,8 @@ def test_encrypt_decrypt(user_wallet, counterparty_wallet, user_key, counterpart
     assert isinstance(enc.get('ciphertext', b''), (bytes, bytearray))
     dec = counterparty_wallet.decrypt(None, {
         'encryption_args': {
-            'protocol_id': {'securityLevel': 2, 'protocol': 'tests'},
-            'key_id': key_id,
+            'protocolID': {'securityLevel': 2, 'protocol': 'tests'},
+            'keyID': key_id,
             'counterparty': user_key.public_key().hex(),
         },
         'ciphertext': enc.get('ciphertext', b'')
@@ -56,16 +56,16 @@ def test_create_and_verify_signature(user_wallet, counterparty_wallet, user_key,
     key_id = '4'
     data = sample_data
     sig = user_wallet.create_signature(None, {
-        'protocol_id': [2, 'tests'],  # BRC-100 compliant (Python snake_case)
-            'key_id': key_id,
+        'protocolID': {'securityLevel': 2, 'protocol': 'tests'},
+            'keyID': key_id,
             'counterparty': counterparty_key.public_key().hex(),
         'data': data
     }, 'test')
     assert isinstance(sig, dict)
     assert isinstance(sig.get('signature', b''), (bytes, bytearray))
     ver = counterparty_wallet.verify_signature(None, {
-        'protocol_id': [2, 'tests'],  # BRC-100 compliant (Python snake_case)
-            'key_id': key_id,
+        'protocolID': {'securityLevel': 2, 'protocol': 'tests'},
+            'keyID': key_id,
             'counterparty': user_key.public_key().hex(),
         'data': data,
         'signature': sig.get('signature', b'')
@@ -80,8 +80,8 @@ def test_create_and_verify_hmac(user_wallet, counterparty_wallet, user_key, coun
     data = sample_data
     h = user_wallet.create_hmac(None, {
         'encryption_args': {
-            'protocol_id': {'securityLevel': 2, 'protocol': 'tests'},
-            'key_id': key_id,
+            'protocolID': {'securityLevel': 2, 'protocol': 'tests'},
+            'keyID': key_id,
             'counterparty': counterparty_key.public_key().hex(),
         },
         'data': data
@@ -90,8 +90,8 @@ def test_create_and_verify_hmac(user_wallet, counterparty_wallet, user_key, coun
     assert isinstance(h.get('hmac', b''), (bytes, bytearray))
     ver = counterparty_wallet.verify_hmac(None, {
         'encryption_args': {
-            'protocol_id': {'securityLevel': 2, 'protocol': 'tests'},
-            'key_id': key_id,
+            'protocolID': {'securityLevel': 2, 'protocol': 'tests'},
+            'keyID': key_id,
             'counterparty': user_key.public_key().hex(),
         },
         'data': data,

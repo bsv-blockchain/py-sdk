@@ -21,18 +21,14 @@ class ScriptNumber:
     @classmethod
     def _validate_minimal_encoding(cls, data: bytes) -> None:
         """Validate that the byte encoding is minimal."""
-        # Check for negative zero (0x80 by itself or 0x80 with all zeros before it)
-        if data[-1] == 0x80 and all(b == 0 for b in data[:-1]):
+        # Port of go-sdk minimal encoding rules:
+        # - If the most significant byte is 0x00 or 0x80, it is only allowed when needed
+        #   to prevent a sign bit conflict with the next-most-significant byte.
+        # - This rejects non-minimal encodings such as {0x00} for 0, and {0x80} for -0.
+        if len(data) == 0:
+            return
+        if (data[-1] & 0x7F) == 0 and (len(data) == 1 or (data[-2] & 0x80) == 0):
             raise ValueError(ERROR_NON_MINIMAL_ENCODING)
-        
-        # Check if we have unnecessary leading zeros
-        if len(data) > 1:
-            # If the last byte is 0x00 and the second-to-last doesn't have sign bit set
-            if data[-1] == 0x00 and (data[-2] & 0x80) == 0:
-                raise ValueError(ERROR_NON_MINIMAL_ENCODING)
-            # If the last byte is 0x80 (negative) and second-to-last doesn't need it
-            if data[-1] == 0x80 and (data[-2] & 0x80) == 0:
-                raise ValueError(ERROR_NON_MINIMAL_ENCODING)
 
     @classmethod
     def _decode_little_endian(cls, data: bytes) -> int:

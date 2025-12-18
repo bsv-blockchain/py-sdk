@@ -227,13 +227,6 @@ class TestScriptInterpreterPerformance:
         assert isinstance(err, (type(None), Exception)), "String operations failed"
         assert execution_time < 1.0, f"String operations took too long: {execution_time:.3f}s"
 
-    @pytest.mark.skip(reason="Requires benchmark framework")
-    def test_benchmark_comparison(self):
-        """Benchmark script execution against known performance targets."""
-        # This test would require a benchmarking framework
-        # and established performance baselines
-        pass
-
     def test_resource_cleanup(self):
         """Test that resources are properly cleaned up after execution."""
         import gc

@@ -9,7 +9,7 @@ def test_serialize_encrypt_args():
     try:
         from bsv.wallet.serializer.encrypt import serialize_encrypt_args
 
-        args = {"plaintext": b'test', "protocolID": [0, "test"], "keyID": "key1"}
+        args = {"plaintext": b'test', "protocolID": {"securityLevel": 0, "protocol": "test"}, "keyID": "key1"}
         result = serialize_encrypt_args(args)
         assert isinstance(result, bytes)
         assert len(result) > 0
@@ -22,7 +22,7 @@ def test_deserialize_encrypt_args():
     try:
         from bsv.wallet.serializer.encrypt import serialize_encrypt_args, deserialize_encrypt_args
 
-        args = {"plaintext": b'test', "protocolID": [0, "test"], "keyID": "key1"}
+        args = {"plaintext": b'test', "protocolID": {"securityLevel": 0, "protocol": "test"}, "keyID": "key1"}
         serialized = serialize_encrypt_args(args)
         deserialized = deserialize_encrypt_args(serialized)
         assert "plaintext" in deserialized
@@ -67,7 +67,7 @@ def test_encrypt_roundtrip():
         )
 
         # Test args roundtrip
-        args = {"plaintext": b'test data', "protocolID": [1, "protocol"], "keyID": "test_key"}
+        args = {"plaintext": b'test data', "protocolID": {"securityLevel": 1, "protocol": "protocol"}, "keyID": "test_key"}
         serialized_args = serialize_encrypt_args(args)
         deserialized_args = deserialize_encrypt_args(serialized_args)
         assert "plaintext" in deserialized_args

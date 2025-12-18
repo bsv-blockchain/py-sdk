@@ -163,11 +163,11 @@ class Peer:
     def start(self):
         """
         Initializes the peer by setting up the transport's message handler.
-        
+
         Sets the _transport_ready flag to indicate whether transport setup succeeded.
         This can be checked by applications to verify peer health.
         """
-        def on_data(ctx, message):
+        def on_data(message):
             return self.handle_incoming_message(message)
         
         try:
@@ -342,12 +342,21 @@ class Peer:
 
     def _extract_base_fields(self, base: Any):
         if isinstance(base, dict):
+            # Check for forbidden snake_case keys
+            forbidden_keys = {
+                'serial_number': 'serialNumber',
+                'revocation_outpoint': 'revocationOutpoint'
+            }
+            for snake_key, camel_key in forbidden_keys.items():
+                if snake_key in base:
+                    raise ValueError(f"Certificate key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
             return (
                 base.get('type'),
-                base.get('serialNumber') or base.get('serial_number'),
+                base.get('serialNumber'),
                 base.get('subject'),
                 base.get('certifier'),
-                base.get('revocationOutpoint') or base.get('revocation_outpoint'),
+                base.get('revocationOutpoint'),
                 base.get('fields', {}) or {},
             )
         return (
@@ -532,7 +541,7 @@ class Peer:
         if sig_result is None or not hasattr(sig_result, 'signature'):
             return Exception("failed to sign initial response")
         response.signature = sig_result.signature
-        err = self.transport.send(None, response)
+        err = self.transport.send(response)
         if err is not None:
             return Exception(f"failed to send initial response: {err}")
         return None
@@ -1357,7 +1366,7 @@ class Peer:
             'session_nonce': session_nonce
         }
         # Send the initial request
-        err = self.transport.send(None, initial_request)
+        err = self.transport.send(initial_request)
         if err is not None:
             del self.on_initial_response_received_callbacks[callback_id]
             return None
@@ -1438,7 +1447,7 @@ class Peer:
         self.session_manager.update_session(peer_session)
         if self.auto_persist_last_session:
             self.last_interacted_with_peer = peer_session.peer_identity_key
-        err = self.transport.send(None, general_message)
+        err = self.transport.send(general_message)
         if err is not None:
             return Exception(f"failed to send message to peer {peer_session.peer_identity_key}: {err}")
         return None
@@ -1488,7 +1497,7 @@ class Peer:
             return Exception("failed to sign certificate request")
         cert_request.signature = sig_result.signature
         # Send the request
-        err = self.transport.send(None, cert_request)
+        err = self.transport.send(cert_request)
         if err is not None:
             return Exception(f"failed to send certificate request: {err}")
         # Update session timestamp
@@ -1544,7 +1553,7 @@ class Peer:
             return Exception("failed to sign certificate response")
         cert_response.signature = sig_result.signature
         # Send the response
-        err = self.transport.send(None, cert_response)
+        err = self.transport.send(cert_response)
         if err is not None:
             return Exception(f"failed to send certificate response: {err}")
         # Update session timestamp

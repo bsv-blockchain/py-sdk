@@ -4,6 +4,8 @@ Coverage tests for registry/client.py - untested branches.
 import pytest
 from unittest.mock import Mock
 from bsv.registry.client import RegistryClient
+from bsv.registry.types import BasketDefinitionData
+from bsv.keys import PrivateKey
 
 
 @pytest.fixture
@@ -42,10 +44,50 @@ def test_client_init_default_originator():
 # Registry operation branches
 # ========================================================================
 
-@pytest.mark.skip(reason="Complex BasketDefinitionData requires many arguments")
 def test_register_definition(client):
     """Test register definition."""
-    pass
+    # Build minimal valid BasketDefinitionData
+    data = BasketDefinitionData(
+        definitionType="basket",
+        basketID="test-basket-123",
+        name="Test Basket",
+        iconURL="https://example.com/icon.png",
+        description="A test basket for coverage",
+        documentationURL="https://example.com/docs",
+    )
+
+    # Mock wallet.get_public_key to return a valid identity public key hex
+    operator_hex = PrivateKey(b"\x03" * 32).public_key().hex()
+    client.wallet.get_public_key.return_value = {"publicKey": operator_hex}
+
+    # Mock wallet.create_action to return create-action-like payload
+    client.wallet.create_action.return_value = {
+        "signableTransaction": {"tx": b"mock_tx", "reference": b"mock_ref"}
+    }
+
+    # Call register_definition
+    res = client.register_definition(None, data)
+
+    # Assert expected behavior
+    assert "signableTransaction" in res
+
+    # Verify wallet methods were called
+    client.wallet.get_public_key.assert_called_once()
+    client.wallet.create_action.assert_called_once()
+
+    # Inspect create_action call arguments
+    call_args = client.wallet.create_action.call_args[0][0]  # First positional arg
+
+    # Check output structure
+    assert "outputs" in call_args
+    assert len(call_args["outputs"]) == 1
+    output = call_args["outputs"][0]
+
+    assert output["satoshis"] == 1
+    assert output["basket"] == "basketmap"
+    assert "lockingScript" in output
+    assert isinstance(output["lockingScript"], str)  # Hex string
+    assert len(output["lockingScript"]) > 0
 
 
 def test_lookup_definition(client):

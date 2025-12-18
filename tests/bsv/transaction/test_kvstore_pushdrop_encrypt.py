@@ -15,8 +15,8 @@ def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
 
     # KV with proper protocol configuration
     default_ca = {
-        "protocol_id": {"securityLevel": 2, "protocol": "kvctx"},
-        "key_id": "foo"
+        "protocolID": {"securityLevel": 2, "protocol": "kvctx"},
+        "keyID": "foo"
     }
     kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kv.ctx", originator="org", encrypt=True, default_ca=default_ca))
 
@@ -30,7 +30,7 @@ def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
     
     # Manually decrypt to validate compatibility
     ct = base64.b64decode(val[4:])
-    dec = wallet.decrypt({"encryption_args": {"protocol_id": {"securityLevel": 2, "protocol": "kvctx"}, "key_id": "foo", "counterparty": {"type": CounterpartyType.SELF}}, "ciphertext": ct}, "org")
+    dec = wallet.decrypt({"encryption_args": {"protocolID": {"securityLevel": 2, "protocol": "kvctx"}, "keyID": "foo", "counterparty": {"type": CounterpartyType.SELF}}, "ciphertext": ct}, "org")
     # ProtoWallet.decrypt returns plaintext as list of ints (TS SDK parity)
     plaintext = dec.get("plaintext")
     if isinstance(plaintext, list):

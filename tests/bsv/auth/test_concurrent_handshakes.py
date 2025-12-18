@@ -26,21 +26,10 @@ class DummyTransport:
         self.callback = callback
         return None
 
-    def send(self, message_or_ctx, message=None):
-        # Handle both calling patterns:
-        # - send(message) - peer.py calls it this way
-        # - send(ctx, message) - interface defines it this way
-        if message is None:
-            # Called as send(message) - first arg is the message
-            msg = message_or_ctx
-            ctx_arg = None
-        else:
-            # Called as send(ctx, message) - first arg is ctx, second is message
-            ctx_arg = message_or_ctx
-            msg = message
-        self.sent_messages.append(msg)
+    def send(self, message):
+        self.sent_messages.append(message)
         # Simulate async response
-        if self.callback and hasattr(msg, 'message_type') and msg.message_type == 'initialRequest':
+        if self.callback and hasattr(message, 'message_type') and message.message_type == 'initialRequest':
             # Simulate receiving an initial response
             import threading
             def delayed_response():
@@ -51,11 +40,10 @@ class DummyTransport:
                     message_type="initialResponse",
                     identity_key=PrivateKey(2).public_key(),
                     nonce="peer_nonce_response",
-                    initial_nonce=getattr(msg, 'nonce', None)
+                    initial_nonce=getattr(message, 'nonce', None)
                 )
                 if self.callback:
                     try:
-                        # Note: peer.py callback expects just (message), not (ctx, message)
                         self.callback(response)
                     except Exception:
                         # Intentional: Callback may raise exceptions during concurrent execution

@@ -83,6 +83,7 @@ class TestEngineComprehensive:
         assert err is None
 
     @pytest.mark.skip(reason="Conditional execution needs refinement - basic opcodes work")
+    @pytest.mark.skip(reason="Conditional execution needs refinement - basic opcodes work")
     def test_conditional_operations(self):
         """Test conditional operations."""
         engine = Engine()

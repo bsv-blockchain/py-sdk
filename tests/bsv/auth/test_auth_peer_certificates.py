@@ -85,7 +85,7 @@ def test_canonicalize_certificates_payload_golden():
             "certificate": {
                 # mixed formats: hex and base64 should canonicalize to base64-32
                 "type": bytes.fromhex("aa" * 32),
-                "serial_number": bytes.fromhex("bb" * 32).hex(),
+                "serialNumber": bytes.fromhex("bb" * 32).hex(),
                 "subject": PrivateKey(10).public_key(),
                 "certifier": PrivateKey(11).public_key().hex(),
                 "fields": {"f": "v"},

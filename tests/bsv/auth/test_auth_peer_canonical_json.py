@@ -12,7 +12,7 @@ class CaptureTransport:
         self._cb = cb
         return None
 
-    def send(self, ctx, msg):
+    def send(self, msg):
         return None
 
 
@@ -94,7 +94,7 @@ def test_canonical_certificate_response_json_golden():
         {
             "certificate": {
                 "type": t1,
-                "serial_number": s1.hex(),
+                "serialNumber": s1.hex(),
                 "subject": subj1,
                 "certifier": cert1,
                 "fields": {"x": "y"},

@@ -166,11 +166,11 @@ class Reader:
 
 def _encode_key_related_params(w: Writer, params: dict):
     # ProtocolID
-    proto: dict = params.get('protocol_id', {})
+    proto: dict = params.get('protocolID', {})
     w.write_byte(proto.get('securityLevel', 0))
     w.write_string(proto.get('protocol', ''))
     # KeyID
-    w.write_string(params.get('key_id', ''))
+    w.write_string(params.get('keyID', ''))
     # Determine counterparty type
     cp_val = params.get('counterparty')
     cp_bytes_param = params.get('counterparty_bytes')
@@ -209,13 +209,13 @@ def _decode_key_related_params(r: Reader) -> dict:
     priv_reason = r.read_string()
     for_self = r.read_optional_bool()
     return {
-        'protocol_id': {'securityLevel': sec_level, 'protocol': protocol},
-        'key_id': key_id,
+        'protocolID': {'securityLevel': sec_level, 'protocol': protocol},
+        'keyID': key_id,
         'counterparty_type': cp_type,
         'counterparty_bytes': cp_pub,
         'counterparty': cp_pub.hex() if cp_pub else None,
         'privileged': privileged,
-        'privileged_reason': priv_reason,
+        'privilegedReason': priv_reason,
         'forSelf': for_self,
     }
 

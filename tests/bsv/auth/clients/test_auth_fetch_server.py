@@ -22,10 +22,10 @@ async def handle_authfetch(request):
         # Intentional: Server error handling - catch all exceptions to return proper HTTP error
         return web.Response(status=400, text="Invalid message format")
 
-    msg_type = msg.get("message_type")
+    msg_type = msg.get("messageType")
     if msg_type == "initialRequest":
-        client_nonce = msg.get("initial_nonce")
-        identity_key = msg.get("identity_key")
+        client_nonce = msg.get("initialNonce")
+        identity_key = msg.get("identityKey")
         server_nonce = base64.b64encode(b"server_nonce_32bytes____1234567890").decode()
         db_sessions[identity_key] = {
             "client_nonce": client_nonce,
@@ -34,25 +34,25 @@ async def handle_authfetch(request):
         }
         response = {
             "version": "0.1",
-            "message_type": "initialResponse",
-            "identity_key": "server_identity_key_dummy",
-            "initial_nonce": server_nonce,
-            "your_nonce": client_nonce,
+            "messageType": "initialResponse",
+            "identityKey": "server_identity_key_dummy",
+            "initialNonce": server_nonce,
+            "yourNonce": client_nonce,
             "certificates": [],
-            "signature": "dummy_signature"
+            "signature": [100, 117, 109, 109, 121, 95, 115, 105, 103, 110, 97, 116, 117, 114, 101]  # list of ints
         }
         return web.Response(body=json.dumps(response).encode(), content_type="application/json")
     elif msg_type == "general":
-        identity_key = msg.get("identity_key")
+        identity_key = msg.get("identityKey")
         session = db_sessions.get(identity_key)
         if not session or not session.get("is_authenticated"):
             return web.Response(status=403, text="Not authenticated")
         response = {
             "version": "0.1",
-            "message_type": "general",
-            "identity_key": "server_identity_key_dummy",
+            "messageType": "general",
+            "identityKey": "server_identity_key_dummy",
             "payload": msg.get("payload"),
-            "signature": "dummy_signature"
+            "signature": [100, 117, 109, 109, 121, 95, 115, 105, 103, 110, 97, 116, 117, 114, 101]  # list of ints
         }
         return web.Response(body=json.dumps(response).encode(), content_type="application/json")
     else:

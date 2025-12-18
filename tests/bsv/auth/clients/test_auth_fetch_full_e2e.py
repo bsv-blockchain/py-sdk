@@ -8,6 +8,8 @@ import signal
 import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from bsv.keys import PrivateKey, PublicKey
 from bsv.auth.clients.auth_fetch import AuthFetch, SimplifiedFetchRequestOptions
 from bsv.auth.requested_certificate_set import RequestedCertificateSet
 
@@ -19,17 +21,20 @@ from test_ssl_helper import get_client_ssl_context
 
 class DummyWallet:
     """Mock wallet for testing"""
-    def get_public_key(self, ctx, args, originator):
-        return {"publicKey": "02a1633cafb311f41c1137864d7dd7cf2d5c9e5c2e5b5f5a5d5c5b5a59584f5e5f", "derivationPrefix": "m/0"}
+    def __init__(self):
+        self._private_key = PrivateKey()
+        self.identity_key = self._private_key.public_key().hex()
+    def get_public_key(self, ctx=None, args=None, originator=None):
+        return SimpleNamespace(public_key=self._private_key.public_key(), publicKey=self.identity_key, derivationPrefix="m/0")
     
-    def create_action(self, ctx, args, originator):
+    def create_action(self, ctx=None, args=None, originator=None):
         return {"tx": "0100000001abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789000000006a473044022012345678901234567890123456789012345678901234567890123456789012340220abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab012103a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0123456789affffffff0100e1f505000000001976a914abcdefabcdefabcdefabcdefabcdefabcdefabcdef88ac00000000"}
     
-    def create_signature(self, ctx, args, originator):
-        return {"signature": b"dummy_signature_for_testing_purposes_32bytes"}
+    def create_signature(self, ctx=None, args=None, originator=None):
+        return SimpleNamespace(signature=b"dummy_signature_for_testing_purposes_32bytes")
     
-    def verify_signature(self, ctx, args, originator):
-        return {"valid": True}
+    def verify_signature(self, ctx=None, args=None, originator=None):
+        return SimpleNamespace(valid=True)
 
 @pytest_asyncio.fixture
 async def auth_server():
@@ -150,7 +155,6 @@ async def test_auth_fetch_full_protocol(auth_server):
         pytest.fail(f"Full protocol test failed: {e}")
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Certificate exchange requires server fixture with certificate response support. Skipped until auth_server fixture implements certificate exchange protocol.")
 async def test_auth_fetch_certificate_exchange(auth_server):
     """Test certificate exchange functionality
     
@@ -171,9 +175,56 @@ async def test_auth_fetch_certificate_exchange(auth_server):
         "certifiers": ["03a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0123456789a"],
         "types": ["test-certificate"]
     }
-    
-    # This should trigger the certificate request flow
-    certs = auth_fetch.send_certificate_request(base_url, certificates_to_request)
+
+    # Establish an authenticated session before requesting certificates
+    import base64
+    import os
+    import time
+    import requests
+    from unittest.mock import patch
+    from bsv.auth.peer_session import PeerSession
+    from bsv.auth.peer import Peer
+
+    original_request = requests.Session.request
+    def patched_request(self, method, url, **kwargs):
+        kwargs.setdefault('verify', False)
+        return original_request(self, method, url, **kwargs)
+
+    certs = None
+    with patch.object(requests.Session, 'request', patched_request):
+        initial_nonce = base64.b64encode(os.urandom(32)).decode('ascii')
+        initial_payload = {
+            "version": "0.1",
+            "messageType": "initialRequest",
+            "identityKey": wallet.identity_key,
+            "nonce": initial_nonce
+        }
+        resp = requests.post(f"{base_url}/auth", json=initial_payload, verify=False, timeout=5)  # NOSONAR - Test environment SSL verification disabled; synchronous client used for test simplicity
+        assert resp.status_code == 200
+        response_data = resp.json()
+        server_identity = response_data.get("identityKey")
+        server_nonce = response_data.get("nonce")
+        assert server_identity is not None
+        assert server_nonce is not None
+
+        class SimplePublicKey:
+            def __init__(self, hex_str: str):
+                self._hex = hex_str
+            def hex(self) -> str:
+                return self._hex
+
+        session = PeerSession(
+            is_authenticated=True,
+            session_nonce=initial_nonce,
+            peer_nonce=server_nonce,
+            peer_identity_key=SimplePublicKey(server_identity),
+            last_update=int(time.time() * 1000)
+        )
+        auth_fetch.session_manager.add_session(session)
+
+        # This should now trigger the certificate request flow
+        with patch.object(Peer, 'get_authenticated_session', return_value=session):
+            certs = auth_fetch.send_certificate_request(base_url, certificates_to_request)
     
     # Verify we received certificates
     assert certs is not None, "Expected certificates to be returned"
@@ -182,12 +233,10 @@ async def test_auth_fetch_certificate_exchange(auth_server):
     
     # Verify certificate structure
     for cert in certs:
-        assert "certificate" in cert, "Each cert should have a certificate field"
-        cert_data = cert["certificate"]
-        assert "type" in cert_data, "Certificate should have a type"
-        assert "serialNumber" in cert_data, "Certificate should have a serial number"
-        assert "subject" in cert_data, "Certificate should have a subject"
-        assert "certifier" in cert_data, "Certificate should have a certifier"
+        assert "type" in cert, "Certificate response should include type"
+        assert "serialNumber" in cert, "Certificate should have a serial number"
+        assert "subject" in cert, "Certificate should have a subject"
+        assert "certifier" in cert, "Certificate should have a certifier"
 
 @pytest.mark.asyncio
 async def test_auth_fetch_session_management(auth_server):

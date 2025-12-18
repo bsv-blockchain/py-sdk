@@ -5,6 +5,68 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/bsv-sdk)](https://pypi.org/project/bsv-sdk)
 [![Coverage](https://img.shields.io/badge/coverage-85.7%25-green)](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)
 
+## Migration Guide (v2.0.0)
+
+**Breaking Changes:** Version 2.0.0 introduces several breaking changes to standardize on camelCase JSON schemas and stricter AuthMessage validation.
+
+### Key Changes
+
+1. **AuthMessage JSON Wire Format Changes:**
+   - `payload` and `signature` fields now **only accept `number[] | null`** (arrays of integers 0-255)
+   - Previously accepted string formats (hex, base64, UTF-8) are no longer supported
+   - **Migration:** Convert string payloads/signatures to byte arrays, then to integer arrays
+
+2. **camelCase Only for SDK-Owned JSON Schemas:**
+   - All AuthMessage JSON keys: `identityKey`, `messageType`, `initialNonce`, `yourNonce`, `requestedCertificates`
+   - Certificate fields: `serialNumber`, `revocationOutpoint`
+   - Wallet API args: `protocolID`, `keyID`, `seekPermission`, `forSelf`
+   - **Migration:** Replace snake_case keys with camelCase equivalents
+
+### Migration Examples
+
+**AuthMessage JSON:**
+```json
+// Before (v1.x)
+{
+  "identity_key": "02...",
+  "message_type": "general",
+  "payload": "string_payload",
+  "signature": "hex_signature"
+}
+
+// After (v2.0)
+{
+  "identityKey": "02...",
+  "messageType": "general",
+  "payload": [115, 116, 114, 105, 110, 103],
+  "signature": [104, 101, 120, 95, 115, 105, 103]
+}
+```
+
+**Wallet API calls:**
+```python
+# Before (v1.x)
+wallet.get_public_key({
+    "protocol_id": {"securityLevel": 1, "protocol": "test"},
+    "key_id": "my_key"
+})
+
+# After (v2.0)
+wallet.get_public_key({
+    "protocolID": {"securityLevel": 1, "protocol": "test"},
+    "keyID": "my_key"
+})
+```
+
+**Certificate fields:**
+```json
+// Before (v1.x)
+{"serial_number": "123", "revocation_outpoint": {...}}
+
+// After (v2.0)
+{"serialNumber": "123", "revocationOutpoint": {...}}
+```
+
 
 Welcome to the BSV Blockchain Libraries Project, the comprehensive Python SDK designed to provide an updated and unified layer for developing scalable applications on the BSV Blockchain. This SDK addresses the limitations of previous tools by offering a fresh, peer-to-peer approach, adhering to SPV, and ensuring privacy and scalability.
 ## Table of Contents

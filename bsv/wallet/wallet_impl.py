@@ -113,16 +113,26 @@ class ProtoWallet(WalletInterface):
 
     def get_public_key(self, args: GetPublicKeyArgs = None, originator: str = None) -> Dict:
         try:
-            seek_permission = args.get("seekPermission") or args.get("seek_permission")
+            # Check for forbidden snake_case keys
+            forbidden_keys = {
+                'seek_permission': 'seekPermission',
+                'protocol_id': 'protocolID',
+                'key_id': 'keyID'
+            }
+            for snake_key, camel_key in forbidden_keys.items():
+                if snake_key in args:
+                    raise ValueError(f"Wallet API key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+            seek_permission = args.get("seekPermission")
             if os.getenv("BSV_DEBUG", "0") == "1":
                 print(f"[DEBUG ProtoWallet.get_public_key] originator=<redacted> seek_permission={seek_permission} args=<redacted>")  # Sensitive info omitted for security
             if seek_permission:
                 self._check_permission("Get public key")
             if args.get("identityKey", False):
                 return {"publicKey": self.public_key.hex()}
-            # Support both camelCase (TS style) and snake_case
-            protocol_id = args.get("protocolID") or args.get("protocol_id")
-            key_id = args.get("keyID") or args.get("key_id")
+            # camelCase only
+            protocol_id = args.get("protocolID")
+            key_id = args.get("keyID")
             counterparty = args.get("counterparty")
             for_self = args.get("forSelf", False)
             if protocol_id is None or key_id is None:
@@ -178,10 +188,19 @@ class ProtoWallet(WalletInterface):
                 plaintext = bytes(plaintext)
             elif isinstance(plaintext, str):
                 plaintext = plaintext.encode('utf-8')
-            
-            # Get protocol parameters (support both camelCase and snake_case)
-            protocol_id = encryption_args.get("protocol_id") or encryption_args.get("protocolID")
-            key_id = encryption_args.get("key_id") or encryption_args.get("keyID")
+
+            # Check for forbidden snake_case keys
+            forbidden_keys = {
+                'protocol_id': 'protocolID',
+                'key_id': 'keyID'
+            }
+            for snake_key, camel_key in forbidden_keys.items():
+                if snake_key in encryption_args:
+                    raise ValueError(f"Wallet API key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+            # Get protocol parameters (camelCase only)
+            protocol_id = encryption_args.get("protocolID")
+            key_id = encryption_args.get("keyID")
             counterparty = encryption_args.get("counterparty")
             
             if protocol_id is None or key_id is None:
@@ -239,10 +258,19 @@ class ProtoWallet(WalletInterface):
             elif isinstance(ciphertext, str):
                 # Assume hex encoding for strings
                 ciphertext = bytes.fromhex(ciphertext)
-            
-            # Get protocol parameters (support both camelCase and snake_case)
-            protocol_id = encryption_args.get("protocol_id") or encryption_args.get("protocolID")
-            key_id = encryption_args.get("key_id") or encryption_args.get("keyID")
+
+            # Check for forbidden snake_case keys
+            forbidden_keys = {
+                'protocol_id': 'protocolID',
+                'key_id': 'keyID'
+            }
+            for snake_key, camel_key in forbidden_keys.items():
+                if snake_key in encryption_args:
+                    raise ValueError(f"Wallet API key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+            # Get protocol parameters (camelCase only)
+            protocol_id = encryption_args.get("protocolID")
+            key_id = encryption_args.get("keyID")
             counterparty = encryption_args.get("counterparty")
             
             if protocol_id is None or key_id is None:
@@ -266,9 +294,18 @@ class ProtoWallet(WalletInterface):
 
     def create_signature(self, args: CreateSignatureArgs = None, originator: str = None) -> Dict:
         try:
-            # Support both camelCase (TS style) and snake_case
-            protocol_id = args.get("protocol_id") or args.get("protocolID")
-            key_id = args.get("key_id") or args.get("keyID")
+            # Check for forbidden snake_case keys
+            forbidden_keys = {
+                'protocol_id': 'protocolID',
+                'key_id': 'keyID'
+            }
+            for snake_key, camel_key in forbidden_keys.items():
+                if snake_key in args:
+                    raise ValueError(f"Wallet API key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+            # camelCase only
+            protocol_id = args.get("protocolID")
+            key_id = args.get("keyID")
             counterparty = args.get("counterparty")
             
             if os.getenv("BSV_DEBUG", "0") == "1":
@@ -424,11 +461,21 @@ class ProtoWallet(WalletInterface):
 
     def verify_signature(self, args: VerifySignatureArgs = None, originator: str = None) -> Dict:
         try:
-            # Extract and validate parameters (support both camelCase and snake_case)
-            protocol_id = args.get("protocol_id") or args.get("protocolID")
-            key_id = args.get("key_id") or args.get("keyID")
+            # Check for forbidden snake_case keys
+            forbidden_keys = {
+                'protocol_id': 'protocolID',
+                'key_id': 'keyID',
+                'for_self': 'forSelf'
+            }
+            for snake_key, camel_key in forbidden_keys.items():
+                if snake_key in args:
+                    raise ValueError(f"Wallet API key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+            # Extract and validate parameters (camelCase only)
+            protocol_id = args.get("protocolID")
+            key_id = args.get("keyID")
             counterparty = args.get("counterparty")
-            for_self = args.get("for_self", False) or args.get("forSelf", False)
+            for_self = args.get("forSelf", False)
             
             if protocol_id is None or key_id is None:
                 return {"error": "verify_signature: protocol_id and key_id are required"}
@@ -530,10 +577,19 @@ class ProtoWallet(WalletInterface):
         """
         # Support both flat args and nested encryption_args
         encryption_args = args.get("encryption_args", args)
-        
-        # Get protocol parameters (support both camelCase and snake_case)
-        protocol_id = encryption_args.get("protocol_id") or encryption_args.get("protocolID")
-        key_id = encryption_args.get("key_id") or encryption_args.get("keyID")
+
+        # Check for forbidden snake_case keys
+        forbidden_keys = {
+            'protocol_id': 'protocolID',
+            'key_id': 'keyID'
+        }
+        for snake_key, camel_key in forbidden_keys.items():
+            if snake_key in encryption_args:
+                raise ValueError(f"Wallet API key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+        # Get protocol parameters (camelCase only)
+        protocol_id = encryption_args.get("protocolID")
+        key_id = encryption_args.get("keyID")
         counterparty = encryption_args.get("counterparty")
         
         data = args.get("data", b"")
@@ -1086,11 +1142,23 @@ class ProtoWallet(WalletInterface):
     def _determine_broadcaster_config(self, args: Dict) -> Dict:
         """Determine which broadcaster to use based on configuration."""
         import os
-        disable_arc = os.getenv("DISABLE_ARC", "0") == "1" or args.get("disable_arc")
+
+        # Check for forbidden snake_case keys
+        forbidden_keys = {
+            'disable_arc': 'disableArc',
+            'use_woc': 'useWoc',
+            'use_mapi': 'useMAPI',
+            'use_custom_node': 'useCustomNode'
+        }
+        for snake_key, camel_key in forbidden_keys.items():
+            if snake_key in args:
+                raise ValueError(f"Broadcaster config key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+        disable_arc = os.getenv("DISABLE_ARC", "0") == "1" or args.get("disableArc")
         use_arc = not disable_arc  # ARC is enabled by default
-        use_woc = os.getenv("USE_WOC", "0") == "1" or args.get("use_woc")
-        use_mapi = args.get("use_mapi")
-        use_custom_node = args.get("use_custom_node")
+        use_woc = os.getenv("USE_WOC", "0") == "1" or args.get("useWoc")
+        use_mapi = args.get("useMAPI")
+        use_custom_node = args.get("useCustomNode")
         ext_bc = args.get("broadcaster")
         
         return {
@@ -1613,8 +1681,8 @@ class ProtoWallet(WalletInterface):
             # Encrypt the linkage for the verifier
             encrypt_result = self.encrypt({
                 "plaintext": list(linkage_bytes),
-                "protocol_id": {"security_level": 2, "protocol": "counterparty linkage revelation"},
-                "key_id": revelation_time,
+                "protocolID": {"securityLevel": 2, "protocol": "counterparty linkage revelation"},
+                "keyID": revelation_time,
                 "counterparty": {"type": CounterpartyType.OTHER, "counterparty": verifier_pubkey}
             }, originator)
             
@@ -1624,8 +1692,8 @@ class ProtoWallet(WalletInterface):
             # Encrypt the proof for the verifier
             encrypt_proof_result = self.encrypt({
                 "plaintext": list(proof_bytes),
-                "protocol_id": {"security_level": 2, "protocol": "counterparty linkage revelation"},
-                "key_id": revelation_time,
+                "protocolID": {"securityLevel": 2, "protocol": "counterparty linkage revelation"},
+                "keyID": revelation_time,
                 "counterparty": {"type": CounterpartyType.OTHER, "counterparty": verifier_pubkey}
             }, originator)
             
@@ -1680,9 +1748,18 @@ class ProtoWallet(WalletInterface):
             if verifier_arg is None:
                 return {"error": "reveal_specific_key_linkage: verifier public key is required"}
             
-            # Get protocol and key parameters
-            protocol_id = args.get("protocol_id") or args.get("protocolID")
-            key_id = args.get("key_id") or args.get("keyID")
+            # Check for forbidden snake_case keys
+            forbidden_keys = {
+                'protocol_id': 'protocolID',
+                'key_id': 'keyID'
+            }
+            for snake_key, camel_key in forbidden_keys.items():
+                if snake_key in args:
+                    raise ValueError(f"Wallet API key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+            # Get protocol and key parameters (camelCase only)
+            protocol_id = args.get("protocolID")
+            key_id = args.get("keyID")
             counterparty_arg = args.get("counterparty")
             
             if protocol_id is None or key_id is None:
@@ -1717,8 +1794,8 @@ class ProtoWallet(WalletInterface):
             # Encrypt the linkage for the verifier
             encrypt_result = self.encrypt({
                 "plaintext": list(linkage),
-                "protocol_id": {"security_level": 2, "protocol": encrypt_protocol_name},
-                "key_id": key_id,
+                "protocolID": {"securityLevel": 2, "protocol": encrypt_protocol_name},
+                "keyID": key_id,
                 "counterparty": {"type": CounterpartyType.OTHER, "counterparty": verifier_pubkey}
             }, originator)
             
@@ -1728,8 +1805,8 @@ class ProtoWallet(WalletInterface):
             # Encrypt the proof for the verifier
             encrypt_proof_result = self.encrypt({
                 "plaintext": list(proof_bytes),
-                "protocol_id": {"security_level": 2, "protocol": encrypt_protocol_name},
-                "key_id": key_id,
+                "protocolID": {"securityLevel": 2, "protocol": encrypt_protocol_name},
+                "keyID": key_id,
                 "counterparty": {"type": CounterpartyType.OTHER, "counterparty": verifier_pubkey}
             }, originator)
             

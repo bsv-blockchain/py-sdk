@@ -4,7 +4,8 @@ from bsv.storage.uploader import Uploader
 from bsv.storage.downloader import Downloader
 from bsv.storage.exceptions import UploadError, DownloadError, NetworkError
 
-# 実ストレージサービスのURL（nanostore.babbage.systems等）
+# Set fallback URL for offline testing
+os.environ.setdefault("E2E_STORAGE_URL", "https://fake-storage.local")
 STORAGE_URL = os.environ.get("E2E_STORAGE_URL", "https://nanostore.babbage.systems")
 NETWORK = os.environ.get("E2E_NETWORK", "mainnet")
 

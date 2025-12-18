@@ -11,7 +11,7 @@ class DummyTransport:
         # Return no error
         return None
 
-    def send(self, ctx, message):
+    def send(self, message):
         # Do nothing; return no error
         return None
 

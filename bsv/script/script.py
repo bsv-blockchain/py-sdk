@@ -82,7 +82,15 @@ class Script:
             self.chunks.append(chunk)
 
     def serialize(self) -> bytes:
-        return self.script
+        if self.script:
+            return self.script
+        # Serialize from chunks if script bytes not set
+        result = bytearray()
+        for chunk in self.chunks:
+            result.extend(chunk.op)
+            if chunk.data is not None:
+                result.extend(chunk.data)
+        return bytes(result)
 
     def hex(self) -> str:
         return self.script.hex()

@@ -164,15 +164,15 @@ class TestStackManipulationOpcodes:
         pop = ParsedOpcode(OpCode.OP_ROT, b"")
         err = op_rot(pop, self.thread)
 
-        # Verify: should be rotated (a, c, b)
+        # Verify: should be rotated (b, c, a)
         assert err is None
         assert self.thread.dstack.depth() == 3
-        assert self.thread.dstack.pop_byte_array() == b"b"  # was top
-        assert self.thread.dstack.pop_byte_array() == b"c"  # was middle
-        assert self.thread.dstack.pop_byte_array() == b"a"  # was bottom
+        assert self.thread.dstack.pop_byte_array() == b"a"  # was bottom, now top
+        assert self.thread.dstack.pop_byte_array() == b"c"  # was top, now middle
+        assert self.thread.dstack.pop_byte_array() == b"b"  # was middle, now bottom
 
     def test_op_tuck_success(self):
-        """Test OP_TUCK - copies top item to position 2."""
+        """Test OP_TUCK - copies top item before the second-to-top item."""
         # Setup: push two items
         self.thread.dstack.push_byte_array(b"bottom")
         self.thread.dstack.push_byte_array(b"top")
@@ -181,12 +181,12 @@ class TestStackManipulationOpcodes:
         pop = ParsedOpcode(OpCode.OP_TUCK, b"")
         err = op_tuck(pop, self.thread)
 
-        # Verify: should be (bottom, top, top) - top item copied to position 2
+        # Verify: should be (top, bottom, top) - top item copied before second item
         assert err is None
         assert self.thread.dstack.depth() == 3
         assert self.thread.dstack.pop_byte_array() == b"top"     # copied top
-        assert self.thread.dstack.pop_byte_array() == b"top"     # original top
         assert self.thread.dstack.pop_byte_array() == b"bottom"  # original bottom
+        assert self.thread.dstack.pop_byte_array() == b"top"     # original top
 
     def test_op_2drop_success(self):
         """Test OP_2DROP - removes top two stack items."""

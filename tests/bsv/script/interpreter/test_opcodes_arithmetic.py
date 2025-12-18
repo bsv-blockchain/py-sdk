@@ -342,7 +342,7 @@ class TestArithmeticOpcodes:
 
     def test_op_lessthan_success(self):
         """Test OP_LESSTHAN."""
-        # Setup: push 5 and 10 (10 < 5 = false)
+        # Setup: push 5 and 10 (5 < 10 = true)
         self.thread.dstack.push_int(ScriptNumber(5))
         self.thread.dstack.push_int(ScriptNumber(10))
 
@@ -350,11 +350,11 @@ class TestArithmeticOpcodes:
         pop = ParsedOpcode(OpCode.OP_LESSTHAN, b"")
         err = op_lessthan(pop, self.thread)
 
-        # Verify: should be 0 (false)
+        # Verify: should be 1 (true)
         assert err is None
         assert self.thread.dstack.depth() == 1
         result = self.thread.dstack.pop_int()
-        assert result.value == 0
+        assert result.value == 1
 
     def test_op_greaterthan_success(self):
         """Test OP_GREATERTHAN."""
@@ -406,10 +406,10 @@ class TestArithmeticOpcodes:
 
     def test_op_within_success_inside(self):
         """Test OP_WITHIN with value inside range."""
-        # Setup: push min=5, max=15, value=10
+        # Setup: push value=10, min=5, max=15
+        self.thread.dstack.push_int(ScriptNumber(10))
         self.thread.dstack.push_int(ScriptNumber(5))
         self.thread.dstack.push_int(ScriptNumber(15))
-        self.thread.dstack.push_int(ScriptNumber(10))
 
         # Execute opcode
         pop = ParsedOpcode(OpCode.OP_WITHIN, b"")

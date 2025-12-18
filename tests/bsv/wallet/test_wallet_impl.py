@@ -39,8 +39,8 @@ def test_encrypt_decrypt_identity(wallet, plain):
     # Encrypt/decrypt with protocol_id and key_id (required by TS/Go SDK)
     args = {
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "test"},
-            "key_id": "default",
+            "protocolID": {"securityLevel": 1, "protocol": "test"},
+            "keyID": "default",
             "forSelf": True
         },
         "plaintext": plain
@@ -50,8 +50,8 @@ def test_encrypt_decrypt_identity(wallet, plain):
     
     dec = wallet.decrypt({
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "test"},
-            "key_id": "default",
+            "protocolID": {"securityLevel": 1, "protocol": "test"},
+            "keyID": "default",
             "forSelf": True
         },
         "ciphertext": enc["ciphertext"]
@@ -89,8 +89,8 @@ def test_encrypt_decrypt_with_protocol_two_parties():
 
     enc_args = {
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "testprotocol"},
-            "key_id": key_id,
+            "protocolID": {"securityLevel": 1, "protocol": "testprotocol"},
+            "keyID": key_id,
             "counterparty": bob.public_key.hex(),
         },
         "plaintext": plain,
@@ -99,8 +99,8 @@ def test_encrypt_decrypt_with_protocol_two_parties():
 
     dec_args = {
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "testprotocol"},
-            "key_id": key_id,
+            "protocolID": {"securityLevel": 1, "protocol": "testprotocol"},
+            "keyID": key_id,
             "counterparty": alice.public_key.hex(),
         },
         "ciphertext": enc["ciphertext"],
@@ -163,8 +163,8 @@ def test_seek_permission_denied_returns_error_dict():
     enc_args = {
         "seekPermission": True,
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "test"},
-            "key_id": "key1",
+            "protocolID": {"securityLevel": 1, "protocol": "test"},
+            "keyID": "key1",
             "counterparty": "0" * 66,
         },
         "plaintext": "test"
@@ -225,8 +225,8 @@ def test_create_signature_basic(wallet):
     """Test creating a signature."""
     data = b"test data to sign"
     args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": data
     }
     result = wallet.create_signature(args, TEST_PASSPHRASE)
@@ -240,12 +240,12 @@ def test_create_signature_basic(wallet):
 def test_create_signature_missing_args(wallet):
     """Test create_signature with missing arguments."""
     # Missing protocol_id
-    args = {"key_id": "key1", "data": b"test"}
+    args = {"keyID": "key1", "data": b"test"}
     result = wallet.create_signature(args, TEST_PASSPHRASE)
     assert "error" in result
     
     # Missing key_id
-    args = {"protocol_id": {"securityLevel": 1, "protocol": "test"}, "data": b"test"}
+    args = {"protocolID": {"securityLevel": 1, "protocol": "test"}, "data": b"test"}
     result = wallet.create_signature(args, TEST_PASSPHRASE)
     assert "error" in result
 
@@ -259,8 +259,8 @@ def test_create_and_verify_signature(wallet):
     # Create signature - use explicit counterparty for consistency
     # TS defaults: create='anyone', verify='self' which would use different keys
     sign_args = {
-        "protocol_id": protocol_id,
-        "key_id": key_id,
+        "protocolID": protocol_id,
+        "keyID": key_id,
         "data": data,
         "counterparty": "self"
     }
@@ -269,8 +269,8 @@ def test_create_and_verify_signature(wallet):
     
     # Verify signature
     verify_args = {
-        "protocol_id": protocol_id,
-        "key_id": key_id,
+        "protocolID": protocol_id,
+        "keyID": key_id,
         "data": data,
         "signature": sign_result["signature"],
         "counterparty": "self"
@@ -287,16 +287,16 @@ def test_verify_signature_with_invalid_data(wallet):
     
     # Create signature
     sign_args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": data
     }
     sign_result = wallet.create_signature(sign_args, TEST_PASSPHRASE)
     
     # Try to verify with different data
     verify_args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": tampered_data,
         "signature": sign_result["signature"]
     }
@@ -308,15 +308,15 @@ def test_verify_signature_missing_args(wallet):
     """Test verify_signature with missing arguments."""
     # Missing signature
     args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": b"test"
     }
     result = wallet.verify_signature(args, TEST_PASSPHRASE)
     assert "error" in result
     
     # Missing protocol_id
-    args = {"key_id": "key1", "data": b"test", "signature": b"fake"}
+    args = {"keyID": "key1", "data": b"test", "signature": b"fake"}
     result = wallet.verify_signature(args, TEST_PASSPHRASE)
     assert "error" in result
 
@@ -325,8 +325,8 @@ def test_create_and_verify_hmac(wallet):
     """Test creating and verifying HMAC."""
     data = b"test data for hmac"
     enc_args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "hmac_key_1"
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "hmac_key_1"
     }
     
     # Create HMAC
@@ -351,8 +351,8 @@ def test_verify_hmac_with_tampered_data(wallet):
     original_data = b"original data"
     tampered_data = b"tampered data"
     enc_args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1"
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1"
     }
     
     # Create HMAC
@@ -373,7 +373,7 @@ def test_create_hmac_missing_args(wallet):
     """Test create_hmac with missing arguments."""
     # Missing key_id
     args = {
-        "encryption_args": {"protocol_id": {"securityLevel": 1, "protocol": "test"}},
+        "encryption_args": {"protocolID": {"securityLevel": 1, "protocol": "test"}},
         "data": b"test"
     }
     result = wallet.create_hmac(args, TEST_PASSPHRASE)
@@ -385,8 +385,8 @@ def test_verify_hmac_missing_args(wallet):
     # Missing hmac value
     args = {
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "test"},
-            "key_id": "key1"
+            "protocolID": {"securityLevel": 1, "protocol": "test"},
+            "keyID": "key1"
         },
         "data": b"test"
     }
@@ -518,8 +518,8 @@ def test_encrypt_decrypt_with_forself(wallet):
     plain = b"self encrypted data"
     enc_args = {
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "test"},
-            "key_id": "key1",
+            "protocolID": {"securityLevel": 1, "protocol": "test"},
+            "keyID": "key1",
             "forSelf": True
         },
         "plaintext": plain
@@ -529,8 +529,8 @@ def test_encrypt_decrypt_with_forself(wallet):
     
     dec_args = {
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "test"},
-            "key_id": "key1",
+            "protocolID": {"securityLevel": 1, "protocol": "test"},
+            "keyID": "key1",
             "forSelf": True
         },
         "ciphertext": encrypted["ciphertext"]

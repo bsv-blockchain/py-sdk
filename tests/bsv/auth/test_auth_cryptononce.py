@@ -99,8 +99,8 @@ def test_serial_number_use_case():
     data = (client_nonce + server_nonce).encode('utf-8')
     hmac_result = server_wallet.create_hmac({
         'encryption_args': {
-            'protocol_id': {'securityLevel': 2, 'protocol': 'certificate creation'},
-            'key_id': server_nonce + client_nonce,
+            'protocolID': {'securityLevel': 2, 'protocol': 'certificate creation'},
+            'keyID': server_nonce + client_nonce,
             'counterparty': client_pub
         },
         'data': data
@@ -113,8 +113,8 @@ def test_serial_number_use_case():
     # Client verifies the server included their nonce
     verify_result = client_wallet.verify_hmac({
         'encryption_args': {
-            'protocol_id': {'securityLevel': 2, 'protocol': 'certificate creation'},
-            'key_id': server_nonce + client_nonce,
+            'protocolID': {'securityLevel': 2, 'protocol': 'certificate creation'},
+            'keyID': server_nonce + client_nonce,
             'counterparty': server_pub
         },
         'data': data,

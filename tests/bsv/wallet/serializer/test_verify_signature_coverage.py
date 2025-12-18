@@ -17,7 +17,7 @@ def test_verify_signature_with_valid_data():
         args = {
             "data": b"test data",
             "signature": b"signature",
-            "protocolID": [2, "test"],
+            "protocolID": {"securityLevel": 2, "protocol": "test"},
             "keyID": "1"
         }
         
@@ -142,7 +142,7 @@ def test_verify_signature_with_counterparty():
         args = {
             "data": b"test data",
             "signature": b"signature",
-            "protocolID": [2, "test"],
+            "protocolID": {"securityLevel": 2, "protocol": "test"},
             "counterparty": "self"
         }
         

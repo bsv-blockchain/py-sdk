@@ -114,16 +114,16 @@ def test_decrypt_with_debug_enabled(wallet, capsys):
     # First encrypt - need protocol_id and key_id
     enc_args = {
         "plaintext": b"test",
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "counterparty": "self"
     }
     enc_result = wallet.encrypt(enc_args, "test")
     assert "ciphertext" in enc_result, f"encrypt failed: {enc_result}"
     
     args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "counterparty": "self",
         "ciphertext": enc_result["ciphertext"]
     }
@@ -138,7 +138,7 @@ def test_decrypt_with_debug_enabled(wallet, capsys):
 # ========================================================================
 
 def test_get_public_key_with_none_protocol_id(wallet):
-    """Test get_public_key returns error when protocol_id is None."""
+    """Test get_public_key returns error when protocolID is None."""
     args = {"protocolID": None, "keyID": None}
     result = wallet.get_public_key(args, "test")
     assert "error" in result
@@ -154,7 +154,7 @@ def test_get_public_key_with_forself_true_no_protocol(wallet):
 
 
 def test_get_public_key_with_non_dict_protocol_id(wallet):
-    """Test get_public_key with protocol_id as non-dict (tuple/list)."""
+    """Test get_public_key with protocolID as non-dict (tuple/list)."""
     protocol = Protocol(1, "test_protocol")
     args = {
         "protocolID": protocol,  # Not a dict
@@ -198,15 +198,15 @@ def test_decrypt_with_none_ciphertext(wallet):
 
 
 def test_create_signature_missing_protocol_id(wallet):
-    """Test create_signature returns error when protocol_id is missing."""
-    args = {"key_id": "key1", "data": b"test"}
+    """Test create_signature returns error when protocolID is missing."""
+    args = {"keyID": "key1", "data": b"test"}
     result = wallet.create_signature(args, "test")
     assert "error" in result
 
 
 def test_create_signature_missing_key_id(wallet):
-    """Test create_signature returns error when key_id is missing."""
-    args = {"protocol_id": {"securityLevel": 1, "protocol": "test"}, "data": b"test"}
+    """Test create_signature returns error when keyID is missing."""
+    args = {"protocolID": {"securityLevel": 1, "protocol": "test"}, "data": b"test"}
     result = wallet.create_signature(args, "test")
     assert "error" in result
 
@@ -214,8 +214,8 @@ def test_create_signature_missing_key_id(wallet):
 def test_create_signature_with_none_data(wallet):
     """Test create_signature with None data (should use empty bytes)."""
     args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": None
     }
     # Should handle None gracefully or return error
@@ -227,8 +227,8 @@ def test_create_signature_with_none_data(wallet):
 def test_verify_signature_missing_signature(wallet):
     """Test verify_signature returns error when signature is missing."""
     args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": b"test"
     }
     result = wallet.verify_signature(args, "test")
@@ -239,8 +239,8 @@ def test_verify_signature_missing_signature(wallet):
 def test_verify_signature_with_none_signature(wallet):
     """Test verify_signature returns error when signature is None."""
     args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": b"test",
         "signature": None
     }
@@ -267,20 +267,20 @@ def test_verify_signature_missing_key_id(wallet):
     assert "error" in result
 
 
-def test_verify_signature_with_list_protocol_id(wallet):
-    """Test verify_signature with protocol_id as list [security_level, protocol]."""
+def test_verify_signature_with_dict_protocol_id(wallet):
+    """Test verify_signature with protocolID as dict."""
     # Create a real signature first
     sign_args = {
-        "protocol_id": [1, "test"],
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": b"test data"
     }
     sign_result = wallet.create_signature(sign_args, "test")
-    
-    # Verify with list protocol_id
+
+    # Verify with dict protocolID
     verify_args = {
-        "protocol_id": [1, "test"],
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": b"test data",
         "signature": sign_result["signature"]
     }
@@ -296,8 +296,8 @@ def test_verify_signature_with_hash_to_directly_verify(wallet):
     
     # Create signature - use explicit counterparty for consistency
     sign_args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": data,
         "counterparty": "self"
     }
@@ -305,8 +305,8 @@ def test_verify_signature_with_hash_to_directly_verify(wallet):
     
     # Verify using hash directly
     verify_args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "hash_to_directly_verify": data_hash,
         "signature": sign_result["signature"],
         "counterparty": "self"
@@ -677,8 +677,8 @@ def test_decrypt_with_empty_args(wallet):
 def test_create_signature_with_empty_data(wallet):
     """Test create_signature with empty data."""
     args = {
-        "protocol_id": {"securityLevel": 1, "protocol": "test"},
-        "key_id": "key1",
+        "protocolID": {"securityLevel": 1, "protocol": "test"},
+        "keyID": "key1",
         "data": b""
     }
     result = wallet.create_signature(args, "test")
@@ -703,18 +703,18 @@ def test_verify_hmac_with_empty_data(wallet):
     # Create HMAC with empty data
     create_args = {
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "test"},
-            "key_id": "key1"
+            "protocolID": {"securityLevel": 1, "protocol": "test"},
+            "keyID": "key1"
         },
         "data": b""
     }
     hmac_result = wallet.create_hmac(create_args, "test")
-    
+
     # Verify with empty data
     verify_args = {
         "encryption_args": {
-            "protocol_id": {"securityLevel": 1, "protocol": "test"},
-            "key_id": "key1"
+            "protocolID": {"securityLevel": 1, "protocol": "test"},
+            "keyID": "key1"
         },
         "data": b"",
         "hmac": hmac_result["hmac"]

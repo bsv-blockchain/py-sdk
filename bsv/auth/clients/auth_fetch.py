@@ -284,9 +284,13 @@ class AuthFetch:
         # コールバック用イベントと結果格納
         cert_event = threading.Event()
         cert_holder = {'certs': None, 'err': None}
-        def on_certificates_received(sender_public_key, certs):
-            cert_holder['certs'] = certs
-            cert_event.set()
+        def on_certificates_received(*args):
+            try:
+                cert_holder['certs'] = args[-1] if args else None
+            except Exception as e:
+                cert_holder['err'] = e
+            finally:
+                cert_event.set()
         callback_id = peer_to_use.peer.listen_for_certificates_received(on_certificates_received)
         try:
             err = peer_to_use.peer.request_certificates(None, certificates_to_request, 30000)
@@ -501,9 +505,16 @@ class AuthFetch:
             }
         }
         action_result = self.wallet.create_action(action_args, None)
-        if not action_result or "tx" not in action_result:
+        if not action_result:
             raise RuntimeError("wallet.create_action did not return a transaction")
-        tx_bytes = action_result["tx"]
+
+        # Handle both direct tx and signableTransaction.tx formats
+        if "tx" in action_result:
+            tx_bytes = action_result["tx"]
+        elif "signableTransaction" in action_result and "tx" in action_result["signableTransaction"]:
+            tx_bytes = action_result["signableTransaction"]["tx"]
+        else:
+            raise RuntimeError("wallet.create_action did not return a transaction")
         if isinstance(tx_bytes, str):
             return tx_bytes
         else:

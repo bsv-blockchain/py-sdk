@@ -242,10 +242,11 @@ class Spend:
                 else:
                     self.program_counter = len(self.locking_script.chunks)
                 self.if_stack = []
+                return  # OP_RETURN stops execution, don't increment counter
 
             elif current_opcode == OpCode.OP_TOALTSTACK:
                 if len(self.stack) < 1:
-                    self.script_evaluation_error('OP_TOALTSTACK requires at oeast one item to be on the stack.')
+                    self.script_evaluation_error('OP_TOALTSTACK requires at least one item to be on the stack.')
                 self.alt_stack.append(self.stack.pop())
 
             elif current_opcode == OpCode.OP_FROMALTSTACK:

@@ -33,6 +33,10 @@ class MockThread:
         """Mock branch execution check."""
         return True
 
+    def should_exec(self, opcode=None):
+        """Mock execution check - always execute for these tests."""
+        return True
+
 
 class TestOperationsEdgeCases:
     """Test edge cases for script operations."""
@@ -171,8 +175,8 @@ class TestOperationsEdgeCases:
 
     def test_op_div_by_zero(self):
         """Test OP_DIV with division by zero."""
-        self.thread.dstack.push(b"\x00")  # x2 (divisor) - this gets checked for zero
-        self.thread.dstack.push(b"\x05")  # x1 (dividend)
+        self.thread.dstack.push(b"\x05")  # dividend
+        self.thread.dstack.push(b"")      # divisor (top, empty = 0) - this gets checked for zero
 
         pop = self.create_parsed_opcode(0x96)  # OP_DIV
         error = op_div(pop, self.thread)
@@ -188,8 +192,8 @@ class TestOperationsEdgeCases:
 
     def test_op_mod_by_zero(self):
         """Test OP_MOD with modulus by zero."""
-        self.thread.dstack.push(b"\x00")  # x2 (modulus) - this gets checked for zero
-        self.thread.dstack.push(b"\x05")  # x1 (dividend)
+        self.thread.dstack.push(b"\x05")  # dividend
+        self.thread.dstack.push(b"")      # modulus (top, empty = 0) - this gets checked for zero
 
         pop = self.create_parsed_opcode(0x97)  # OP_MOD
         error = op_mod(pop, self.thread)

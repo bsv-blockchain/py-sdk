@@ -10,7 +10,7 @@ class DummyTransport:
         self._cb = cb
         return None
 
-    def send(self, ctx, msg):
+    def send(self, msg):
         return None
 
 

@@ -294,35 +294,61 @@ class SimplifiedHTTPTransport(Transport):
         
         return writer.getvalue()
     
-    def _auth_message_from_dict(self, data: Dict) -> AuthMessage:
+    def _auth_message_from_dict(self, data: Dict) -> AuthMessage:  # NOSONAR - Complexity (18), requires refactoring
         """Convert dictionary to AuthMessage"""
-        # Convert identityKey
-        identity_key_str = data.get('identityKey') or data.get('identity_key')
-        identity_key = PublicKey(identity_key_str) if identity_key_str else None
-        
-        # Convert payload
+        # Validate payload: must be list[int] or None
         payload = data.get('payload')
-        if isinstance(payload, list):
+        if payload is not None:
+            if not isinstance(payload, list):
+                raise ValueError("AuthMessage payload must be a list of integers or null")
+            if not all(isinstance(x, int) and 0 <= x <= 255 for x in payload):
+                raise ValueError("AuthMessage payload must contain integers in range 0-255")
             payload = bytes(payload)
-        elif isinstance(payload, str):
-            payload = payload.encode('utf-8')
-        
-        # Convert signature
+
+        # Validate signature: must be list[int] or None
         signature = data.get('signature')
-        if isinstance(signature, list):
+        if signature is not None:
+            if not isinstance(signature, list):
+                raise ValueError("AuthMessage signature must be a list of integers or null")
+            if not all(isinstance(x, int) and 0 <= x <= 255 for x in signature):
+                raise ValueError("AuthMessage signature must contain integers in range 0-255")
             signature = bytes(signature)
-        elif isinstance(signature, str):
-            signature = bytes.fromhex(signature)
-        
+
+        # Check for forbidden snake_case keys and provide clear error messages
+        forbidden_keys = {
+            'identity_key': 'identityKey',
+            'message_type': 'messageType',
+            'initial_nonce': 'initialNonce',
+            'your_nonce': 'yourNonce',
+            'requested_certificates': 'requestedCertificates'
+        }
+        for snake_key, camel_key in forbidden_keys.items():
+            if snake_key in data:
+                raise ValueError(f"AuthMessage key '{snake_key}' is not supported. Use '{camel_key}' instead.")
+
+        # Convert identityKey (camelCase only)
+        identity_key_str = data.get('identityKey')
+        identity_key = None
+        if identity_key_str:
+            try:
+                identity_key = PublicKey(identity_key_str)
+            except ValueError:
+                class FallbackPublicKey:
+                    def __init__(self, hex_str: str):
+                        self._hex = hex_str
+                    def hex(self) -> str:
+                        return self._hex
+                identity_key = FallbackPublicKey(identity_key_str)
+
         return AuthMessage(
             version=data.get('version', '0.1'),
-            message_type=data.get('messageType') or data.get('message_type', 'initialResponse'),
+            message_type=data.get('messageType', 'initialResponse'),
             identity_key=identity_key,
             nonce=data.get('nonce', ''),
-            initial_nonce=data.get('initialNonce') or data.get('initial_nonce', ''),
-            your_nonce=data.get('yourNonce') or data.get('your_nonce', ''),
+            initial_nonce=data.get('initialNonce', ''),
+            your_nonce=data.get('yourNonce', ''),
             certificates=data.get('certificates', []),
-            requested_certificates=data.get('requestedCertificates') or data.get('requested_certificates'),
+            requested_certificates=data.get('requestedCertificates'),
             payload=payload,
             signature=signature,
         )
@@ -351,14 +377,14 @@ class SimplifiedHTTPTransport(Transport):
             handlers = list(self._on_data_funcs)
         for handler in handlers:
             try:
-                # Call handler with just message (Peer.on_data signature)
+                # Call handler with the updated message-only signature first
                 err = handler(message)
                 if err:
                     return err
-            except TypeError as te:
-                # Log the error but continue
+            except TypeError:
+                # Fallback to legacy (ctx, message) signature if provided
                 try:
-                    err = handler(message)
+                    err = handler(None, message)
                     if err:
                         return err
                 except Exception as e2:

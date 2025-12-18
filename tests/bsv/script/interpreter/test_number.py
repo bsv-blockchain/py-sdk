@@ -23,9 +23,9 @@ class TestScriptNumber(unittest.TestCase):
         self.assertEqual(num.value, 0)
 
     def test_from_bytes_single_zero(self):
-        """Test from_bytes with single zero byte."""
-        num = ScriptNumber.from_bytes(b"\x00")
-        self.assertEqual(num.value, 0)
+        """Test from_bytes with single zero byte - should fail minimal encoding."""
+        with self.assertRaises(ValueError):
+            ScriptNumber.from_bytes(b"\x00", require_minimal=True)
 
     def test_from_bytes_positive_single_byte(self):
         """Test from_bytes with positive single byte."""

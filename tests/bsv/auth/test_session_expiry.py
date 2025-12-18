@@ -35,7 +35,7 @@ def test_session_expiry_removes_old_sessions():
     class _DummyTransport:
         def on_data(self, cb):
             return None
-        def send(self, ctx, msg):
+        def send(self, msg):
             return None
 
     p = Peer(PeerOptions(wallet=_DummyWallet(), transport=_DummyTransport(), session_manager=sm))

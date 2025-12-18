@@ -170,11 +170,55 @@ def test_aes_gcm_different_keys_different_output():
         key1 = b'\x00' * 32
         key2 = b'\x01' * 32
         data = b'test'
-        
+
         enc1 = encrypt(data, key1)
         enc2 = encrypt(data, key2)
-        
+
         assert enc1 != enc2
+    except ImportError:
+        pytest.skip(SKIP_AES_GCM)
+
+
+# ========================================================================
+# Missing coverage branches (lines 19-20, 59)
+# ========================================================================
+
+def test_aes_gcm_decrypt_verification_failure():
+    """Test AES-GCM decryption with corrupted data to trigger AESGCMError."""
+    try:
+        from bsv.aes_gcm import aes_gcm_decrypt, AESGCMError
+        key = b'\x00' * 32
+        iv = b'\x01' * 16
+        aad = b'test'
+
+        # Encrypt valid data
+        from bsv.aes_gcm import aes_gcm_encrypt
+        plaintext = b'test message'
+        ciphertext, tag = aes_gcm_encrypt(plaintext, key, iv, aad)
+
+        # Corrupt the ciphertext to trigger verification failure
+        corrupted_ciphertext = ciphertext[:-1] + bytes([ciphertext[-1] ^ 0x01])
+
+        # This should raise AESGCMError
+        with pytest.raises(AESGCMError, match="decryption failed"):
+            aes_gcm_decrypt(corrupted_ciphertext, key, iv, tag, aad)
+
+    except ImportError:
+        pytest.skip(SKIP_AES_GCM)
+
+
+def test_ghash_padding_block():
+    """Test GHASH with input that requires padding (covers line 59)."""
+    try:
+        from bsv.aes_gcm import ghash
+        # Use input that's not a multiple of 16 bytes to trigger padding
+        input_bytes = b'hello world'  # 11 bytes, not multiple of 16
+        hash_subkey = b'\x00' * 16
+
+        result = ghash(input_bytes, hash_subkey)
+        assert len(result) == 16  # GHASH always returns 16 bytes
+        assert isinstance(result, bytes)
+
     except ImportError:
         pytest.skip(SKIP_AES_GCM)
 
