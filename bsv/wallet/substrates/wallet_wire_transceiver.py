@@ -40,6 +40,7 @@ class WalletWireTransceiver:
         response = self.wire.transmit_to_wallet(ctx, frame)
         return read_result_frame(response)
 
+
     def create_action(self, ctx: Any, args: dict, originator: str) -> dict:
         # Use dedicated serializer
         from bsv.wallet.serializer.create_action_args import serialize_create_action_args

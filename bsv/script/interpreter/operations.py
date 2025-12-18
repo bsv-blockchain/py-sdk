@@ -1361,21 +1361,15 @@ def _extract_sighash_from_signature(t: "Thread", sig: bytes) -> tuple:
     sighash_flag = _sighash_from_int(shf_val)
     return sighash_flag, sig_bytes, None
 
-def _compute_signature_hash(t: "Thread", sig: bytes, sighash_flag) -> Optional[bytes]:  # NOSONAR - Complexity (25), requires refactoring
-    """Compute the signature hash digest (32 bytes) for verification."""
-    sub_script = t.sub_script()
-    
-    # Mirror go-sdk: remove signature and OP_CODESEPARATOR when not using forkid mode.
-    if (not t.flags.has_flag(t.flags.ENABLE_SIGHASH_FORK_ID)) or not (int(sighash_flag) & int(SIGHASH.FORKID)):
-        sub_script = remove_signature_from_script(sub_script, sig)
-        sub_script = remove_opcode(sub_script, OpCode.OP_CODESEPARATOR.value)
-    
+def _compute_sighash_internal(t: "Thread", script_bytes: bytes, sighash_flag) -> Optional[bytes]:
+    """
+    Internal helper to compute signature hash from script bytes and sighash flag.
+    Shared by both single signature and multisig operations.
+    """
+    if t.tx is None:
+        return None
+
     try:
-        script_bytes = _serialize_parsed_script(sub_script)
-
-        if t.tx is None:
-            return None
-
         shf_val = int(sighash_flag)
         use_bip143 = t.flags.has_flag(Flag.VERIFY_BIP143_SIGHASH) or (shf_val & int(SIGHASH.FORKID)) != 0
 
@@ -1442,6 +1436,22 @@ def _compute_signature_hash(t: "Thread", sig: bytes, sighash_flag) -> Optional[b
         raw += shf_val.to_bytes(4, "little")
 
         return hash256(bytes(raw))
+    except Exception:
+        return None
+
+
+def _compute_signature_hash(t: "Thread", sig: bytes, sighash_flag) -> Optional[bytes]:  # NOSONAR - Complexity (25), requires refactoring
+    """Compute the signature hash digest (32 bytes) for verification."""
+    sub_script = t.sub_script()
+    
+    # Mirror go-sdk: remove signature and OP_CODESEPARATOR when not using forkid mode.
+    if (not t.flags.has_flag(t.flags.ENABLE_SIGHASH_FORK_ID)) or not (int(sighash_flag) & int(SIGHASH.FORKID)):
+        sub_script = remove_signature_from_script(sub_script, sig)
+        sub_script = remove_opcode(sub_script, OpCode.OP_CODESEPARATOR.value)
+    
+    try:
+        script_bytes = _serialize_parsed_script(sub_script)
+        return _compute_sighash_internal(t, script_bytes, sighash_flag)
     except Exception:
         return None
 
@@ -1548,70 +1558,7 @@ def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSO
         Return signature hash digest (32 bytes) for this multisig evaluation.
         Mirrors go-sdk CalcInputSignatureHash selection between legacy and BIP143-style.
         """
-        if t.tx is None:
-            return None
-        try:
-            shf_val = int(flag)
-            use_bip143 = t.flags.has_flag(Flag.VERIFY_BIP143_SIGHASH) or (shf_val & int(SIGHASH.FORKID)) != 0
-            if use_bip143:
-                txin = t.tx.inputs[t.input_idx]
-                original_locking_script = txin.locking_script
-                original_sighash = txin.sighash
-                txin.locking_script = Script.from_bytes(script_bytes)
-                txin.sighash = _sighash_from_int(shf_val)
-                preimage = t.tx.preimage(t.input_idx)
-                txin.locking_script = original_locking_script
-                txin.sighash = original_sighash
-                return hash256(preimage)
-
-            hash_type = shf_val & 0x1F
-            anyone_can_pay = (shf_val & int(SIGHASH.ANYONECANPAY)) != 0
-
-            if hash_type == int(SIGHASH.SINGLE) and t.input_idx >= len(t.tx.outputs):
-                return b"\x01" + (b"\x00" * 31)
-
-            raw = bytearray()
-            raw += t.tx.version.to_bytes(4, "little")
-
-            if anyone_can_pay:
-                raw += unsigned_to_varint(1)
-                ins = [(t.input_idx, t.tx.inputs[t.input_idx])]
-            else:
-                raw += unsigned_to_varint(len(t.tx.inputs))
-                ins = list(enumerate(t.tx.inputs))
-
-            for i, txin in ins:
-                raw += bytes.fromhex(txin.source_txid)[::-1]
-                raw += txin.source_output_index.to_bytes(4, "little")
-                if i == t.input_idx:
-                    raw += unsigned_to_varint(len(script_bytes))
-                    raw += script_bytes
-                else:
-                    raw += b"\x00"
-
-                seq = txin.sequence
-                if i != t.input_idx and (hash_type == int(SIGHASH.NONE) or hash_type == int(SIGHASH.SINGLE)):
-                    seq = 0
-                raw += seq.to_bytes(4, "little")
-
-            if hash_type == int(SIGHASH.NONE):
-                raw += unsigned_to_varint(0)
-            elif hash_type == int(SIGHASH.SINGLE):
-                raw += unsigned_to_varint(t.input_idx + 1)
-                null_out = (0xFFFFFFFFFFFFFFFF).to_bytes(8, "little") + b"\x00"
-                for _ in range(t.input_idx):
-                    raw += null_out
-                raw += t.tx.outputs[t.input_idx].serialize()
-            else:
-                raw += unsigned_to_varint(len(t.tx.outputs))
-                for o in t.tx.outputs:
-                    raw += o.serialize()
-
-            raw += t.tx.locktime.to_bytes(4, "little")
-            raw += shf_val.to_bytes(4, "little")
-            return hash256(bytes(raw))
-        except Exception:
-            return None
+        return _compute_sighash_internal(t, script_bytes, flag)
 
     # Go-sdk semantics:
     # - only check pubkey encoding once the signature is non-empty and has passed its encoding checks

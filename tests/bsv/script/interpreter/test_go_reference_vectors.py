@@ -329,6 +329,18 @@ def test_go_script_tests_json(test_idx: int, test_vec: list[Any]) -> None:
     assert any(is_error_code(err, c) for c in allowed), f"vector #{test_idx} expected {expected} (codes={allowed}), got {err}"
 
 
+def _build_prev_outs_from_inputs(inputs: list[Any]) -> dict[tuple[str, int], TransactionOutput]:
+    """Build previous outputs dictionary from test vector inputs."""
+    prev_outs: dict[tuple[str, int], TransactionOutput] = {}
+    for inp in inputs:
+        prev_hash = str(inp[0])
+        prev_idx = int(inp[1])
+        prev_script = parse_short_form(str(inp[2]))
+        prev_value = int(inp[3]) if len(inp) == 4 else 0
+        prev_outs[(prev_hash, prev_idx)] = TransactionOutput(locking_script=prev_script, satoshis=prev_value)
+    return prev_outs
+
+
 @pytest.mark.parametrize("test_idx,test_vec", [(i, t) for i, t in enumerate(_load_json("tx_valid.json")) if not (len(t) == 1 and isinstance(t[0], str))])
 def test_go_tx_valid_json(test_idx: int, test_vec: list[Any]) -> None:
     # Format: [[[prev_hash, prev_index, prev_script, amount?]...], serializedTxHex, verifyFlags]
@@ -340,14 +352,7 @@ def test_go_tx_valid_json(test_idx: int, test_vec: list[Any]) -> None:
     assert tx is not None, f"failed to parse tx hex for vector {test_idx}"
 
     flags = parse_script_flags(flags_str)
-
-    prev_outs: dict[tuple[str, int], TransactionOutput] = {}
-    for inp in inputs:
-        prev_hash = str(inp[0])
-        prev_idx = int(inp[1])
-        prev_script = parse_short_form(str(inp[2]))
-        prev_value = int(inp[3]) if len(inp) == 4 else 0
-        prev_outs[(prev_hash, prev_idx)] = TransactionOutput(locking_script=prev_script, satoshis=prev_value)
+    prev_outs = _build_prev_outs_from_inputs(inputs)
 
     engine = Engine()
     for k, txin in enumerate(tx.inputs):
@@ -367,14 +372,7 @@ def test_go_tx_invalid_json(test_idx: int, test_vec: list[Any]) -> None:
     assert tx is not None, f"failed to parse tx hex for vector {test_idx}"
 
     flags = parse_script_flags(flags_str)
-
-    prev_outs: dict[tuple[str, int], TransactionOutput] = {}
-    for inp in inputs:
-        prev_hash = str(inp[0])
-        prev_idx = int(inp[1])
-        prev_script = parse_short_form(str(inp[2]))
-        prev_value = int(inp[3]) if len(inp) == 4 else 0
-        prev_outs[(prev_hash, prev_idx)] = TransactionOutput(locking_script=prev_script, satoshis=prev_value)
+    prev_outs = _build_prev_outs_from_inputs(inputs)
 
     engine = Engine()
     # Any failing input is sufficient for the test case to be considered failing (mirrors Go)
