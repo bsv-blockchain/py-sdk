@@ -747,17 +747,22 @@ class Peer:
             return Exception(f"failed to decode nonce: {e}")
         sig_data = client_initial_bytes + server_session_bytes
         signature = getattr(message, 'signature', None)
+        
+        # Use server's identity key as counterparty for verification (matches TypeScript/Go SDK)
+        # BRC-42 key derivation uses ECDH commutativity:
+        # - Server derived private key using: serverPrivKey.DeriveChild(clientPubKey)
+        # - Client derives public key using: serverPubKey.DeriveChild(clientPrivKey)
+        # Both produce the same shared secret, so the derived keys correspond
+        server_identity_key = getattr(message, 'identity_key', None)
         verify_result = self.wallet.verify_signature({
-            'encryption_args': {
-                'protocol_id': {
-                    'securityLevel': 2,
-                    'protocol': self.AUTH_MESSAGE_SIGNATURE
-                },
-                'key_id': f"{getattr(message, 'your_nonce', '')} {getattr(message, 'initial_nonce', '')}",
-                'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
-                    'counterparty': getattr(message, 'identity_key', None)
-                }
+            'protocolID': {
+                'securityLevel': 2,
+                'protocol': self.AUTH_MESSAGE_SIGNATURE
+            },
+            'keyID': f"{getattr(message, 'your_nonce', '')} {getattr(message, 'initial_nonce', '')}",
+            'counterparty': {
+                'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                'counterparty': server_identity_key  # Use server's identity key (BRC-42 ECDH commutativity)
             },
             'data': sig_data,
             'signature': signature
@@ -900,18 +905,16 @@ class Peer:
         cert_request_data = self._serialize_for_signature(canonical_req)
         signature = getattr(message, 'signature', None)
         verify_result = self.wallet.verify_signature({
-            'encryption_args': {
-                'protocol_id': {
-                    'securityLevel': 2,
-                    'protocol': self.AUTH_MESSAGE_SIGNATURE
-                },
-                'key_id': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
-                'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
-                    'counterparty': sender_public_key
-                },
-                'forSelf': False
+            'protocolID': {
+                'securityLevel': 2,
+                'protocol': self.AUTH_MESSAGE_SIGNATURE
             },
+            'keyID': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
+            'counterparty': {
+                'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                'counterparty': sender_public_key
+            },
+            'forSelf': False,
             'data': cert_request_data,
             'signature': signature
         }, "auth-peer")
@@ -992,16 +995,14 @@ class Peer:
     def _verify_certificate_response_signature(self, message: Any, session: Any, sender_public_key: Any, cert_data: bytes) -> Optional[Exception]:
         signature = getattr(message, 'signature', None)
         verify_result = self.wallet.verify_signature({
-            'encryption_args': {
-                'protocol_id': {
-                    'securityLevel': 2,
-                    'protocol': self.AUTH_MESSAGE_SIGNATURE
-                },
-                'key_id': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
-                'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
-                    'counterparty': sender_public_key
-                }
+            'protocolID': {
+                'securityLevel': 2,
+                'protocol': self.AUTH_MESSAGE_SIGNATURE
+            },
+            'keyID': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
+            'counterparty': {
+                'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                'counterparty': sender_public_key
             },
             'data': cert_data,
             'signature': signature
@@ -1146,23 +1147,19 @@ class Peer:
 
     def _verify_general_message_signature(self, message: Any, session: Any, sender_public_key: Any, data_to_verify: bytes) -> Optional[Exception]:
         signature = getattr(message, 'signature', None)
-        enc = {
-            'encryption_args': {
-                'protocol_id': {
-                    'securityLevel': 2,
-                    'protocol': self.AUTH_MESSAGE_SIGNATURE
-                },
-                'key_id': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
-                'counterparty': {
-                    'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
-                    'counterparty': sender_public_key
-                }
+        verify_result = self.wallet.verify_signature({
+            'protocolID': {
+                'securityLevel': 2,
+                'protocol': self.AUTH_MESSAGE_SIGNATURE
+            },
+            'keyID': f"{getattr(message, 'nonce', '')} {session.session_nonce}",
+            'counterparty': {
+                'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
+                'counterparty': sender_public_key
             },
             'data': data_to_verify,
             'signature': signature
-        }
-
-        verify_result = self.wallet.verify_signature(enc, "auth-peer")
+        }, "auth-peer")
         
         valid = False
         if hasattr(verify_result, 'valid'):
@@ -1610,4 +1607,3 @@ class PeerAuthError(Exception):
 class CertificateError(Exception):
     """Raised for certificate validation or issuance errors."""
     pass
-
