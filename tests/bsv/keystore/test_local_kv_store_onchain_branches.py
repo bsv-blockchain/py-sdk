@@ -164,7 +164,7 @@ def test_get_onchain_value_multiple_outputs(kv_store):
     ]
 
     with patch.object(kv_store, '_lookup_outputs_for_get', return_value=(outputs, b'mock_beef')):
-            with patch.object(kv_store, '_extract_locking_script_from_output', return_value=b'mock_script'):
+        with patch.object(kv_store, '_extract_locking_script_from_output', return_value=b'mock_script'):
             with patch('bsv.transaction.pushdrop.PushDrop.decode', return_value={'fields': [b'data']}):
                 kv_store._get_onchain_value(None, "test_key")
 

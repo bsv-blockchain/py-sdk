@@ -23,7 +23,7 @@ from bsv.script.script import Script
 from bsv.script.interpreter import Engine, with_tx, with_flags
 from bsv.script.interpreter.errs import ErrorCode, is_error_code
 from bsv.script.interpreter.scriptflag import Flag
-from bsv.transaction import Transaction, TransactionOutput
+from bsv.transaction import Transaction, TransactionInput, TransactionOutput
 
 
 VECTORS_DIR = Path(__file__).resolve().parent / "data"
@@ -292,11 +292,9 @@ def test_go_script_tests_json(test_idx: int, test_vec: list[Any]) -> None:
     # - Create a coinbase tx with one input (outpoint = 0..:0xffffffff, scriptSig = OP_0 OP_0)
     # - Add one output with the test locking script and amount
     # - Create a spending tx that spends that output, with the test unlocking script
-    transaction_input = __import__("bsv.transaction_input", fromlist=["TransactionInput"]).TransactionInput
-
     coinbase_tx = Transaction()
     coinbase_tx.add_input(
-        transaction_input(
+        TransactionInput(
             source_txid="00" * 32,
             source_output_index=0xFFFFFFFF,
             unlocking_script=Script.from_bytes(b"\x00\x00"),
