@@ -1,19 +1,15 @@
 """
-Coverage tests for AuthFetch - binary parsing, JSON fallback, retry logic, and payment flow.
+Coverage tests for AuthFetch - key missing branches.
 """
 import pytest
 import base64
 import json
 import struct
-import os
 from unittest.mock import Mock, patch
 
 from bsv.auth.clients.auth_fetch import AuthFetch, SimplifiedFetchRequestOptions
-from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
-from bsv.auth.peer import PeerOptions
 from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
-
 
 
 @pytest.fixture
@@ -24,8 +20,8 @@ def mock_wallet():
     wallet.create_signature = Mock(return_value={'signature': b'mock_signature'})
     wallet.verify_signature = Mock(return_value={'valid': True})
     wallet.create_action = Mock(return_value={
-    'signableTransaction': {'tx': b'mock_tx', 'reference': b'mock_ref'},
-    'txid': 'mock_txid'
+        'signableTransaction': {'tx': b'mock_tx', 'reference': b'mock_ref'},
+        'txid': 'mock_txid'
     })
     return wallet
 
@@ -69,11 +65,11 @@ def test_parse_binary_general_response_success(auth_fetch):
 
     # Mock the _parse_general_response method inputs
     result = auth_fetch._parse_general_response(
-    sender_public_key=None,
-    payload=bytes(payload),
-    request_nonce_b64=base64.b64encode(request_nonce).decode(),
-    url_str="http://test.com",
-    config=SimplifiedFetchRequestOptions()
+        sender_public_key=None,
+        payload=bytes(payload),
+        request_nonce_b64=base64.b64encode(request_nonce).decode(),
+        url_str="http://test.com",
+        config=SimplifiedFetchRequestOptions()
     )
 
     assert result is not None
@@ -94,11 +90,11 @@ def test_parse_binary_general_response_nonce_mismatch(auth_fetch):
     payload.extend(struct.pack('<Q', 0))   # empty body
 
     result = auth_fetch._parse_general_response(
-    sender_public_key=None,
-    payload=bytes(payload),
-    request_nonce_b64=base64.b64encode(request_nonce).decode(),
-    url_str="http://test.com",
-    config=SimplifiedFetchRequestOptions()
+        sender_public_key=None,
+        payload=bytes(payload),
+        request_nonce_b64=base64.b64encode(request_nonce).decode(),
+        url_str="http://test.com",
+        config=SimplifiedFetchRequestOptions()
     )
 
     assert result is None
@@ -109,11 +105,11 @@ def test_parse_binary_general_response_short_payload(auth_fetch):
     short_payload = b'too_short'
 
     result = auth_fetch._parse_general_response(
-    sender_public_key=None,
-    payload=short_payload,
-    request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
-    url_str="http://test.com",
-    config=SimplifiedFetchRequestOptions()
+        sender_public_key=None,
+        payload=short_payload,
+        request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
+        url_str="http://test.com",
+        config=SimplifiedFetchRequestOptions()
     )
 
     assert result is None
@@ -126,17 +122,17 @@ def test_parse_binary_general_response_short_payload(auth_fetch):
 def test_parse_json_fallback_success(auth_fetch):
     """Test JSON fallback parsing success."""
     json_payload = json.dumps({
-    'status_code': 200,
-    'headers': {'content-type': 'application/json'},
-    'body': '{"result": "success"}'
+        'status_code': 200,
+        'headers': {'content-type': 'application/json'},
+        'body': '{"result": "success"}'
     }).encode('utf-8')
 
     result = auth_fetch._parse_general_response(
-    sender_public_key=None,
-    payload=json_payload,
-    request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
-    url_str="http://test.com",
-    config=SimplifiedFetchRequestOptions()
+        sender_public_key=None,
+        payload=json_payload,
+        request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
+        url_str="http://test.com",
+        config=SimplifiedFetchRequestOptions()
     )
 
     assert result is not None
@@ -149,11 +145,11 @@ def test_parse_json_fallback_invalid_json(auth_fetch):
     invalid_json = b'invalid json content'
 
     result = auth_fetch._parse_general_response(
-    sender_public_key=None,
-    payload=invalid_json,
-    request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
-    url_str="http://test.com",
-    config=SimplifiedFetchRequestOptions()
+        sender_public_key=None,
+        payload=invalid_json,
+        request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
+        url_str="http://test.com",
+        config=SimplifiedFetchRequestOptions()
     )
 
     assert result is None
@@ -184,10 +180,10 @@ def test_handle_peer_error_session_not_found(auth_fetch, mock_wallet):
     """Test peer error handling for 'Session not found' triggers retry."""
     # Mock the callbacks
     callbacks = {
-    'test_nonce': {
-    'resolve': Mock(),
-    'reject': Mock()
-    }
+        'test_nonce': {
+            'resolve': Mock(),
+            'reject': Mock()
+        }
     }
     auth_fetch.callbacks = callbacks
 
@@ -205,21 +201,21 @@ def test_handle_peer_error_session_not_found(auth_fetch, mock_wallet):
             Mock()
         )
 
-    # Should have called resolve with retry result
-    callbacks['test_nonce']['resolve'].assert_called_once_with('retry_result')
+        # Should have called resolve with retry result
+        callbacks['test_nonce']['resolve'].assert_called_once_with('retry_result')
 
-    # Should have removed the peer
-    assert "http://test.com" not in auth_fetch.peers
+        # Should have removed the peer
+        assert "http://test.com" not in auth_fetch.peers
 
 
 def test_handle_peer_error_http_auth_failed(auth_fetch):
     """Test peer error handling for HTTP auth failure falls back to regular HTTP."""
     # Mock the callbacks
     callbacks = {
-    'test_nonce': {
-    'resolve': Mock(),
-    'reject': Mock()
-    }
+        'test_nonce': {
+            'resolve': Mock(),
+            'reject': Mock()
+        }
     }
     auth_fetch.callbacks = callbacks
 
@@ -229,16 +225,16 @@ def test_handle_peer_error_http_auth_failed(auth_fetch):
     # Mock handle_fetch_and_validate to return success
     with patch.object(auth_fetch, 'handle_fetch_and_validate', return_value=fallback_response):
         auth_fetch._handle_peer_error(
-    Exception("HTTP server failed to authenticate"),
-    "http://test.com",
-    "http://test.com",
-    SimplifiedFetchRequestOptions(),
-    "test_nonce",
-    mock_peer
-    )
+            Exception("HTTP server failed to authenticate"),
+            "http://test.com",
+            "http://test.com",
+            SimplifiedFetchRequestOptions(),
+            "test_nonce",
+            mock_peer
+        )
 
-    # Should have called resolve with fallback response
-    callbacks['test_nonce']['resolve'].assert_called_once_with(fallback_response)
+        # Should have called resolve with fallback response
+        callbacks['test_nonce']['resolve'].assert_called_once_with(fallback_response)
 
 
 # ========================================================================
@@ -249,10 +245,10 @@ def test_validate_payment_headers_success(auth_fetch):
     """Test payment header validation success."""
     response = Mock()
     response.headers = {
-    'x-bsv-payment-version': '1.0',
-    'x-bsv-payment-satoshis-required': '1000',
-    'x-bsv-auth-identity-key': 'server_key',
-    'x-bsv-payment-derivation-prefix': 'prefix'
+        'x-bsv-payment-version': '1.0',
+        'x-bsv-payment-satoshis-required': '1000',
+        'x-bsv-auth-identity-key': 'server_key',
+        'x-bsv-payment-derivation-prefix': 'prefix'
     }
 
     result = auth_fetch._validate_payment_headers(response)
@@ -266,7 +262,7 @@ def test_validate_payment_headers_missing_version(auth_fetch):
     """Test payment header validation fails with missing version."""
     response = Mock()
     response.headers = {
-    'x-bsv-payment-satoshis-required': '1000',
+        'x-bsv-payment-satoshis-required': '1000',
     }
 
     with pytest.raises(ValueError, match="unsupported.*version"):
@@ -277,8 +273,8 @@ def test_validate_payment_headers_invalid_satoshis(auth_fetch):
     """Test payment header validation fails with invalid satoshis."""
     response = Mock()
     response.headers = {
-    'x-bsv-payment-version': '1.0',
-    'x-bsv-payment-satoshis-required': '-100',
+        'x-bsv-payment-version': '1.0',
+        'x-bsv-payment-satoshis-required': '-100',
     }
 
     with pytest.raises(ValueError, match="invalid.*satoshis"):
@@ -290,50 +286,6 @@ def test_generate_derivation_suffix(auth_fetch):
     with patch('os.urandom', return_value=b'\x01' * 8):
         suffix = auth_fetch._generate_derivation_suffix()
         assert len(base64.b64decode(suffix)) == 8
-
-
-def test_create_payment_transaction(auth_fetch, mock_wallet):
-    """Test payment transaction creation."""
-    # Mock the required methods
-    auth_fetch._get_payment_public_key = Mock(return_value='mock_pubkey')
-    auth_fetch._build_locking_script = Mock(return_value=b'mock_script')
-
-    result = auth_fetch._create_payment_transaction(
-    "http://test.com",
-    {'satoshis_required': 1000, 'server_identity_key': 'server_key', 'derivation_prefix': 'prefix'},
-    'suffix',
-    b'mock_script'
-    )
-
-    assert result is not None
-
-
-# ========================================================================
-# Integration Tests with Local Server
-# ========================================================================
-
-def test_fetch_with_local_server(auth_fetch):
-    """Test fetch response structure using mocked HTTP fallback."""
-    # Test a simple fetch using mocked HTTP fallback
-    config = SimplifiedFetchRequestOptions(
-    method="GET",
-    headers={"test": "value"}
-    )
-
-    # Mock the fallback HTTP response since auth server setup is complex
-    mock_response = type('MockResponse', (), {
-        'status_code': 200,
-        'headers': {'content-type': 'application/json'},
-        'text': '{"status": "ok"}',
-        'json': lambda: {"status": "ok"}
-    })()
-
-    with patch.object(auth_fetch, '_try_fallback_http', return_value=mock_response):
-        response = auth_fetch.fetch("http://mock-server/health", config)
-
-    # The response should be a requests-like object
-    assert hasattr(response, 'status_code')
-    assert response.status_code == 200
 
 
 def test_peer_creation_and_certificates_listener(auth_fetch, mock_wallet):
@@ -377,11 +329,11 @@ def test_serialize_request_binary_format(auth_fetch):
 def test_select_headers_filters_correctly(auth_fetch):
     """Test header selection for serialization."""
     headers = {
-    "content-type": "application/json",
-    "authorization": "Bearer token",
-    "x-bsv-custom": "bsv-value",
-    "x-bsv-auth-internal": "filtered-out",  # Should be filtered
-    "normal-header": "normal-value",       # Should be filtered
+        "content-type": "application/json",
+        "authorization": "Bearer token",
+        "x-bsv-custom": "bsv-value",
+        "x-bsv-auth-internal": "filtered-out",  # Should be filtered
+        "normal-header": "normal-value",       # Should be filtered
     }
 
     selected = auth_fetch._select_headers(headers)

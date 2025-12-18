@@ -505,9 +505,16 @@ class AuthFetch:
             }
         }
         action_result = self.wallet.create_action(action_args, None)
-        if not action_result or "tx" not in action_result:
+        if not action_result:
             raise RuntimeError("wallet.create_action did not return a transaction")
-        tx_bytes = action_result["tx"]
+
+        # Handle both direct tx and signableTransaction.tx formats
+        if "tx" in action_result:
+            tx_bytes = action_result["tx"]
+        elif "signableTransaction" in action_result and "tx" in action_result["signableTransaction"]:
+            tx_bytes = action_result["signableTransaction"]["tx"]
+        else:
+            raise RuntimeError("wallet.create_action did not return a transaction")
         if isinstance(tx_bytes, str):
             return tx_bytes
         else:

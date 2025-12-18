@@ -99,6 +99,8 @@ class WalletWireTransceiver:
         return deserialize_list_actions_result(resp)
 
     def internalize_action(self, ctx: Any, args: dict, originator: str) -> dict:
+        if "tx" not in args:
+            raise ValueError("Missing required argument: tx")
         params = serialize_internalize_action_args(args)
         resp = self.transmit(ctx, WalletWireCall.INTERNALIZE_ACTION, originator, params)
         from bsv.wallet.serializer.internalize_action import (
@@ -125,6 +127,12 @@ class WalletWireTransceiver:
         return deserialize_list_outputs_result(resp)
 
     def relinquish_output(self, ctx: Any, args: dict, originator: str) -> dict:
+        if not args.get("outpoint"):
+            raise ValueError("Missing required argument: outpoint")
+        # Basic validation for outpoint format (should be txid:vout)
+        outpoint = args["outpoint"]
+        if not isinstance(outpoint, str) or ":" not in outpoint:
+            raise ValueError("Invalid outpoint format")
         params = serialize_relinquish_output_args(args)
         resp = self.transmit(ctx, WalletWireCall.RELINQUISH_OUTPUT, originator, params)
         from bsv.wallet.serializer.relinquish_output import (
@@ -155,6 +163,8 @@ class WalletWireTransceiver:
         return deserialize_get_public_key_result(resp)
 
     def reveal_counterparty_key_linkage(self, ctx: Any, args: dict, originator: str) -> dict:
+        if not args.get('counterparty'):
+            raise ValueError("Missing required argument: counterparty")
         params = serialize_reveal_counterparty_key_linkage_args(args)
         resp = self.transmit(ctx, WalletWireCall.REVEAL_COUNTERPARTY_KEY_LINKAGE, originator, params)
         from bsv.wallet.serializer.key_linkage import deserialize_key_linkage_result
@@ -166,6 +176,8 @@ class WalletWireTransceiver:
         return deserialize_key_linkage_result(resp)
 
     def reveal_specific_key_linkage(self, ctx: Any, args: dict, originator: str) -> dict:
+        if not args.get('protocolID'):
+            raise ValueError("Missing required argument: protocolID")
         params = serialize_reveal_specific_key_linkage_args(args)
         resp = self.transmit(ctx, WalletWireCall.REVEAL_SPECIFIC_KEY_LINKAGE, originator, params)
         from bsv.wallet.serializer.key_linkage import deserialize_key_linkage_result
@@ -204,6 +216,8 @@ class WalletWireTransceiver:
         return deserialize_decrypt_result(resp)
 
     def create_hmac(self, ctx: Any, args: dict, originator: str) -> dict:
+        if not args.get('data'):
+            raise ValueError("Missing required argument: data")
         enc = args.get('encryption_args', {})
         proto = enc.get('protocolID') or {}
         key_id = enc.get('keyID') or ''
@@ -238,6 +252,8 @@ class WalletWireTransceiver:
         return {"hmac": resp}
 
     def verify_hmac(self, ctx: Any, args: dict, originator: str) -> dict:
+        if not args.get('hmac'):
+            raise ValueError("Missing required argument: hmac")
         enc = args.get('encryption_args', {})
         proto = enc.get('protocolID') or {}
         key_id = enc.get('keyID') or ''
@@ -273,6 +289,8 @@ class WalletWireTransceiver:
         return {"valid": bool(resp and len(resp) > 0 and resp[0] == 1)}
 
     def create_signature(self, ctx: Any, args: dict, originator: str) -> dict:
+        if not args.get('data') and not args.get('hashToDirectlySign'):
+            raise ValueError("Missing required argument: data or hashToDirectlySign")
         enc = args.get('encryption_args', {})
         proto = enc.get('protocolID') or {}
         key_id = enc.get('keyID') or ''
@@ -370,6 +388,8 @@ class WalletWireTransceiver:
         return deserialize_list_certificates_result(resp)
 
     def prove_certificate(self, ctx: Any, args: dict, originator: str) -> dict:
+        if not args.get('verifier'):
+            raise ValueError("Missing required argument: verifier")
         params = serialize_prove_certificate_args(args)
         resp = self.transmit(ctx, WalletWireCall.PROVE_CERTIFICATE, originator, params)
         from bsv.wallet.serializer.prove_certificate import (
@@ -492,6 +512,8 @@ class WalletWireTransceiver:
         return {"authenticated": True}
 
     def get_height(self, ctx: Any, args: dict, originator: str) -> dict:
+        if not args.get('header'):
+            raise ValueError("Missing required argument: header")
         params = serialize_get_height_args(args)
         resp = self.transmit(ctx, WalletWireCall.GET_HEIGHT, originator, params)
         from bsv.wallet.serializer.get_network import deserialize_get_height_result

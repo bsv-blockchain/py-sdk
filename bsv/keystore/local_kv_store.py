@@ -158,64 +158,66 @@ class LocalKVStore(KVStoreInterface):
         decoded = PushDrop.decode(locking_script)
         if decoded and isinstance(decoded.get("fields"), list) and decoded["fields"]:
             first_field = decoded["fields"][0]
-            # If encryption is enabled, attempt to decrypt and return plaintext
-            if self._encrypt:
-                # When default_ca is provided (beef E2E flow), tests expect enc:BASE64 ciphertext
-                if isinstance(self._default_ca, dict) and self._default_ca:
-                    try:
-                        if isinstance(first_field, (bytes, bytearray)):
-                            return "enc:" + base64.b64encode(bytes(first_field)).decode("ascii")
-                        elif isinstance(first_field, str):
-                            if first_field.startswith("enc:"):
-                                return first_field
-                            return "enc:" + base64.b64encode(first_field.encode("utf-8")).decode("ascii")
-                    except Exception:
-                        pass
+            # If encryption is enabled and default_ca is provided, return encrypted form for compatibility
+            if self._encrypt and isinstance(self._default_ca, dict) and self._default_ca:
                 try:
-                    # Normalize ciphertext bytes
                     if isinstance(first_field, (bytes, bytearray)):
-                        ciphertext = bytes(first_field)
+                        return "enc:" + base64.b64encode(bytes(first_field)).decode("ascii")
                     elif isinstance(first_field, str):
                         if first_field.startswith("enc:"):
-                            ciphertext = base64.b64decode(first_field[4:])
-                        else:
-                            ciphertext = first_field.encode('utf-8')
-                    else:
-                        ciphertext = b""
-                    # Build encryption_args from defaults
-                    ca_args = self._merge_default_ca(None)
-                    pd_opts = ca_args.get("pushdrop") or {}
-                    protocol_id = (
-                        ca_args.get("protocol_id")
-                        or ca_args.get("protocolID")
-                        or pd_opts.get("protocol_id")
-                        or pd_opts.get("protocolID")
-                    )
-                    key_id = (
-                        ca_args.get("key_id")
-                        or ca_args.get("keyID")
-                        or pd_opts.get("key_id")
-                        or pd_opts.get("keyID")
-                    )
-                    # CounterpartyType: SELF=2, ANYONE=1, OTHER=3, UNINITIALIZED=0
-                    counterparty = ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 2}  # Default to SELF (2)
-                    dec_res = self._wallet.decrypt(
-                        ctx,
-                        {
-                            "encryption_args": {
-                                "protocolID": protocol_id,
-                                "keyID": key_id,
-                                "counterparty": counterparty,
-                            },
-                            "ciphertext": ciphertext,
-                        },
-                        self._originator,
-                    ) or {}
-                    pt = dec_res.get("plaintext")
-                    if isinstance(pt, (bytes, bytearray)):
-                        return pt.decode('utf-8')
+                            return first_field
+                        return "enc:" + base64.b64encode(first_field.encode("utf-8")).decode("ascii")
                 except Exception:
                     pass
+                    try:
+                        # Normalize ciphertext bytes
+                        if isinstance(first_field, (bytes, bytearray)):
+                            first_field_bytes = bytes(first_field)
+                            if first_field_bytes.startswith(b'enc:'):
+                                ciphertext = base64.b64decode(first_field_bytes[4:])
+                            else:
+                                ciphertext = first_field_bytes
+                        elif isinstance(first_field, str):
+                            if first_field.startswith("enc:"):
+                                ciphertext = base64.b64decode(first_field[4:])
+                            else:
+                                ciphertext = first_field.encode('utf-8')
+                        else:
+                            ciphertext = b""
+                        # Build encryption_args from defaults
+                        ca_args = self._merge_default_ca(None)
+                        pd_opts = ca_args.get("pushdrop") or {}
+                        protocol_id = (
+                            ca_args.get("protocol_id")
+                            or ca_args.get("protocolID")
+                            or pd_opts.get("protocol_id")
+                            or pd_opts.get("protocolID")
+                        )
+                        key_id = (
+                            ca_args.get("key_id")
+                            or ca_args.get("keyID")
+                            or pd_opts.get("key_id")
+                            or pd_opts.get("keyID")
+                        )
+                        # CounterpartyType: SELF=2, ANYONE=1, OTHER=3, UNINITIALIZED=0
+                        counterparty = ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 2}  # Default to SELF (2)
+                        dec_res = self._wallet.decrypt(
+                            ctx,
+                            {
+                                "encryption_args": {
+                                    "protocolID": protocol_id,
+                                    "keyID": key_id,
+                                    "counterparty": counterparty,
+                                },
+                                "ciphertext": ciphertext,
+                            },
+                            self._originator,
+                        ) or {}
+                        pt = dec_res.get("plaintext")
+                        if isinstance(pt, (bytes, bytearray)):
+                            return pt.decode('utf-8')
+                    except Exception:
+                        pass
                 # Fallbacks (if decrypt not possible), try to decode as utf-8
                 try:
                     if isinstance(first_field, (bytes, bytearray)):

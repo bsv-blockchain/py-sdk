@@ -21,15 +21,19 @@ def build_pushdrop_locking_script(items: List[Union[str, bytes]]) -> str:
     return b"".join(parts).hex()
 
 
-def parse_pushdrop_locking_script(script: bytes) -> List[bytes]:
+def parse_pushdrop_locking_script(script: Union[bytes, str]) -> List[bytes]:
     """
     Parse a PushDrop locking script built as: <data> OP_DROP ... OP_TRUE
     Returns the sequence of pushed data items.
     """
+    # Convert hex string to bytes if needed
+    if isinstance(script, str):
+        script = bytes.fromhex(script)
+
     items: List[bytes] = []
     i = 0
     n = len(script)
-    
+
     while i < n:
         op = script[i]
         i += 1
@@ -44,14 +48,19 @@ def parse_pushdrop_locking_script(script: bytes) -> List[bytes]:
         data, new_i = result
         if data is None:
             break  # Invalid data, stop parsing
-        
-        items.append(data)
+
+        # Skip empty data pushes for PushDrop
+        if data:
+            items.append(data)
         i = new_i
     
     return items
 
 def _parse_push_opcode(op: int, script: bytes, i: int, n: int) -> Optional[tuple]:
     """Parse a single push opcode and return (data, new_index) or None if not a push."""
+    # Ensure op is an integer for comparison
+    if isinstance(op, bytes):
+        op = op[0] if len(op) > 0 else 0
     if op <= 75:
         return _parse_direct_push(op, script, i, n)
     elif op == 0x4c:  # OP_PUSHDATA1
@@ -209,11 +218,13 @@ def _arrange_chunks_by_position(lock_chunks: List[bytes], pushdrop_chunks: List[
 def _convert_chunks_to_bytes(chunks: List[bytes]) -> List[bytes]:
     """Convert all chunks to bytes, handling OpCodes."""
     print(f"[DEBUG] chunks types: {[(type(c), c if isinstance(c, bytes) and len(c) <= 10 else f'bytes[{len(c)}]' if isinstance(c, bytes) else str(c)) for c in chunks]}")
-    
+
     byte_chunks = []
     for chunk in chunks:
         if isinstance(chunk, bytes):
             byte_chunks.append(chunk)
+        elif hasattr(chunk, 'value'):  # OpCode enum
+            byte_chunks.append(chunk.value)
         else:
             try:
                 if hasattr(chunk, '__bytes__'):
@@ -224,7 +235,7 @@ def _convert_chunks_to_bytes(chunks: List[bytes]) -> List[bytes]:
             except Exception as e:
                 print(f"[ERROR] Failed to convert {type(chunk)} to bytes: {e}")
                 byte_chunks.append(b'\x51')  # Fallback to OP_TRUE
-    
+
     return byte_chunks
 
 
