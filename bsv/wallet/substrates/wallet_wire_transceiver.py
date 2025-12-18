@@ -292,7 +292,11 @@ class WalletWireTransceiver:
     def create_signature(self, ctx: Any, args: dict, originator: str) -> dict:
         if not args.get('data') and not args.get('hashToDirectlySign'):
             raise ValueError("Missing required argument: data or hashToDirectlySign")
+        # Support both nested (encryption_args) and top-level parameter formats
         enc = args.get('encryption_args', {})
+        if not enc:
+            # If no encryption_args, check for top-level parameters (direct ProtoWallet format)
+            enc = args
         proto = enc.get('protocolID') or {}
         key_id = enc.get('keyID') or ''
         counterparty = enc.get('counterparty')
@@ -327,7 +331,11 @@ class WalletWireTransceiver:
         return {"signature": resp}
 
     def verify_signature(self, ctx: Any, args: dict, originator: str) -> dict:
+        # Support both nested (encryption_args) and top-level parameter formats
         enc = args.get('encryption_args', {})
+        if not enc:
+            # If no encryption_args, check for top-level parameters (direct ProtoWallet format)
+            enc = args
         proto = enc.get('protocolID') or {}
         key_id = enc.get('keyID') or ''
         counterparty = enc.get('counterparty')
