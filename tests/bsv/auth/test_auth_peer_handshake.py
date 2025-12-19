@@ -26,7 +26,12 @@ class HandshakeWallet:
     def verify_signature(self, args=None, originator=None):
         data: bytes = args.get("data", b"")
         sig: bytes = args.get("signature")
-        cp = args.get("encryption_args", {}).get("counterparty")
+        # Support both nested (encryption_args) and top-level parameter formats
+        enc = args.get("encryption_args", {})
+        if not enc:
+            # If no encryption_args, check for top-level parameters (direct format)
+            enc = args
+        cp = enc.get("counterparty")
         # Counterparty may be dict {type, counterparty}
         pub = None
         if isinstance(cp, dict):
