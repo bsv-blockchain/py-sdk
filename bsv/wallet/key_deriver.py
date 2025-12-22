@@ -155,22 +155,23 @@ class KeyDeriver:
         This is intentional and matches TS/Go SDK behavior for asymmetric key derivation.
         """
         invoice_number = self.compute_invoice_number(protocol, key_id)
-        # Determine counterparty pub used for tweak
-        cp_pub = counterparty.to_public_key(self._root_public_key) if not for_self else self._root_public_key
-        delta = self._branch_scalar(invoice_number, cp_pub)
         
         if for_self:
-            # forSelf=True: derived from root's perspective
-            # tweaked public = root_pub + delta*G
-            delta_point = curve_multiply(delta, curve.g)
-            new_point = curve_add(self._root_public_key.point(), delta_point)
+            # forSelf=True: Derive private key first, then get public key
+            # This matches Go: privKey = rootKey.DeriveChild(counterparty, invoice); return privKey.PubKey()
+            # This matches TS: rootKey.deriveChild(counterparty, invoice).toPublicKey()
+            cp_pub = counterparty.to_public_key(self._root_public_key)
+            delta = self._branch_scalar(invoice_number, cp_pub)
+            derived_priv = PrivateKey((self._root_private_key.int() + delta) % CURVE_ORDER)
+            return derived_priv.public_key()
         else:
             # forSelf=False: derived from counterparty's perspective
             # tweaked public = cp_pub + delta*G
+            cp_pub = counterparty.to_public_key(self._root_public_key)
+            delta = self._branch_scalar(invoice_number, cp_pub)
             delta_point = curve_multiply(delta, curve.g)
             new_point = curve_add(cp_pub.point(), delta_point)
-        
-        return PublicKey(new_point)
+            return PublicKey(new_point)
 
     def derive_symmetric_key(self, protocol: Protocol, key_id: str, counterparty: Counterparty) -> bytes:
         """Derive a symmetric key based on protocol ID, key ID, and counterparty.

@@ -613,31 +613,58 @@ class ProtoWallet(WalletInterface):
                 print(f"[DEBUG ProtoWallet.verify_hmac] cp normalization error: {dbg_e}")
 
     def verify_hmac(self, args: VerifyHmacArgs = None, originator: str = None) -> Dict:
+        print(f"[ProtoWallet.verify_hmac] Starting verification")
+        print(f"[ProtoWallet.verify_hmac] Args: {args}")
         try:
             # Extract parameters
             encryption_args, protocol_id, key_id, counterparty, data, hmac_value = self._extract_hmac_params(args)
             
+            print(f"[ProtoWallet.verify_hmac] Extracted params:")
+            print(f"  - protocol_id: {protocol_id}")
+            print(f"  - key_id: {key_id} (type: {type(key_id)}, length: {len(key_id) if isinstance(key_id, str) else 'N/A'})")
+            print(f"  - counterparty: {counterparty} (type: {type(counterparty)})")
+            print(f"  - data: {data.hex() if isinstance(data, bytes) else data} (length: {len(data) if isinstance(data, bytes) else 'N/A'})")
+            print(f"  - hmac_value: {hmac_value.hex() if isinstance(hmac_value, bytes) else hmac_value} (length: {len(hmac_value) if isinstance(hmac_value, bytes) else 'N/A'})")
+            
             # Validate required fields
             if protocol_id is None or key_id is None:
-                return {"error": "verify_hmac: protocol_id and key_id are required"}
+                error_msg = "verify_hmac: protocol_id and key_id are required"
+                print(f"[ProtoWallet.verify_hmac] ERROR: {error_msg}")
+                return {"error": error_msg}
             if hmac_value is None:
-                return {"error": "verify_hmac: hmac is required"}
+                error_msg = "verify_hmac: hmac is required"
+                print(f"[ProtoWallet.verify_hmac] ERROR: {error_msg}")
+                return {"error": error_msg}
             
             # Normalize protocol and counterparty
             protocol = self._normalize_protocol(protocol_id) if isinstance(protocol_id, dict) else protocol_id
             cp = self._normalize_counterparty(counterparty)
             
+            print(f"[ProtoWallet.verify_hmac] Normalized:")
+            print(f"  - protocol: {protocol}")
+            print(f"  - counterparty normalized: {cp}")
+            
             # Debug logging
             self._debug_log_hmac_params(encryption_args, cp)
             
             # Derive shared secret and verify HMAC
+            print(f"[ProtoWallet.verify_hmac] Deriving symmetric key...")
             shared_secret = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
+            print(f"[ProtoWallet.verify_hmac] Shared secret length: {len(shared_secret)}")
+            print(f"[ProtoWallet.verify_hmac] Computing expected HMAC...")
             expected = hmac.new(shared_secret, data, hashlib.sha256).digest()
+            print(f"[ProtoWallet.verify_hmac] Expected HMAC: {expected.hex()}")
+            print(f"[ProtoWallet.verify_hmac] Received HMAC: {hmac_value.hex() if isinstance(hmac_value, bytes) else hmac_value}")
             valid = hmac.compare_digest(expected, hmac_value)
+            print(f"[ProtoWallet.verify_hmac] HMAC comparison result: {valid}")
             
             return {"valid": valid}
         except Exception as e:
-            return {"error": f"verify_hmac: {e}"}
+            error_msg = f"verify_hmac: {e}"
+            print(f"[ProtoWallet.verify_hmac] EXCEPTION: {error_msg}")
+            import traceback
+            print(f"[ProtoWallet.verify_hmac] Traceback: {traceback.format_exc()}")
+            return {"error": error_msg}
 
     def abort_action(self, *a, **k):
         # NOTE: This mock wallet does not manage long-running actions, so there is

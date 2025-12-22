@@ -7,21 +7,30 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None) -> bool:
     Verifies that a nonce was derived from the given wallet.
     Ported from Go/TypeScript verifyNonce.
     """
+    print(f"[verify_nonce] Starting verification, nonce length: {len(nonce) if nonce else 0}")
+    print(f"[verify_nonce] Counterparty: {counterparty}")
     try:
         nonce_bytes = base64.b64decode(nonce)
-    except Exception:
+        print(f"[verify_nonce] Decoded nonce bytes length: {len(nonce_bytes)}")
+    except Exception as e:
+        print(f"[verify_nonce] ERROR: Failed to decode nonce: {e}")
         return False
     if len(nonce_bytes) <= 16:
+        print(f"[verify_nonce] ERROR: Nonce too short: {len(nonce_bytes)} bytes (need > 16)")
         return False
     data = nonce_bytes[:16]
     hmac = nonce_bytes[16:]
+    print(f"[verify_nonce] Data (first 16 bytes): {data.hex()}")
+    print(f"[verify_nonce] HMAC (remaining bytes, length {len(hmac)}): {hmac.hex()}")
+    
     # Prepare encryption_args for wallet.verify_hmac
+    key_id = data.decode('latin1')
     encryption_args = {
         'protocolID': {
             'securityLevel': 1,  # Go version: SecurityLevelEveryApp = 1
             'protocol': 'server hmac'
         },
-        'keyID': data.decode('latin1'),  # Go version: string(randomBytes)
+        'keyID': key_id,  # Go version: string(randomBytes)
         'counterparty': counterparty
     }
     args = {
@@ -29,14 +38,28 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None) -> bool:
         'data': data,
         'hmac': hmac
     }
+    print(f"[verify_nonce] Calling wallet.verify_hmac with:")
+    print(f"  - protocolID: {encryption_args['protocolID']}")
+    print(f"  - keyID: {key_id} (length: {len(key_id)})")
+    print(f"  - counterparty: {counterparty}")
+    print(f"  - data length: {len(data)}")
+    print(f"  - hmac length: {len(hmac)}")
     try:
         result = wallet.verify_hmac(args, "")
-        print(f"[verify_nonce] result={result}")
+        print(f"[verify_nonce] wallet.verify_hmac result: {result}")
+        print(f"[verify_nonce] result type: {type(result)}")
         if isinstance(result, dict):
-            return bool(result.get('valid', False))
+            valid = bool(result.get('valid', False))
+            print(f"[verify_nonce] Valid (from dict): {valid}")
+            return valid
         else:
-            return bool(getattr(result, 'valid', False))
-    except Exception:
+            valid = bool(getattr(result, 'valid', False))
+            print(f"[verify_nonce] Valid (from attr): {valid}")
+            return valid
+    except Exception as e:
+        print(f"[verify_nonce] ERROR: Exception during verify_hmac: {e}")
+        import traceback
+        print(f"[verify_nonce] Traceback: {traceback.format_exc()}")
         return False
 
 def create_nonce(wallet: Any, counterparty: Any = None) -> str:
