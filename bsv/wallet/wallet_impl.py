@@ -660,7 +660,7 @@ class ProtoWallet(WalletInterface):
                 return {"error": error_msg}
             
             # Normalize protocol and counterparty
-            protocol = self._normalize_protocol(protocol_id) if isinstance(protocol_id, dict) else protocol_id
+            protocol = self._normalize_protocol(protocol_id)
             cp = self._normalize_counterparty(counterparty)
             
             print(f"[ProtoWallet.verify_hmac] Normalized:")

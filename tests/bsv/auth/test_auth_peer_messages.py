@@ -95,7 +95,7 @@ def test_general_message_invalid_signature_returns_error():
         message_type="general",
         identity_key=sender_pub,
         nonce=base64.b64encode(b"N" * 32).decode(),
-        your_nonce=peer_nonce,
+        your_nonce=session_nonce,
         payload=b"hello",
         signature=b"\x30\x00",
     )

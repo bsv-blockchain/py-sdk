@@ -545,10 +545,7 @@ def test_kvstore_set_transaction_verify_with_merkle_proof():
     value = "hello"
     field_bytes = value.encode()
     pub = wallet.get_public_key({
-        "protocolID": {"securityLevel": 2, "protocol": "kvctx"},
-        "keyID": key,
-        "counterparty": {"type": 0},
-        "forSelf": True,
+        "identityKey": True,
     }, "org") or {}
     pubhex = pub.get("publicKey") or ""
     assert isinstance(pubhex, str) and len(pubhex) >= 66

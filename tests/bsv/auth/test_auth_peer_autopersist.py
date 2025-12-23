@@ -18,8 +18,6 @@ class CaptureTransport:
 
     def send(self, message):
         self.sent.append(message)
-        if self._on_data_callback is not None:
-            return self._on_data_callback(message)
         return None
 
 

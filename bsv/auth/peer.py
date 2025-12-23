@@ -1062,12 +1062,12 @@ class Peer:
             print(f"[Peer._verify_your_nonce] Case 1: Checking session for sender: {sender_key_hex}")
             session = self.session_manager.get_session(sender_key_hex)
             if session:
-                print(f"[Peer._verify_your_nonce] Found session, session_nonce: {session.session_nonce}")
-                if session.session_nonce == your_nonce:
-                    print(f"[Peer._verify_your_nonce] Case 1 SUCCESS: your_nonce matches session_nonce")
-                    return None  # Valid: your_nonce matches our session nonce
+                print(f"[Peer._verify_your_nonce] Found session, peer_nonce: {session.peer_nonce}")
+                if session.peer_nonce == your_nonce:
+                    print(f"[Peer._verify_your_nonce] Case 1 SUCCESS: your_nonce matches peer_nonce")
+                    return None  # Valid: your_nonce matches peer nonce
                 else:
-                    print(f"[Peer._verify_your_nonce] Case 1 FAILED: session_nonce mismatch")
+                    print(f"[Peer._verify_your_nonce] Case 1 FAILED: peer_nonce mismatch")
             else:
                 print(f"[Peer._verify_your_nonce] Case 1: No session found for sender")
         
@@ -1168,9 +1168,10 @@ class Peer:
             return err
         print(f"[Peer.handle_general_message] your_nonce verified successfully")
 
-        # Get session using your_nonce (matches Go SDK: GetSession(message.YourNonce) and TypeScript: getSession(message.yourNonce))
-        # This uniquely identifies the session even when multiple devices share the same identity key
-        session = self.session_manager.get_session(your_nonce) if your_nonce else None
+        # Get session using sender's identity key
+        # Since your_nonce verification already confirmed the session exists
+        sender_key_hex = sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
+        session = self.session_manager.get_session(sender_key_hex)
         if session is None:
             return Exception(self.SESSION_NOT_FOUND)
 

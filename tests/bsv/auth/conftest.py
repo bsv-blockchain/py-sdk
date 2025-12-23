@@ -95,8 +95,6 @@ class LocalTransport:
         self.sent_messages.append(message)
         if self.peer and self.peer._on_data_callback:
             return self.peer._on_data_callback(message)
-        elif self._on_data_callback is not None:
-            return self._on_data_callback(message)
         return None
 
 
