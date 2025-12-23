@@ -486,11 +486,34 @@ class ProtoWallet(WalletInterface):
             # TS ProtoWallet.verifySignature: args.counterparty ?? 'self'
             if counterparty is None:
                 counterparty = "self"
+            
+            # Always log for debugging (temporary - remove after fixing)
+            print(f"[ProtoWallet.verify_signature] counterparty before normalize: {type(counterparty)} = {counterparty}")
+            if isinstance(counterparty, dict):
+                print(f"[ProtoWallet.verify_signature] counterparty dict keys: {list(counterparty.keys())}")
+                if 'counterparty' in counterparty:
+                    cp_val = counterparty['counterparty']
+                    if hasattr(cp_val, 'hex'):
+                        print(f"[ProtoWallet.verify_signature] counterparty.counterparty.hex: {cp_val.hex()}")
+            
             cp = self._normalize_counterparty(counterparty)
+            
+            # Always log for debugging
+            cp_pub = cp.to_public_key(self.key_deriver.identity_key()) if hasattr(cp, 'to_public_key') else None
+            cp_hex = cp_pub.hex() if cp_pub else str(cp)
+            print(f"[ProtoWallet.verify_signature] counterparty after normalize: type={cp.type}, pub={cp_hex}")
+            print(f"[ProtoWallet.verify_signature] Server identity key: {self.key_deriver.identity_key().hex()}")
+            print(f"[ProtoWallet.verify_signature] protocol: {protocol.security_level}-{protocol.protocol}")
+            print(f"[ProtoWallet.verify_signature] key_id: {key_id}")
+            print(f"[ProtoWallet.verify_signature] for_self: {for_self}")
+            
             pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self)
             
             # Debug logging
             self._debug_log_verify_params(protocol_id, key_id, for_self, cp, pub)
+            
+            # Always log derived key
+            print(f"[ProtoWallet.verify_signature] Server derived pub key: {pub.hex()}")
             
             # Get data and signature
             signature = args.get("signature")

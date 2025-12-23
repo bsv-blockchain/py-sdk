@@ -23,23 +23,21 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None) -> bool:
     print(f"[verify_nonce] Data (first 16 bytes): {data.hex()}")
     print(f"[verify_nonce] HMAC (remaining bytes, length {len(hmac)}): {hmac.hex()}")
     
-    # Prepare encryption_args for wallet.verify_hmac
+    # Default counterparty to 'self' if not provided (matches TypeScript)
+    if counterparty is None:
+        counterparty = 'self'
+    
+    # FLAT structure like TypeScript, no encryption_args wrapper!
     key_id = data.decode('latin1')
-    encryption_args = {
-        'protocolID': {
-            'securityLevel': 1,  # Go version: SecurityLevelEveryApp = 1
-            'protocol': 'server hmac'
-        },
-        'keyID': key_id,  # Go version: string(randomBytes)
-        'counterparty': counterparty
-    }
     args = {
-        'encryption_args': encryption_args,
+        'protocolID': [2, 'server hmac'],  # TypeScript uses [2, 'server hmac']
+        'keyID': key_id,
+        'counterparty': counterparty,
         'data': data,
         'hmac': hmac
     }
     print(f"[verify_nonce] Calling wallet.verify_hmac with:")
-    print(f"  - protocolID: {encryption_args['protocolID']}")
+    print(f"  - protocolID: [2, 'server hmac']")
     print(f"  - keyID: {key_id} (length: {len(key_id)})")
     print(f"  - counterparty: {counterparty}")
     print(f"  - data length: {len(data)}")
@@ -65,27 +63,42 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None) -> bool:
 def create_nonce(wallet: Any, counterparty: Any = None) -> str:
     """
     Creates a nonce derived from a wallet (ported from TypeScript createNonce).
+    
+    Matches TypeScript SDK exactly:
+    - protocolID: [2, 'server hmac']
+    - Flat structure, no encryption_args wrapper
     """
     # Generate 16 random bytes for the first half of the data
     first_half = os.urandom(16)
-    # Create an sha256 HMAC
-    encryption_args = {
-        'protocolID': {
-            'securityLevel': 1,  # Go version: SecurityLevelEveryApp = 1
-            'protocol': 'server hmac'
-        },
-        'keyID': first_half.decode('latin1'),  # Go version: string(randomBytes)
-        'counterparty': counterparty
-    }
+    
+    # Default counterparty to 'self' if not provided (matches TypeScript)
+    if counterparty is None:
+        counterparty = 'self'
+    
+    # Create an sha256 HMAC - FLAT structure like TypeScript, no encryption_args!
     args = {
-        'encryption_args': encryption_args,
+        'protocolID': [2, 'server hmac'],  # TypeScript uses [2, 'server hmac']
+        'keyID': first_half.decode('latin1'),
+        'counterparty': counterparty,
         'data': first_half
     }
+    print(f"[create_nonce] About to call wallet.create_hmac with:")
+    print(f"  protocolID: {args['protocolID']}")
+    print(f"  keyID length: {len(args['keyID'])}")
+    print(f"  counterparty: {args['counterparty']}")
+    print(f"  data length: {len(args['data'])}")
     result = wallet.create_hmac(args, "")
     print(f"[create_nonce] result={result}")
     hmac = result.get('hmac') if isinstance(result, dict) else getattr(result, 'hmac', None)
     if hmac is None:
         raise RuntimeError('Failed to create HMAC for nonce')
+    
+    # Ensure hmac is bytes (it might be a list from some wallets)
+    if isinstance(hmac, list):
+        hmac = bytes(hmac)
+    elif not isinstance(hmac, bytes):
+        hmac = bytes(hmac)
+    
     nonce_bytes = first_half + hmac
     return base64.b64encode(nonce_bytes).decode('ascii')
 

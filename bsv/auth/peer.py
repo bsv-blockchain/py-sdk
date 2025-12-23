@@ -1168,8 +1168,9 @@ class Peer:
             return err
         print(f"[Peer.handle_general_message] your_nonce verified successfully")
 
-        # Get session
-        session = self.session_manager.get_session(sender_public_key.hex()) if sender_public_key else None
+        # Get session using your_nonce (matches Go SDK: GetSession(message.YourNonce) and TypeScript: getSession(message.yourNonce))
+        # This uniquely identifies the session even when multiple devices share the same identity key
+        session = self.session_manager.get_session(your_nonce) if your_nonce else None
         if session is None:
             return Exception(self.SESSION_NOT_FOUND)
 
@@ -1208,11 +1209,46 @@ class Peer:
     def _verify_general_message_signature(self, message: Any, session: Any, sender_public_key: Any, data_to_verify: bytes) -> Optional[Exception]:
         signature = getattr(message, 'signature', None)
         message_nonce = getattr(message, 'nonce', '')
+        # CRITICAL FIX: The client and server must use the SAME nonce in the keyID!
+        # 
+        # TypeScript client (Peer.ts:135): keyID = `${requestNonce} ${peerSession.peerNonce}`
+        # Where peerSession.peerNonce = server's nonce from initial handshake (line 606: peerNonce = message.initialNonce)
+        #
+        # TypeScript server (Peer.ts:838): keyID = `${message.nonce} ${peerSession.sessionNonce}`
+        # Where peerSession.sessionNonce = server's OWN nonce from initial handshake
+        #
+        # Both refer to the SAME server nonce, but from different perspectives:
+        # - Client calls it peerNonce (the other party's nonce)
+        # - Server calls it sessionNonce (my own nonce)
+        #
+        # Python fix: Use session_nonce (server's own nonce) to match TypeScript/Go
         key_id = f"{message_nonce} {session.session_nonce}"
+        print(f"[Peer._verify_general_message_signature] Using session_nonce (server's own nonce): {session.session_nonce[:20] if session.session_nonce else 'None'}...")
         print(f"[Peer._verify_general_message_signature] keyID: '{key_id}'")
         print(f"[Peer._verify_general_message_signature] message.nonce: {message_nonce}")
         print(f"[Peer._verify_general_message_signature] session.session_nonce: {session.session_nonce}")
-        print(f"[Peer._verify_general_message_signature] counterparty (sender/client identity key): {sender_public_key.hex() if hasattr(sender_public_key, 'hex') else sender_public_key}")
+        
+        # Use session.peer_identity_key to match TypeScript: peerSession.peerIdentityKey
+        # Go SDK uses senderPublicKey directly, but TypeScript uses peerSession.peerIdentityKey
+        # Both should be the same (client's identity key), but prefer session.peer_identity_key for consistency
+        if hasattr(session, 'peer_identity_key') and session.peer_identity_key is not None:
+            counterparty_key = session.peer_identity_key
+            # Verify it matches sender_public_key (they should be the same)
+            peer_key_hex = session.peer_identity_key.hex() if hasattr(session.peer_identity_key, 'hex') else str(session.peer_identity_key)
+            sender_key_hex = sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
+            if peer_key_hex != sender_key_hex:
+                print(f"[Peer._verify_general_message_signature] WARNING: session.peer_identity_key ({peer_key_hex[:40]}...) != sender_public_key ({sender_key_hex[:40]}...)")
+                print(f"[Peer._verify_general_message_signature] Using session.peer_identity_key for counterparty (matches TypeScript)")
+        else:
+            # Fallback to sender_public_key if session.peer_identity_key is not available
+            counterparty_key = sender_public_key
+            print(f"[Peer._verify_general_message_signature] WARNING: session.peer_identity_key not available, using sender_public_key")
+        
+        print(f"[Peer._verify_general_message_signature] counterparty (using session.peer_identity_key): {counterparty_key.hex() if hasattr(counterparty_key, 'hex') else counterparty_key}")
+        print(f"[Peer._verify_general_message_signature] session details: session_nonce={session.session_nonce[:20] if session.session_nonce else 'None'}..., peer_nonce={getattr(session, 'peer_nonce', 'None')[:20] if getattr(session, 'peer_nonce', None) else 'None'}...")
+        print(f"[Peer._verify_general_message_signature] data_to_verify length: {len(data_to_verify)} bytes")
+        print(f"[Peer._verify_general_message_signature] data_to_verify (first 50 bytes): {data_to_verify[:50].hex() if len(data_to_verify) > 0 else 'EMPTY'}")
+        print(f"[Peer._verify_general_message_signature] signature length: {len(signature) if signature else 0} bytes")
         verify_result = self.wallet.verify_signature({
             'protocolID': {
                 'securityLevel': 2,
@@ -1221,7 +1257,7 @@ class Peer:
             'keyID': key_id,
             'counterparty': {
                 'type': CounterpartyType.OTHER,  # Go SDK: CounterpartyTypeOther = 3
-                'counterparty': sender_public_key  # Use sender's (client's) identity key (matches Go SDK: Counterparty: senderPublicKey)
+                'counterparty': counterparty_key  # Use session.peer_identity_key to match TypeScript: peerSession.peerIdentityKey
             },
             # forSelf defaults to False, which matches Go SDK behavior
             'data': data_to_verify,
@@ -1245,7 +1281,7 @@ class Peer:
                             "verify_result": getattr(verify_result, '__dict__', verify_result),
                             "nonce": getattr(message, 'nonce', None),
                             "session_nonce": session.session_nonce,
-                            "counterparty": getattr(server_identity_key, 'hex', lambda: server_identity_key)() if server_identity_key else None,
+                            "counterparty": counterparty_key.hex() if hasattr(counterparty_key, 'hex') else str(counterparty_key) if counterparty_key else None,
                         }
                     )
                 except Exception:

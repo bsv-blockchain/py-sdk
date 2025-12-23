@@ -96,12 +96,21 @@ class KeyDeriver:
         
         This implementation matches TypeScript/Go SDK behavior:
         - TS SDK: sha256hmac(sharedSecret.encode(true), invoiceNumberBin)
+        - Go SDK: Sha256HMAC(invoiceNumberBin, sharedSecret.Compressed())
         - sharedSecret.encode(true) returns compressed public key (33 bytes)
         
-        Reference: ts-sdk/src/primitives/PublicKey.ts deriveChild()
+        Reference: 
+        - ts-sdk/src/primitives/PublicKey.ts deriveChild()
+        - go-sdk/primitives/ec/publickey.go DeriveChild()
+        
+        Note: HMAC parameter order differs between SDKs but produces same result:
+        - Python/TS: hmac_sha256(key=shared_secret, msg=invoice_number)
+        - Go: Sha256HMAC(data=invoice_number, key=shared_secret)
+        Both are equivalent: HMAC-SHA256(key, data)
         """
         invoice_number_bin = invoice_number.encode('utf-8')
         # derive_shared_secret returns compressed public key (33 bytes)
+        # This computes: cp_pub * root_priv (ECDH shared secret)
         shared_secret = cp_pub.derive_shared_secret(self._root_private_key)
         
         # Use the full compressed point (33 bytes) as HMAC key, matching TS SDK
@@ -110,13 +119,25 @@ class KeyDeriver:
         else:
             shared_key = shared_secret
         
+        # HMAC-SHA256(key=shared_secret, msg=invoice_number)
+        # This matches TypeScript: sha256hmac(sharedSecret.encode(true), invoiceNumberBin)
         branch = hmac_sha256(shared_key, invoice_number_bin)
         scalar = int.from_bytes(branch, 'big') % CURVE_ORDER
-        if os.getenv("BSV_DEBUG", "0") == "1":
-            try:
-                print(f"[DEBUG KeyDeriver._branch_scalar] invoice_number={invoice_number} shared_len={len(shared_key)} scalar={scalar:x}")
-            except Exception:
-                print(f"[DEBUG KeyDeriver._branch_scalar] scalar={scalar:x}")
+        
+        # Always log for debugging (temporary - remove after fixing)
+        try:
+            print(f"[KeyDeriver._branch_scalar]")
+            print(f"  invoice_number={invoice_number}")
+            print(f"  cp_pub.hex={cp_pub.hex()}")
+            print(f"  root_pub.hex={self._root_public_key.hex()}")
+            print(f"  shared_secret_len={len(shared_key)}")
+            print(f"  shared_secret_hex={shared_key.hex()}")
+            print(f"  invoice_number_bin={invoice_number_bin.hex()}")
+            print(f"  branch_hex={branch.hex()}")
+            print(f"  scalar={scalar:x}")
+        except Exception as e:
+            print(f"[KeyDeriver._branch_scalar] error: {e}")
+        
         return scalar
 
     # ------------------------------------------------------------------
@@ -153,6 +174,11 @@ class KeyDeriver:
         
         Note: This means derive_public_key(forSelf=False) != derive_private_key().public_key()
         This is intentional and matches TS/Go SDK behavior for asymmetric key derivation.
+        
+        For BRC-42 ECDH:
+        - Client signs with: counterparty = server_identity_key, forSelf = False
+        - Server verifies with: counterparty = client_identity_key, forSelf = False
+        - Both derive the same public key because ECDH is commutative
         """
         invoice_number = self.compute_invoice_number(protocol, key_id)
         
@@ -167,11 +193,27 @@ class KeyDeriver:
         else:
             # forSelf=False: derived from counterparty's perspective
             # tweaked public = cp_pub + delta*G
+            # This computes: counterparty.deriveChild(rootKey, invoice)
             cp_pub = counterparty.to_public_key(self._root_public_key)
+            
+            # Always log for debugging (temporary - remove after fixing)
+            print(f"[KeyDeriver.derive_public_key] forSelf=False")
+            print(f"  protocol: {protocol.security_level}-{protocol.protocol}")
+            print(f"  key_id: {key_id}")
+            print(f"  invoice_number: {invoice_number}")
+            print(f"  counterparty type: {counterparty.type}")
+            print(f"  counterparty pub: {cp_pub.hex()}")
+            print(f"  root pub: {self._root_public_key.hex()}")
+            
             delta = self._branch_scalar(invoice_number, cp_pub)
             delta_point = curve_multiply(delta, curve.g)
             new_point = curve_add(cp_pub.point(), delta_point)
-            return PublicKey(new_point)
+            derived_pub = PublicKey(new_point)
+            
+            print(f"  delta (scalar): {delta:x}")
+            print(f"  derived pub: {derived_pub.hex()}")
+            
+            return derived_pub
 
     def derive_symmetric_key(self, protocol: Protocol, key_id: str, counterparty: Counterparty) -> bytes:
         """Derive a symmetric key based on protocol ID, key ID, and counterparty.
@@ -219,12 +261,25 @@ class KeyDeriver:
         
         Protocol names are converted to lowercase and trimmed, matching TS/Go SDK behavior.
         Reference: go-sdk/wallet/key_deriver.go computeInvoiceNumber
+        
+        This is critical for BRC-42 ECDH key derivation - both client and server must
+        compute the same invoice number to derive matching keys.
         """
         self._validate_protocol(protocol)
         self._validate_key_id(key_id)
         # Normalize protocol name: lowercase and trim whitespace (matches Go/TS SDK)
         protocol_name = protocol.protocol.strip().lower()
-        return f"{protocol.security_level}-{protocol_name}-{key_id}"
+        invoice_number = f"{protocol.security_level}-{protocol_name}-{key_id}"
+        
+        # Always log for debugging (temporary - remove after fixing)
+        print(f"[KeyDeriver.compute_invoice_number]")
+        print(f"  protocol.security_level: {protocol.security_level}")
+        print(f"  protocol.protocol (raw): {protocol.protocol}")
+        print(f"  protocol_name (normalized): {protocol_name}")
+        print(f"  key_id: {key_id}")
+        print(f"  invoice_number: {invoice_number}")
+        
+        return invoice_number
 
     def normalize_counterparty(self, cp: Any) -> PublicKey:
         """Normalize various counterparty representations to a PublicKey.
