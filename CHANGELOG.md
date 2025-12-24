@@ -26,25 +26,38 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
 
 ---
-## [Unreleased]
+## [1.0.12] - 2025-11-25
 
 ### Added
-- (Include new features or significant user-visible enhancements here.)
+- Complete Wallet infrastructure with serializers, substrates, and implementations for full wallet functionality
+- Authentication system including peer authentication, certificates, session management, and HTTP transport
+- Enhanced BEEF infrastructure with dedicated builder, serializer, and validator modules for advanced transaction management
+- Script interpreter with comprehensive opcode support, stack operations, and script execution engine
+- Storage interfaces and implementations for data upload/download with encryption support
+- Overlay tools including lookup resolver, SHIP broadcaster, historian, and host reputation tracker
+- Registry client for overlay network management
+- Identity client with contacts manager for identity and contact management
+- Headers client for blockchain header synchronization
+- Keystore with local key-value store implementation supporting encrypted storage
+- Additional cryptographic primitives: Schnorr signatures, DRBG (Deterministic Random Bit Generator), AES-GCM encryption
+- Compatibility modules for BSM (Bitcoin Signed Message) and ECIES encryption
+- TOTP (Time-based One-Time Password) support for two-factor authentication
+- BIP-276 payment destination encoding support
+- PushDrop token protocol implementation
+- Teranode broadcaster support
 
 ### Changed
-- (Detail modifications that are non-breaking but relevant to the end-users.)
+- Refactored `bsv/utils.py` monolithic module into organized submodules under `bsv/utils/` for better maintainability
+- Enhanced broadcaster implementations with improved error handling and status categorization
+- Updated chain trackers with block headers service integration
+- Improved transaction handling with extended BEEF support and validation
+- Reorganized entire test suite into `tests/bsv/` structure with comprehensive coverage tests (455 files changed, 74,468+ additions)
 
-### Deprecated
-- (List features that are in the process of being phased out or replaced.)
-
-### Removed
-- (Indicate features or capabilities that were taken out of the project.)
-
-### Fixed
-- (Document bugs that were fixed since the last release.)
-
-### Security
-- (Notify of any improvements related to security vulnerabilities or potential risks.)
+### Notes
+- **No breaking changes** - All existing APIs remain fully compatible
+- Legacy tests continue to pass but have been superseded by new comprehensive test structure
+- Test organization now follows a more modular and maintainable structure under `tests/bsv/`
+- Added extensive test coverage across all modules ensuring code quality and reliability
 
 ---
 ## [1.0.11] - 2025-11-23

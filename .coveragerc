@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = src
+source = bsv
 
 [report]
 exclude_lines =
@@ -11,3 +11,5 @@ ignore_errors = False
 omit =
     tests/*
     setup.py
+show_missing = True
+skip_covered = False
