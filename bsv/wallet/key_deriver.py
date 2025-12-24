@@ -271,14 +271,6 @@ class KeyDeriver:
         protocol_name = protocol.protocol.strip().lower()
         invoice_number = f"{protocol.security_level}-{protocol_name}-{key_id}"
         
-        # Always log for debugging (temporary - remove after fixing)
-        print(f"[KeyDeriver.compute_invoice_number]")
-        print(f"  protocol.security_level: {protocol.security_level}")
-        print(f"  protocol.protocol (raw): {protocol.protocol}")
-        print(f"  protocol_name (normalized): {protocol_name}")
-        print(f"  key_id: {key_id}")
-        print(f"  invoice_number: {invoice_number}")
-        
         return invoice_number
 
     def normalize_counterparty(self, cp: Any) -> PublicKey:
