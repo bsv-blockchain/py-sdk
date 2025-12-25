@@ -124,19 +124,6 @@ class KeyDeriver:
         branch = hmac_sha256(shared_key, invoice_number_bin)
         scalar = int.from_bytes(branch, 'big') % CURVE_ORDER
         
-        # Always log for debugging (temporary - remove after fixing)
-        try:
-            print(f"[KeyDeriver._branch_scalar]")
-            print(f"  invoice_number={invoice_number}")
-            print(f"  cp_pub.hex={cp_pub.hex()}")
-            print(f"  root_pub.hex={self._root_public_key.hex()}")
-            print(f"  shared_secret_len={len(shared_key)}")
-            print(f"  shared_secret_hex={shared_key.hex()}")
-            print(f"  invoice_number_bin={invoice_number_bin.hex()}")
-            print(f"  branch_hex={branch.hex()}")
-            print(f"  scalar={scalar:x}")
-        except Exception as e:
-            print(f"[KeyDeriver._branch_scalar] error: {e}")
         
         return scalar
 
@@ -196,23 +183,12 @@ class KeyDeriver:
             # This computes: counterparty.deriveChild(rootKey, invoice)
             cp_pub = counterparty.to_public_key(self._root_public_key)
             
-            # Always log for debugging (temporary - remove after fixing)
-            print(f"[KeyDeriver.derive_public_key] forSelf=False")
-            print(f"  protocol: {protocol.security_level}-{protocol.protocol}")
-            print(f"  key_id: {key_id}")
-            print(f"  invoice_number: {invoice_number}")
-            print(f"  counterparty type: {counterparty.type}")
-            print(f"  counterparty pub: {cp_pub.hex()}")
-            print(f"  root pub: {self._root_public_key.hex()}")
             
             delta = self._branch_scalar(invoice_number, cp_pub)
             delta_point = curve_multiply(delta, curve.g)
             new_point = curve_add(cp_pub.point(), delta_point)
             derived_pub = PublicKey(new_point)
-            
-            print(f"  delta (scalar): {delta:x}")
-            print(f"  derived pub: {derived_pub.hex()}")
-            
+
             return derived_pub
 
     def derive_symmetric_key(self, protocol: Protocol, key_id: str, counterparty: Counterparty) -> bytes:

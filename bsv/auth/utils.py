@@ -82,13 +82,7 @@ def create_nonce(wallet: Any, counterparty: Any = None) -> str:
         'counterparty': counterparty,
         'data': first_half
     }
-    print(f"[create_nonce] About to call wallet.create_hmac with:")
-    print(f"  protocolID: {args['protocolID']}")
-    print(f"  keyID length: {len(args['keyID'])}")
-    print(f"  counterparty: {args['counterparty']}")
-    print(f"  data length: {len(args['data'])}")
     result = wallet.create_hmac(args, "")
-    print(f"[create_nonce] result={result}")
     hmac = result.get('hmac') if isinstance(result, dict) else getattr(result, 'hmac', None)
     if hmac is None:
         raise RuntimeError('Failed to create HMAC for nonce')

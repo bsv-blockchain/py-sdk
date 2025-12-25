@@ -401,36 +401,27 @@ class Peer:
         """
         Processes incoming authentication messages.
         """
-        print(f"[Peer.handle_incoming_message] Called")
         if message is None:
             return Exception("Invalid message")
-        
+
         version = getattr(message, 'version', None)
         msg_type = getattr(message, 'message_type', None)
-        
-        print(f"[Peer.handle_incoming_message] version={version}, msg_type={msg_type}")
-        
+
         if version != AUTH_VERSION:
             return Exception(f"Invalid or unsupported message auth version! Received: {version}, expected: {AUTH_VERSION}")
-        
+
         # Dispatch based on message type
         if msg_type == MessageTypeInitialRequest:
-            print(f"[Peer.handle_incoming_message] Routing to handle_initial_request")
             return self.handle_initial_request(message, getattr(message, 'identity_key', None))
         elif msg_type == MessageTypeInitialResponse:
-            print(f"[Peer.handle_incoming_message] Routing to handle_initial_response")
             return self.handle_initial_response(message, getattr(message, 'identity_key', None))
         elif msg_type == MessageTypeCertificateRequest:
-            print(f"[Peer.handle_incoming_message] Routing to handle_certificate_request")
             return self.handle_certificate_request(message, getattr(message, 'identity_key', None))
         elif msg_type == MessageTypeCertificateResponse:
-            print(f"[Peer.handle_incoming_message] Routing to handle_certificate_response")
             return self.handle_certificate_response(message, getattr(message, 'identity_key', None))
         elif msg_type == MessageTypeGeneral:
-            print(f"[Peer.handle_incoming_message] Routing to handle_general_message")
             return self.handle_general_message(message, getattr(message, 'identity_key', None))
         else:
-            print(f"[Peer.handle_incoming_message] Unknown message type: {msg_type}")
             return Exception(f"unknown message type: {msg_type}")
 
     def handle_initial_request(self, message: Any, sender_public_key: Any) -> Optional[Exception]:
@@ -1047,79 +1038,47 @@ class Peer:
         
         Reference: BSV_MIDDLEWARE_SPECIFICATION.md - Nonce システム
         """
-        print(f"[Peer._verify_your_nonce] Starting verification")
-        print(f"[Peer._verify_your_nonce] your_nonce: {your_nonce}")
-        print(f"[Peer._verify_your_nonce] sender_public_key: {sender_public_key.hex() if sender_public_key and hasattr(sender_public_key, 'hex') else sender_public_key}")
-        
         if not your_nonce:
-            print(f"[Peer._verify_your_nonce] ERROR: your_nonce is missing")
             return Exception("your_nonce is required for general message")
-        
+
         # Case 1: Server receiving from client
         # your_nonce should match our session_nonce with that peer
         if sender_public_key:
             sender_key_hex = sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
-            print(f"[Peer._verify_your_nonce] Case 1: Checking session for sender: {sender_key_hex}")
             session = self.session_manager.get_session(sender_key_hex)
             if session:
-                print(f"[Peer._verify_your_nonce] Found session, peer_nonce: {session.peer_nonce}")
                 if session.peer_nonce == your_nonce:
-                    print(f"[Peer._verify_your_nonce] Case 1 SUCCESS: your_nonce matches peer_nonce")
                     return None  # Valid: your_nonce matches peer nonce
-                else:
-                    print(f"[Peer._verify_your_nonce] Case 1 FAILED: peer_nonce mismatch")
-            else:
-                print(f"[Peer._verify_your_nonce] Case 1: No session found for sender")
-        
+
         # Case 2: Check if your_nonce matches any of our session nonces
         # This handles server-side verification
-        print(f"[Peer._verify_your_nonce] Case 2: Checking if your_nonce is a known session nonce")
         session_by_nonce = self.session_manager.get_session(your_nonce)
         if session_by_nonce:
-            print(f"[Peer._verify_your_nonce] Case 2 SUCCESS: your_nonce is a known session nonce")
             return None  # Valid: your_nonce is a known session nonce
-        else:
-            print(f"[Peer._verify_your_nonce] Case 2 FAILED: your_nonce is not a known session nonce")
-        
+
         # Case 3: Client receiving response from server
         # The your_nonce in response should match the nonce we sent in our request
         # Since we don't track request nonces here, we rely on the transport layer
         # to match responses to requests via request_id
         # For now, accept any your_nonce that looks valid (base64 encoded)
-        print(f"[Peer._verify_your_nonce] Case 3: Checking if your_nonce is valid base64")
         try:
             import base64
             decoded = base64.b64decode(your_nonce)
-            print(f"[Peer._verify_your_nonce] Case 3: Decoded length: {len(decoded)}")
             if len(decoded) >= 16:  # Reasonable nonce length
-                print(f"[Peer._verify_your_nonce] Case 3 SUCCESS: your_nonce looks like valid base64 (length >= 16)")
                 # This is likely a valid response nonce from server
                 # The actual verification happens at transport level via request_id matching
                 return None
-            else:
-                print(f"[Peer._verify_your_nonce] Case 3 FAILED: Decoded length too short: {len(decoded)}")
         except Exception as e:
-            print(f"[Peer._verify_your_nonce] Case 3 FAILED: Base64 decode error: {e}")
-        
+            pass
+
         # Case 4: Try HMAC-based verification (for HMAC-generated nonces)
-        print(f"[Peer._verify_general_message_nonce] Attempting HMAC-based verification")
-        print(f"[Peer._verify_general_message_nonce] your_nonce: {your_nonce}")
-        print(f"[Peer._verify_general_message_nonce] Counterparty: {{'type': 1}}")
         try:
             from .utils import verify_nonce
             valid = verify_nonce(your_nonce, self.wallet, {'type': 1})
-            print(f"[Peer._verify_general_message_nonce] verify_nonce returned: {valid}")
             if valid:
-                print(f"[Peer._verify_general_message_nonce] Nonce verified successfully via HMAC")
                 return None
-            else:
-                print(f"[Peer._verify_general_message_nonce] HMAC verification failed")
         except Exception as e:
-            print(f"[Peer._verify_general_message_nonce] Exception during verify_nonce: {e}")
-            import traceback
-            print(f"[Peer._verify_general_message_nonce] Traceback: {traceback.format_exc()}")
-        
-        print(f"[Peer._verify_general_message_nonce] All verification methods failed")
+            pass
         return Exception("Unable to verify nonce for general message")
 
     def _log_signature_verification_failure(self, err: Exception, message: Any, session: Any, data_to_verify: Any) -> None:
@@ -1140,33 +1099,22 @@ class Peer:
             except Exception:
                 self.logger.warning(f"General message signature verification failed: {err}")
         else:
-            print(f"[AUTH DEBUG] General message signature verification failed: {err}")
+            pass
 
     def handle_general_message(self, message: Any, sender_public_key: Any) -> Optional[Exception]:
         """
         Processes a general message.
         """
-        print(f"[Peer.handle_general_message] Processing general message")
-        print(f"[Peer.handle_general_message] Sender: {sender_public_key.hex() if hasattr(sender_public_key, 'hex') else sender_public_key}")
-        print(f"[Peer.handle_general_message] Message nonce: {getattr(message, 'nonce', None)}")
-        print(f"[Peer.handle_general_message] Message your_nonce: {getattr(message, 'your_nonce', None)}")
-        
         # Note: Loopback echo detection is disabled for server/middleware use cases
         # In server contexts, we should process messages even if identity keys match
         # (signature verification ensures message legitimacy)
         # Loopback detection is primarily for P2P scenarios where a peer might echo its own messages
-        # if self._is_loopback_echo(sender_public_key):
-        #     print(f"[Peer.handle_general_message] Loopback echo detected, skipping")
-        #     return None
 
         # Verify your_nonce
         your_nonce = getattr(message, 'your_nonce', None)
-        print(f"[Peer.handle_general_message] Verifying your_nonce: {your_nonce}")
         err = self._verify_your_nonce(your_nonce, sender_public_key)
         if err:
-            print(f"[Peer.handle_general_message] your_nonce verification failed: {err}")
             return err
-        print(f"[Peer.handle_general_message] your_nonce verified successfully")
 
         # Get session using sender's identity key
         # Since your_nonce verification already confirmed the session exists
@@ -1224,32 +1172,15 @@ class Peer:
         #
         # Python fix: Use session_nonce (server's own nonce) to match TypeScript/Go
         key_id = f"{message_nonce} {session.session_nonce}"
-        print(f"[Peer._verify_general_message_signature] Using session_nonce (server's own nonce): {session.session_nonce[:20] if session.session_nonce else 'None'}...")
-        print(f"[Peer._verify_general_message_signature] keyID: '{key_id}'")
-        print(f"[Peer._verify_general_message_signature] message.nonce: {message_nonce}")
-        print(f"[Peer._verify_general_message_signature] session.session_nonce: {session.session_nonce}")
-        
+
         # Use session.peer_identity_key to match TypeScript: peerSession.peerIdentityKey
         # Go SDK uses senderPublicKey directly, but TypeScript uses peerSession.peerIdentityKey
         # Both should be the same (client's identity key), but prefer session.peer_identity_key for consistency
         if hasattr(session, 'peer_identity_key') and session.peer_identity_key is not None:
             counterparty_key = session.peer_identity_key
-            # Verify it matches sender_public_key (they should be the same)
-            peer_key_hex = session.peer_identity_key.hex() if hasattr(session.peer_identity_key, 'hex') else str(session.peer_identity_key)
-            sender_key_hex = sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
-            if peer_key_hex != sender_key_hex:
-                print(f"[Peer._verify_general_message_signature] WARNING: session.peer_identity_key ({peer_key_hex[:40]}...) != sender_public_key ({sender_key_hex[:40]}...)")
-                print(f"[Peer._verify_general_message_signature] Using session.peer_identity_key for counterparty (matches TypeScript)")
         else:
             # Fallback to sender_public_key if session.peer_identity_key is not available
             counterparty_key = sender_public_key
-            print(f"[Peer._verify_general_message_signature] WARNING: session.peer_identity_key not available, using sender_public_key")
-        
-        print(f"[Peer._verify_general_message_signature] counterparty (using session.peer_identity_key): {counterparty_key.hex() if hasattr(counterparty_key, 'hex') else counterparty_key}")
-        print(f"[Peer._verify_general_message_signature] session details: session_nonce={session.session_nonce[:20] if session.session_nonce else 'None'}..., peer_nonce={getattr(session, 'peer_nonce', 'None')[:20] if getattr(session, 'peer_nonce', None) else 'None'}...")
-        print(f"[Peer._verify_general_message_signature] data_to_verify length: {len(data_to_verify)} bytes")
-        print(f"[Peer._verify_general_message_signature] data_to_verify (first 50 bytes): {data_to_verify[:50].hex() if len(data_to_verify) > 0 else 'EMPTY'}")
-        print(f"[Peer._verify_general_message_signature] signature length: {len(signature) if signature else 0} bytes")
         verify_result = self.wallet.verify_signature({
             'protocolID': {
                 'securityLevel': 2,
@@ -1288,19 +1219,15 @@ class Peer:
                 except Exception:
                     self.logger.warning("Wallet verify_signature returned invalid")
             else:
-                print("[AUTH DEBUG] Wallet verify_signature returned invalid")
+                pass
             return Exception("general message - invalid signature")
         return None
 
     def _dispatch_general_message_callbacks(self, sender_public_key: Any, payload: Any) -> None:
-        print(f"[Peer._dispatch_general_message_callbacks] Called with {len(self.on_general_message_received_callbacks)} callbacks")
         for callback_id, callback in self.on_general_message_received_callbacks.items():
             try:
-                print(f"[Peer._dispatch_general_message_callbacks] Calling callback {callback_id}")
                 callback(sender_public_key, payload)
-                print(f"[Peer._dispatch_general_message_callbacks] Callback {callback_id} completed")
             except Exception as e:
-                print(f"[Peer._dispatch_general_message_callbacks] Callback {callback_id} error: {e}")
                 import traceback
                 traceback.print_exc()
                 self.logger.warning(f"General message callback error: {e}")
