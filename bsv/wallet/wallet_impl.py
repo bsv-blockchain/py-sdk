@@ -60,8 +60,6 @@ class ProtoWallet(WalletInterface):
             # Default for CLI: Ask the user for permission
             resp = input(f"[Wallet] Allow {action}? [y/N]: ")
             allowed = resp.strip().lower() in ("y", "yes")
-        if os.getenv("BSV_DEBUG", "0") == "1":
-            print(f"[DEBUG ProtoWallet._check_permission] action={action!r} allowed={allowed}")
         if not allowed:
             raise PermissionError(f"Operation '{action}' was not permitted by the user.")
 
@@ -124,8 +122,6 @@ class ProtoWallet(WalletInterface):
                     raise ValueError(f"Wallet API key '{snake_key}' is not supported. Use '{camel_key}' instead.")
 
             seek_permission = args.get("seekPermission")
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.get_public_key] originator=<redacted> seek_permission={seek_permission} args=<redacted>")  # Sensitive info omitted for security
             if seek_permission:
                 self._check_permission("Get public key")
             if args.get("identityKey", False):
@@ -173,8 +169,6 @@ class ProtoWallet(WalletInterface):
             # Support both flat args (TS style) and nested encryption_args (legacy)
             encryption_args = args.get("encryption_args", args)
             
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.encrypt] enc_args keys={list(encryption_args.keys())}")
             
             self._maybe_seek_permission("Encrypt", encryption_args)
             
@@ -242,8 +236,6 @@ class ProtoWallet(WalletInterface):
             # Support both flat args (TS style) and nested encryption_args (legacy)
             encryption_args = args.get("encryption_args", args)
             
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.decrypt] enc_args keys={list(encryption_args.keys())}")
             
             self._maybe_seek_permission("Decrypt", encryption_args)
             
@@ -308,8 +300,6 @@ class ProtoWallet(WalletInterface):
             key_id = args.get("keyID")
             counterparty = args.get("counterparty")
             
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.create_signature] protocol_id={protocol_id}, key_id={key_id}")
             
             if protocol_id is None or key_id is None:
                 return {"error": "create_signature: protocol_id and key_id are required"}
@@ -395,16 +385,6 @@ class ProtoWallet(WalletInterface):
         x_bytes = x.to_bytes(32, 'big')
         return bytes([prefix]) + x_bytes
 
-    def _debug_log_verify_params(self, protocol_id, key_id, for_self, cp, pub):
-        """Log verification parameters if debug is enabled."""
-        if os.getenv("BSV_DEBUG", "0") == "1":
-            try:
-                proto_dbg = protocol_id if not isinstance(protocol_id, dict) else protocol_id.get('protocol')
-                print(f"[DEBUG ProtoWallet.verify_signature] protocol={proto_dbg} key_id={key_id} for_self={for_self}")
-                cp_pub_dbg = cp.to_public_key(self.public_key)
-                print(f"[DEBUG ProtoWallet.verify_signature] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()} derived.pub={pub.hex()}")
-            except Exception:
-                pass
 
     def _compute_hash_to_verify(self, args: Dict) -> tuple[bytes, bytes]:
         """Compute hash to verify and return (to_verify, data)."""
@@ -416,48 +396,6 @@ class ProtoWallet(WalletInterface):
         else:
             return hashlib.sha256(data).digest(), data
 
-    def _debug_log_verification_data(self, data: bytes, to_verify: bytes, signature: bytes, pub):
-        """Log verification data if debug is enabled."""
-        if os.getenv("BSV_DEBUG", "0") == "1":
-            try:
-                print(f"[DEBUG ProtoWallet.verify_signature] data_len={len(data)} sha256={to_verify.hex()[:32]}.. sig_len={len(signature)}")
-                print(f"[DEBUG ProtoWallet.verify_signature] pub.hex={pub.hex()}")
-            except Exception:
-                pass
-
-    def _log_verification_details(self, originator: str, protocol_id, key_id, counterparty, pub, data: bytes, to_verify: bytes, signature: bytes):
-        """Log detailed verification information."""
-        print("[WALLET VERIFY] === SIGNATURE VERIFICATION START ===")
-        print(f"[WALLET VERIFY] originator: {originator}")
-        if isinstance(protocol_id, dict):
-            print(f"[WALLET VERIFY] protocol: {protocol_id.get('protocol', 'NONE')}")
-        print(f"[WALLET VERIFY] key_id: {key_id[:50] if key_id else 'NONE'}...")
-        if isinstance(counterparty, dict):
-            cp_obj = counterparty.get('counterparty')
-            if hasattr(cp_obj, 'hex'):
-                print(f"[WALLET VERIFY] counterparty.hex: {cp_obj.hex()}")
-        
-        print(f"[WALLET VERIFY] derived_public_key: {pub.hex()}")
-        print(f"[WALLET VERIFY] data_to_verify_length: {len(data)}")
-        print(f"[WALLET VERIFY] data_digest (SHA-256): {to_verify.hex()}")
-        print(f"[WALLET VERIFY] signature_bytes: {signature.hex()}")
-        print(f"[WALLET VERIFY] signature_length: {len(signature)}")
-
-    def _log_verification_result(self, valid: bool, signature: bytes):
-        """Log verification result and debug info."""
-        print("[WALLET VERIFY] === CALLING pub.verify() ===")
-        print(f"[WALLET VERIFY] === ECDSA RESULT: {valid} ===")
-        
-        if valid:
-            print("[WALLET VERIFY] ✅ SIGNATURE VERIFICATION SUCCESS!")
-        else:
-            print("[WALLET VERIFY] ❌ SIGNATURE VERIFICATION FAILED!")
-            try:
-                print("[WALLET VERIFY] Signature DER format check...")
-                print(f"[WALLET VERIFY] Signature first byte: 0x{signature[0]:02x}")
-                print("[WALLET VERIFY] Expected DER start: 0x30")
-            except Exception as e:
-                print(f"[WALLET VERIFY] Signature format check error: {e}")
 
     def verify_signature(self, args: VerifySignatureArgs = None, originator: str = None) -> Dict:
         try:
@@ -487,33 +425,11 @@ class ProtoWallet(WalletInterface):
             if counterparty is None:
                 counterparty = "self"
             
-            # Always log for debugging (temporary - remove after fixing)
-            print(f"[ProtoWallet.verify_signature] counterparty before normalize: {type(counterparty)} = {counterparty}")
-            if isinstance(counterparty, dict):
-                print(f"[ProtoWallet.verify_signature] counterparty dict keys: {list(counterparty.keys())}")
-                if 'counterparty' in counterparty:
-                    cp_val = counterparty['counterparty']
-                    if hasattr(cp_val, 'hex'):
-                        print(f"[ProtoWallet.verify_signature] counterparty.counterparty.hex: {cp_val.hex()}")
-            
             cp = self._normalize_counterparty(counterparty)
-            
-            # Always log for debugging
-            cp_pub = cp.to_public_key(self.key_deriver.identity_key()) if hasattr(cp, 'to_public_key') else None
-            cp_hex = cp_pub.hex() if cp_pub else str(cp)
-            print(f"[ProtoWallet.verify_signature] counterparty after normalize: type={cp.type}, pub={cp_hex}")
-            print(f"[ProtoWallet.verify_signature] Server identity key: {self.key_deriver.identity_key().hex()}")
-            print(f"[ProtoWallet.verify_signature] protocol: {protocol.security_level}-{protocol.protocol}")
-            print(f"[ProtoWallet.verify_signature] key_id: {key_id}")
-            print(f"[ProtoWallet.verify_signature] for_self: {for_self}")
-            
+
             pub = self.key_deriver.derive_public_key(protocol, key_id, cp, for_self)
             
-            # Debug logging
-            self._debug_log_verify_params(protocol_id, key_id, for_self, cp, pub)
-            
             # Always log derived key
-            print(f"[ProtoWallet.verify_signature] Server derived pub key: {pub.hex()}")
             
             # Get data and signature
             signature = args.get("signature")
@@ -522,20 +438,9 @@ class ProtoWallet(WalletInterface):
             
             to_verify, data = self._compute_hash_to_verify(args)
             
-            # Debug log verification data
-            self._debug_log_verification_data(data, to_verify, signature, pub)
-            
-            # Log detailed verification info
-            self._log_verification_details(originator, protocol_id, key_id, counterparty, pub, data, to_verify, signature)
-            
             # Perform verification
             valid = pub.verify(signature, to_verify, hasher=lambda m: m)
             
-            # Log result
-            self._log_verification_result(valid, signature)
-            
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.verify_signature] valid={valid}")
             
             return {"valid": valid}
         except Exception as e:
@@ -566,8 +471,6 @@ class ProtoWallet(WalletInterface):
             key_id = encryption_args.get("key_id") or encryption_args.get("keyID")
             counterparty = encryption_args.get("counterparty")
             
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.create_hmac] protocol_id={protocol_id} key_id={key_id}")
             
             if protocol_id is None or key_id is None:
                 return {"error": "create_hmac: protocol_id and key_id are required"}
@@ -625,15 +528,6 @@ class ProtoWallet(WalletInterface):
             
         return encryption_args, protocol_id, key_id, counterparty, data, hmac_value
 
-    def _debug_log_hmac_params(self, encryption_args: dict, cp):
-        """Log HMAC parameters if debug is enabled."""
-        if os.getenv("BSV_DEBUG", "0") == "1":
-            print(f"[DEBUG ProtoWallet.verify_hmac] enc_args={encryption_args}")
-            try:
-                cp_pub_dbg = cp.to_public_key(self.public_key)
-                print(f"[DEBUG ProtoWallet.verify_hmac] cp.type={cp.type} cp.pub={cp_pub_dbg.hex()}")
-            except Exception as dbg_e:
-                print(f"[DEBUG ProtoWallet.verify_hmac] cp normalization error: {dbg_e}")
 
     def verify_hmac(self, args: VerifyHmacArgs = None, originator: str = None) -> Dict:
         print(f"[ProtoWallet.verify_hmac] Starting verification")
@@ -667,8 +561,6 @@ class ProtoWallet(WalletInterface):
             print(f"  - protocol: {protocol}")
             print(f"  - counterparty normalized: {cp}")
             
-            # Debug logging
-            self._debug_log_hmac_params(encryption_args, cp)
             
             # Derive shared secret and verify HMAC
             print(f"[ProtoWallet.verify_hmac] Deriving symmetric key...")
@@ -1501,8 +1393,6 @@ class ProtoWallet(WalletInterface):
             now_epoch = int(args.get("nowEpoch", time.time()))
             outputs_desc = [o for o in outputs_desc if not self._is_output_expired(o, now_epoch)]
         
-        if os.getenv("REGISTRY_DEBUG") == "1":
-            print("[DEBUG list_outputs] basket", basket, "outputs_desc", outputs_desc)
         
         beef_bytes = self._build_beef_for_outputs(outputs_desc)
         res = {"outputs": self._format_outputs_result(outputs_desc, basket)}
@@ -1631,15 +1521,9 @@ class ProtoWallet(WalletInterface):
             protocol = SimpleNamespace(security_level=int(protocol_id.get("securityLevel", 0)), protocol=str(protocol_id.get("protocol", ""))) if isinstance(protocol_id, dict) else protocol_id
             cp = self._normalize_counterparty(counterparty)
             derived_priv = self.key_deriver.derive_private_key(protocol, key_id, cp)
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.decrypt] derived_priv int={derived_priv.int():x} ciphertext_len={len(ciphertext)}")
             try:
                 plaintext = derived_priv.decrypt(ciphertext)
-                if os.getenv("BSV_DEBUG", "0") == "1":
-                    print(f"[DEBUG ProtoWallet.decrypt] decrypt success, plaintext={plaintext.hex()}")
             except Exception as dec_err:
-                if os.getenv("BSV_DEBUG", "0") == "1":
-                    print(f"[DEBUG ProtoWallet.decrypt] decrypt failed with derived key: {dec_err}")
                 plaintext = b""
             return plaintext
         # Fallback path
@@ -1684,8 +1568,6 @@ class ProtoWallet(WalletInterface):
             from datetime import datetime, timezone
             
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.reveal_counterparty_key_linkage] originator={originator}")
 
             if seek_permission:
                 self._check_permission("Reveal counterparty key linkage")
@@ -1787,8 +1669,6 @@ class ProtoWallet(WalletInterface):
         """
         try:
             seek_permission = args.get("seekPermission") or args.get("seek_permission")
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG ProtoWallet.reveal_specific_key_linkage] originator={originator}")
 
             if seek_permission:
                 self._check_permission("Reveal specific key linkage")
@@ -2099,12 +1979,9 @@ class ProtoWallet(WalletInterface):
             derived_addr = derived_pub.address(network=network) if network else derived_pub.address()
             
             if derived_addr and validate_address(derived_addr):
-                if os.getenv("BSV_DEBUG", "0") == "1":
-                    print(f"[DEBUG _list_self_utxos] Candidate derived address: {derived_addr}")
                 return derived_addr
         except Exception as e:
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG _list_self_utxos] derive addr error: {e}")
+            pass
         return None
 
     def _build_candidate_addresses(self, protocol_id, key_id, counterparty, args: Dict) -> List[str]:
@@ -2121,8 +1998,6 @@ class ProtoWallet(WalletInterface):
         master_addr = self._self_address()
         if master_addr and validate_address(master_addr):
             candidate_addresses.append(master_addr)
-            if os.getenv("BSV_DEBUG", "0") == "1":
-                print(f"[DEBUG _list_self_utxos] Candidate master address: {master_addr}")
         
         # 3) Optional explicit basket override
         explicit_basket = args.get("basket")

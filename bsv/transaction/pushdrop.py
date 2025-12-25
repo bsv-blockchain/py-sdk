@@ -138,7 +138,6 @@ def parse_identity_reveal(items: List[bytes]) -> List[Tuple[str, str]]:
 
 def create_minimally_encoded_script_chunk(data: bytes) -> str:
     """Return minimal encoding for data (OP_0/OP_1NEGATE/OP_1..OP_16 when applicable)."""
-    print(f"[DEBUG] create_minimally_encoded_script_chunk: data length={len(data)}, data={data}")
     if len(data) == 0:
         return b"\x00".hex()
     if len(data) == 1:
@@ -150,7 +149,6 @@ def create_minimally_encoded_script_chunk(data: bytes) -> str:
         if 0x01 <= b0 <= 0x10:
             return bytes([0x50 + b0]).hex()  # OP_1..OP_16
     result = encode_pushdata(data).hex()
-    print(f"[DEBUG] create_minimally_encoded_script_chunk: result={result}")
     return result
 
 
@@ -172,7 +170,6 @@ def build_lock_before_pushdrop(
     chunks = _arrange_chunks_by_position(lock_chunks, pushdrop_chunks, lock_position)
     byte_chunks = _convert_chunks_to_bytes(chunks)
     result = b"".join(byte_chunks)
-    print(f"[DEBUG] Final script bytes: {result.hex()}")
     return result.hex()
 
 def _create_lock_chunks(public_key: bytes) -> List[bytes]:
@@ -192,20 +189,15 @@ def _create_pushdrop_chunks(fields: List[bytes], include_signature: bool, signat
         bytes.fromhex(create_minimally_encoded_script_chunk(field))
         for field in data_fields
     ]
-    
+
     not_yet_dropped = len(data_fields)
-    print(f"[DEBUG] data_fields count: {len(data_fields)}, not_yet_dropped: {not_yet_dropped}")
-    
+
     while not_yet_dropped > 1:
         pushdrop_chunks.append(OpCode.OP_2DROP)
         not_yet_dropped -= 2
-        print(f"[DEBUG] Added OP_2DROP, not_yet_dropped now: {not_yet_dropped}")
-    
+
     if not_yet_dropped != 0:
         pushdrop_chunks.append(OpCode.OP_DROP)
-        print(f"[DEBUG] Added OP_DROP, final not_yet_dropped: {not_yet_dropped}")
-    else:
-        print(f"[DEBUG] No OP_DROP added, not_yet_dropped: {not_yet_dropped}")
     
     return pushdrop_chunks
 
@@ -217,8 +209,6 @@ def _arrange_chunks_by_position(lock_chunks: List[bytes], pushdrop_chunks: List[
 
 def _convert_chunks_to_bytes(chunks: List[bytes]) -> List[bytes]:  # NOSONAR - Complexity (16), requires refactoring
     """Convert all chunks to bytes, handling OpCodes."""
-    print(f"[DEBUG] chunks types: {[(type(c), c if isinstance(c, bytes) and len(c) <= 10 else f'bytes[{len(c)}]' if isinstance(c, bytes) else str(c)) for c in chunks]}")
-
     byte_chunks = []
     for chunk in chunks:
         if isinstance(chunk, bytes):
@@ -392,11 +382,8 @@ class PushDrop:
             "counterparty": counterparty,
             "forSelf": for_self,
         }
-        print(f"[DEBUG] PushDrop.lock() args: {args}")
         pub = self.wallet.get_public_key(args, self.originator) or {}
-        print(f"[DEBUG] PushDrop.lock() pub: {pub}")
         pubhex = pub.get("publicKey") or ""
-        print(f"[DEBUG] PushDrop.lock() pubhex: {pubhex}")
         return pubhex
 
     def _create_signature_if_needed(self, fields, protocol_id, key_id, counterparty, include_signature):
@@ -426,7 +413,6 @@ class PushDrop:
     def _build_locking_script(self, fields, pubhex, sig_bytes, include_signature, lock_position):
         """Build the locking script from components."""
         if not isinstance(pubhex, str) or len(pubhex) < 66:
-            print(f"[DEBUG] PushDrop.lock() returning OP_TRUE because pubhex length {len(pubhex)} < 66 or not string")
             return b"\x51".hex()
         
         try:
@@ -436,10 +422,8 @@ class PushDrop:
                 signature=sig_bytes,
                 lock_position=lock_position
             )
-            print(f"[DEBUG] PushDrop.lock() build_lock_before_pushdrop result: {result}")
             return result
         except Exception as e:
-            print(f"[DEBUG] PushDrop.lock() build_lock_before_pushdrop exception: {e}")
             return b"\x51".hex()
 
     def unlock(
@@ -684,9 +668,8 @@ class PushDropUnlocker:
                 self.prev_locking_script[0:3] == b'v\xa9\x14' and 
                 self.prev_locking_script[-2:] == b'\x88\xac'):
             return None
-        
+
         hash160_bytes = self.prev_locking_script[3:23]
-        print(f"[DEBUG] PushDropUnlocker.sign: P2PKH UTXO detected, hash160: {hash160_bytes.hex()}")
         
         create_args = {
             "protocolID": self.protocol_id,
@@ -695,13 +678,9 @@ class PushDropUnlocker:
             "hash160": hash160_bytes.hex(),
             "data": hash_to_sign,
         }
-        print(f"[DEBUG] PushDropUnlocker.sign: Calling wallet.create_signature with args: {create_args}")
         res = self.wallet.create_signature(create_args, "") if hasattr(self.wallet, "create_signature") else {}
-        print(f"[DEBUG] PushDropUnlocker.sign: create_signature result: {res}")
         sig = res.get("signature", b"")
-        print(f"[DEBUG] PushDropUnlocker.sign: Extracted signature: {sig.hex() if sig else 'None'}")
         sig = bytes(sig) + bytes([sighash_flag])
-        print(f"[DEBUG] PushDropUnlocker.sign: Final signature with sighash: {sig.hex()}")
         return encode_pushdata(sig)
     
     def _try_pushdrop_signature(self, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> Optional[bytes]:
@@ -712,8 +691,6 @@ class PushDropUnlocker:
             if not locking_pubkey:
                 print("[WARN] PushDropUnlocker.sign: Could not extract public key from PushDrop script")
                 return None
-            
-            print(f"[DEBUG] PushDropUnlocker.sign: Using locking public key from PushDrop UTXO: {locking_pubkey.hex()}")
             # Use protocol_id/key_id/counterparty to derive the key (same as fallback)
             # The derived key should match the locking public key if the protocol/key_id match
             create_args = {
@@ -735,7 +712,6 @@ class PushDropUnlocker:
     
     def _create_fallback_signature(self, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> bytes:
         """Create signature using derived key (fallback method)."""
-        print(f"[DEBUG] PushDropUnlocker.sign: Fallback to derived public key, protocol_id={self.protocol_id}, key_id={self.key_id}")
         create_args = {
             "protocolID": self.protocol_id,
             "keyID": self.key_id,
@@ -745,14 +721,9 @@ class PushDropUnlocker:
             create_args["hash_to_directly_sign"] = hash_to_sign
         else:
             create_args["data"] = hash_to_sign
-        print(f"[DEBUG] PushDropUnlocker.sign: Calling create_signature with args: {create_args}")
         res = self.wallet.create_signature(create_args, "") if hasattr(self.wallet, "create_signature") else {}
-        print(f"[DEBUG] PushDropUnlocker.sign: create_signature result: {res}")
         sig = res.get("signature", b"")
-        if not sig:
-            print(f"[WARN] PushDropUnlocker.sign: No signature in result, result keys: {list(res.keys()) if isinstance(res, dict) else 'not a dict'}")
         sig = bytes(sig) + bytes([sighash_flag])
-        print(f"[DEBUG] PushDropUnlocker.sign: Final sig length: {len(sig)}, sig: {sig.hex()[:100] if len(sig) > 0 else 'empty'}")
         return encode_pushdata(sig)
 
 
