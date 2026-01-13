@@ -1077,7 +1077,7 @@ class Peer:
             valid = verify_nonce(your_nonce, self.wallet, {'type': 1})
             if valid:
                 return None
-        except Exception as e:
+        except Exception:
             pass
         return Exception("Unable to verify nonce for general message")
 
