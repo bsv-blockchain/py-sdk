@@ -1980,7 +1980,7 @@ class ProtoWallet(WalletInterface):
             
             if derived_addr and validate_address(derived_addr):
                 return derived_addr
-        except Exception as e:
+        except Exception:
             pass
         return None
 
