@@ -1098,8 +1098,6 @@ class Peer:
                 )
             except Exception:
                 self.logger.warning(f"General message signature verification failed: {err}")
-        else:
-            pass
 
     def handle_general_message(self, message: Any, sender_public_key: Any) -> Optional[Exception]:
         """
@@ -1218,8 +1216,7 @@ class Peer:
                     )
                 except Exception:
                     self.logger.warning("Wallet verify_signature returned invalid")
-            else:
-                pass
+                    
             return Exception("general message - invalid signature")
         return None
 
