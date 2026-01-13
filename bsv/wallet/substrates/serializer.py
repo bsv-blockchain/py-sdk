@@ -228,8 +228,6 @@ def serialize_encrypt_args(args: dict) -> bytes:
     enc_args = args.get('encryption_args', args)
     if enc_args is None:
         enc_args = {}
-    if os.getenv("BSV_DEBUG", "0") == "1":
-        print(f"[DEBUG serialize_encrypt_args] enc_args keys={list(enc_args.keys())}")
     _encode_key_related_params(w, enc_args)
     plaintext: bytes = args.get('plaintext', b'')
     w.write_int_bytes(plaintext)
@@ -254,8 +252,6 @@ def deserialize_encrypt_result(data: bytes) -> dict:
 def serialize_decrypt_args(args: dict) -> bytes:
     w = Writer()
     enc_args = args.get('encryption_args', args)
-    if os.getenv("BSV_DEBUG", "0") == "1":
-        print(f"[DEBUG serialize_decrypt_args] enc_args keys={list(enc_args.keys())}")
     _encode_key_related_params(w, enc_args)
     ciphertext: bytes = args.get('ciphertext', b'')
     w.write_int_bytes(ciphertext)

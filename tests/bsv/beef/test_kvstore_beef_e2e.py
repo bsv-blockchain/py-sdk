@@ -796,12 +796,9 @@ def test_kvstore_remove_stringifies_spends_and_uses_input_beef():
             self.last_sign_args = None
             self.last_create_args = None
         def sign_action(self, args=None, originator=None):
-            print(f"[DEBUG] SpyWallet.sign_action labels: {args.get('labels')}")
             self.last_sign_args = args
             return super().sign_action(args, originator)
         def create_action(self, args=None, originator=None):
-            print(f"[DEBUG] SpyWallet.create_action args keys: {list(args.keys())}")
-            print(f"[DEBUG] SpyWallet.create_action args['inputs']: {args.get('inputs')}")
             self.last_create_args = args
             return super().create_action(args, originator)
 

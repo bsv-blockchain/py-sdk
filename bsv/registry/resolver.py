@@ -56,8 +56,6 @@ class WalletWireResolver:
         ) or {}
 
         outputs = cast(List[Dict[str, Any]], lo.get("outputs") or [])
-        if os.getenv("REGISTRY_DEBUG") == "1":
-            print("[DEBUG resolver.outputs]", len(outputs), outputs[:1])
         # For WalletWire-backed resolver, prefer direct lockingScript from outputs (BEEF not required)
 
         matches: List[Dict[str, Any]] = []
