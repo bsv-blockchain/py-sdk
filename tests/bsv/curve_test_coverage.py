@@ -17,7 +17,7 @@ def test_point_addition():
         from bsv.curve import point_add
         # Test with identity points
         result = point_add((0, 0), (0, 0))
-        assert result is not None or True
+        assert result is not None
     except (ImportError, AttributeError):
         pytest.skip(SKIP_CURVE)
 
@@ -28,7 +28,7 @@ def test_point_multiplication():
         from bsv.curve import point_mul
         # Test with small scalar
         result = point_mul((0, 0), 1)
-        assert result is not None or True
+        assert result is not None
     except (ImportError, AttributeError):
         pytest.skip(SKIP_CURVE)
 
@@ -38,7 +38,7 @@ def test_point_doubling():
     try:
         from bsv.curve import point_double
         result = point_double((0, 0))
-        assert result is not None or True
+        assert result is not None
     except (ImportError, AttributeError):
         pytest.skip(SKIP_CURVE)
 
@@ -49,7 +49,7 @@ def test_is_on_curve():
         from bsv.curve import is_on_curve
         # Test with generator point
         result = is_on_curve((0, 0))
-        assert isinstance(result, bool) or True
+        assert isinstance(result, bool)
     except (ImportError, AttributeError):
         pytest.skip(SKIP_CURVE)
 
@@ -62,7 +62,7 @@ def test_infinity_point():
     """Test handling of infinity point."""
     try:
         from bsv.curve import INFINITY
-        assert INFINITY is not None or True
+        assert INFINITY is not None
     except (ImportError, AttributeError):
         pytest.skip("INFINITY constant not available")
 

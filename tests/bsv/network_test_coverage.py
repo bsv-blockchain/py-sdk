@@ -69,10 +69,10 @@ def test_get_network_config_invalid():
         
         try:
             config = get_network_config('invalid')
-            assert config is None or True
+            assert config is None
         except (ValueError, KeyError):
             # Expected
-            assert True
+            pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_NETWORK_CONFIG)
 

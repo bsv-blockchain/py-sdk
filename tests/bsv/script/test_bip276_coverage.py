@@ -57,7 +57,7 @@ def test_bip276_decode_invalid_prefix():
         _ = decode_script('invalid-prefix:abc123')
         assert False, "Should have raised error"
     except InvalidBIP276Format:
-        assert True
+        pass
 
 
 def test_bip276_decode_malformed():
@@ -66,9 +66,9 @@ def test_bip276_decode_malformed():
 
     try:
         _ = decode_script('bitcoin-script:invalid')
-        assert True  # May handle gracefully
+        pass  # May handle gracefully
     except (ValueError, Exception):
-        assert True  # Or raise error
+        pass  # Or raise error
 
 
 # ========================================================================

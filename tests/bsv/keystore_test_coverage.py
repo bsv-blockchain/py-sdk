@@ -44,7 +44,7 @@ def test_memory_keystore_store_key():
         
         if hasattr(keystore, 'store'):
             keystore.store('test_key', priv)
-            assert True
+            pass
     except (ImportError, AttributeError):
         pytest.skip("MemoryKeystore store not available")
 
@@ -76,7 +76,7 @@ def test_memory_keystore_delete_key():
         if hasattr(keystore, 'store') and hasattr(keystore, 'delete'):
             keystore.store('test_key', priv)
             keystore.delete('test_key')
-            assert True
+            pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_MEMORY_KEYSTORE)
 
@@ -115,10 +115,10 @@ def test_keystore_retrieve_nonexistent():
         if hasattr(keystore, 'retrieve'):
             try:
                 key = keystore.retrieve('nonexistent')
-                assert key is None or True
+                assert key is None
             except KeyError:
                 # Expected
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip("MemoryKeystore retrieve not available")
 

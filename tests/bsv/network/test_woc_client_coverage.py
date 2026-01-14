@@ -167,10 +167,10 @@ def test_woc_client_invalid_txid():
     if hasattr(client, 'get_tx_hex'):
         try:
             _ = client.get_tx_hex('invalid')
-            assert True
+            pass
         except (ValueError, Exception):
             # Expected
-            assert True
+            pass
 
 
 def test_woc_client_invalid_address():

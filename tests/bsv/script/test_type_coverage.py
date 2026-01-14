@@ -118,10 +118,10 @@ def test_p2pkh_extract_pubkey_hash_invalid():
     if hasattr(P2PKH, 'extract_pubkey_hash'):
         try:
             extracted = P2PKH.extract_pubkey_hash(script)
-            assert extracted is None or True
+            assert extracted is None
         except Exception:
             # Expected for invalid script
-            assert True
+            pass
 
 
 # ========================================================================

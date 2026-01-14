@@ -134,7 +134,7 @@ class HTTPSOverlayLookupFacilitator:
         self,
         url: str,
         question: LookupQuestion,
-        timeout: int = 5000
+        timeout: Optional[int] = None
     ) -> LookupAnswer:
         """Returns a lookup answer for a lookup question."""
         import aiohttp
@@ -143,7 +143,7 @@ class HTTPSOverlayLookupFacilitator:
             raise HTTPProtocolError('HTTPS facilitator can only use URLs that start with "https:"')
 
         async def _perform_lookup():
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout/1000)) as session:
+            async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{url}/lookup",
                     json={"service": question.service, "query": question.query},
@@ -167,7 +167,7 @@ class HTTPSOverlayLookupFacilitator:
                             outputs=[]  # Custom responses don't have outputs
                         )
 
-        timeout_ctx = TimeoutContext(timeout / 1000)
+        timeout_ctx = TimeoutContext(timeout / 1000 if timeout is not None else None)
         try:
             return await timeout_ctx.run(_perform_lookup())
         except asyncio.TimeoutError:
@@ -257,7 +257,7 @@ class LookupResolver:
         """Given a LookupQuestion, returns a LookupAnswer with aggregated results."""
         async def _perform_query():
             ranked_hosts = await self._prepare_ranked_hosts(question.service)
-            host_responses = await self._query_all_hosts(ranked_hosts, question, timeout)
+            host_responses = await self._query_all_hosts(ranked_hosts, question)
             return self._aggregate_host_responses(host_responses)
 
         timeout_ctx = TimeoutContext(timeout / 1000 if timeout is not None else None)
@@ -280,12 +280,11 @@ class LookupResolver:
     async def _query_all_hosts(
         self,
         ranked_hosts: List[str],
-        question: LookupQuestion,
-        timeout: Optional[int]
+        question: LookupQuestion
     ) -> List[Union[LookupAnswer, Exception]]:
         """Query all ranked hosts in parallel."""
         return await asyncio.gather(
-            *[self._lookup_host_with_tracking(host, question, timeout) for host in ranked_hosts],
+            *[self._lookup_host_with_tracking(host, question) for host in ranked_hosts],
             return_exceptions=True
         )
 
@@ -448,14 +447,13 @@ class LookupResolver:
     async def _lookup_host_with_tracking(
         self,
         host: str,
-        question: LookupQuestion,
-        timeout: Optional[int]
+        question: LookupQuestion
     ) -> LookupAnswer:
         """Lookup from a host with success/failure tracking."""
         started_at = int(time.time() * 1000)
 
         try:
-            answer = await self.facilitator.lookup(host, question, timeout)
+            answer = await self.facilitator.lookup(host, question)
             latency = int(time.time() * 1000) - started_at
 
             # Check if response is valid

@@ -60,7 +60,7 @@ def test_legacy_empty_input():
         
         try:
             result = to_legacy_script(b'')
-            assert result is not None or True
+            assert result is not None
         except (NameError, AttributeError):
             pytest.skip("to_legacy_script not available")
     except ImportError:

@@ -76,7 +76,7 @@ def test_script_engine_step():
         if hasattr(engine, 'step'):
             try:
                 result = engine.step()
-                assert isinstance(result, bool) or True
+                assert isinstance(result, bool)
             except Exception:
                 # May require valid context or step may not be implemented
                 pytest.skip("Step functionality not implemented or requires context")

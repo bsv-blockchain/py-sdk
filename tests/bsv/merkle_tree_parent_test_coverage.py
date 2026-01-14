@@ -83,10 +83,10 @@ def test_merkle_tree_parent_invalid_length():
         
         try:
             parent = merkle_tree_parent(b'\x00' * 16, b'\x01' * 32)
-            assert True  # May handle gracefully
+            pass  # May handle gracefully
         except (ValueError, AssertionError):
             # Expected
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_MERKLE_TREE_PARENT)
 
@@ -98,10 +98,10 @@ def test_merkle_tree_parent_empty():
         
         try:
             parent = merkle_tree_parent(b'', b'')
-            assert True
+            pass
         except (ValueError, AssertionError):
             # Expected
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_MERKLE_TREE_PARENT)
 

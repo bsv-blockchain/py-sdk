@@ -15,7 +15,8 @@ from bsv.overlay_tools.lookup_resolver import (
     LookupQuestion,
     LookupAnswer,
     LookupOutput,
-    HTTPSOverlayLookupFacilitator
+    HTTPSOverlayLookupFacilitator,
+    LookupTimeoutError
 )
 from bsv.overlay_tools.ship_broadcaster import (
     SHIPBroadcaster,
@@ -385,7 +386,7 @@ class TestErrorHandling:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise Exception("Network timeout")
+                raise LookupTimeoutError("Network timeout")
             return LookupAnswer(outputs=[])
 
         mock_facilitator.lookup.side_effect = failing_then_succeeding

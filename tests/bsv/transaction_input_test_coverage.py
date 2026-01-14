@@ -64,7 +64,7 @@ def test_transaction_input_init_with_template():
             unlocking_script_template=template,
             sequence=0xFFFFFFFF
         )
-        assert inp.unlocking_script_template == template or True
+        assert inp.unlocking_script_template == template
     except ImportError:
         pytest.skip("UnlockingScriptTemplate not available")
 

@@ -329,7 +329,7 @@ def test_public_key_from_bytes_compressed():
         assert hasattr(pub, 'address')
     except Exception:
         # May fail if invalid point
-        assert True
+        pass
 
 
 def test_public_key_from_bytes_uncompressed():
@@ -341,7 +341,7 @@ def test_public_key_from_bytes_uncompressed():
         assert hasattr(pub, 'address')
     except Exception:
         # May fail if invalid point
-        assert True
+        pass
 
 
 # ========================================================================

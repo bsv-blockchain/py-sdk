@@ -90,7 +90,7 @@ def test_aes_cbc_decrypt_wrong_key():
         decrypted = decrypt(encrypted, key2)
         
         # Should produce garbage or error
-        assert decrypted != data or True
+        assert decrypted != data
     except ImportError:
         pytest.skip(SKIP_AES_CBC)
 

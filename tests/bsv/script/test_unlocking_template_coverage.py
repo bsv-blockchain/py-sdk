@@ -24,7 +24,7 @@ def test_unlocking_template_sign_method():
         from bsv.script.unlocking_template import UnlockingScriptTemplate
         
         # Check if abstract method exists
-        assert hasattr(UnlockingScriptTemplate, 'sign') or True
+        assert hasattr(UnlockingScriptTemplate, 'sign')
     except ImportError:
         pytest.skip("UnlockingScriptTemplate not available")
 
@@ -35,7 +35,7 @@ def test_unlocking_template_estimated_length():
         from bsv.script.unlocking_template import UnlockingScriptTemplate
         
         # Check if abstract method exists
-        assert hasattr(UnlockingScriptTemplate, 'estimated_unlocking_byte_length') or True
+        assert hasattr(UnlockingScriptTemplate, 'estimated_unlocking_byte_length')
     except ImportError:
         pytest.skip("UnlockingScriptTemplate not available")
 

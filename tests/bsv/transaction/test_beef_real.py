@@ -361,7 +361,7 @@ def test_beef_roundtrip():
     beef2 = Beef(version=4022206465)
     try:
         beef2.merge_beef_bytes(binary)
-        assert True
+        pass
     except Exception:
         # Roundtrip may not be perfect yet
         pass

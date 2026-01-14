@@ -45,10 +45,10 @@ def test_rpc_client_call():
         # This will fail without actual RPC server, but tests the call path
         try:
             result = client.call('getinfo')
-            assert True
+            pass
         except Exception:
             # Expected without RPC server
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_RPC)
 
@@ -63,10 +63,10 @@ def test_rpc_client_empty_host():
         from bsv.rpc import RPCClient
         try:
             client = RPCClient(host='', port=8332)
-            assert client is not None or True
+            assert client is not None
         except ValueError:
             # May validate host
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_RPC)
 
@@ -77,10 +77,10 @@ def test_rpc_client_invalid_port():
         from bsv.rpc import RPCClient
         try:
             client = RPCClient(host='localhost', port=-1)
-            assert True
+            pass
         except (ValueError, OSError):
             # May validate port
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_RPC)
 

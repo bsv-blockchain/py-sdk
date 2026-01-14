@@ -140,7 +140,7 @@ def test_transaction_output_is_p2pkh():
     )
     # Check if has method to detect type
     if hasattr(out, 'is_p2pkh'):
-        assert out.is_p2pkh() or True
+        assert out.is_p2pkh()
 
 
 def test_transaction_output_is_p2sh():
@@ -152,7 +152,7 @@ def test_transaction_output_is_p2sh():
         locking_script=Script(script_bytes)
     )
     if hasattr(out, 'is_p2sh'):
-        assert out.is_p2sh() or True
+        assert out.is_p2sh()
 
 
 # ========================================================================

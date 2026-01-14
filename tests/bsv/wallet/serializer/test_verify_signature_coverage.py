@@ -44,7 +44,7 @@ def test_verify_signature_with_missing_data():
         
         try:
             result = verify_signature(wallet, args, "origin")
-            assert result is not None or True
+            assert result is not None
         except (KeyError, ValueError):
             # Expected - exception caught
             pass
@@ -66,7 +66,7 @@ def test_verify_signature_with_missing_signature():
         
         try:
             result = verify_signature(wallet, args, "origin")
-            assert result is not None or True
+            assert result is not None
         except (KeyError, ValueError):
             # Expected - exception caught
             pass
@@ -168,7 +168,7 @@ def test_verify_signature_with_none_args():
         
         try:
             result = verify_signature(wallet, None, "origin")
-            assert result is not None or True
+            assert result is not None
         except (TypeError, AttributeError):
             # Expected - exception caught
             pass
@@ -185,7 +185,7 @@ def test_verify_signature_with_empty_args():
         
         try:
             result = verify_signature(wallet, {}, "origin")
-            assert result is not None or True
+            assert result is not None
         except (KeyError, ValueError):
             # Expected - exception caught
             pass

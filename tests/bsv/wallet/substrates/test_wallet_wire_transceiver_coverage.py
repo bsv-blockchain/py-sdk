@@ -79,7 +79,7 @@ async def test_transceiver_send_message():
         t.ws = AsyncMock()
         
         await t.send({"type": "test", "data": "value"})
-        assert t.ws.send.called or True
+        assert t.ws.send.called
     except (ImportError, AttributeError):
         pytest.skip("WalletWireTransceiver not available")
 
@@ -94,7 +94,7 @@ async def test_transceiver_receive_message():
         t.ws.recv = AsyncMock(return_value='{"type":"response"}')
         
         msg = await t.receive()
-        assert msg is not None or True
+        assert msg is not None
     except (ImportError, AttributeError):
         pytest.skip("WalletWireTransceiver not available")
 

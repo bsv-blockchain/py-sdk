@@ -13,7 +13,7 @@ def test_constants_opcode():
     try:
         from bsv.constants import OpCode
         assert hasattr(OpCode, 'OP_0') or hasattr(OpCode, 'OP_FALSE')
-        assert hasattr(OpCode, 'OP_1') or True
+        assert hasattr(OpCode, 'OP_1')
     except ImportError:
         pytest.skip("Constants not available")
 
@@ -31,7 +31,7 @@ def test_constants_network():
     """Test Network constants."""
     try:
         from bsv.constants import Network
-        assert hasattr(Network, 'MAINNET') or True
+        assert hasattr(Network, 'MAINNET')
     except (ImportError, AttributeError):
         pytest.skip("Network constants not available")
 

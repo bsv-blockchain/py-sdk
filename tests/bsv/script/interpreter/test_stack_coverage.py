@@ -58,7 +58,7 @@ def test_stack_pop_empty():
             _ = stack.pop()
             assert False, "Should raise error"
         except ValueError:
-            assert True
+            pass
     except ImportError:
         pytest.skip("Stack not available")
 

@@ -158,10 +158,10 @@ def test_delete_contact_existing(manager, mock_wallet):
     try:
         _ = manager.delete_contact("test_key")
         # Should call wallet methods
-        assert True
+        pass
     except Exception:
         # May not be implemented yet
-        assert True
+        pass
 
 
 def test_delete_contact_not_found(manager, mock_wallet):
@@ -171,10 +171,10 @@ def test_delete_contact_not_found(manager, mock_wallet):
     try:
         _ = manager.delete_contact("nonexistent_key")
         # May handle gracefully
-        assert True
+        pass
     except (ValueError, KeyError, AttributeError):
         # Or raise
-        assert True
+        pass
 
 
 def test_delete_contact_with_none(manager):
@@ -182,10 +182,10 @@ def test_delete_contact_with_none(manager):
     try:
         _ = manager.delete_contact(None)
         # May handle or raise
-        assert True
+        pass
     except (TypeError, AttributeError):
         # Expected if no None handling
-        assert True
+        pass
 
 
 # ========================================================================
@@ -228,10 +228,10 @@ def test_manager_with_wallet_error(manager, mock_wallet):
     try:
         _ = manager.get_contacts()
         # May handle error gracefully
-        assert True
+        pass
     except Exception:
         # Or may propagate
-        assert True
+        pass
 
 
 def test_manager_str_representation(manager):

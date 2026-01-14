@@ -95,6 +95,6 @@ def test_lookup_definition(client):
     if hasattr(client, 'lookup_definition'):
         try:
             result = client.lookup_definition(Mock(), "basket", "testbasket")
-            assert result is not None or True
+            assert result is not None
         except Exception:
             pass

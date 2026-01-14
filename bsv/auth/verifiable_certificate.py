@@ -12,7 +12,7 @@ from .cert_encryption import get_certificate_encryption_details
 
 # Placeholder for WalletInterface (should be implemented or imported)
 class WalletInterface:
-    def decrypt(self, args: dict, originator: Optional[str] = None) -> dict:
+    def decrypt(self, _args: dict, _originator: Optional[str] = None) -> dict:
         return {}
 
 # Removed local stub; using shared module implementation
@@ -28,7 +28,7 @@ class VerifiableCertificate:
         cert = Certificate.from_binary(data)
         return cls(cert, keyring={})
 
-    def decrypt_fields(self, ctx: Any, verifier_wallet: WalletInterface, privileged: bool = False, privileged_reason: str = "") -> Dict[str, str]:
+    def decrypt_fields(self, _ctx: Any, verifier_wallet: WalletInterface, privileged: bool = False, privileged_reason: str = "") -> Dict[str, str]:
         if not self.keyring:
             raise ValueError("A keyring is required to decrypt certificate fields for the verifier")
         decrypted_fields = {}

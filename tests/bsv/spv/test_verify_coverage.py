@@ -93,10 +93,10 @@ def test_verify_block_header_invalid():
         
         try:
             is_valid = verify_block_header(header)
-            assert is_valid == False or True
+            assert is_valid == False
         except (ValueError, NameError, AttributeError):
             # Expected
-            assert True
+            pass
     except ImportError:
         pytest.skip("SPV verify not available")
 
@@ -112,10 +112,10 @@ def test_verify_merkle_proof_empty_txid():
 
         try:
             is_valid = verify_merkle_proof(b'', b'\x00' * 32, [])
-            assert isinstance(is_valid, bool) or True
+            assert isinstance(is_valid, bool)
         except (ValueError, AssertionError):
             # Expected
-            assert True
+            pass
     except (ImportError, AttributeError):
         pytest.skip("verify_merkle_proof not available")
 

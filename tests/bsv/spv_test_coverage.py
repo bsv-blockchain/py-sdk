@@ -68,7 +68,7 @@ def test_spv_verify_header():
         
         try:
             is_valid = verify_header(header)
-            assert isinstance(is_valid, bool) or True
+            assert isinstance(is_valid, bool)
         except (NameError, AttributeError):
             pytest.skip("verify_header not available")
     except ImportError:

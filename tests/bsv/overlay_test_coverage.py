@@ -53,10 +53,10 @@ def test_overlay_lookup():
         if hasattr(client, 'lookup'):
             try:
                 result = client.lookup('test')
-                assert result is not None or True
+                assert result is not None
             except Exception:
                 # Expected without real overlay server
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip("OverlayClient lookup not available")
 
@@ -71,10 +71,10 @@ def test_overlay_submit():
         if hasattr(client, 'submit'):
             try:
                 _ = client.submit({'data': 'test'})
-                assert True
+                pass
             except Exception:
                 # Expected without real overlay server
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip("OverlayClient submit not available")
 
@@ -93,10 +93,10 @@ def test_overlay_lookup_empty():
         if hasattr(client, 'lookup'):
             try:
                 _ = client.lookup('')
-                assert True
+                pass
             except (ValueError, Exception):
                 # Expected
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip("OverlayClient lookup not available")
 

@@ -64,7 +64,7 @@ def test_merkle_path_compute_root_empty():
         assert isinstance(root, bytes) or root is None
     except Exception:
         # May require valid path
-        assert True
+        pass
 
 
 def test_merkle_path_verify():
@@ -75,7 +75,7 @@ def test_merkle_path_verify():
         assert isinstance(is_valid, bool)
     except (AttributeError, Exception):
         # May not have verify method
-        assert True
+        pass
 
 
 # ========================================================================
@@ -92,10 +92,10 @@ def test_merkle_path_with_negative_height():
     """Test MerklePath with negative height."""
     try:
         mp = MerklePath(block_height=-1, path=[])
-        assert mp.block_height == -1 or True
+        assert mp.block_height == -1
     except ValueError:
         # May validate height
-        assert True
+        pass
 
 
 def test_merkle_path_with_none_path():
@@ -105,7 +105,7 @@ def test_merkle_path_with_none_path():
         assert mp.path is None or mp.path == []
     except TypeError:
         # May require list
-        assert True
+        pass
 
 
 def test_merkle_path_str_representation():

@@ -128,7 +128,7 @@ def test_pushdrop_decode_basic():
         
         if hasattr(PushDrop, 'decode'):
             result = PushDrop.decode(script.serialize() if hasattr(script, 'serialize') else bytes(script))
-            assert result is not None or True
+            assert result is not None
     except (ImportError, Exception):
         pytest.skip("PushDrop decode not fully testable")
 
@@ -144,7 +144,7 @@ def test_pushdrop_decode_with_key():
         
         if hasattr(PushDrop, 'decode'):
             result = PushDrop.decode(script, priv)
-            assert result is not None or True
+            assert result is not None
     except (ImportError, Exception):
         pytest.skip("PushDrop decode not fully testable")
 

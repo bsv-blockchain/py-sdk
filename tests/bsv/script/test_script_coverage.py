@@ -142,7 +142,7 @@ def test_script_get_public_key_hash():
     script = Script(b'\x76\xa9\x14' + b'\x11' * 20 + b'\x88\xac')
     if hasattr(script, 'get_public_key_hash'):
         pkh = script.get_public_key_hash()
-        assert pkh is not None or True
+        assert pkh is not None
 
 
 # ========================================================================
