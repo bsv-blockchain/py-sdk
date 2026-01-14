@@ -1216,7 +1216,6 @@ class Peer:
                     )
                 except Exception:
                     self.logger.warning("Wallet verify_signature returned invalid")
-                    
             return Exception("general message - invalid signature")
         return None
 
