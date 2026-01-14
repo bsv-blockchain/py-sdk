@@ -248,4 +248,4 @@ class TestScriptInterpreterPerformance:
 
         # Memory should not be growing significantly
         # (This is a basic check - more sophisticated memory profiling would be needed)
-        pass, "Resource cleanup test completed"
+        pass
