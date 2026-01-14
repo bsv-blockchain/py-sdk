@@ -65,15 +65,6 @@ jobs:
       run: |
         python update_coverage.py ${{ steps.coverage.outputs.coverage }}
 
-    - name: Commit coverage update
-      if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && matrix.python-version == '3.11'
-      uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403
-      with:
-        commit_message: "chore: update coverage badge to ${{ steps.coverage.outputs.coverage }}%"
-        file_pattern: README.md
-        commit_user_name: github-actions[bot]
-        commit_user_email: github-actions[bot]@users.noreply.github.com
-
     - name: Upload coverage reports
       if: matrix.python-version == '3.11'
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

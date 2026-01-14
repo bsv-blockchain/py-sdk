@@ -16,7 +16,7 @@ target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "ANN", "B", "A", "C4", "PIE", "T20", "SIM", "ARG", "PTH", "ERA", "PL", "RUF"]
-# Ignore common test-related warnings
+# Project-wide code style ignores (test-specific ignores are configured in per-file-ignores below)
 ignore = [
     "ERA001",   # commented-out-code (acceptable in tests)
     "PLR2004",  # magic-value-comparison (acceptable in tests)
