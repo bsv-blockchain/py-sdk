@@ -29,15 +29,12 @@ class BIP276Error(Exception):
     """Base exception for BIP276 errors."""
 
 
-
 class InvalidBIP276Format(BIP276Error):
     """Raised when BIP276 format is invalid."""
 
 
-
 class InvalidChecksum(BIP276Error):
     """Raised when BIP276 checksum is invalid."""
-
 
 
 @dataclass

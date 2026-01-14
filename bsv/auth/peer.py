@@ -1718,7 +1718,5 @@ class PeerAuthError(Exception):
     """Raised for authentication-related errors in Peer."""
 
 
-
 class CertificateError(Exception):
     """Raised for certificate validation or issuance errors."""
-

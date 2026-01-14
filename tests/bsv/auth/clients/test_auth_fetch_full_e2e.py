@@ -53,8 +53,11 @@ async def auth_server():
     this_dir = os.path.dirname(__file__)
     server_script = os.path.abspath(os.path.join(this_dir, "..", "test_auth_server_full.py"))
 
-    # Start the server process using the current Python interpreter (async)
-    server_process = await asyncio.create_subprocess_exec(sys.executable, server_script, env=os.environ)
+    # Start the server process using the current Python interpreter with PYTHONPATH set
+    # The server needs access to the bsv module (add the py-sdk directory to PYTHONPATH)
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(server_script))))
+    server_process = await asyncio.create_subprocess_exec(sys.executable, server_script, env=env)
 
     # Wait for server to become ready by polling /health
     import ssl
@@ -201,19 +204,18 @@ async def test_auth_fetch_certificate_exchange(auth_server):
     import time
     from unittest.mock import patch
 
+    import aiohttp
     import requests
+    from test_ssl_helper import get_client_ssl_context
 
     from bsv.auth.peer import Peer
     from bsv.auth.peer_session import PeerSession
 
-    original_request = requests.Session.request
-
-    def patched_request(self, method, url, **kwargs):
-        kwargs.setdefault("verify", False)
-        return original_request(self, method, url, **kwargs)
-
     certs = None
-    with patch.object(requests.Session, "request", patched_request):
+    # Use SSL context with verification disabled for test environment
+    ssl_context = get_client_ssl_context()  # NOSONAR - Test environment only
+    connector = aiohttp.TCPConnector(ssl=ssl_context)
+    async with aiohttp.ClientSession(connector=connector) as http_session:
         initial_nonce = base64.b64encode(os.urandom(32)).decode("ascii")
         initial_payload = {
             "version": "0.1",
@@ -221,35 +223,48 @@ async def test_auth_fetch_certificate_exchange(auth_server):
             "identityKey": wallet.identity_key,
             "nonce": initial_nonce,
         }
-        resp = requests.post(
-            f"{base_url}/auth", json=initial_payload, verify=False, timeout=5
-        )  # NOSONAR - Test environment SSL verification disabled; synchronous client used for test simplicity
-        assert resp.status_code == 200
-        response_data = resp.json()
-        server_identity = response_data.get("identityKey")
-        server_nonce = response_data.get("nonce")
-        assert server_identity is not None
-        assert server_nonce is not None
+        async with http_session.post(
+            f"{base_url}/auth", json=initial_payload, timeout=aiohttp.ClientTimeout(total=5)
+        ) as resp:
+            assert resp.status == 200
+            response_data = await resp.json()
+            server_identity = response_data.get("identityKey")
+            server_nonce = response_data.get("nonce")
+            assert server_identity is not None
+            assert server_nonce is not None
 
-        class SimplePublicKey:
-            def __init__(self, hex_str: str):
-                self._hex = hex_str
+            class SimplePublicKey:
+                def __init__(self, hex_str: str):
+                    self._hex = hex_str
 
-            def hex(self) -> str:
-                return self._hex
+                def hex(self) -> str:
+                    return self._hex
 
-        session = PeerSession(
-            is_authenticated=True,
-            session_nonce=initial_nonce,
-            peer_nonce=server_nonce,
-            peer_identity_key=SimplePublicKey(server_identity),
-            last_update=int(time.time() * 1000),
-        )
-        auth_fetch.session_manager.add_session(session)
+            session = PeerSession(
+                is_authenticated=True,
+                session_nonce=initial_nonce,
+                peer_nonce=server_nonce,
+                peer_identity_key=SimplePublicKey(server_identity),
+                last_update=int(time.time() * 1000),
+            )
+            auth_fetch.session_manager.add_session(session)
 
-        # This should now trigger the certificate request flow
-        with patch.object(Peer, "get_authenticated_session", return_value=session):
-            certs = auth_fetch.send_certificate_request(base_url, certificates_to_request)
+            # This should now trigger the certificate request flow
+            # Configure requests to accept self-signed certificates for SimplifiedHTTPTransport
+            original_request = requests.Session.request
+
+            def patched_request(self, method, url, **kwargs):
+                kwargs.setdefault("verify", False)
+                return original_request(self, method, url, **kwargs)
+
+            with patch.object(requests.Session, "request", patched_request):
+                with patch.object(
+                    requests.Session,
+                    "post",
+                    lambda self, url, **kwargs: original_request(self, "POST", url, **{**kwargs, "verify": False}),
+                ):
+                    with patch.object(Peer, "get_authenticated_session", return_value=session):
+                        certs = auth_fetch.send_certificate_request(base_url, certificates_to_request)
 
     # Verify we received certificates
     assert certs is not None, "Expected certificates to be returned"

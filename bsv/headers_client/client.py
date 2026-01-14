@@ -19,25 +19,20 @@ class HeadersClientError(Exception):
     """Base exception for HeadersClient errors."""
 
 
-
 class MerkleRootVerificationError(HeadersClientError):
     """Exception raised when merkle root verification fails."""
-
 
 
 class HeaderRetrievalError(HeadersClientError):
     """Exception raised when header retrieval fails."""
 
 
-
 class WebhookError(HeadersClientError):
     """Exception raised when webhook operations fail."""
 
 
-
 class ChainTipError(HeadersClientError):
     """Exception raised when chain tip retrieval fails."""
-
 
 
 class HeadersClient(ChainTracker):

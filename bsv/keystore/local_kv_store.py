@@ -148,9 +148,7 @@ class LocalKVStore(KVStoreInterface):
         finally:
             self._release_key_lock(key)
 
-    def _get_onchain_value(
-        self, ctx: Any, key: str
-    ) -> str | None:  # NOSONAR - Complexity (56), requires refactoring
+    def _get_onchain_value(self, ctx: Any, key: str) -> str | None:  # NOSONAR - Complexity (56), requires refactoring
         """Retrieve value from on-chain outputs (BEEF/PushDrop)."""
         outputs, beef_bytes = self._lookup_outputs_for_get(ctx, key)
         if not outputs:

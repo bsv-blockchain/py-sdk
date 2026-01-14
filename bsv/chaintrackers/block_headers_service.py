@@ -18,15 +18,12 @@ class BlockHeadersServiceError(Exception):
     """Base exception for BlockHeadersService errors."""
 
 
-
 class MerkleRootVerificationError(BlockHeadersServiceError):
     """Exception raised when merkle root verification fails."""
 
 
-
 class CurrentHeightError(BlockHeadersServiceError):
     """Exception raised when current height retrieval fails."""
-
 
 
 @dataclass

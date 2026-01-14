@@ -85,9 +85,7 @@ class Spend:
 
         # Read instruction
         current_opcode = operation.op
-        if current_opcode not in OPCODE_VALUE_NAME_DICT and not (
-            b"\x01" <= current_opcode < OpCode.OP_PUSHDATA1
-        ):
+        if current_opcode not in OPCODE_VALUE_NAME_DICT and not (b"\x01" <= current_opcode < OpCode.OP_PUSHDATA1):
             self.script_evaluation_error(f"An opcode is missing in this chunk of the {self.context}!")
         if operation.data is not None and len(operation.data) > MAX_SCRIPT_ELEMENT_SIZE:
             _m = f"It's not currently possible to push data larger than {MAX_SCRIPT_ELEMENT_SIZE} bytes."

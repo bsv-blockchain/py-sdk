@@ -56,9 +56,7 @@ class BroadcasterInterface:
     or {"accepted": False, "code": "network|client", "error": "..."}
     """
 
-    def broadcast(
-        self, tx_hex: str, *, api_key: Optional[str] = None, timeout: int = 10
-    ) -> dict[str, Any]:
+    def broadcast(self, tx_hex: str, *, api_key: Optional[str] = None, timeout: int = 10) -> dict[str, Any]:
         raise NotImplementedError
 
 

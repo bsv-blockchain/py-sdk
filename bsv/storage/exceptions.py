@@ -4,12 +4,10 @@ class StorageError(Exception):
     """
 
 
-
 class UploadError(StorageError):
     """
     Raised when file upload fails.
     """
-
 
 
 class DownloadError(StorageError):
@@ -18,16 +16,13 @@ class DownloadError(StorageError):
     """
 
 
-
 class AuthError(StorageError):
     """
     Raised when authentication or wallet integration fails.
     """
 
 
-
 class NetworkError(StorageError):
     """
     Raised when network communication fails.
     """
-

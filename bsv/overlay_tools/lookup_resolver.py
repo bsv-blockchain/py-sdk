@@ -21,20 +21,16 @@ class LookupError(Exception):
     """Base exception for lookup operations."""
 
 
-
 class LookupTimeoutError(LookupError):
     """Exception raised when lookup operation times out."""
-
 
 
 class LookupResponseError(LookupError):
     """Exception raised when lookup response is invalid."""
 
 
-
 class HTTPProtocolError(LookupError):
     """Exception raised when HTTP protocol requirement is violated."""
-
 
 
 class TimeoutContext:

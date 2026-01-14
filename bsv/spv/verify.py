@@ -176,7 +176,7 @@ def verify_block_header(header: bytes) -> bool:
     header[36:68]  # Not used in basic validation
     timestamp = int.from_bytes(header[68:72], "little")
     bits = int.from_bytes(header[72:76], "little")
-    int.from_bytes(header[76:80], "little")
+    _ = int.from_bytes(header[76:80], "little")  # nonce - not used in basic validation
 
     # Basic version validation (must be positive, reasonable range)
     if version < 1 or version > 0x7FFFFFFF:

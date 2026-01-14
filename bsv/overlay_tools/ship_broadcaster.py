@@ -19,15 +19,12 @@ class BroadcastError(Exception):
     """Base exception for SHIP broadcast operations."""
 
 
-
 class HTTPProtocolError(BroadcastError):
     """Exception raised when HTTP protocol requirement is violated."""
 
 
-
 class BroadcastResponseError(BroadcastError):
     """Exception raised when broadcast response is invalid."""
-
 
 
 @dataclass
