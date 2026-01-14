@@ -167,9 +167,10 @@ class HTTPSOverlayLookupFacilitator:
                             outputs=[]  # Custom responses don't have outputs
                         )
 
-        timeout_ctx = TimeoutContext(timeout / 1000 if timeout is not None else None)
+        timeout_seconds = timeout / 1000 if timeout is not None else None
         try:
-            return await timeout_ctx.run(_perform_lookup())
+            async with TimeoutContext(timeout_seconds) as timeout_ctx:
+                return await timeout_ctx.run(_perform_lookup())
         except asyncio.TimeoutError:
             raise LookupTimeoutError('Request timed out')
         except (LookupError, HTTPProtocolError):
@@ -247,10 +248,11 @@ class LookupResolver:
     async def lookup(self, question: LookupQuestion, timeout: Optional[int] = None) -> List[LookupOutput]:
         """Lookup outputs for a given question. Delegates to query method."""
         async def _perform_lookup():
-            return await self.query(question, timeout)
+            return await self.query(question)
 
-        timeout_ctx = TimeoutContext(timeout / 1000 if timeout is not None else None)
-        answer = await timeout_ctx.run(_perform_lookup())
+        timeout_seconds = timeout / 1000 if timeout is not None else None
+        async with TimeoutContext(timeout_seconds) as timeout_ctx:
+            answer = await timeout_ctx.run(_perform_lookup())
         return answer.outputs
 
     async def query(self, question: LookupQuestion, timeout: Optional[int] = None) -> LookupAnswer:
@@ -260,8 +262,9 @@ class LookupResolver:
             host_responses = await self._query_all_hosts(ranked_hosts, question)
             return self._aggregate_host_responses(host_responses)
 
-        timeout_ctx = TimeoutContext(timeout / 1000 if timeout is not None else None)
-        return await timeout_ctx.run(_perform_query())
+        timeout_seconds = timeout / 1000 if timeout is not None else None
+        async with TimeoutContext(timeout_seconds) as timeout_ctx:
+            return await timeout_ctx.run(_perform_query())
 
     async def _prepare_ranked_hosts(self, service: str) -> List[str]:
         """Prepare and validate ranked hosts for a service."""
@@ -447,13 +450,14 @@ class LookupResolver:
     async def _lookup_host_with_tracking(
         self,
         host: str,
-        question: LookupQuestion
+        question: LookupQuestion,
+        timeout: Optional[int] = None
     ) -> LookupAnswer:
         """Lookup from a host with success/failure tracking."""
         started_at = int(time.time() * 1000)
 
         try:
-            answer = await self.facilitator.lookup(host, question)
+            answer = await self.facilitator.lookup(host, question, timeout)
             latency = int(time.time() * 1000) - started_at
 
             # Check if response is valid

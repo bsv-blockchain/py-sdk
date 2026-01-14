@@ -1176,8 +1176,8 @@ def test_beef_v2_mixed_txidonly_and_rawtx():
     # Build BEEF V2: bumps=0, txs=2
     # First entry: TxIDOnly for tx1
     # Second entry: RawTx for tx2
-    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"  # bumps=0
-    v2 += b"\x02"  # txs=2
+    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"
+    v2 += b"\x02"
     v2 += b"\x02" + bytes.fromhex(tx1_id)[::-1]  # TxIDOnly(tx1)
     v2 += b"\x00" + tx2.serialize()  # RawTx(tx2)
     
@@ -1234,8 +1234,8 @@ def test_beef_v2_duplicate_txidonly_and_rawtx():
     # Build BEEF V2: bumps=0, txs=2
     # First entry: TxIDOnly for the txid
     # Second entry: RawTx for the same txid (should deduplicate)
-    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"  # bumps=0
-    v2 += b"\x02"  # txs=2
+    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"
+    v2 += b"\x02"
     v2 += b"\x02" + bytes.fromhex(tx_id)[::-1]  # TxIDOnly(tx)
     v2 += b"\x00" + tx.serialize()  # RawTx(tx) - same txid
     

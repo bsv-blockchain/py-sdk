@@ -56,7 +56,7 @@ class TestScriptNumber(unittest.TestCase):
 
     def test_from_bytes_multi_byte_positive(self):
         """Test from_bytes with multi-byte positive number."""
-        num = ScriptNumber.from_bytes(b"\x2a\x01")  # 42 + 256*1 = 298
+        num = ScriptNumber.from_bytes(b"\x2a\x01")
         self.assertEqual(num.value, 298)
 
     def test_from_bytes_multi_byte_negative(self):

@@ -131,7 +131,7 @@ class TestCheckSigVectors:
         if expected_result == "OK":
             assert err is None, f"Expected OK but got error: {err}"
         else:
-            assert err is not None, f"Expected error but got OK"
+            assert err is not None, "Expected error but got OK"
 
     @pytest.mark.parametrize("sig_hex,pubkey_hex,script_after,flags,expected_error,description", [
         # Ported from Go SDK script_tests.json - invalid encoding tests

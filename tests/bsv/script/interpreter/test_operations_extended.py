@@ -81,7 +81,7 @@ class TestSignatureEncodingExtended:
     
     def test_signature_negative_r(self):
         """Test signature with negative R value."""
-        sig = b"\x30\x06\x02\x01\x80\x02\x01\x01\x01"  # R = 0x80 (negative)
+        sig = b"\x30\x06\x02\x01\x80\x02\x01\x01\x01"
         result = check_signature_encoding(sig, require_der=True)
         assert result is not None
     
@@ -105,7 +105,7 @@ class TestSignatureEncodingExtended:
     
     def test_signature_negative_s(self):
         """Test signature with negative S value."""
-        sig = b"\x30\x06\x02\x01\x01\x02\x01\x80\x01"  # S = 0x80 (negative)
+        sig = b"\x30\x06\x02\x01\x01\x02\x01\x80\x01"
         result = check_signature_encoding(sig, require_der=True)
         assert result is not None
     

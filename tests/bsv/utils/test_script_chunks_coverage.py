@@ -369,7 +369,7 @@ def test_read_script_chunks_op_push_boundary_75():
         from bsv.utils.script_chunks import read_script_chunks
 
         # Exactly 75 bytes of data (boundary between direct push and OP_PUSHDATA1)
-        script = b'\x4b' + b'\x00' * 75  # 0x4b = 75
+        script = b'\x4b' + b'\x00' * 75
         chunks = read_script_chunks(script)
         assert isinstance(chunks, list)
         assert len(chunks) == 1
@@ -431,7 +431,7 @@ def test_serialize_chunks_with_pushdata1():
         data = b'\x00' * 100
         chunks = [ScriptChunk(op=0x4C, data=data)]
         result = serialize_chunks(chunks)
-        assert result == b'\x4c\x64' + data  # 0x64 = 100
+        assert result == b'\x4c\x64' + data
         assert len(result) == 1 + 1 + 100
     except ImportError:
         pytest.skip("serialize_chunks not available")

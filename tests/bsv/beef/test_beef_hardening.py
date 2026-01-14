@@ -49,8 +49,8 @@ def test_beef_v2_txidonly_then_raw_deduplicate():
     
     # Build BEEF V2 with TxIDOnly followed by RawTx for same txid
     v2 = int(BEEF_V2).to_bytes(4, 'little')
-    v2 += b"\x00"  # bumps=0
-    v2 += b"\x02"  # txs=2
+    v2 += b"\x00"
+    v2 += b"\x02"
     v2 += b"\x02" + txid_bytes  # TxIDOnly
     v2 += b"\x00" + tx.serialize()  # RawTx (same txid)
     
@@ -96,8 +96,8 @@ def test_beef_v2_mixed_txidonly_and_rawtx_linking():
     child.outputs = [TransactionOutput(Script(b"\x51"), 900)]
     child_id = child.txid()
     # Build BEEF V2 bytes: bumps=0, txs=3: TxIDOnly(parent), TxIDOnly(child), RawTx(parent), RawTx(child)
-    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"  # bumps=0
-    v2 += b"\x04"  # txs=4
+    v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x00"
+    v2 += b"\x04"
     v2 += b"\x02" + bytes.fromhex(parent_id)[::-1]  # TxIDOnly(parent)
     v2 += b"\x02" + bytes.fromhex(child_id)[::-1]   # TxIDOnly(child)
     v2 += b"\x00" + parent.serialize()              # RawTx(parent)
@@ -178,7 +178,6 @@ def test_atomicbeef_deeply_nested():
 def test_beef_v2_bump_index_out_of_range():
     """BEEF V2: bump index out of range should raise ValueError."""
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
-    # version, bumps=1, txs=1, kind=RawTxAndBumpIndex, bumpIndex=2 (invalid)
     v2 = int(BEEF_V2).to_bytes(4, 'little') + b"\x01" + b"\x00" + b"\x01" + b"\x01" + b"\x02" + b"\x00"
     import pytest
     with pytest.raises((ValueError, TypeError)):
@@ -198,8 +197,8 @@ def test_beef_v2_txidonly_rawtx_duplicate_order():
     
     # Build BEEF V2: TxIDOnly, RawTx, TxIDOnly (all same txid) - tests deduplication in various orders
     v2 = int(BEEF_V2).to_bytes(4, 'little')
-    v2 += b"\x00"  # bumps=0
-    v2 += b"\x03"  # txs=3
+    v2 += b"\x00"
+    v2 += b"\x03"
     v2 += b"\x02" + txid_bytes  # TxIDOnly
     v2 += b"\x00" + tx.serialize()  # RawTx (same txid)
     v2 += b"\x02" + txid_bytes  # TxIDOnly again

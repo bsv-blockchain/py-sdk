@@ -194,7 +194,7 @@ class TestECDSARecoverable:
     
     def test_deserialize_recoverable_invalid_rec_id_raises(self):
         """Test that invalid recovery ID in data raises AssertionError."""
-        invalid_sig = b'\x00' * 64 + b'\x04'  # rec_id = 4 (invalid)
+        invalid_sig = b'\x00' * 64 + b'\x04'
         with pytest.raises(AssertionError, match="invalid recovery id"):
             deserialize_ecdsa_recoverable(invalid_sig)
     

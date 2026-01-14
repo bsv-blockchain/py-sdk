@@ -238,12 +238,12 @@ def test_verify_block_header_invalid_version():
         from bsv.spv.verify import verify_block_header
 
         # Test with negative version
-        header = b'\xFF\xFF\xFF\xFF' + b'\x00' * 76  # version = -1
+        header = b'\xFF\xFF\xFF\xFF' + b'\x00' * 76
         result = verify_block_header(header)
         assert result == False
 
         # Test with version too high
-        header = b'\x00\x00\x00\x80' + b'\x00' * 76  # version = 0x80000000
+        header = b'\x00\x00\x00\x80' + b'\x00' * 76
         result = verify_block_header(header)
         assert result == False
     except ImportError:
@@ -256,7 +256,7 @@ def test_verify_block_header_invalid_timestamp():
         from bsv.spv.verify import verify_block_header
 
         # Test with timestamp before genesis (1231006505)
-        header = b'\x01\x00\x00\x00' + b'\x00' * 68 + b'\x00\x00\x00\x00' + b'\x00' * 4  # timestamp = 0
+        header = b'\x01\x00\x00\x00' + b'\x00' * 68 + b'\x00\x00\x00\x00' + b'\x00' * 4
         result = verify_block_header(header)
         assert result == False
 
@@ -276,12 +276,12 @@ def test_verify_block_header_invalid_bits():
         from bsv.spv.verify import verify_block_header
 
         # Test with bits too low
-        header = b'\x01\x00\x00\x00' + b'\x00' * 72 + b'\x00\x00\x00\x00'  # bits = 0
+        header = b'\x01\x00\x00\x00' + b'\x00' * 72 + b'\x00\x00\x00\x00'
         result = verify_block_header(header)
         assert result == False
 
         # Test with bits too high
-        header = b'\x01\x00\x00\x00' + b'\x00' * 72 + b'\x00\x00\x00\x21'  # bits = 0x21000000
+        header = b'\x01\x00\x00\x00' + b'\x00' * 72 + b'\x00\x00\x00\x21'
         result = verify_block_header(header)
         assert result == False
     except ImportError:
@@ -295,10 +295,10 @@ def test_verify_block_header_pow_validation():
 
         # Create a header with low difficulty that should fail PoW
         # This is a simplified test - in practice, PoW validation depends on the actual difficulty
-        header = b'\x01\x00\x00\x00' + b'\xFF' * 32 + b'\xFF' * 32  # Hard merkle root
-        header += b'\x00\x00\x00\x00'  # timestamp = 0 (will fail timestamp check anyway)
-        header += b'\xFF\xFF\x00\x1D'  # bits = 0x1D00FFFF (reasonable)
-        header += b'\x00\x00\x00\x00'  # nonce = 0
+        header = b'\x01\x00\x00\x00' + b'\xFF' * 32 + b'\xFF' * 32
+        header += b'\x00\x00\x00\x00'
+        header += b'\xFF\xFF\x00\x1D'
+        header += b'\x00\x00\x00\x00'
 
         # Should fail due to timestamp, but if we ignore that, PoW should be checked
         # For this test, we'll just ensure the function returns a boolean
@@ -318,12 +318,12 @@ def test_verify_block_header_edge_cases():
         timestamp_bytes = current_time.to_bytes(4, 'little')
 
         # Create a minimal valid-looking header
-        header = b'\x01\x00\x00\x00'  # version = 1
-        header += b'\x00' * 32  # prev_block_hash = 0
-        header += b'\x00' * 32  # merkle_root = 0
-        header += timestamp_bytes  # current timestamp
-        header += b'\xFF\xFF\x00\x1D'  # bits = 0x1D00FFFF
-        header += b'\x00\x00\x00\x00'  # nonce = 0
+        header = b'\x01\x00\x00\x00'
+        header += b'\x00' * 32
+        header += b'\x00' * 32
+        header += timestamp_bytes
+        header += b'\xFF\xFF\x00\x1D'
+        header += b'\x00\x00\x00\x00'
 
         # Should return False due to PoW check, but should not crash
         result = verify_block_header(header)
