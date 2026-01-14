@@ -53,21 +53,13 @@ class SymmetricKey:
         if isinstance(key, int):
             # Convert integer to 32-byte big-endian (matches TS BigNumber.toArray('be', 32))
             self._key = key.to_bytes(self.KEY_LENGTH, byteorder='big')
-        elif isinstance(key, (bytes, bytearray)):
+        elif isinstance(key, (bytes, bytearray, list)):
             key_bytes = bytes(key)
             if len(key_bytes) < self.KEY_LENGTH:
                 # Left-pad with zeros (matches Go SDK NewSymmetricKey behavior)
                 self._key = bytes(self.KEY_LENGTH - len(key_bytes)) + key_bytes
             elif len(key_bytes) > self.KEY_LENGTH:
                 # Truncate to 32 bytes
-                self._key = key_bytes[:self.KEY_LENGTH]
-            else:
-                self._key = key_bytes
-        elif isinstance(key, list):
-            key_bytes = bytes(key)
-            if len(key_bytes) < self.KEY_LENGTH:
-                self._key = bytes(self.KEY_LENGTH - len(key_bytes)) + key_bytes
-            elif len(key_bytes) > self.KEY_LENGTH:
                 self._key = key_bytes[:self.KEY_LENGTH]
             else:
                 self._key = key_bytes

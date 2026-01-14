@@ -1374,70 +1374,84 @@ def _compute_sighash_internal(t: "Thread", script_bytes: bytes, sighash_flag) ->
         use_bip143 = t.flags.has_flag(Flag.VERIFY_BIP143_SIGHASH) or (shf_val & int(SIGHASH.FORKID)) != 0
 
         if use_bip143:
-            txin = t.tx.inputs[t.input_idx]
-            original_locking_script = txin.locking_script
-            original_sighash = txin.sighash
-            txin.locking_script = Script.from_bytes(script_bytes)
-            txin.sighash = _sighash_from_int(shf_val)
-            preimage = t.tx.preimage(t.input_idx)
-            txin.locking_script = original_locking_script
-            txin.sighash = original_sighash
-            return hash256(preimage)
+            return _compute_bip143_sighash(t, script_bytes, shf_val)
 
-        # Legacy (non-BIP143) signature hashing.
-        hash_type = shf_val & 0x1F
-        anyone_can_pay = (shf_val & int(SIGHASH.ANYONECANPAY)) != 0
-
-        # SIGHASH_SINGLE bug: if input index >= outputs, signature hash is 1.
-        if hash_type == int(SIGHASH.SINGLE) and t.input_idx >= len(t.tx.outputs):
-            return b"\x01" + (b"\x00" * 31)
-
-        raw = bytearray()
-        raw += t.tx.version.to_bytes(4, "little")
-
-        # Inputs
-        if anyone_can_pay:
-            raw += unsigned_to_varint(1)
-            ins = [(t.input_idx, t.tx.inputs[t.input_idx])]
-        else:
-            raw += unsigned_to_varint(len(t.tx.inputs))
-            ins = list(enumerate(t.tx.inputs))
-
-        for i, txin in ins:
-            raw += bytes.fromhex(txin.source_txid)[::-1]
-            raw += txin.source_output_index.to_bytes(4, "little")
-            if i == t.input_idx:
-                raw += unsigned_to_varint(len(script_bytes))
-                raw += script_bytes
-            else:
-                raw += b"\x00"
-
-            seq = txin.sequence
-            if i != t.input_idx and (hash_type == int(SIGHASH.NONE) or hash_type == int(SIGHASH.SINGLE)):
-                seq = 0
-            raw += seq.to_bytes(4, "little")
-
-        # Outputs
-        if hash_type == int(SIGHASH.NONE):
-            raw += unsigned_to_varint(0)
-        elif hash_type == int(SIGHASH.SINGLE):
-            raw += unsigned_to_varint(t.input_idx + 1)
-            # "Null" outputs for indices < input_idx
-            null_out = (0xFFFFFFFFFFFFFFFF).to_bytes(8, "little") + b"\x00"
-            for _ in range(t.input_idx):
-                raw += null_out
-            raw += t.tx.outputs[t.input_idx].serialize()
-        else:
-            raw += unsigned_to_varint(len(t.tx.outputs))
-            for o in t.tx.outputs:
-                raw += o.serialize()
-
-        raw += t.tx.locktime.to_bytes(4, "little")
-        raw += shf_val.to_bytes(4, "little")
-
-        return hash256(bytes(raw))
+        return _compute_legacy_sighash(t, script_bytes, shf_val)
     except Exception:
         return None
+
+
+def _compute_bip143_sighash(t: "Thread", script_bytes: bytes, shf_val: int) -> bytes:
+    """Compute BIP143 signature hash."""
+    txin = t.tx.inputs[t.input_idx]
+    original_locking_script = txin.locking_script
+    original_sighash = txin.sighash
+    txin.locking_script = Script.from_bytes(script_bytes)
+    txin.sighash = _sighash_from_int(shf_val)
+    preimage = t.tx.preimage(t.input_idx)
+    txin.locking_script = original_locking_script
+    txin.sighash = original_sighash
+    return hash256(preimage)
+
+
+def _compute_legacy_sighash(t: "Thread", script_bytes: bytes, shf_val: int) -> bytes:
+    """Compute legacy (non-BIP143) signature hash."""
+    hash_type = shf_val & 0x1F
+    anyone_can_pay = (shf_val & int(SIGHASH.ANYONECANPAY)) != 0
+
+    # SIGHASH_SINGLE bug: if input index >= outputs, signature hash is 1.
+    if hash_type == int(SIGHASH.SINGLE) and t.input_idx >= len(t.tx.outputs):
+        return b"\x01" + (b"\x00" * 31)
+
+    raw = bytearray()
+    raw += t.tx.version.to_bytes(4, "little")
+    _serialize_legacy_inputs(raw, t, script_bytes, hash_type, anyone_can_pay)
+    _serialize_legacy_outputs(raw, t, hash_type)
+    raw += t.tx.locktime.to_bytes(4, "little")
+    raw += shf_val.to_bytes(4, "little")
+
+    return hash256(bytes(raw))
+
+
+def _serialize_legacy_inputs(raw: bytearray, t: "Thread", script_bytes: bytes, hash_type: int, anyone_can_pay: bool) -> None:
+    """Serialize inputs for legacy sighash computation."""
+    if anyone_can_pay:
+        raw += unsigned_to_varint(1)
+        ins = [(t.input_idx, t.tx.inputs[t.input_idx])]
+    else:
+        raw += unsigned_to_varint(len(t.tx.inputs))
+        ins = list(enumerate(t.tx.inputs))
+
+    for i, txin in ins:
+        raw += bytes.fromhex(txin.source_txid)[::-1]
+        raw += txin.source_output_index.to_bytes(4, "little")
+        if i == t.input_idx:
+            raw += unsigned_to_varint(len(script_bytes))
+            raw += script_bytes
+        else:
+            raw += b"\x00"
+
+        seq = txin.sequence
+        if i != t.input_idx and (hash_type == int(SIGHASH.NONE) or hash_type == int(SIGHASH.SINGLE)):
+            seq = 0
+        raw += seq.to_bytes(4, "little")
+
+
+def _serialize_legacy_outputs(raw: bytearray, t: "Thread", hash_type: int) -> None:
+    """Serialize outputs for legacy sighash computation."""
+    if hash_type == int(SIGHASH.NONE):
+        raw += unsigned_to_varint(0)
+    elif hash_type == int(SIGHASH.SINGLE):
+        raw += unsigned_to_varint(t.input_idx + 1)
+        # "Null" outputs for indices < input_idx
+        null_out = (0xFFFFFFFFFFFFFFFF).to_bytes(8, "little") + b"\x00"
+        for _ in range(t.input_idx):
+            raw += null_out
+        raw += t.tx.outputs[t.input_idx].serialize()
+    else:
+        raw += unsigned_to_varint(len(t.tx.outputs))
+        for o in t.tx.outputs:
+            raw += o.serialize()
 
 
 def _compute_signature_hash(t: "Thread", sig: bytes, sighash_flag) -> Optional[bytes]:  # NOSONAR - Complexity (25), requires refactoring

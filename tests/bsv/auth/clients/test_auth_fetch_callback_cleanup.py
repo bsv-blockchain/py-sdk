@@ -74,23 +74,23 @@ class TestAuthFetchCallbackCleanup:
 
         # Test resolve callback with exception - should propagate (this is expected behavior)
         def failing_resolve(resp):
-            raise Exception("Resolve failed")
+            raise RuntimeError("Resolve failed")
 
         # Replace the lambda with failing version
         self.auth_fetch.callbacks[request_nonce_b64]['resolve'] = failing_resolve
 
         # This should raise an exception (expected behavior)
-        with pytest.raises(Exception, match="Resolve failed"):
+        with pytest.raises(RuntimeError, match="Resolve failed"):
             self.auth_fetch.callbacks[request_nonce_b64]['resolve']("test_resp")
 
         # Test reject callback with exception - should propagate
         def failing_reject(err):
-            raise Exception("Reject failed")
+            raise RuntimeError("Reject failed")
 
         self.auth_fetch.callbacks[request_nonce_b64]['reject'] = failing_reject
 
         # This should raise an exception (expected behavior)
-        with pytest.raises(Exception, match="Reject failed"):
+        with pytest.raises(RuntimeError, match="Reject failed"):
             self.auth_fetch.callbacks[request_nonce_b64]['reject']("test_err")
 
     def test_cleanup_and_get_response_success(self):

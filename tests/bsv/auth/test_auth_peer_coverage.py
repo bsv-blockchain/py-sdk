@@ -895,7 +895,7 @@ def test_serialize_for_signature_with_exception(wallet, transport):
     # Create data that will cause exception in json.dumps
     class BadData:
         def __repr__(self):
-            raise Exception("Cannot serialize")
+            raise ValueError("Cannot serialize")
     data = BadData()
     result = peer._serialize_for_signature(data)
     assert result == b""

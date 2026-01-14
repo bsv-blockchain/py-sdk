@@ -538,40 +538,57 @@ class PushDropUnlocker:
         and optionally ANYONECANPAY when anyone_can_pay is True.
         """
         # Try to get locking script from transaction input if not already set
-        if not self.prev_locking_script and hasattr(tx, "inputs") and input_index < len(tx.inputs):
-            tin = tx.inputs[input_index]
-            if hasattr(tin, "source_transaction") and tin.source_transaction:
-                src_tx = tin.source_transaction
-                src_idx = getattr(tin, "source_output_index", 0)
-                if hasattr(src_tx, "outputs") and src_idx < len(src_tx.outputs):
-                    out = src_tx.outputs[src_idx]
-                    if hasattr(out, "locking_script"):
-                        ls = out.locking_script
-                        if hasattr(ls, "to_bytes"):
-                            self.prev_locking_script = ls.to_bytes()
-                        elif isinstance(ls, bytes):
-                            self.prev_locking_script = ls
-                        elif isinstance(ls, str):
-                            try:
-                                self.prev_locking_script = bytes.fromhex(ls)
-                            except Exception:
-                                pass
+        if not self.prev_locking_script:
+            self._extract_locking_script_from_tx(tx, input_index)
         
         sighash_flag = self._compute_sighash_flag()
         hash_to_sign, used_preimage = self._compute_hash_to_sign(tx, input_index, sighash_flag)
         
         # Try script-specific signature methods first
         if self.prev_locking_script:
-            sig = self._try_p2pkh_signature(hash_to_sign, sighash_flag)
-            if sig:
-                return sig
-            
-            sig = self._try_pushdrop_signature(hash_to_sign, sighash_flag, used_preimage)
+            sig = self._try_script_specific_signatures(hash_to_sign, sighash_flag, used_preimage)
             if sig:
                 return sig
         
         # Fallback to derived key signature
         return self._create_fallback_signature(hash_to_sign, sighash_flag, used_preimage)
+    
+    def _extract_locking_script_from_tx(self, tx, input_index: int) -> None:
+        """Extract locking script from transaction input if available."""
+        if not hasattr(tx, "inputs") or input_index >= len(tx.inputs):
+            return
+        
+        tin = tx.inputs[input_index]
+        if not hasattr(tin, "source_transaction") or not tin.source_transaction:
+            return
+        
+        src_tx = tin.source_transaction
+        src_idx = getattr(tin, "source_output_index", 0)
+        if not hasattr(src_tx, "outputs") or src_idx >= len(src_tx.outputs):
+            return
+        
+        out = src_tx.outputs[src_idx]
+        if not hasattr(out, "locking_script"):
+            return
+        
+        ls = out.locking_script
+        if hasattr(ls, "to_bytes"):
+            self.prev_locking_script = ls.to_bytes()
+        elif isinstance(ls, bytes):
+            self.prev_locking_script = ls
+        elif isinstance(ls, str):
+            try:
+                self.prev_locking_script = bytes.fromhex(ls)
+            except Exception:
+                pass
+    
+    def _try_script_specific_signatures(self, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> Optional[bytes]:
+        """Try P2PKH and PushDrop signature methods. Returns signature if successful, None otherwise."""
+        sig = self._try_p2pkh_signature(hash_to_sign, sighash_flag)
+        if sig:
+            return sig
+        
+        return self._try_pushdrop_signature(hash_to_sign, sighash_flag, used_preimage)
     
     def _compute_sighash_flag(self) -> int:
         """Compute SIGHASH flag from sign_outputs_mode and anyone_can_pay settings."""

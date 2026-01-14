@@ -50,33 +50,24 @@ def test_validate_mnemonic_valid():
     from bsv.hd.bip39 import mnemonic_from_entropy, validate_mnemonic
     mnemonic = mnemonic_from_entropy()
     # validate_mnemonic raises exception if invalid, returns None if valid
-    try:
-        validate_mnemonic(mnemonic)
-        assert True  # No exception means valid
-    except Exception:
-        assert False  # Should not raise exception for valid mnemonic
+    # Should not raise exception for valid mnemonic
+    validate_mnemonic(mnemonic)
 
 
 def test_validate_mnemonic_invalid():
     """Test validating invalid mnemonic."""
     from bsv.hd.bip39 import validate_mnemonic
-    try:
+    # validate_mnemonic raises exception for invalid mnemonics
+    with pytest.raises((ValueError, AssertionError)):
         validate_mnemonic("invalid mnemonic phrase")
-        assert False  # Should raise exception
-    except (ValueError, AssertionError):
-        # validate_mnemonic raises exception for invalid mnemonics
-        assert True
 
 
 def test_validate_mnemonic_empty():
     """Test validating empty mnemonic."""
     from bsv.hd.bip39 import validate_mnemonic
-    try:
+    # Empty mnemonic should raise an error
+    with pytest.raises((ValueError, IndexError, AssertionError)):
         validate_mnemonic("")
-        assert False  # Should raise exception
-    except (ValueError, IndexError, AssertionError):
-        # Empty mnemonic should raise an error
-        assert True
 
 
 # ========================================================================

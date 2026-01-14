@@ -20,7 +20,7 @@ def test_encrypt_message_empty():
         recipient = PrivateKey().public_key()
         
         encrypted = encrypt(b'', sender, recipient)
-        assert isinstance(encrypted, bytes) or True
+        assert isinstance(encrypted, bytes)
     except ImportError:
         pytest.skip(SKIP_ENCRYPTION)
 
@@ -88,7 +88,7 @@ def test_decrypt_message_wrong_key():
         try:
             decrypted = decrypt(encrypted, wrong_key, sender.public_key())
             # Should fail or return garbage
-            assert decrypted != message or True
+            # Decryption failed or produced different result
         except Exception:
             # Expected to fail
             assert True
@@ -105,10 +105,9 @@ def test_decrypt_invalid_data():
         
         try:
             decrypted = decrypt(b'invalid', recipient, sender_pub)
-            assert True
         except Exception:
             # Expected to fail
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_ENCRYPTION)
 
@@ -142,10 +141,9 @@ def test_encrypt_with_none_message():
         
         try:
             encrypted = encrypt(None, sender, recipient)
-            assert True
         except (TypeError, AttributeError):
             # Expected
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_ENCRYPTION)
 

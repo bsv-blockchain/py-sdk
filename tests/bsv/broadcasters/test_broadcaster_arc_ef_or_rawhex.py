@@ -35,7 +35,7 @@ class TransactionBroadcaster:
     def request_headers(self):
         return {"Content-Type": "application/json"}
 
-    async def broadcast(self, tx: 'Transaction') -> Union[BroadcastResponse, BroadcastFailure]:
+    def broadcast(self, tx: 'Transaction') -> Union[BroadcastResponse, BroadcastFailure]:
         # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
         request_options = {
@@ -54,8 +54,7 @@ def broadcaster():
     return TransactionBroadcaster()
 
 
-@pytest.mark.asyncio
-async def test_all_inputs_have_source_transaction(broadcaster):
+def test_all_inputs_have_source_transaction(broadcaster):
     # すべての入力にsource_transactionがある場合
     inputs = [
         Input(source_transaction="tx1"),
@@ -64,14 +63,13 @@ async def test_all_inputs_have_source_transaction(broadcaster):
     ]
     tx = Transaction(inputs=inputs)
 
-    result = await broadcaster.broadcast(tx)
+    result = broadcaster.broadcast(tx)
 
     # EFフォーマットが使われていることを確認
     assert result["data"]["rawTx"] == "ef_formatted_hex_data"
 
 
-@pytest.mark.asyncio
-async def test_some_inputs_missing_source_transaction(broadcaster):
+def test_some_inputs_missing_source_transaction(broadcaster):
     # 一部の入力にsource_transactionがない場合
     inputs = [
         Input(source_transaction="tx1"),
@@ -80,14 +78,13 @@ async def test_some_inputs_missing_source_transaction(broadcaster):
     ]
     tx = Transaction(inputs=inputs)
 
-    result = await broadcaster.broadcast(tx)
+    result = broadcaster.broadcast(tx)
 
     # 通常のhexフォーマットが使われていることを確認
     assert result["data"]["rawTx"] == "normal_hex_data"
 
 
-@pytest.mark.asyncio
-async def test_no_inputs_have_source_transaction(broadcaster):
+def test_no_inputs_have_source_transaction(broadcaster):
     # すべての入力にsource_transactionがない場合
     inputs = [
         Input(source_transaction=None),
@@ -96,7 +93,7 @@ async def test_no_inputs_have_source_transaction(broadcaster):
     ]
     tx = Transaction(inputs=inputs)
 
-    result = await broadcaster.broadcast(tx)
+    result = broadcaster.broadcast(tx)
 
     # 通常のhexフォーマットが使われていることを確認
     assert result["data"]["rawTx"] == "normal_hex_data"

@@ -62,7 +62,7 @@ def deserialize_verify_signature_args(data: bytes) -> Dict[str, Any]:
     return out
 
 
-def verify_signature(wallet: Any, args: Dict[str, Any], origin: str) -> Dict[str, Any]:
+def verify_signature(wallet: Any, args: Dict[str, Any], _origin: str) -> Dict[str, Any]:
     """
     Verify a signature using the wallet.
 

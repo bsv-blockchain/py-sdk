@@ -17,7 +17,7 @@ def test_aes_gcm_encrypt_empty():
         from bsv.aes_gcm import encrypt
         key = b'\x00' * 32  # 256-bit key
         encrypted = encrypt(b'', key)
-        assert isinstance(encrypted, bytes) or True
+        assert isinstance(encrypted, bytes)
     except ImportError:
         pytest.skip(SKIP_AES_GCM)
 
@@ -75,13 +75,11 @@ def test_aes_gcm_decrypt_wrong_key():
         data = b'test'
         
         encrypted = encrypt(data, key1)
-        try:
-            decrypted = decrypt(encrypted, key2)
-            # Should fail authentication
-            assert False, "Should have failed"
-        except Exception:
+        # Should fail authentication with wrong key
+        with pytest.raises(Exception):
+            decrypt(encrypted, key2)
             # Expected to fail
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_AES_GCM)
 
@@ -94,10 +92,9 @@ def test_aes_gcm_decrypt_invalid_data():
         
         try:
             decrypted = decrypt(b'invalid', key)
-            assert True
         except Exception:
             # Expected to fail
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_AES_GCM)
 
@@ -136,10 +133,9 @@ def test_aes_gcm_invalid_key_size():
         
         try:
             encrypted = encrypt(b'test', key)
-            assert True
         except ValueError:
             # Expected to fail
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_AES_GCM)
 

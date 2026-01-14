@@ -126,8 +126,7 @@ def test_relinquish_output_multiple(wallet):
         "output": {"txid": "b" * 64, "vout": 1}
     }, "test")
     
-    # Both should succeed
-    assert True
+    # Both operations should succeed
 
 
 def test_output_expiration_check():

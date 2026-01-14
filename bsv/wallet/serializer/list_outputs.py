@@ -61,9 +61,19 @@ def deserialize_list_outputs_args(data: bytes) -> Dict[str, Any]:
             tags.append(r.read_string())
     out["tags"] = tags
     mode_b = r.read_byte()
-    out["tagQueryMode"] = "all" if mode_b == 1 else ("any" if mode_b == 2 else "")
+    if mode_b == 1:
+        out["tagQueryMode"] = "all"
+    elif mode_b == 2:
+        out["tagQueryMode"] = "any"
+    else:
+        out["tagQueryMode"] = ""
     inc_b = r.read_byte()
-    out["include"] = "locking scripts" if inc_b == 1 else ("entire transactions" if inc_b == 2 else "")
+    if inc_b == 1:
+        out["include"] = "locking scripts"
+    elif inc_b == 2:
+        out["include"] = "entire transactions"
+    else:
+        out["include"] = ""
     out["includeCustomInstructions"] = None if (b := r.read_byte()) == 0xFF else (b == 1)
     out["includeTags"] = None if (b := r.read_byte()) == 0xFF else (b == 1)
     out["includeLabels"] = None if (b := r.read_byte()) == 0xFF else (b == 1)

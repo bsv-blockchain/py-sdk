@@ -29,7 +29,7 @@ def test_chaintracker_get_header():
     """Test ChainTracker get_header method exists."""
     try:
         from bsv.chaintracker import ChainTracker
-        assert hasattr(ChainTracker, 'get_header') or True
+        assert hasattr(ChainTracker, 'get_header')
     except ImportError:
         pytest.skip(SKIP_CHAINTRACKER)
 
@@ -38,7 +38,7 @@ def test_chaintracker_get_height():
     """Test ChainTracker get_height method exists."""
     try:
         from bsv.chaintracker import ChainTracker
-        assert hasattr(ChainTracker, 'get_height') or True
+        assert hasattr(ChainTracker, 'get_height')
     except ImportError:
         pytest.skip(SKIP_CHAINTRACKER)
 
@@ -67,10 +67,10 @@ def test_default_chaintracker_get_height():
         if hasattr(tracker, 'get_height'):
             try:
                 height = tracker.get_height()
-                assert isinstance(height, int) or True
+                assert isinstance(height, int)
             except Exception:
                 # May require connection
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 
@@ -85,10 +85,10 @@ def test_default_chaintracker_get_header():
         if hasattr(tracker, 'get_header'):
             try:
                 header = tracker.get_header(0)  # Genesis block
-                assert header is not None or True
+                # Header retrieved or exception raised
             except Exception:
                 # May require connection
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 
@@ -107,10 +107,9 @@ def test_chaintracker_get_header_negative():
         if hasattr(tracker, 'get_header'):
             try:
                 _ = tracker.get_header(-1)
-                assert True
             except (ValueError, IndexError):
                 # Expected
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 
@@ -125,7 +124,7 @@ def test_chaintracker_get_header_future():
         if hasattr(tracker, 'get_header'):
             try:
                 header = tracker.get_header(99999999)
-                assert header is None or True
+                # Header is None or exception raised
             except Exception:
                 # Expected
                 assert True

@@ -46,8 +46,8 @@ def test_verify_signature_with_missing_data():
             result = verify_signature(wallet, args, "origin")
             assert result is not None or True
         except (KeyError, ValueError):
-            # Expected
-            assert True
+            # Expected - exception caught
+            pass
     except ImportError:
         pytest.skip("verify_signature not available")
 
@@ -68,8 +68,8 @@ def test_verify_signature_with_missing_signature():
             result = verify_signature(wallet, args, "origin")
             assert result is not None or True
         except (KeyError, ValueError):
-            # Expected
-            assert True
+            # Expected - exception caught
+            pass
     except ImportError:
         pytest.skip("verify_signature not available")
 
@@ -170,8 +170,8 @@ def test_verify_signature_with_none_args():
             result = verify_signature(wallet, None, "origin")
             assert result is not None or True
         except (TypeError, AttributeError):
-            # Expected
-            assert True
+            # Expected - exception caught
+            pass
     except ImportError:
         pytest.skip("verify_signature not available")
 
@@ -187,8 +187,8 @@ def test_verify_signature_with_empty_args():
             result = verify_signature(wallet, {}, "origin")
             assert result is not None or True
         except (KeyError, ValueError):
-            # Expected
-            assert True
+            # Expected - exception caught
+            pass
     except ImportError:
         pytest.skip("verify_signature not available")
 

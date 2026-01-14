@@ -149,7 +149,7 @@ class RegistryClient:
         self.originator = originator
         self._resolver = LookupResolver()
 
-    def register_definition(self, ctx: Any, data: DefinitionData) -> Dict[str, Any]:
+    def register_definition(self, _ctx: Any, data: DefinitionData) -> Dict[str, Any]:
         pub = self.wallet.get_public_key({"identityKey": True}, self.originator) or {}
         operator = cast(str, pub.get("publicKey") or "")
 
@@ -183,7 +183,7 @@ class RegistryClient:
         # For now, return create_action-like structure; broadcasting can be done by caller via Transaction.broadcast
         return ca_res
 
-    def list_own_registry_entries(self, ctx: Any, definition_type: DefinitionType) -> List[Dict[str, Any]]:
+    def list_own_registry_entries(self, _ctx: Any, definition_type: DefinitionType) -> List[Dict[str, Any]]:
         include_instructions = True
         include_tags = True
         include_labels = True

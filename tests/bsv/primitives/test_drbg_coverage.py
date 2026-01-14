@@ -16,7 +16,8 @@ def test_drbg_init():
         entropy = b'\x01' * 32
         nonce = b'\x02' * 16
         drbg = DRBG(entropy, nonce)
-        assert drbg is not None
+        # Verify the DRBG was created successfully
+        assert hasattr(drbg, 'generate') or hasattr(drbg, 'reseed')
     except ImportError:
         pytest.skip("DRBG not available")
 
@@ -28,7 +29,8 @@ def test_drbg_init_with_entropy():
     entropy = b'\x01' * 48
     nonce = b'\x02' * 16
     drbg = DRBG(entropy, nonce)
-    assert drbg is not None
+    # Verify the DRBG was created successfully
+    assert hasattr(drbg, 'generate') or hasattr(drbg, 'reseed')
 
 
 # ========================================================================
@@ -100,7 +102,6 @@ def test_drbg_reseed():
         if hasattr(drbg, 'reseed'):
             new_entropy = b'\x03' * 32
             drbg.reseed(new_entropy)
-            assert True
     except ImportError:
         pytest.skip("DRBG not available")
 

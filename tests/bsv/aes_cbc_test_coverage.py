@@ -17,7 +17,7 @@ def test_aes_cbc_encrypt_empty():
         from bsv.aes_cbc import encrypt
         key = b'\x00' * 32  # 256-bit key
         encrypted = encrypt(b'', key)
-        assert isinstance(encrypted, bytes) or True
+        assert isinstance(encrypted, bytes)
     except ImportError:
         pytest.skip(SKIP_AES_CBC)
 
@@ -103,10 +103,9 @@ def test_aes_cbc_decrypt_invalid_data():
         
         try:
             _ = decrypt(b'invalid', key)
-            assert True
         except Exception:
             # Expected to fail
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_AES_CBC)
 
@@ -166,10 +165,9 @@ def test_aes_cbc_invalid_key_size():
         
         try:
             _ = encrypt(b'test', key)
-            assert True
         except ValueError:
             # Expected to fail
-            assert True
+            pass
     except ImportError:
         pytest.skip(SKIP_AES_CBC)
 

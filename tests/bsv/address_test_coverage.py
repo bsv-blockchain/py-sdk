@@ -7,6 +7,7 @@ from bsv.keys import PrivateKey
 # Constants for skip messages
 SKIP_VALIDATE_ADDRESS = "validate_address not available"
 SKIP_DECODE_WIF = "decode_wif not available"
+SKIP_DECODE_WIF_ADDRESS = "decode_wif not available in address.py"
 SKIP_DECODE_ADDRESS = "decode_address not available"
 
 
@@ -322,7 +323,7 @@ def test_decode_wif_direct():
         assert compressed is False
         assert len(private_key) == 32
     except ImportError:
-        pytest.skip("decode_wif not available in address.py")
+        pytest.skip(SKIP_DECODE_WIF_ADDRESS)
 
 
 def test_decode_wif_unknown_prefix():
@@ -343,7 +344,7 @@ def test_decode_wif_unknown_prefix():
         with pytest.raises(ValueError, match="unknown WIF prefix"):
             decode_wif(invalid_wif)
     except ImportError:
-        pytest.skip("decode_wif not available in address.py")
+        pytest.skip(SKIP_DECODE_WIF_ADDRESS)
 
 
 def test_decode_wif_uncompressed_path():
@@ -363,7 +364,7 @@ def test_decode_wif_uncompressed_path():
         assert compressed is False
         assert len(private_key) == 32
     except ImportError:
-        pytest.skip("decode_wif not available in address.py")
+        pytest.skip(SKIP_DECODE_WIF_ADDRESS)
 
 
 def test_decode_address_function():

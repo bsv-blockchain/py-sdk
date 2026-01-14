@@ -86,10 +86,9 @@ def test_decode_invalid_character():
     try:
         _ = decode('0OIl')  # Contains invalid chars
         # May handle or raise
-        assert True
     except (ValueError, Exception):
         # Expected for invalid base58
-        assert True
+        pass
 
 
 def test_decode_with_checksum():
@@ -100,7 +99,7 @@ def test_decode_with_checksum():
         assert result == b'\x00'
     except Exception:
         # May fail depending on implementation
-        assert True
+        pass
 
 
 # ========================================================================

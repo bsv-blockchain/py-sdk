@@ -43,7 +43,7 @@ def test_woc_chaintracker_get_height():
         if hasattr(tracker, 'get_height'):
             try:
                 height = tracker.get_height()
-                assert isinstance(height, int) or True
+                assert isinstance(height, int)
             except Exception:
                 # Expected without network access
                 pytest.skip("Requires network access")
@@ -61,7 +61,7 @@ def test_woc_chaintracker_get_header():
         if hasattr(tracker, 'get_header'):
             try:
                 header = tracker.get_header(0)  # Genesis
-                assert header is not None or True
+                # Header retrieved or exception raised
             except Exception:
                 # Expected without network access
                 pytest.skip("Requires network access")
@@ -102,10 +102,9 @@ def test_chaintracker_invalid_height():
         if hasattr(tracker, 'get_header'):
             try:
                 header = tracker.get_header(-1)
-                assert True
             except (ValueError, Exception):
                 # Expected
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_WOC_TRACKER)
 

@@ -96,32 +96,42 @@ def verify_merkle_proof(txid: bytes, merkle_root: bytes, proof: List[Dict[str, U
 
     # Apply each proof element
     for element in proof:
-        if not isinstance(element, dict):
-            raise ValueError("Proof elements must be dictionaries")
-        if 'hash' not in element or 'side' not in element:
-            raise ValueError("Proof elements must contain 'hash' and 'side' keys")
-
-        sibling_hash = element['hash']
-        side = element['side']
-
-        if not isinstance(sibling_hash, bytes) or len(sibling_hash) != 32:
-            raise ValueError("Sibling hash must be 32 bytes")
-        if side not in ('left', 'right'):
-            raise ValueError("Side must be 'left' or 'right'")
-
-        # Combine hashes in the correct order
-        if side == 'left':
-            # Sibling is on the left, current hash is on the right
-            combined = sibling_hash + current_hash
-        else:
-            # Sibling is on the right, current hash is on the left
-            combined = current_hash + sibling_hash
-
-        # Hash the combination
-        current_hash = hash256(combined)
+        sibling_hash, side = _validate_proof_element(element)
+        current_hash = _combine_hashes(current_hash, sibling_hash, side)
 
     # Check if the final hash matches the expected root
     return current_hash == merkle_root
+
+
+def _validate_proof_element(element: Dict[str, Union[bytes, str]]) -> tuple[bytes, str]:
+    """Validate and extract hash and side from proof element."""
+    if not isinstance(element, dict):
+        raise ValueError("Proof elements must be dictionaries")
+    if 'hash' not in element or 'side' not in element:
+        raise ValueError("Proof elements must contain 'hash' and 'side' keys")
+
+    sibling_hash = element['hash']
+    side = element['side']
+
+    if not isinstance(sibling_hash, bytes) or len(sibling_hash) != 32:
+        raise ValueError("Sibling hash must be 32 bytes")
+    if side not in ('left', 'right'):
+        raise ValueError("Side must be 'left' or 'right'")
+
+    return sibling_hash, side
+
+
+def _combine_hashes(current_hash: bytes, sibling_hash: bytes, side: str) -> bytes:
+    """Combine hashes in the correct order based on side."""
+    if side == 'left':
+        # Sibling is on the left, current hash is on the right
+        combined = sibling_hash + current_hash
+    else:
+        # Sibling is on the right, current hash is on the left
+        combined = current_hash + sibling_hash
+
+    # Hash the combination
+    return hash256(combined)
 
 
 def verify_block_header(header: bytes) -> bool:

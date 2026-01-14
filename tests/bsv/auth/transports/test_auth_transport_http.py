@@ -94,7 +94,7 @@ def test_send_general_performs_http_and_notifies_handler(monkeypatch):  # NOSONA
     import struct
     reader = Reader(resp_msg.payload)
     # Skip request_id (32 bytes)
-    request_id = reader.read(32)
+    _ = reader.read(32)
     # Read status code (varint)
     status_first = reader.read(1)[0]
     if status_first < 0xFD:

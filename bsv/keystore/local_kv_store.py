@@ -742,7 +742,7 @@ class LocalKVStore(KVStoreInterface):
             lock_position="before",
         )
 
-    def _lookup_outputs_for_set(self, ctx: Any, key: str, ca_args: Optional[dict] = None) -> Tuple[list, bytes]:
+    def _lookup_outputs_for_set(self, _ctx: Any, key: str, ca_args: Optional[dict] = None) -> Tuple[list, bytes]:
         ca_args = self._merge_default_ca(ca_args)
         address = self._context
         # Preserve original behaviour (basket/tags) and pass-through ca_args for optional derived lookup
@@ -819,7 +819,7 @@ class LocalKVStore(KVStoreInterface):
             },
         }
 
-    def _sign_and_relinquish_set(self, ctx: Any, key: str, outs: list, inputs_meta: list, signable: dict, signable_tx_bytes: bytes, input_beef: bytes) -> Optional[bytes]:
+    def _sign_and_relinquish_set(self, _ctx: Any, key: str, outs: list, inputs_meta: list, signable: dict, signable_tx_bytes: bytes, input_beef: bytes) -> Optional[bytes]:
         spends = self._prepare_spends(key, inputs_meta, signable_tx_bytes, input_beef)
         try:
             spends_str_keys = {str(int(k)): v for k, v in (spends or {}).items()}
@@ -879,7 +879,7 @@ class LocalKVStore(KVStoreInterface):
         finally:
             self._release_key_lock(key)
 
-    def _lookup_outputs_for_remove(self, ctx: Any, key: str) -> Tuple[list, bytes, Optional[int]]:
+    def _lookup_outputs_for_remove(self, _ctx: Any, key: str) -> Tuple[list, bytes, Optional[int]]:
         lo = self._wallet.list_outputs({
             "basket": self._context,
             "tags": [key],
@@ -903,7 +903,7 @@ class LocalKVStore(KVStoreInterface):
                 input_beef = b""
         return outs, input_beef, total_outputs
 
-    def _onchain_remove_flow(self, ctx: Any, key: str, inputs_meta: list, input_beef: bytes) -> Optional[str]:
+    def _onchain_remove_flow(self, _ctx: Any, key: str, inputs_meta: list, input_beef: bytes) -> Optional[str]:
         ca_res = self._wallet.create_action({
             "labels": ["kv", "remove"],
             "description": f"kvstore remove {key}",

@@ -80,40 +80,58 @@ def serialize_chunks(chunks: List[ScriptChunk]) -> bytes:
     result = bytearray()
 
     for chunk in chunks:
-        # Write the opcode
         result.append(chunk.op)
-
-        # Handle data based on opcode type
         if chunk.data is not None:
-            data = chunk.data
-
-            # Validate data length based on opcode
-            if chunk.op <= 75:  # direct push
-                if len(data) != chunk.op:
-                    raise ValueError(f"Direct push opcode {chunk.op} requires data length {chunk.op}, got {len(data)}")
-                result.extend(data)
-            elif chunk.op == 0x4C:  # OP_PUSHDATA1
-                if len(data) > 255:
-                    raise ValueError(f"OP_PUSHDATA1 data too long: {len(data)} bytes")
-                result.append(len(data))
-                result.extend(data)
-            elif chunk.op == 0x4D:  # OP_PUSHDATA2
-                if len(data) > 65535:
-                    raise ValueError(f"OP_PUSHDATA2 data too long: {len(data)} bytes")
-                result.extend(len(data).to_bytes(2, 'little'))
-                result.extend(data)
-            elif chunk.op == 0x4E:  # OP_PUSHDATA4
-                if len(data) > 4294967295:
-                    raise ValueError(f"OP_PUSHDATA4 data too long: {len(data)} bytes")
-                result.extend(len(data).to_bytes(4, 'little'))
-                result.extend(data)
-            else:
-                # Non-push opcode with data - this shouldn't happen in valid scripts
-                raise ValueError(f"Non-push opcode {chunk.op} should not have data")
-        else:
-            # No data - this is correct for non-push opcodes
-            pass
+            _serialize_chunk_data(result, chunk)
 
     return bytes(result)
+
+
+def _serialize_chunk_data(result: bytearray, chunk: ScriptChunk) -> None:
+    """Serialize chunk data based on opcode type."""
+    data = chunk.data
+    
+    if chunk.op <= 75:  # direct push
+        _serialize_direct_push(result, chunk, data)
+    elif chunk.op == 0x4C:  # OP_PUSHDATA1
+        _serialize_pushdata1(result, data)
+    elif chunk.op == 0x4D:  # OP_PUSHDATA2
+        _serialize_pushdata2(result, data)
+    elif chunk.op == 0x4E:  # OP_PUSHDATA4
+        _serialize_pushdata4(result, data)
+    else:
+        # Non-push opcode with data - this shouldn't happen in valid scripts
+        raise ValueError(f"Non-push opcode {chunk.op} should not have data")
+
+
+def _serialize_direct_push(result: bytearray, chunk: ScriptChunk, data: bytes) -> None:
+    """Serialize direct push opcode (opcode <= 75)."""
+    if len(data) != chunk.op:
+        raise ValueError(f"Direct push opcode {chunk.op} requires data length {chunk.op}, got {len(data)}")
+    result.extend(data)
+
+
+def _serialize_pushdata1(result: bytearray, data: bytes) -> None:
+    """Serialize OP_PUSHDATA1 opcode."""
+    if len(data) > 255:
+        raise ValueError(f"OP_PUSHDATA1 data too long: {len(data)} bytes")
+    result.append(len(data))
+    result.extend(data)
+
+
+def _serialize_pushdata2(result: bytearray, data: bytes) -> None:
+    """Serialize OP_PUSHDATA2 opcode."""
+    if len(data) > 65535:
+        raise ValueError(f"OP_PUSHDATA2 data too long: {len(data)} bytes")
+    result.extend(len(data).to_bytes(2, 'little'))
+    result.extend(data)
+
+
+def _serialize_pushdata4(result: bytearray, data: bytes) -> None:
+    """Serialize OP_PUSHDATA4 opcode."""
+    if len(data) > 4294967295:
+        raise ValueError(f"OP_PUSHDATA4 data too long: {len(data)} bytes")
+    result.extend(len(data).to_bytes(4, 'little'))
+    result.extend(data)
 
 

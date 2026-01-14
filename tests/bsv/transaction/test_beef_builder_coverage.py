@@ -19,7 +19,8 @@ def test_beef_builder_init():
     
     # beef_builder module has functions, not a class
     beef = Beef(version=4)
-    assert beef is not None
+    # Verify the Beef object was created successfully
+    assert hasattr(beef, 'to_binary') or hasattr(beef, 'txs')
     assert callable(merge_transaction)
     assert callable(merge_beef)
 
@@ -67,7 +68,7 @@ def test_beef_builder_build():
     
     # Beef is created directly, not via a builder
     beef = Beef(version=4)
-    assert beef is not None
+    # Verify the Beef object was created successfully
     assert hasattr(beef, 'to_binary')
     assert hasattr(beef, 'to_hex')
 
@@ -96,8 +97,9 @@ def test_beef_builder_build_with_transactions():
     
     # Use merge_transaction to add tx to beef
     beef_tx = merge_transaction(beef, tx)
-    assert beef_tx is not None
-    assert beef is not None
+    # Verify the transaction was merged successfully
+    assert beef_tx is not None or hasattr(beef_tx, 'txid')
+    assert hasattr(beef, 'txs') or hasattr(beef, 'to_binary')
 
 
 # ========================================================================
@@ -110,7 +112,7 @@ def test_beef_builder_empty():
     
     # Beef can be created empty
     beef = Beef(version=4)
-    assert beef is not None
+    # Verify the Beef object was created successfully
     assert hasattr(beef, 'txs')
 
 
@@ -126,5 +128,4 @@ def test_beef_builder_reset():
     beef_tx = merge_transaction(beef, tx)
     if beef_tx:
         remove_existing_txid(beef, beef_tx.txid)
-    assert True
 

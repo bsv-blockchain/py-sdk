@@ -231,10 +231,6 @@ class TestAuthFetchListenerCleanup:
 
         self.auth_fetch.peers[base_url] = mock_peer
 
-        # Mock successful certificate reception
-        def mock_cert_callback(sender, certs):
-            self.auth_fetch.certificates_received.extend(certs or [])
-
         # This is hard to test directly since send_certificate_request is complex
         # Let's test the components instead
         with patch('threading.Event') as mock_event_class:

@@ -113,7 +113,7 @@ class ProtoWallet(WalletInterface):
 
     def get_public_key(self, args: GetPublicKeyArgs = None, originator: str = None) -> Dict:
         if os.environ.get("BSV_DEBUG") == "1":
-            print(f"DEBUG ProtoWallet.get_public_key originator=<redacted>")
+            print("DEBUG ProtoWallet.get_public_key originator=<redacted>")
         try:
             # Check for forbidden snake_case keys
             forbidden_keys = {
@@ -168,7 +168,7 @@ class ProtoWallet(WalletInterface):
             - counterparty: The counterparty (optional, defaults to 'self')
         """
         if os.environ.get("BSV_DEBUG") == "1":
-            print(f"DEBUG ProtoWallet.encrypt")
+            print("DEBUG ProtoWallet.encrypt")
         try:
             from bsv.primitives.symmetric_key import SymmetricKey
             
@@ -237,7 +237,7 @@ class ProtoWallet(WalletInterface):
             - counterparty: The counterparty (optional, defaults to 'self')
         """
         if os.environ.get("BSV_DEBUG") == "1":
-            print(f"DEBUG ProtoWallet.decrypt")
+            print("DEBUG ProtoWallet.decrypt")
         try:
             from bsv.primitives.symmetric_key import SymmetricKey
             
@@ -359,29 +359,35 @@ class ProtoWallet(WalletInterface):
         """Convert various representations to a PublicKey."""
         if isinstance(arg, PublicKey):
             return arg
-        elif isinstance(arg, bytes):
+        if isinstance(arg, bytes):
             return PublicKey(arg)
-        elif isinstance(arg, str):
-            # Handle special string values
-            if arg == "anyone":
-                return PrivateKey(1).public_key()
-            if arg == "self":
-                return self.public_key
-            return PublicKey(arg)
-        elif isinstance(arg, dict):
-            # Handle counterparty dict format
-            cp = arg.get("counterparty")
-            if cp is not None:
-                return self._to_public_key(cp)
-            # Handle type-only dict (e.g., {'type': 1} for 'anyone')
-            cp_type = arg.get("type")
-            if cp_type == CounterpartyType.ANYONE or cp_type == 1:
-                return PrivateKey(1).public_key()
-            if cp_type == CounterpartyType.SELF or cp_type == 2:
-                return self.public_key
-            raise ValueError(f"Cannot convert dict to PublicKey: {arg}")
-        else:
-            raise ValueError(f"Cannot convert {type(arg)} to PublicKey")
+        if isinstance(arg, str):
+            return self._convert_string_to_public_key(arg)
+        if isinstance(arg, dict):
+            return self._convert_dict_to_public_key(arg)
+        raise ValueError(f"Cannot convert {type(arg)} to PublicKey")
+    
+    def _convert_string_to_public_key(self, arg: str) -> PublicKey:
+        """Convert string to PublicKey, handling special values."""
+        if arg == "anyone":
+            return PrivateKey(1).public_key()
+        if arg == "self":
+            return self.public_key
+        return PublicKey(arg)
+    
+    def _convert_dict_to_public_key(self, arg: dict) -> PublicKey:
+        """Convert dict to PublicKey, handling counterparty and type formats."""
+        cp = arg.get("counterparty")
+        if cp is not None:
+            return self._to_public_key(cp)
+        
+        # Handle type-only dict (e.g., {'type': 1} for 'anyone')
+        cp_type = arg.get("type")
+        if cp_type == CounterpartyType.ANYONE or cp_type == 1:
+            return PrivateKey(1).public_key()
+        if cp_type == CounterpartyType.SELF or cp_type == 2:
+            return self.public_key
+        raise ValueError(f"Cannot convert dict to PublicKey: {arg}")
 
     def _encode_point(self, point) -> bytes:
         """Encode a curve point as a compressed public key (33 bytes)."""
@@ -538,13 +544,13 @@ class ProtoWallet(WalletInterface):
 
 
     def verify_hmac(self, args: VerifyHmacArgs = None, originator: str = None) -> Dict:
-        print(f"[ProtoWallet.verify_hmac] Starting verification")
+        print("[ProtoWallet.verify_hmac] Starting verification")
         print(f"[ProtoWallet.verify_hmac] Args: {args}")
         try:
             # Extract parameters
             encryption_args, protocol_id, key_id, counterparty, data, hmac_value = self._extract_hmac_params(args)
             
-            print(f"[ProtoWallet.verify_hmac] Extracted params:")
+            print("[ProtoWallet.verify_hmac] Extracted params:")
             print(f"  - protocol_id: {protocol_id}")
             print(f"  - key_id: {key_id} (type: {type(key_id)}, length: {len(key_id) if isinstance(key_id, str) else 'N/A'})")
             print(f"  - counterparty: {counterparty} (type: {type(counterparty)})")
@@ -565,16 +571,16 @@ class ProtoWallet(WalletInterface):
             protocol = self._normalize_protocol(protocol_id)
             cp = self._normalize_counterparty(counterparty)
             
-            print(f"[ProtoWallet.verify_hmac] Normalized:")
+            print("[ProtoWallet.verify_hmac] Normalized:")
             print(f"  - protocol: {protocol}")
             print(f"  - counterparty normalized: {cp}")
             
             
             # Derive shared secret and verify HMAC
-            print(f"[ProtoWallet.verify_hmac] Deriving symmetric key...")
+            print("[ProtoWallet.verify_hmac] Deriving symmetric key...")
             shared_secret = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
             print(f"[ProtoWallet.verify_hmac] Shared secret length: {len(shared_secret)}")
-            print(f"[ProtoWallet.verify_hmac] Computing expected HMAC...")
+            print("[ProtoWallet.verify_hmac] Computing expected HMAC...")
             expected = hmac.new(shared_secret, data, hashlib.sha256).digest()
             print(f"[ProtoWallet.verify_hmac] Expected HMAC: {expected.hex()}")
             print(f"[ProtoWallet.verify_hmac] Received HMAC: {hmac_value.hex() if isinstance(hmac_value, bytes) else hmac_value}")
@@ -1449,7 +1455,11 @@ class ProtoWallet(WalletInterface):
             for o in outputs_desc:
                 ls_hex = o.get("lockingScript")
                 try:
-                    print(f"[TRACE] [_build_beef_for_outputs] out sat={o.get('satoshis')} ls_hex={ls_hex if isinstance(ls_hex, str) else (ls_hex.hex() if isinstance(ls_hex, (bytes, bytearray)) else ls_hex)}")
+                    ls_hex_str = ls_hex
+                    if not isinstance(ls_hex, str):
+                        if isinstance(ls_hex, (bytes, bytearray)):
+                            ls_hex_str = ls_hex.hex()
+                    print(f"[TRACE] [_build_beef_for_outputs] out sat={o.get('satoshis')} ls_hex={ls_hex_str}")
                 except Exception:
                     pass
                 ls_script = Script(ls_hex) if isinstance(ls_hex, str) else Script(ls_hex or b"\x51")
@@ -2201,20 +2211,20 @@ class ProtoWallet(WalletInterface):
     def _select_best_pair(self, utxos: List[Dict], need: int) -> Optional[tuple]:
         """Heuristic 2: try best pair (limit search space)."""
         pair = None
-        best_sum = None
+        best_sum = float('inf')
         limited = utxos[:50]
         
         for i in range(len(limited)):
             vi = int(limited[i].get("satoshis", 0))
             if vi >= need:
-                if best_sum is None or vi < best_sum:
+                if vi < best_sum:
                     best_sum = vi
                     pair = (limited[i],)
                 break
             for j in range(i + 1, len(limited)):
                 vj = int(limited[j].get("satoshis", 0))
                 s = vi + vj
-                if s >= need and (best_sum is None or s < best_sum):
+                if s >= need and s < best_sum:
                     best_sum = s
                     pair = (limited[i], limited[j])
         
@@ -2341,7 +2351,12 @@ class ProtoWallet(WalletInterface):
             existing_outpoints.add(outpoint_key)
             
             ls_val = u.get("lockingScript")
-            ls_hex = ls_val.hex() if isinstance(ls_val, bytes) else (ls_val if isinstance(ls_val, str) else "")
+            if isinstance(ls_val, bytes):
+                ls_hex = ls_val.hex()
+            elif isinstance(ls_val, str):
+                ls_hex = ls_val
+            else:
+                ls_hex = ""
             
             funding_ctx.append({
                 "satoshis": int(u.get("satoshis", 0)),

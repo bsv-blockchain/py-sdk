@@ -36,8 +36,8 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None) -> bool:
         'data': data,
         'hmac': hmac
     }
-    print(f"[verify_nonce] Calling wallet.verify_hmac with:")
-    print(f"  - protocolID: [2, 'server hmac']")
+    print("[verify_nonce] Calling wallet.verify_hmac with:")
+    print("  - protocolID: [2, 'server hmac']")
     print(f"  - keyID: {key_id} (length: {len(key_id)})")
     print(f"  - counterparty: {counterparty}")
     print(f"  - data length: {len(data)}")
@@ -88,9 +88,7 @@ def create_nonce(wallet: Any, counterparty: Any = None) -> str:
         raise RuntimeError('Failed to create HMAC for nonce')
     
     # Ensure hmac is bytes (it might be a list from some wallets)
-    if isinstance(hmac, list):
-        hmac = bytes(hmac)
-    elif not isinstance(hmac, bytes):
+    if not isinstance(hmac, bytes):
         hmac = bytes(hmac)
     
     nonce_bytes = first_half + hmac

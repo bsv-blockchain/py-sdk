@@ -31,7 +31,7 @@ def test_broadcaster_broadcast():
         from bsv.broadcaster import Broadcaster
         
         # Can't instantiate abstract class, but can check it exists
-        assert hasattr(Broadcaster, 'broadcast') or True
+        assert hasattr(Broadcaster, 'broadcast')
     except ImportError:
         pytest.skip("Broadcaster not available")
 
@@ -71,10 +71,9 @@ def test_default_broadcaster_broadcast_tx():
         if hasattr(broadcaster, 'broadcast'):
             try:
                 _ = broadcaster.broadcast(tx)
-                assert True
             except Exception:
                 # Expected without real endpoint
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_BROADCASTER)
 
@@ -90,10 +89,10 @@ def test_broadcaster_with_invalid_url():
         
         try:
             broadcaster = DefaultBroadcaster(url='invalid')
-            assert broadcaster is not None or True
+            # Broadcaster created or validation occurred
         except ValueError:
             # May validate URL
-            assert True
+            pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_BROADCASTER)
 
@@ -108,10 +107,9 @@ def test_broadcaster_broadcast_none():
         if hasattr(broadcaster, 'broadcast'):
             try:
                 _ = broadcaster.broadcast(None)
-                assert True
             except (TypeError, AttributeError):
                 # Expected
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_BROADCASTER)
 

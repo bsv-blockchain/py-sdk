@@ -46,7 +46,6 @@ def test_woc_broadcaster_broadcast():
         if hasattr(broadcaster, 'broadcast'):
             try:
                 result = broadcaster.broadcast(tx)
-                assert True
             except Exception:
                 # Expected without valid tx or network
                 pytest.skip("Requires valid transaction and network")
@@ -80,7 +79,6 @@ def test_gorillapool_broadcaster_broadcast():
         if hasattr(broadcaster, 'broadcast'):
             try:
                 result = broadcaster.broadcast(tx)
-                assert True
             except Exception:
                 # Expected without valid tx or network
                 pytest.skip("Requires valid transaction and network")

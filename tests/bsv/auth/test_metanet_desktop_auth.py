@@ -546,7 +546,7 @@ class PySDKAuthClient:
                 self.is_authenticated = True
                 return {"status": "authenticated", "session": self.auth_session}
             else:
-                raise Exception("py-sdk認証に失敗しました")
+                raise RuntimeError("py-sdk認証に失敗しました")
                 
         except Exception as e:
             print(f"❌ py-sdk認証エラー: {e}")
@@ -567,7 +567,7 @@ class PySDKAuthClient:
         print("=== ステップ2: py-sdk認証済みリクエスト実行 ===")
         
         if not self.is_authenticated:
-            raise Exception("認証が完了していません")
+            raise RuntimeError("認証が完了していません")
         
         try:
             # リクエストデータを準備
@@ -604,7 +604,7 @@ class PySDKAuthClient:
                 print("✅ py-sdk認証済みリクエストが成功しました")
                 return {"status": "success", "message": "リクエストが送信されました"}
             else:
-                raise Exception(f"py-sdkリクエストエラー: {result}")
+                raise RuntimeError(f"py-sdkリクエストエラー: {result}")
                 
         except Exception as e:
             print(f"❌ py-sdkリクエストエラー: {e}")
@@ -731,7 +731,7 @@ class TestMetanetDesktopAuth(unittest.TestCase):
         # Test send (should not raise exception)
         try:
             transport.send("test message")
-            self.assertTrue(True)  # Should reach here
+            # Should reach here without exception
         except Exception:
             self.fail("Mock transport send should not raise exception")
     

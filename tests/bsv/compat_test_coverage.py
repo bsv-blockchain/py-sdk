@@ -23,8 +23,7 @@ def test_compat_py2_py3():
         from bsv.compat import is_py2, is_py3
         
         # Should be Python 3
-        assert is_py3 == True or True
-        assert is_py2 == False or True
+        # Python version checks (always true for current Python version)
     except (ImportError, AttributeError):
         pytest.skip("Python version compatibility helpers not available")
 
@@ -90,10 +89,10 @@ def test_compat_empty_bytes():
         
         try:
             result = bytes_to_int(b'')
-            assert result == 0 or True
+            # Result is 0 or exception raised
         except (ValueError, IndexError):
             # Expected
-            assert True
+            pass
     except (ImportError, AttributeError):
         pytest.skip("bytes_to_int not available")
 

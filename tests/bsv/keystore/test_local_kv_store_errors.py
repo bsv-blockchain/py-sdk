@@ -30,12 +30,13 @@ class TestLocalKVStoreErrorHandling:
         store = LocalKVStore(self.valid_config)
 
         # Test None key (this will fail before validation)
+        # Pass empty string for ctx, but None for key will cause type error
         with pytest.raises((ErrInvalidKey, TypeError)):
-            store.set(None, None, "value")
+            store.set("", None, "value")  # type: ignore
 
         # Test empty string key
         with pytest.raises(ErrInvalidKey):
-            store.set(None, "", "value")
+            store.set("", "", "value")
 
         # Note: whitespace-only keys are allowed by current validation
 
@@ -44,12 +45,13 @@ class TestLocalKVStoreErrorHandling:
         store = LocalKVStore(self.valid_config)
 
         # Test None value (this will fail before validation)
+        # Pass empty string for ctx, but None for value will cause type error
         with pytest.raises((ErrInvalidValue, TypeError)):
-            store.set(None, "key", None)
+            store.set("", "key", None)  # type: ignore
 
         # Test empty string value
         with pytest.raises(ErrInvalidValue):
-            store.set(None, "key", "")
+            store.set("", "key", "")
 
         # Note: whitespace-only values are allowed by current validation
 
@@ -58,12 +60,13 @@ class TestLocalKVStoreErrorHandling:
         store = LocalKVStore(self.valid_config)
 
         # Test None key (this will fail before validation)
+        # Pass empty string for ctx, but None for key will cause type error
         with pytest.raises((ErrInvalidKey, TypeError)):
-            store.get(None, None)
+            store.get("", None)  # type: ignore
 
         # Test empty string key
         with pytest.raises(ErrInvalidKey):
-            store.get(None, "")
+            store.get("", "")
 
         # Note: whitespace-only keys are allowed by current validation
 
@@ -75,7 +78,7 @@ class TestLocalKVStoreErrorHandling:
         # Mock _lookup_outputs_for_get to raise exception
         with patch.object(store, '_lookup_outputs_for_get', side_effect=Exception("Wallet lookup failed")):
             with pytest.raises(Exception, match="Wallet lookup failed"):
-                store.get(None, "test_key")
+                store.get("", "test_key")
 
     def test_encryption_config(self):
         """Test encryption configuration handling."""
@@ -125,7 +128,7 @@ class TestLocalKVStoreErrorHandling:
 
         # Mock empty outputs
         with patch.object(store, '_lookup_outputs_for_get', return_value=([], b"")):
-            result = store.get(None, "nonexistent_key", "default")
+            result = store.get("", "nonexistent_key", "default")
             assert result == "default"
 
     def test_remove_nonexistent_key(self):
@@ -134,5 +137,5 @@ class TestLocalKVStoreErrorHandling:
 
         # Mock empty outputs for remove (needs 3-tuple: outputs, beef, total)
         with patch.object(store, '_lookup_outputs_for_remove', return_value=([], b"", 0)):
-            result = store.remove(None, "nonexistent_key")
+            result = store.remove("", "nonexistent_key")
             assert result == []  # Should return empty list

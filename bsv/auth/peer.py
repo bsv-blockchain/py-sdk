@@ -1046,9 +1046,8 @@ class Peer:
         if sender_public_key:
             sender_key_hex = sender_public_key.hex() if hasattr(sender_public_key, 'hex') else str(sender_public_key)
             session = self.session_manager.get_session(sender_key_hex)
-            if session:
-                if session.peer_nonce == your_nonce:
-                    return None  # Valid: your_nonce matches peer nonce
+            if session and session.peer_nonce == your_nonce:
+                return None  # Valid: your_nonce matches peer nonce
 
         # Case 2: Check if your_nonce matches any of our session nonces
         # This handles server-side verification
@@ -1171,14 +1170,7 @@ class Peer:
         # Python fix: Use session_nonce (server's own nonce) to match TypeScript/Go
         key_id = f"{message_nonce} {session.session_nonce}"
 
-        # Use session.peer_identity_key to match TypeScript: peerSession.peerIdentityKey
-        # Go SDK uses senderPublicKey directly, but TypeScript uses peerSession.peerIdentityKey
-        # Both should be the same (client's identity key), but prefer session.peer_identity_key for consistency
-        if hasattr(session, 'peer_identity_key') and session.peer_identity_key is not None:
-            counterparty_key = session.peer_identity_key
-        else:
-            # Fallback to sender_public_key if session.peer_identity_key is not available
-            counterparty_key = sender_public_key
+        counterparty_key = self._get_counterparty_key(session, sender_public_key)
         verify_result = self.wallet.verify_signature({
             'protocolID': {
                 'securityLevel': 2,
@@ -1194,30 +1186,51 @@ class Peer:
             'signature': signature
         }, "auth-peer")
         
-        valid = False
-        if hasattr(verify_result, 'valid'):
-            valid = verify_result.valid
-        elif isinstance(verify_result, dict):
-            valid = verify_result.get('valid', False)
-        else:
-            valid = bool(verify_result)
+        valid = self._extract_verification_validity(verify_result)
         
         if not valid:
-            if self.logger:
-                try:
-                    self.logger.warning(
-                        "Wallet verify_signature returned invalid",
-                        extra={
-                            "verify_result": getattr(verify_result, '__dict__', verify_result),
-                            "nonce": getattr(message, 'nonce', None),
-                            "session_nonce": session.session_nonce,
-                            "counterparty": counterparty_key.hex() if hasattr(counterparty_key, 'hex') else str(counterparty_key) if counterparty_key else None,
-                        }
-                    )
-                except Exception:
-                    self.logger.warning("Wallet verify_signature returned invalid")
+            self._log_verification_failure(message, session, counterparty_key, verify_result)
             return Exception("general message - invalid signature")
         return None
+    
+    def _get_counterparty_key(self, session: Any, sender_public_key: Any) -> Any:
+        """Get counterparty key from session or fallback to sender_public_key."""
+        if hasattr(session, 'peer_identity_key') and session.peer_identity_key is not None:
+            return session.peer_identity_key
+        return sender_public_key
+    
+    def _extract_verification_validity(self, verify_result: Any) -> bool:
+        """Extract validity from verification result."""
+        if hasattr(verify_result, 'valid'):
+            return verify_result.valid
+        if isinstance(verify_result, dict):
+            return verify_result.get('valid', False)
+        return bool(verify_result)
+    
+    def _log_verification_failure(self, message: Any, session: Any, counterparty_key: Any, verify_result: Any) -> None:
+        """Log verification failure with detailed information."""
+        if not self.logger:
+            return
+        
+        try:
+            counterparty_str = None
+            if counterparty_key:
+                if hasattr(counterparty_key, 'hex'):
+                    counterparty_str = counterparty_key.hex()
+                else:
+                    counterparty_str = str(counterparty_key)
+            
+            self.logger.warning(
+                "Wallet verify_signature returned invalid",
+                extra={
+                    "verify_result": getattr(verify_result, '__dict__', verify_result),
+                    "nonce": getattr(message, 'nonce', None),
+                    "session_nonce": session.session_nonce,
+                    "counterparty": counterparty_str,
+                }
+            )
+        except Exception:
+            self.logger.warning("Wallet verify_signature returned invalid")
 
     def _dispatch_general_message_callbacks(self, sender_public_key: Any, payload: Any) -> None:
         for callback_id, callback in self.on_general_message_received_callbacks.items():

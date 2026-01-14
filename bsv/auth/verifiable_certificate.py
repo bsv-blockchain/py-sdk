@@ -59,6 +59,7 @@ class VerifiableCertificate:
                 },
                 "ciphertext": encrypted_key_bytes,
             }
+            # decrypt expects (ctx, decrypt_args)
             decrypt_result = verifier_wallet.decrypt(ctx, decrypt_args)
             if not decrypt_result or 'plaintext' not in decrypt_result:
                 raise ValueError(f"Wallet decryption failed for field '{field_name}'")

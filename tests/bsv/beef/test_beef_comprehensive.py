@@ -103,7 +103,6 @@ def test_beef_sort_txs():
     
     # Validate transactions
     result = validate_transactions(beef)
-    # print(result)
     # After sorting, parent should be valid (no missing inputs, but no bump either)
     # Parent has no inputs, so it might be in not_valid if no bump is present
     # Child references parent, so once parent is in beef.txs, child should be able to validate
@@ -198,7 +197,6 @@ def test_beef_trim_known_txids():
     
     txid1 = "ee" * 32
     txid2 = "ff" * 32
-    txid3 = "00" * 32
     
     # Add transactions
     beef.merge_txid_only(txid1)

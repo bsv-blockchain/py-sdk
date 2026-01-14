@@ -13,7 +13,8 @@ def test_live_policy_fee_model_init():
     from bsv.fee_models.live_policy import LivePolicy
 
     fee_model = LivePolicy()
-    assert fee_model is not None
+    # Verify the fee model was created successfully
+    assert hasattr(fee_model, 'compute_fee') or hasattr(fee_model, 'update')
 
 
 def test_live_policy_fee_model_with_url():
@@ -21,7 +22,8 @@ def test_live_policy_fee_model_with_url():
     from bsv.fee_models.live_policy import LivePolicy
 
     fee_model = LivePolicy(arc_policy_url='https://api.example.com/fee')
-    assert fee_model is not None
+    # Verify the fee model was created successfully with custom URL
+    assert hasattr(fee_model, 'compute_fee') or hasattr(fee_model, 'update')
 
 
 def test_live_policy_fee_model_compute_fee():
@@ -48,7 +50,6 @@ def test_live_policy_fee_model_update():
     if hasattr(fee_model, 'update'):
         try:
             fee_model.update()
-            assert True
         except Exception:
             # Expected without network access
             pass
@@ -70,7 +71,6 @@ def test_live_policy_fee_model_cache():
             _ = fee_model.compute_fee(250)
             _ = fee_model.compute_fee(250)
             # Fees should be same if cached
-            assert True
         except Exception:
             # Expected without network access
             pass

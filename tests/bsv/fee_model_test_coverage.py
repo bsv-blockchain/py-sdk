@@ -64,10 +64,10 @@ def test_satoshis_per_kb_init_negative_rate():
     """Test SatoshisPerKilobyte with negative rate."""
     try:
         fee_model = SatoshisPerKilobyte(value=-1)
-        assert fee_model.value == -1 or True
+        # Fee model value is -1 or exception raised
     except ValueError:
         # May validate rate
-        assert True
+        pass
 
 
 def test_satoshis_per_kb_compute_fee_empty():

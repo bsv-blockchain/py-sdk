@@ -60,45 +60,73 @@ def decode_pushdata(encoded: bytes) -> bytes:
     opcode = encoded[0]
 
     # Handle special opcodes
-    if opcode == OpCode.OP_0[0]:
-        return b''
-    elif OpCode.OP_1[0] <= opcode <= OpCode.OP_16[0]:
-        # OP_1 to OP_16 represent values 1-16
-        return bytes([opcode - OpCode.OP_1[0] + 1])
-    elif opcode == OpCode.OP_1NEGATE[0]:
-        return b'\x81'
+    special_result = _decode_special_opcode(opcode)
+    if special_result is not None:
+        return special_result
 
     # Handle pushdata opcodes
-    elif 0 <= opcode <= 75:
-        # Direct push - opcode is the length
-        length = opcode
-        if len(encoded) < 1 + length:
-            raise ValueError(f"Encoded data too short for direct push of length {length}")
-        return encoded[1:1 + length]
+    return _decode_pushdata_opcode(encoded, opcode)
 
-    elif opcode == OpCode.OP_PUSHDATA1[0]:
-        if len(encoded) < 2:
-            raise ValueError("Encoded data too short for OP_PUSHDATA1")
-        length = encoded[1]
-        if len(encoded) < 2 + length:
-            raise ValueError(f"Encoded data too short for OP_PUSHDATA1 with length {length}")
-        return encoded[2:2 + length]
 
-    elif opcode == OpCode.OP_PUSHDATA2[0]:
-        if len(encoded) < 3:
-            raise ValueError("Encoded data too short for OP_PUSHDATA2")
-        length = int.from_bytes(encoded[1:3], 'little')
-        if len(encoded) < 3 + length:
-            raise ValueError(f"Encoded data too short for OP_PUSHDATA2 with length {length}")
-        return encoded[3:3 + length]
+def _decode_special_opcode(opcode: int) -> bytes | None:
+    """Decode special opcodes (OP_0, OP_1-OP_16, OP_1NEGATE). Returns None if not a special opcode."""
+    if opcode == OpCode.OP_0[0]:
+        return b''
+    if OpCode.OP_1[0] <= opcode <= OpCode.OP_16[0]:
+        # OP_1 to OP_16 represent values 1-16
+        return bytes([opcode - OpCode.OP_1[0] + 1])
+    if opcode == OpCode.OP_1NEGATE[0]:
+        return b'\x81'
+    return None
 
-    elif opcode == OpCode.OP_PUSHDATA4[0]:
-        if len(encoded) < 5:
-            raise ValueError("Encoded data too short for OP_PUSHDATA4")
-        length = int.from_bytes(encoded[1:5], 'little')
-        if len(encoded) < 5 + length:
-            raise ValueError(f"Encoded data too short for OP_PUSHDATA4 with length {length}")
-        return encoded[5:5 + length]
 
-    else:
-        raise ValueError(f"Unknown pushdata opcode: {opcode}")
+def _decode_pushdata_opcode(encoded: bytes, opcode: int) -> bytes:
+    """Decode pushdata opcodes (direct push, OP_PUSHDATA1, OP_PUSHDATA2, OP_PUSHDATA4)."""
+    if 0 <= opcode <= 75:
+        return _decode_direct_push(encoded, opcode)
+    if opcode == OpCode.OP_PUSHDATA1[0]:
+        return _decode_pushdata1(encoded)
+    if opcode == OpCode.OP_PUSHDATA2[0]:
+        return _decode_pushdata2(encoded)
+    if opcode == OpCode.OP_PUSHDATA4[0]:
+        return _decode_pushdata4(encoded)
+    
+    raise ValueError(f"Unknown pushdata opcode: {opcode}")
+
+
+def _decode_direct_push(encoded: bytes, opcode: int) -> bytes:
+    """Decode direct push opcode (opcode is the length)."""
+    length = opcode
+    if len(encoded) < 1 + length:
+        raise ValueError(f"Encoded data too short for direct push of length {length}")
+    return encoded[1:1 + length]
+
+
+def _decode_pushdata1(encoded: bytes) -> bytes:
+    """Decode OP_PUSHDATA1 opcode."""
+    if len(encoded) < 2:
+        raise ValueError("Encoded data too short for OP_PUSHDATA1")
+    length = encoded[1]
+    if len(encoded) < 2 + length:
+        raise ValueError(f"Encoded data too short for OP_PUSHDATA1 with length {length}")
+    return encoded[2:2 + length]
+
+
+def _decode_pushdata2(encoded: bytes) -> bytes:
+    """Decode OP_PUSHDATA2 opcode."""
+    if len(encoded) < 3:
+        raise ValueError("Encoded data too short for OP_PUSHDATA2")
+    length = int.from_bytes(encoded[1:3], 'little')
+    if len(encoded) < 3 + length:
+        raise ValueError(f"Encoded data too short for OP_PUSHDATA2 with length {length}")
+    return encoded[3:3 + length]
+
+
+def _decode_pushdata4(encoded: bytes) -> bytes:
+    """Decode OP_PUSHDATA4 opcode."""
+    if len(encoded) < 5:
+        raise ValueError("Encoded data too short for OP_PUSHDATA4")
+    length = int.from_bytes(encoded[1:5], 'little')
+    if len(encoded) < 5 + length:
+        raise ValueError(f"Encoded data too short for OP_PUSHDATA4 with length {length}")
+    return encoded[5:5 + length]

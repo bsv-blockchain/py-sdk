@@ -358,7 +358,12 @@ def test_unlocker_input_output_scope_constraints_for_sighash_modes():
     def get_digest(mode_flag):
         # Map to unlocker mode using base flag (low 5 bits)
         base = (mode_flag & 0x1F)
-        mode = 0 if base == SIGHASH.ALL else (2 if base == SIGHASH.NONE else 3)
+        if base == SIGHASH.ALL:
+            mode = 0
+        elif base == SIGHASH.NONE:
+            mode = 2
+        else:
+            mode = 3
         u = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "test"}, "k", None, sign_outputs_mode=mode, anyone_can_pay=bool(mode_flag & SIGHASH.ANYONECANPAY))
         _ = u.sign(t, 0)
         return wallet.last_args.get("hash_to_directly_sign") if wallet.last_args else None
@@ -393,7 +398,12 @@ def test_unlocker_input_output_scope_constraints_for_sighash_modes():
     t_multi.outputs = list(t.outputs)
     def get_digest_for_tx(tx_obj, mode_flag):
         base = (mode_flag & 0x1F)
-        mode = 0 if base == SIGHASH.ALL else (2 if base == SIGHASH.NONE else 3)
+        if base == SIGHASH.ALL:
+            mode = 0
+        elif base == SIGHASH.NONE:
+            mode = 2
+        else:
+            mode = 3
         u = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "test"}, "k", None, sign_outputs_mode=mode, anyone_can_pay=bool(mode_flag & SIGHASH.ANYONECANPAY))
         _ = u.sign(tx_obj, 0)
         return wallet.last_args.get("hash_to_directly_sign") if wallet.last_args else None
@@ -1055,7 +1065,12 @@ def _check_histogram_bounds(hist):
 
 def _run_histogram_for_combo(wallet, t, base_flag, acp):
     from bsv.transaction.pushdrop import PushDropUnlocker
-    mode = 0 if (base_flag & 0x1) else (2 if (base_flag & 0x2) else 3)
+    if base_flag & 0x1:
+        mode = 0
+    elif base_flag & 0x2:
+        mode = 2
+    else:
+        mode = 3
     u = PushDropUnlocker(wallet, {"securityLevel": 2, "protocol": "kvhisto"}, "k", {"type": 0}, sign_outputs_mode=mode, anyone_can_pay=acp)
     hist = {}
     for i in range(256):
@@ -1108,7 +1123,12 @@ def test_unlocker_histogram_with_transaction_preimage_optional():
         t.inputs[0].sighash = base_flag
         hist = _run_histogram_for_combo(wallet, t, base_flag, acp)
         if os.getenv("PRINT_HISTO", "0") == "1":
-            mode = 0 if (base_flag & 0x1) else (2 if (base_flag & 0x2) else 3)
+            if base_flag & 0x1:
+                mode = 0
+            elif base_flag & 0x2:
+                mode = 2
+            else:
+                mode = 3
             print(f"mode={mode} acp={acp} hist={sorted(hist.items())}")
         _check_histogram_bounds(hist)
 
