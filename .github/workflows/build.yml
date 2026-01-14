@@ -60,10 +60,24 @@ jobs:
         echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
         echo "Coverage: $COVERAGE%"
 
-    - name: Update coverage badge (PRs targeting master only)
-      if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && matrix.python-version == '3.11'
+    - name: Update coverage badge
+      if: matrix.python-version == '3.11'
       run: |
         python update_coverage.py ${{ steps.coverage.outputs.coverage }}
+
+    - name: Commit and push updated coverage badge (push to master only)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master' && matrix.python-version == '3.11'
+      run: |
+        # Only proceed if README.md has changes
+        if git diff --quiet README.md; then
+          echo "No coverage badge changes to commit."
+          exit 0
+        fi
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add README.md
+        git commit -m "chore: update coverage badge to ${{ steps.coverage.outputs.coverage }}% [skip ci]" || echo "No changes to commit."
+        git push
 
     - name: Upload coverage reports
       if: matrix.python-version == '3.11'
