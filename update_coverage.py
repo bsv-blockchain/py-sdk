@@ -32,7 +32,7 @@ def update_readme_coverage(coverage_percentage: str):
         color = "red"
 
     # Update the coverage badge at the top (link-wrapped format)
-    badge_pattern = r'\[!\[Coverage\]\(https://img\.shields\.io/badge/coverage-[\d.]+%25-[a-z]+\)\]\([^)]+\)'
+    badge_pattern = r'\[!\[Coverage\]\(https://img\.shields\.io/badge/coverage-[\d.]+%25-[a-z-]+\)\]\([^)]+\)'
     new_badge = f'[![Coverage](https://img.shields.io/badge/coverage-{coverage_percentage}%25-{color})](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)'
 
     content = re.sub(badge_pattern, new_badge, content)
@@ -56,11 +56,14 @@ def main():
 
     coverage_percentage = sys.argv[1]
 
-    # Validate that it's a number
+    # Validate that it's a number within the valid percentage range (0-100)
     try:
-        float(coverage_percentage)
+        coverage_float = float(coverage_percentage)
     except ValueError:
         print(f"Invalid coverage percentage: {coverage_percentage}")
+        sys.exit(1)
+    if not 0.0 <= coverage_float <= 100.0:
+        print(f"Coverage percentage must be between 0 and 100: {coverage_percentage}")
         sys.exit(1)
 
     success = update_readme_coverage(coverage_percentage)

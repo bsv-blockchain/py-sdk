@@ -14,6 +14,7 @@ jobs:
       pull-requests: write
       contents: write
     strategy:
+      fail-fast: false
       matrix:
         python-version: [ "3.9", "3.10", "3.11", "3.12" ]
 
@@ -45,7 +46,7 @@ jobs:
         echo "Running black..."
         black --check bsv/ tests/
         echo "Running ruff..."
-        ruff check bsv/ tests/ || echo "ruff not installed, skipping"
+        ruff check bsv/ tests/
 
     - name: Run tests with coverage
       run: |
@@ -54,8 +55,8 @@ jobs:
     - name: Extract coverage percentage
       id: coverage
       run: |
-        # Extract coverage percentage from coverage.json
-        COVERAGE=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+        # Extract coverage percentage from coverage.json and format to one decimal place
+        COVERAGE=$(python -c "import json; data=json.load(open('coverage.json')); print(f\"{data['totals']['percent_covered']:.1f}\")")
         echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
         echo "Coverage: $COVERAGE%"
 
