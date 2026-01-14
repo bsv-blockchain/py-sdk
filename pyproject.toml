@@ -5,6 +5,85 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[tool.black]
+line-length = 120
+target-version = ['py39']
+skip-string-normalization = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "ANN", "B", "A", "C4", "PIE", "T20", "SIM", "ARG", "PTH", "ERA", "PL", "RUF"]
+# Ignore common test-related warnings
+ignore = [
+    "ERA001",   # commented-out-code (acceptable in tests)
+    "PLR2004",  # magic-value-comparison (acceptable in tests)
+    "ARG005",   # unused-lambda-argument (fixtures)
+    "ANN401",   # any-type (acceptable for flexible types)
+    "A006",     # builtin-lambda-argument-shadowing (fixtures)
+    "ARG001",   # unused-function-argument (test fixtures)
+    "PLR0915",  # too-many-statements (acceptable in tests)
+    "PLR0912",  # too-many-branches (acceptable in tests)
+    "PLR0911",  # too-many-return-statements (complex but correct logic)
+    "B017",     # assert-raises-exception (pytest pattern)
+    "T201",     # print (acceptable in manual tests)
+    "ANN204",   # missing-return-type-special-method
+    "E722",     # bare-except (some legacy code)
+    "SIM105",   # suppressible-exception
+    "A002",     # builtin-argument-shadowing
+    "B023",     # function-uses-loop-variable
+    "SIM102",   # collapsible-if
+    "SIM108",   # if-else-block-instead-of-if-exp
+    "A001",     # builtin-variable-shadowing
+    "RUF013",   # implicit-optional
+    "B904",     # raise-without-from-inside-except
+    "PLR1714",  # repeated-equality-comparison
+    "ARG002",   # unused-method-argument (interface methods may have unused args)
+    "ARG004",   # unused-static-method-argument (interface methods may have unused args)
+    "ANN001",   # missing-type-annotation-for-function-argument (self/cls in methods)
+    "ANN002",   # missing-type-annotation-for-*args (acceptable for flexible functions)
+    "ANN003",   # missing-type-annotation-for-**kwargs (acceptable for flexible functions)
+    "SIM103",   # return-negated-condition (acceptable for clarity)
+    "ANN201",   # missing-return-type-annotation-for-public-function
+    "ANN202",   # missing-return-type-annotation-for-private-function
+    "E501",     # line-too-long (handled by black formatter)
+    "PLC0415",  # import-not-at-top-level (acceptable for conditional imports)
+    "PLR0913",  # too-many-arguments (some functions legitimately need many args)
+    "SIM117",   # nested-with-statements (acceptable in test code)
+    "N802",     # function-name-should-be-lowercase (test function naming conventions)
+    "N806",     # variable-name-should-be-lowercase (constants and class attributes)
+    "N815",     # mixedCase-variable-names (for compatibility with TS/Go APIs)
+    "PLW0603",  # global-statement (acceptable for module-level state)
+    "PLW1641",  # object-does-not-implement-__hash__ (acceptable for some classes)
+    "RUF006",   # asyncio-create-task (acceptable when task reference not needed)
+    "RUF012",   # mutable-class-attributes (acceptable for some patterns)
+    "RUF034",   # useless-if-else (may be intentional for clarity)
+    "B027",     # empty-method-in-abstract-base-class (acceptable pattern)
+    "UP035",    # typing.Dict deprecated (legacy code)
+    "E741",     # ambiguous-variable-name (acceptable for short loops)
+    "ANN206",   # missing-return-type-for-classmethod (acceptable in some cases)
+    "ARG003",   # unused-class-method-argument (interface compatibility)
+    "PTH118",   # os.path.join (acceptable for compatibility)
+    "PTH120",   # os.path.dirname (acceptable for compatibility)
+    "PTH123",   # open() vs Path.open() (acceptable for compatibility)
+    "PTH110",   # os.path.exists (acceptable for compatibility)
+    "PTH103",   # os.makedirs (acceptable for compatibility)
+    "PTH102",   # os.mkdir (acceptable for compatibility)
+    "RUF043",   # pattern-metacharacters (acceptable in pytest.raises)
+    "G004",     # logging-format (acceptable patterns)
+    "F401",     # unused-import (acceptable for type checking or compatibility)
+    "PLC0206",  # use-dict-items (acceptable in some contexts)
+    "A004",     # reimported (acceptable for compatibility)
+    "F811",     # redefinition-of-unused (acceptable for method overrides/interface compatibility)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files have different standards
+"tests/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "E501", "B018", "PLC0415", "F811"]
+"manual_tests/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "E501", "PLC0415"]
+
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
 markers = [
