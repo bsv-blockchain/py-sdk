@@ -60,6 +60,8 @@ class ProtoWallet(WalletInterface):
             # Default for CLI: Ask the user for permission
             resp = input(f"[Wallet] Allow {action}? [y/N]: ")
             allowed = resp.strip().lower() in ("y", "yes")
+        if os.environ.get("BSV_DEBUG") == "1":
+            print(f"DEBUG ProtoWallet._check_permission action={action} allowed={allowed}")
         if not allowed:
             raise PermissionError(f"Operation '{action}' was not permitted by the user.")
 
@@ -110,6 +112,8 @@ class ProtoWallet(WalletInterface):
         return Counterparty(CounterpartyType.SELF)
 
     def get_public_key(self, args: GetPublicKeyArgs = None, originator: str = None) -> Dict:
+        if os.environ.get("BSV_DEBUG") == "1":
+            print(f"DEBUG ProtoWallet.get_public_key originator=<redacted>")
         try:
             # Check for forbidden snake_case keys
             forbidden_keys = {
@@ -151,18 +155,20 @@ class ProtoWallet(WalletInterface):
 
     def encrypt(self, args: EncryptArgs = None, originator: str = None) -> Dict:
         """Encrypt data using AES-GCM with a derived symmetric key.
-        
+
         This implementation matches TS/Go SDK ProtoWallet.encrypt:
         1. Derive symmetric key from protocol_id, key_id, counterparty
         2. Encrypt using AES-GCM (SymmetricKey.encrypt)
         3. Return ciphertext in format: IV (32 bytes) || ciphertext || authTag (16 bytes)
-        
+
         Args format (matches TS SDK WalletEncryptArgs):
             - plaintext: The data to encrypt (bytes or list of ints)
             - protocol_id / protocolID: The protocol ID [security_level, protocol_name]
             - key_id / keyID: The key identifier string
             - counterparty: The counterparty (optional, defaults to 'self')
         """
+        if os.environ.get("BSV_DEBUG") == "1":
+            print(f"DEBUG ProtoWallet.encrypt")
         try:
             from bsv.primitives.symmetric_key import SymmetricKey
             
@@ -230,6 +236,8 @@ class ProtoWallet(WalletInterface):
             - key_id / keyID: The key identifier string
             - counterparty: The counterparty (optional, defaults to 'self')
         """
+        if os.environ.get("BSV_DEBUG") == "1":
+            print(f"DEBUG ProtoWallet.decrypt")
         try:
             from bsv.primitives.symmetric_key import SymmetricKey
             
