@@ -83,8 +83,7 @@ class OverlayLookupFacilitator(Protocol):
     async def lookup(
         self,
         url: str,
-        question: LookupQuestion,
-        timeout: Optional[int] = None
+        question: LookupQuestion
     ) -> LookupAnswer:
         """Returns a lookup answer for a lookup question."""
         ...
@@ -133,8 +132,7 @@ class HTTPSOverlayLookupFacilitator:
     async def lookup(
         self,
         url: str,
-        question: LookupQuestion,
-        timeout: Optional[int] = None
+        question: LookupQuestion
     ) -> LookupAnswer:
         """Returns a lookup answer for a lookup question."""
         import aiohttp
@@ -167,10 +165,8 @@ class HTTPSOverlayLookupFacilitator:
                             outputs=[]  # Custom responses don't have outputs
                         )
 
-        timeout_seconds = timeout / 1000 if timeout is not None else None
         try:
-            async with TimeoutContext(timeout_seconds) as timeout_ctx:
-                return await timeout_ctx.run(_perform_lookup())
+            return await _perform_lookup()
         except asyncio.TimeoutError:
             raise LookupTimeoutError('Request timed out')
         except (LookupError, HTTPProtocolError):
@@ -245,26 +241,16 @@ class LookupResolver:
         else:
             self.host_reputation = get_overlay_host_reputation_tracker()
 
-    async def lookup(self, question: LookupQuestion, timeout: Optional[int] = None) -> List[LookupOutput]:
+    async def lookup(self, question: LookupQuestion) -> List[LookupOutput]:
         """Lookup outputs for a given question. Delegates to query method."""
-        async def _perform_lookup():
-            return await self.query(question)
-
-        timeout_seconds = timeout / 1000 if timeout is not None else None
-        async with TimeoutContext(timeout_seconds) as timeout_ctx:
-            answer = await timeout_ctx.run(_perform_lookup())
+        answer = await self.query(question)
         return answer.outputs
 
-    async def query(self, question: LookupQuestion, timeout: Optional[int] = None) -> LookupAnswer:
+    async def query(self, question: LookupQuestion) -> LookupAnswer:
         """Given a LookupQuestion, returns a LookupAnswer with aggregated results."""
-        async def _perform_query():
-            ranked_hosts = await self._prepare_ranked_hosts(question.service)
-            host_responses = await self._query_all_hosts(ranked_hosts, question)
-            return self._aggregate_host_responses(host_responses)
-
-        timeout_seconds = timeout / 1000 if timeout is not None else None
-        async with TimeoutContext(timeout_seconds) as timeout_ctx:
-            return await timeout_ctx.run(_perform_query())
+        ranked_hosts = await self._prepare_ranked_hosts(question.service)
+        host_responses = await self._query_all_hosts(ranked_hosts, question)
+        return self._aggregate_host_responses(host_responses)
 
     async def _prepare_ranked_hosts(self, service: str) -> List[str]:
         """Prepare and validate ranked hosts for a service."""
@@ -401,9 +387,13 @@ class LookupResolver:
             return []
 
         # Query all trackers in parallel
+        async def _lookup_with_timeout(host, q):
+            timeout_seconds = MAX_TRACKER_WAIT_TIME / 1000
+            async with TimeoutContext(timeout_seconds) as timeout_ctx:
+                return await timeout_ctx.run(self._lookup_host_with_tracking(host, q))
+
         tracker_responses = await asyncio.gather(
-            *[self._lookup_host_with_tracking(tracker, question, MAX_TRACKER_WAIT_TIME)
-              for tracker in tracker_hosts],
+            *[_lookup_with_timeout(tracker, question) for tracker in tracker_hosts],
             return_exceptions=True
         )
 
@@ -450,14 +440,13 @@ class LookupResolver:
     async def _lookup_host_with_tracking(
         self,
         host: str,
-        question: LookupQuestion,
-        timeout: Optional[int] = None
+        question: LookupQuestion
     ) -> LookupAnswer:
         """Lookup from a host with success/failure tracking."""
         started_at = int(time.time() * 1000)
 
         try:
-            answer = await self.facilitator.lookup(host, question, timeout)
+            answer = await self.facilitator.lookup(host, question)
             latency = int(time.time() * 1000) - started_at
 
             # Check if response is valid

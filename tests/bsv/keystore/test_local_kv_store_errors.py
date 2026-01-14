@@ -2,6 +2,7 @@
 Comprehensive error handling tests for LocalKVStore
 """
 import pytest
+from typing import cast
 from unittest.mock import Mock, patch, MagicMock
 from bsv.keystore.local_kv_store import LocalKVStore
 from bsv.keystore.interfaces import (
@@ -33,7 +34,7 @@ class TestLocalKVStoreErrorHandling:
         # Pass empty string for ctx, but None for key will cause type error
         invalid_key: str | None = None
         with pytest.raises((ErrInvalidKey, TypeError)):
-            store.set("", invalid_key, "value")  # type: ignore[arg-type]
+            store.set("", cast(str, invalid_key), "value")
 
         # Test empty string key
         with pytest.raises(ErrInvalidKey):
@@ -49,7 +50,7 @@ class TestLocalKVStoreErrorHandling:
         # Pass empty string for ctx, but None for value will cause type error
         invalid_value: str | None = None
         with pytest.raises((ErrInvalidValue, TypeError)):
-            store.set("", "key", invalid_value)  # type: ignore[arg-type]
+            store.set("", "key", cast(str, invalid_value))
 
         # Test empty string value
         with pytest.raises(ErrInvalidValue):
@@ -65,7 +66,7 @@ class TestLocalKVStoreErrorHandling:
         # Pass empty string for ctx, but None for key will cause type error
         invalid_key: str | None = None
         with pytest.raises((ErrInvalidKey, TypeError)):
-            store.get("", invalid_key)  # type: ignore[arg-type]
+            store.get("", cast(str, invalid_key))
 
         # Test empty string key
         with pytest.raises(ErrInvalidKey):

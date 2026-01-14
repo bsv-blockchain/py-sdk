@@ -6,7 +6,8 @@ from unittest.mock import Mock, patch, AsyncMock
 from bsv.overlay_tools.lookup_resolver import (
     LookupResolver,
     LookupResolverConfig,
-    HTTPSOverlayLookupFacilitator
+    HTTPSOverlayLookupFacilitator,
+    TimeoutContext
 )
 
 
@@ -228,7 +229,9 @@ async def test_lookup_timeout():
         mock_session.return_value = mock_session_instance
         
         with pytest.raises(Exception) as exc:
-            await f.lookup("https://example.com", question, timeout=100)
+            timeout_seconds = 100 / 1000
+            async with TimeoutContext(timeout_seconds) as timeout_ctx:
+                await timeout_ctx.run(f.lookup("https://example.com", question))
         assert "timeout" in str(exc.value).lower() or "timed out" in str(exc.value).lower()
 
 
