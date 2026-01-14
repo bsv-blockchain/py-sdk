@@ -1,4 +1,4 @@
-from .bsm import sign, verify, magic_hash
 from . import ecies
+from .bsm import magic_hash, sign, verify
 
-__all__ = ['sign', 'verify', 'magic_hash', 'ecies']
+__all__ = ["ecies", "magic_hash", "sign", "verify"]

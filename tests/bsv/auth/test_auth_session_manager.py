@@ -1,6 +1,7 @@
 import pytest
-from bsv.auth.session_manager import DefaultSessionManager
+
 from bsv.auth.peer_session import PeerSession
+from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
 
 
@@ -144,30 +145,31 @@ class TestDefaultSessionManager:
             )
             self.session_manager.add_session(session)
             sessions.append(session)
-        
+
         # All sessions should be retrievable by their nonces
         for session in sessions:
             retrieved = self.session_manager.get_session(session.session_nonce)
             assert retrieved is session
-        
+
         # Getting by identity key should return the best one (most recent authenticated)
         key_hex = self.identity_key.hex()
         best = self.session_manager.get_session(key_hex)
         assert best is not None
         assert best.session_nonce == "nonce-4"  # Most recent
-        
+
         # All sessions should still exist
         for session in sessions:
             assert self.session_manager.has_session(session.session_nonce)
-        
+
         # Identity key should have multiple nonces
         assert self.session_manager.has_session(key_hex)
 
     def test_concurrent_session_additions(self):
         """Test that sessions can be added concurrently"""
         import threading
-        
+
         errors = []
+
         def add_session(i):
             try:
                 session = PeerSession(
@@ -180,23 +182,21 @@ class TestDefaultSessionManager:
                 self.session_manager.add_session(session)
             except Exception as e:
                 errors.append(e)
-        
+
         threads = []
         for i in range(10):
             t = threading.Thread(target=add_session, args=(i,))
             threads.append(t)
             t.start()
-        
+
         for t in threads:
             t.join()
-        
+
         # No errors should occur
         assert len(errors) == 0
-        
+
         # All sessions should be retrievable
         for i in range(10):
             session = self.session_manager.get_session(f"concurrent-{i}")
             assert session is not None
             assert session.session_nonce == f"concurrent-{i}"
-
-

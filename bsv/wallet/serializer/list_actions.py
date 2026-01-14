@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
@@ -7,7 +7,7 @@ NEGATIVE_ONE = (1 << 64) - 1
 # labelQueryMode: 1=any, 2=all, 0xFF=None
 
 
-def serialize_list_actions_args(args: Dict[str, Any]) -> bytes:
+def serialize_list_actions_args(args: dict[str, Any]) -> bytes:
     w = Writer()
     # labels
     w.write_string_slice(args.get("labels"))
@@ -36,9 +36,9 @@ def serialize_list_actions_args(args: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_list_actions_args(data: bytes) -> Dict[str, Any]:
+def deserialize_list_actions_args(data: bytes) -> dict[str, Any]:
     r = Reader(data)
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     out["labels"] = r.read_string_slice()
     mode_b = r.read_byte()
     if mode_b == 1:
@@ -76,21 +76,21 @@ _status_to_code = {
 _code_to_status = {v: k for k, v in _status_to_code.items()}
 
 
-def _encode_outpoint(w: Writer, outpoint: Dict[str, Any]):
+def _encode_outpoint(w: Writer, outpoint: dict[str, Any]):
     txid = outpoint.get("txid", b"\x00" * 32)
     w.write_bytes_reverse(txid)
     w.write_varint(int(outpoint.get("index", 0)))
 
 
-def _decode_outpoint(r: Reader) -> Dict[str, Any]:
+def _decode_outpoint(r: Reader) -> dict[str, Any]:
     txid = r.read_bytes_reverse(32)
     index = r.read_varint()
     return {"txid": txid, "index": int(index)}
 
 
-def serialize_list_actions_result(result: Dict[str, Any]) -> bytes:
+def serialize_list_actions_result(result: dict[str, Any]) -> bytes:
     w = Writer()
-    actions: List[Dict[str, Any]] = result.get("actions", [])
+    actions: list[dict[str, Any]] = result.get("actions", [])
     total = int(result.get("totalActions", len(actions)))
     if total != len(actions):
         raise ValueError(f"totalActions {total} does not match actions length {len(actions)}")
@@ -101,7 +101,8 @@ def serialize_list_actions_result(result: Dict[str, Any]) -> bytes:
         _serialize_action_outputs(w, action.get("outputs", []))
     return w.to_bytes()
 
-def _serialize_action_metadata(w: Writer, action: Dict[str, Any]):
+
+def _serialize_action_metadata(w: Writer, action: dict[str, Any]):
     """Serialize action metadata (txid, satoshis, status, etc.)."""
     # Basic fields
     txid = action.get("txid", b"\x00" * 32)
@@ -109,11 +110,11 @@ def _serialize_action_metadata(w: Writer, action: Dict[str, Any]):
         raise ValueError("txid must be 32 bytes")
     w.write_bytes_reverse(txid)
     w.write_varint(int(action.get("satoshis", 0)))
-    
+
     # Status
     status = action.get("status", "")
     w.write_byte(_status_to_code.get(status, _status_to_code.get("unprocessed")))
-    
+
     # Additional metadata
     w.write_optional_bool(action.get("isOutgoing"))
     w.write_string(action.get("description", ""))
@@ -121,12 +122,13 @@ def _serialize_action_metadata(w: Writer, action: Dict[str, Any]):
     w.write_varint(int(action.get("version", 0)) & 0xFFFFFFFF)
     w.write_varint(int(action.get("lockTime", 0)) & 0xFFFFFFFF)
 
-def _serialize_action_inputs(w: Writer, inputs: List[Dict[str, Any]]):
+
+def _serialize_action_inputs(w: Writer, inputs: list[dict[str, Any]]):
     """Serialize action inputs."""
     if not inputs:
         w.write_negative_one()
         return
-    
+
     w.write_varint(len(inputs))
     for inp in inputs:
         _encode_outpoint(w, inp.get("sourceOutpoint", {}))
@@ -136,12 +138,13 @@ def _serialize_action_inputs(w: Writer, inputs: List[Dict[str, Any]]):
         w.write_string(inp.get("inputDescription", ""))
         w.write_varint(int(inp.get("sequenceNumber", 0)) & 0xFFFFFFFF)
 
-def _serialize_action_outputs(w: Writer, outputs: List[Dict[str, Any]]):
+
+def _serialize_action_outputs(w: Writer, outputs: list[dict[str, Any]]):
     """Serialize action outputs."""
     if not outputs:
         w.write_negative_one()
         return
-    
+
     w.write_varint(len(outputs))
     for out in outputs:
         w.write_varint(int(out.get("outputIndex", 0)) & 0xFFFFFFFF)
@@ -158,20 +161,22 @@ def _serialize_action_outputs(w: Writer, outputs: List[Dict[str, Any]]):
             w.write_string(ci)
 
 
-def deserialize_list_actions_result(data: bytes) -> Dict[str, Any]:
+def deserialize_list_actions_result(data: bytes) -> dict[str, Any]:
     r = Reader(data)
     total = r.read_varint()
     actions = [_deserialize_action(r) for _ in range(int(total))]
     return {"totalActions": int(total), "actions": actions}
 
-def _deserialize_action(r: Reader) -> Dict[str, Any]:
+
+def _deserialize_action(r: Reader) -> dict[str, Any]:
     """Deserialize a single action."""
     action = _deserialize_action_metadata_from_reader(r)
     action["inputs"] = _deserialize_action_inputs(r)
     action["outputs"] = _deserialize_action_outputs(r)
     return action
 
-def _deserialize_action_metadata_from_reader(r: Reader) -> Dict[str, Any]:
+
+def _deserialize_action_metadata_from_reader(r: Reader) -> dict[str, Any]:
     """Deserialize action metadata."""
     txid = r.read_bytes_reverse(32)
     satoshis = int(r.read_varint())
@@ -188,12 +193,13 @@ def _deserialize_action_metadata_from_reader(r: Reader) -> Dict[str, Any]:
         "lockTime": int(r.read_varint()),
     }
 
-def _deserialize_action_inputs(r: Reader) -> List[Dict[str, Any]]:
+
+def _deserialize_action_inputs(r: Reader) -> list[dict[str, Any]]:
     """Deserialize action inputs."""
     inputs_count = r.read_varint()
     if inputs_count == NEGATIVE_ONE:
         return []
-    
+
     inputs = []
     for _ in range(int(inputs_count)):
         inp = {
@@ -207,12 +213,13 @@ def _deserialize_action_inputs(r: Reader) -> List[Dict[str, Any]]:
         inputs.append(inp)
     return inputs
 
-def _deserialize_action_outputs(r: Reader) -> List[Dict[str, Any]]:
+
+def _deserialize_action_outputs(r: Reader) -> list[dict[str, Any]]:
     """Deserialize action outputs."""
     outputs_count = r.read_varint()
     if outputs_count == NEGATIVE_ONE:
         return []
-    
+
     outputs = []
     for _ in range(int(outputs_count)):
         out = {

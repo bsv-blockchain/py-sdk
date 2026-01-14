@@ -19,12 +19,11 @@ from typing import Any, Iterable, Optional
 import pytest
 
 from bsv.constants import OpCode
-from bsv.script.script import Script
-from bsv.script.interpreter import Engine, with_tx, with_flags
+from bsv.script.interpreter import Engine, with_flags, with_tx
 from bsv.script.interpreter.errs import ErrorCode, is_error_code
 from bsv.script.interpreter.scriptflag import Flag
+from bsv.script.script import Script
 from bsv.transaction import Transaction, TransactionInput, TransactionOutput
-
 
 VECTORS_DIR = Path(__file__).resolve().parent / "data"
 
@@ -203,7 +202,7 @@ def allowed_error_codes(expected: str) -> list[ErrorCode]:
     if expected == "OK":
         return []
 
-    def _maybe(name: str) -> Optional[ErrorCode]:
+    def _maybe(name: str) -> ErrorCode | None:
         return getattr(ErrorCode, name, None)  # type: ignore[arg-type]
 
     def _codes(*names: str) -> list[ErrorCode]:
@@ -211,7 +210,9 @@ def allowed_error_codes(expected: str) -> list[ErrorCode]:
 
     mapping: dict[str, list[ErrorCode]] = {
         "EVAL_FALSE": _codes("ERR_EVAL_FALSE", "ERR_EMPTY_STACK"),
-        "SPLIT_RANGE": _codes("ERR_INVALID_SPLIT_RANGE", "ERR_INVALID_NUMBER_RANGE", "ERR_NUMBER_TOO_BIG", "ERR_NUMBER_TOO_SMALL"),
+        "SPLIT_RANGE": _codes(
+            "ERR_INVALID_SPLIT_RANGE", "ERR_INVALID_NUMBER_RANGE", "ERR_NUMBER_TOO_BIG", "ERR_NUMBER_TOO_SMALL"
+        ),
         "INVALID_NUMBER_RANGE": _codes("ERR_INVALID_NUMBER_RANGE", "ERR_NUMBER_TOO_BIG", "ERR_NUMBER_TOO_SMALL"),
         "OPERAND_SIZE": _codes("ERR_INVALID_INPUT_LENGTH"),
         "EQUALVERIFY": _codes("ERR_EQUAL_VERIFY"),
@@ -221,11 +222,21 @@ def allowed_error_codes(expected: str) -> list[ErrorCode]:
         "SIG_HASHTYPE": _codes("ERR_SIG_HASHTYPE"),
         "ILLEGAL_FORKID": _codes("ERR_ILLEGAL_FORKID"),
         "SIG_DER": _codes(
-            "ERR_SIG_TOO_SHORT", "ERR_SIG_TOO_LONG", "ERR_SIG_INVALID_SEQ_ID",
-            "ERR_SIG_INVALID_DATA_LEN", "ERR_SIG_MISSING_S_TYPE_ID", "ERR_SIG_MISSING_S_LEN",
-            "ERR_SIG_INVALID_S_LEN", "ERR_SIG_INVALID_R_INT_ID", "ERR_SIG_ZERO_R_LEN",
-            "ERR_SIG_NEGATIVE_R", "ERR_SIG_TOO_MUCH_R_PADDING", "ERR_SIG_INVALID_S_INT_ID",
-            "ERR_SIG_ZERO_S_LEN", "ERR_SIG_NEGATIVE_S", "ERR_SIG_TOO_MUCH_S_PADDING",
+            "ERR_SIG_TOO_SHORT",
+            "ERR_SIG_TOO_LONG",
+            "ERR_SIG_INVALID_SEQ_ID",
+            "ERR_SIG_INVALID_DATA_LEN",
+            "ERR_SIG_MISSING_S_TYPE_ID",
+            "ERR_SIG_MISSING_S_LEN",
+            "ERR_SIG_INVALID_S_LEN",
+            "ERR_SIG_INVALID_R_INT_ID",
+            "ERR_SIG_ZERO_R_LEN",
+            "ERR_SIG_NEGATIVE_R",
+            "ERR_SIG_TOO_MUCH_R_PADDING",
+            "ERR_SIG_INVALID_S_INT_ID",
+            "ERR_SIG_ZERO_S_LEN",
+            "ERR_SIG_NEGATIVE_S",
+            "ERR_SIG_TOO_MUCH_S_PADDING",
             "ERR_SIG_HASHTYPE",
         ),
         "SIG_HIGH_S": _codes("ERR_SIG_HIGH_S"),
@@ -240,9 +251,9 @@ def allowed_error_codes(expected: str) -> list[ErrorCode]:
         "DISABLED_OPCODE": _codes("ERR_DISABLED_OPCODE"),
         "DISCOURAGE_UPGRADABLE_NOPS": _codes("ERR_DISCOURAGE_UPGRADABLE_NOPS"),
         "SCRIPTNUM_OVERFLOW": _codes("ERR_NUMBER_TOO_BIG"),
-            "SCRIPTNUM_MINENCODE": _codes("ERR_MINIMAL_DATA"),
-            "DIV_BY_ZERO": _codes("ERR_DIVIDE_BY_ZERO"),
-            "MOD_BY_ZERO": _codes("ERR_DIVIDE_BY_ZERO"),
+        "SCRIPTNUM_MINENCODE": _codes("ERR_MINIMAL_DATA"),
+        "DIV_BY_ZERO": _codes("ERR_DIVIDE_BY_ZERO"),
+        "MOD_BY_ZERO": _codes("ERR_DIVIDE_BY_ZERO"),
         "NUMBER_SIZE": _codes("ERR_NUMBER_TOO_BIG", "ERR_NUMBER_TOO_SMALL"),
         "PUSH_SIZE": _codes("ERR_ELEMENT_TOO_BIG"),
         "OP_COUNT": _codes("ERR_TOO_MANY_OPERATIONS"),
@@ -251,8 +262,8 @@ def allowed_error_codes(expected: str) -> list[ErrorCode]:
         "ELEMENT_SIZE": _codes("ERR_ELEMENT_TOO_BIG"),
         "PUBKEY_COUNT": _codes("ERR_PUBKEY_COUNT"),
         "SIG_COUNT": _codes("ERR_SIG_COUNT"),
-            "PUBKEYTYPE": _codes("ERR_PUBKEY_TYPE"),
-            "SIGTYPE": _codes("ERR_SIG_TYPE"),
+        "PUBKEYTYPE": _codes("ERR_PUBKEY_TYPE"),
+        "SIGTYPE": _codes("ERR_SIG_TYPE"),
         "MINIMALDATA": _codes("ERR_MINIMAL_DATA"),
         "MINIMALIF": _codes("ERR_MINIMAL_IF"),
         "CHECKSIGVERIFY": _codes("ERR_CHECK_SIG_VERIFY"),
@@ -269,7 +280,9 @@ def _load_json(name: str) -> list[list[Any]]:
         return json.load(f)
 
 
-@pytest.mark.parametrize("test_idx,test_vec", [(i, t) for i, t in enumerate(_load_json("script_tests.json")) if len(t) != 1])
+@pytest.mark.parametrize(
+    "test_idx,test_vec", [(i, t) for i, t in enumerate(_load_json("script_tests.json")) if len(t) != 1]
+)
 def test_go_script_tests_json(test_idx: int, test_vec: list[Any]) -> None:
     # Format: [[wit..., amount]?, scriptSig, scriptPubKey, flags, expected, ...comment]
     vec = list(test_vec)
@@ -324,7 +337,9 @@ def test_go_script_tests_json(test_idx: int, test_vec: list[Any]) -> None:
         return
 
     assert err is not None, f"vector #{test_idx} expected error {expected}, got OK"
-    assert any(is_error_code(err, c) for c in allowed), f"vector #{test_idx} expected {expected} (codes={allowed}), got {err}"
+    assert any(
+        is_error_code(err, c) for c in allowed
+    ), f"vector #{test_idx} expected {expected} (codes={allowed}), got {err}"
 
 
 def _build_prev_outs_from_inputs(inputs: list[Any]) -> dict[tuple[str, int], TransactionOutput]:
@@ -339,7 +354,10 @@ def _build_prev_outs_from_inputs(inputs: list[Any]) -> dict[tuple[str, int], Tra
     return prev_outs
 
 
-@pytest.mark.parametrize("test_idx,test_vec", [(i, t) for i, t in enumerate(_load_json("tx_valid.json")) if not (len(t) == 1 and isinstance(t[0], str))])
+@pytest.mark.parametrize(
+    "test_idx,test_vec",
+    [(i, t) for i, t in enumerate(_load_json("tx_valid.json")) if not (len(t) == 1 and isinstance(t[0], str))],
+)
 def test_go_tx_valid_json(test_idx: int, test_vec: list[Any]) -> None:
     # Format: [[[prev_hash, prev_index, prev_script, amount?]...], serializedTxHex, verifyFlags]
     inputs = test_vec[0]
@@ -360,7 +378,10 @@ def test_go_tx_valid_json(test_idx: int, test_vec: list[Any]) -> None:
         assert err is None, f"tx_valid vector {test_idx} failed at input {k}: {err}"
 
 
-@pytest.mark.parametrize("test_idx,test_vec", [(i, t) for i, t in enumerate(_load_json("tx_invalid.json")) if not (len(t) == 1 and isinstance(t[0], str))])
+@pytest.mark.parametrize(
+    "test_idx,test_vec",
+    [(i, t) for i, t in enumerate(_load_json("tx_invalid.json")) if not (len(t) == 1 and isinstance(t[0], str))],
+)
 def test_go_tx_invalid_json(test_idx: int, test_vec: list[Any]) -> None:
     inputs = test_vec[0]
     tx_hex = test_vec[1]
@@ -383,5 +404,3 @@ def test_go_tx_invalid_json(test_idx: int, test_vec: list[Any]) -> None:
             return
 
     pytest.fail(f"tx_invalid vector {test_idx} succeeded when should fail")
-
-

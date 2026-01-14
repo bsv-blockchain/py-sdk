@@ -2,15 +2,14 @@ import base64
 import json
 
 from bsv.auth.peer import Peer, PeerOptions
-from bsv.auth.session_manager import DefaultSessionManager
 from bsv.auth.requested_certificate_set import RequestedCertificateSet, RequestedCertificateTypeIDAndFieldList
+from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
 
 
 class CaptureTransport:
     def on_data(self, cb):
         self._cb = cb
-        return None
 
     def send(self, msg):
         return None
@@ -144,5 +143,3 @@ def test_canonical_certificate_response_json_golden():
     can = peer._canonicalize_certificates_payload(raw)
     ser = peer._serialize_for_signature(can)
     assert ser == expected_json
-
-

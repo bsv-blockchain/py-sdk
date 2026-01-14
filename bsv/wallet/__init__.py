@@ -1,5 +1,5 @@
-from .key_deriver import KeyDeriver, Protocol, Counterparty, CounterpartyType
 from .cached_key_deriver import CachedKeyDeriver
+from .key_deriver import Counterparty, CounterpartyType, KeyDeriver, Protocol
 from .wallet_impl import ProtoWallet
 from .wallet_interface import WalletInterface
 
@@ -8,6 +8,12 @@ from .wallet_interface import WalletInterface
 WalletImpl = ProtoWallet
 
 __all__ = [
-    'KeyDeriver', 'Protocol', 'Counterparty', 'CounterpartyType',
-    'CachedKeyDeriver', 'ProtoWallet', 'WalletImpl', 'WalletInterface'
+    "CachedKeyDeriver",
+    "Counterparty",
+    "CounterpartyType",
+    "KeyDeriver",
+    "ProtoWallet",
+    "Protocol",
+    "WalletImpl",
+    "WalletInterface",
 ]

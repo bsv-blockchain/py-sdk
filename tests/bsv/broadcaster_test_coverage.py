@@ -1,7 +1,9 @@
 """
 Coverage tests for broadcaster.py - untested branches.
 """
+
 import pytest
+
 from bsv.transaction import Transaction
 
 # Constants for skip messages
@@ -12,10 +14,12 @@ SKIP_DEFAULT_BROADCASTER = "DefaultBroadcaster not available"
 # Broadcaster interface branches
 # ========================================================================
 
+
 def test_broadcaster_interface_exists():
     """Test that Broadcaster interface exists."""
     try:
         from bsv.broadcaster import Broadcaster
+
         assert Broadcaster  # Verify import succeeds and class exists
     except ImportError:
         pytest.skip("Broadcaster not available")
@@ -25,13 +29,14 @@ def test_broadcaster_interface_exists():
 # Broadcaster broadcast branches
 # ========================================================================
 
+
 def test_broadcaster_broadcast():
     """Test broadcaster broadcast method."""
     try:
         from bsv.broadcaster import Broadcaster
-        
+
         # Can't instantiate abstract class, but can check it exists
-        assert hasattr(Broadcaster, 'broadcast')
+        assert hasattr(Broadcaster, "broadcast")
     except ImportError:
         pytest.skip("Broadcaster not available")
 
@@ -40,10 +45,12 @@ def test_broadcaster_broadcast():
 # Default Broadcaster branches
 # ========================================================================
 
+
 def test_default_broadcaster_init():
     """Test default broadcaster initialization."""
     try:
         from bsv.broadcaster import DefaultBroadcaster
+
         broadcaster = DefaultBroadcaster()
         assert broadcaster is not None
     except (ImportError, AttributeError):
@@ -54,7 +61,8 @@ def test_default_broadcaster_with_url():
     """Test default broadcaster with custom URL."""
     try:
         from bsv.broadcaster import DefaultBroadcaster
-        broadcaster = DefaultBroadcaster(url='https://api.example.com')
+
+        broadcaster = DefaultBroadcaster(url="https://api.example.com")
         assert broadcaster is not None
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_BROADCASTER)
@@ -64,11 +72,11 @@ def test_default_broadcaster_broadcast_tx():
     """Test broadcasting transaction."""
     try:
         from bsv.broadcaster import DefaultBroadcaster
-        
+
         broadcaster = DefaultBroadcaster()
         tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        
-        if hasattr(broadcaster, 'broadcast'):
+
+        if hasattr(broadcaster, "broadcast"):
             try:
                 _ = broadcaster.broadcast(tx)
             except Exception:
@@ -82,13 +90,14 @@ def test_default_broadcaster_broadcast_tx():
 # Edge cases
 # ========================================================================
 
+
 def test_broadcaster_with_invalid_url():
     """Test broadcaster with invalid URL."""
     try:
         from bsv.broadcaster import DefaultBroadcaster
-        
+
         try:
-            broadcaster = DefaultBroadcaster(url='invalid')
+            DefaultBroadcaster(url="invalid")
             # Broadcaster created or validation occurred
         except ValueError:
             # May validate URL
@@ -101,10 +110,10 @@ def test_broadcaster_broadcast_none():
     """Test broadcasting None."""
     try:
         from bsv.broadcaster import DefaultBroadcaster
-        
+
         broadcaster = DefaultBroadcaster()
-        
-        if hasattr(broadcaster, 'broadcast'):
+
+        if hasattr(broadcaster, "broadcast"):
             try:
                 _ = broadcaster.broadcast(None)
             except (TypeError, AttributeError):
@@ -112,4 +121,3 @@ def test_broadcaster_broadcast_none():
                 pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_BROADCASTER)
-

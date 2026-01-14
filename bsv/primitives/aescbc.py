@@ -1,14 +1,18 @@
 import hmac
 from typing import Optional
+
 from Cryptodome.Cipher import AES
 from Cryptodome.Hash import HMAC, SHA256
+
 
 class InvalidPadding(Exception):
     pass
 
+
 def PKCS7Padd(data: bytes, block_size: int) -> bytes:  # NOSONAR - Standard PKCS7 naming convention
     padding = block_size - (len(data) % block_size)
     return data + bytes([padding]) * padding
+
 
 def PKCS7Unpad(data: bytes, block_size: int) -> bytes:  # NOSONAR - Standard PKCS7 naming convention
     length = len(data)
@@ -21,32 +25,44 @@ def PKCS7Unpad(data: bytes, block_size: int) -> bytes:  # NOSONAR - Standard PKC
         raise InvalidPadding("invalid padding byte (inconsistent)")
     return data[:-padding]
 
-def AESCBCEncrypt(data: bytes, key: bytes, iv: bytes, concat_iv: bool) -> bytes:  # NOSONAR - Standard AES-CBC naming convention
+
+def AESCBCEncrypt(
+    data: bytes, key: bytes, iv: bytes, concat_iv: bool
+) -> bytes:  # NOSONAR - Standard AES-CBC naming convention
     block_size = AES.block_size
     padded = PKCS7Padd(data, block_size)
     # AES-CBC is used with HMAC-SHA256 for authenticated encryption (see aes_cbc_encrypt_mac)
-    cipher = AES.new(key, AES.MODE_CBC, iv)  # noqa: S305  # NOSONAR - CBC mode with HMAC provides authenticated encryption
+    cipher = AES.new(
+        key, AES.MODE_CBC, iv
+    )  # NOSONAR - CBC mode with HMAC provides authenticated encryption
     ciphertext = cipher.encrypt(padded)
     if concat_iv:
         return iv + ciphertext
     return ciphertext
 
+
 def AESCBCDecrypt(data: bytes, key: bytes, iv: bytes) -> bytes:  # NOSONAR - Standard AES-CBC naming convention
     block_size = AES.block_size
     # AES-CBC is used with HMAC-SHA256 for authenticated encryption (see aes_cbc_decrypt_mac)
-    cipher = AES.new(key, AES.MODE_CBC, iv)  # noqa: S305  # NOSONAR - CBC mode with HMAC provides authenticated encryption
+    cipher = AES.new(
+        key, AES.MODE_CBC, iv
+    )  # NOSONAR - CBC mode with HMAC provides authenticated encryption
     plaintext = cipher.decrypt(data)
     return PKCS7Unpad(plaintext, block_size)
+
 
 def aes_encrypt_with_iv(key: bytes, iv: bytes, data: bytes) -> bytes:
     # 既存のAESCBCEncryptの引数順に合わせてラップ
     return AESCBCEncrypt(data, key, iv, concat_iv=False)
 
+
 def aes_decrypt_with_iv(key: bytes, iv: bytes, data: bytes) -> bytes:
     # 既存のAESCBCDecryptの引数順に合わせてラップ
     return AESCBCDecrypt(data, key, iv)
 
+
 # --- Encrypt-then-MAC helpers (Go ECIES compatible) ---
+
 
 def aes_cbc_encrypt_mac(data: bytes, key_e: bytes, iv: bytes, mac_key: bytes, concat_iv: bool = True) -> bytes:
     """AES-CBC Encrypt then append HMAC-SHA256 (iv|cipher|mac).
@@ -72,7 +88,9 @@ def aes_cbc_encrypt_mac(data: bytes, key_e: bytes, iv: bytes, mac_key: bytes, co
     return mac_input + mac
 
 
-def aes_cbc_decrypt_mac(blob: bytes, key_e: bytes, iv: Optional[bytes], mac_key: bytes, concat_iv: bool = True) -> bytes:
+def aes_cbc_decrypt_mac(
+    blob: bytes, key_e: bytes, iv: Optional[bytes], mac_key: bytes, concat_iv: bool = True
+) -> bytes:
     """Verify HMAC then decrypt AES-CBC message produced by aes_cbc_encrypt_mac.
 
     Parameters

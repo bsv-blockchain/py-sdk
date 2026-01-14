@@ -24,19 +24,18 @@ except (ImportError, AttributeError):
     # VerifiableCertificate might have different structure
     VerifiableCertificate = None  # type: ignore
 
-from .requested_certificate_set import RequestedCertificateSet
 from .auth_message import AuthMessage
+from .requested_certificate_set import RequestedCertificateSet
 from .transports.transport import Transport
 
 __all__ = [
-    'Peer',
-    'PeerOptions',
-    'PeerSession',
-    'SessionManager',
-    'Certificate',
-    'VerifiableCertificate',
-    'RequestedCertificateSet',
-    'AuthMessage',
-    'Transport',
+    "AuthMessage",
+    "Certificate",
+    "Peer",
+    "PeerOptions",
+    "PeerSession",
+    "RequestedCertificateSet",
+    "SessionManager",
+    "Transport",
+    "VerifiableCertificate",
 ]
-

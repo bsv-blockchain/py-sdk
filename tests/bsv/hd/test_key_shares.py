@@ -1,6 +1,5 @@
 import unittest
 
-
 from bsv.keys import PrivateKey
 from bsv.polynomial import KeyShares, PointInFiniteField
 
@@ -8,11 +7,11 @@ from bsv.polynomial import KeyShares, PointInFiniteField
 class TestPrivateKeySharing(unittest.TestCase):
     # 既知のバックアップシェアデータ
     sample_backup = [
-        '45s4vLL2hFvqmxrarvbRT2vZoQYGZGocsmaEksZ64o5M.A7nZrGux15nEsQGNZ1mbfnMKugNnS6SYYEQwfhfbDZG8.3.2f804d43',
-        '7aPzkiGZgvU4Jira5PN9Qf9o7FEg6uwy1zcxd17NBhh3.CCt7NH1sPFgceb6phTRkfviim2WvmUycJCQd2BxauxP9.3.2f804d43',
-        '9GaS2Tw5sXqqbuigdjwGPwPsQuEFqzqUXo5MAQhdK3es.8MLh2wyE3huyq6hiBXjSkJRucgyKh4jVY6ESq5jNtXRE.3.2f804d43',
-        'GBmoNRbsMVsLmEK5A6G28fktUNonZkn9mDrJJ58FXgsf.HDBRkzVUCtZ38ApEu36fvZtDoDSQTv3TWmbnxwwR7kto.3.2f804d43',
-        '2gHebXBgPd7daZbsj6w9TPDta3vQzqvbkLtJG596rdN1.E7ZaHyyHNDCwR6qxZvKkPPWWXzFCiKQFentJtvSSH5Bi.3.2f804d43'
+        "45s4vLL2hFvqmxrarvbRT2vZoQYGZGocsmaEksZ64o5M.A7nZrGux15nEsQGNZ1mbfnMKugNnS6SYYEQwfhfbDZG8.3.2f804d43",
+        "7aPzkiGZgvU4Jira5PN9Qf9o7FEg6uwy1zcxd17NBhh3.CCt7NH1sPFgceb6phTRkfviim2WvmUycJCQd2BxauxP9.3.2f804d43",
+        "9GaS2Tw5sXqqbuigdjwGPwPsQuEFqzqUXo5MAQhdK3es.8MLh2wyE3huyq6hiBXjSkJRucgyKh4jVY6ESq5jNtXRE.3.2f804d43",
+        "GBmoNRbsMVsLmEK5A6G28fktUNonZkn9mDrJJ58FXgsf.HDBRkzVUCtZ38ApEu36fvZtDoDSQTv3TWmbnxwwR7kto.3.2f804d43",
+        "2gHebXBgPd7daZbsj6w9TPDta3vQzqvbkLtJG596rdN1.E7ZaHyyHNDCwR6qxZvKkPPWWXzFCiKQFentJtvSSH5Bi.3.2f804d43",
     ]
 
     def test_split_private_key_into_shares_correctly(self):
@@ -54,7 +53,8 @@ class TestPrivateKeySharing(unittest.TestCase):
         k = PrivateKey()
 
         # Test with invalid threshold type
-        from typing import cast, Any
+        from typing import Any, cast
+
         with self.assertRaises(ValueError) as cm:
             k.to_key_shares(cast(Any, "invalid"), 14)
         self.assertIn("threshold and totalShares must be numbers", str(cm.exception))
@@ -94,11 +94,7 @@ class TestPrivateKeySharing(unittest.TestCase):
     def test_duplicate_share_in_recovery_with_sample_data(self):
         """Test that using duplicate shares from sample data during recovery raises an error."""
         # 既知のバックアップデータから重複するシェアを含むリストを作成
-        duplicate_shares = [
-            self.sample_backup[0],
-            self.sample_backup[1],
-            self.sample_backup[1]  # 重複するシェア
-        ]
+        duplicate_shares = [self.sample_backup[0], self.sample_backup[1], self.sample_backup[1]]  # 重複するシェア
 
         # KeySharesオブジェクトを作成
         recovery = KeyShares.from_backup_format(duplicate_shares)
@@ -128,8 +124,8 @@ class TestPrivateKeySharing(unittest.TestCase):
 
         # 元のバックアップと同じフォーマットであることを確認
         for i in range(3):
-            parts_original = self.sample_backup[i].split('.')
-            parts_new = backup_format[i].split('.')
+            parts_original = self.sample_backup[i].split(".")
+            parts_new = backup_format[i].split(".")
 
             # 最後の2つの部分（しきい値と整合性ハッシュ）が同じか確認
             self.assertEqual(parts_original[-2:], parts_new[-2:])
@@ -137,11 +133,7 @@ class TestPrivateKeySharing(unittest.TestCase):
     def test_recombination_with_sample_shares(self):
         """Test recombination of private key using different combinations of sample shares."""
         # サンプルシェアの様々な組み合わせでキーを復元
-        combinations = [
-            [0, 1, 2],  # 最初の3つのシェア
-            [0, 2, 4],  # 異なる3つのシェア
-            [1, 3, 4]  # 別の組み合わせ
-        ]
+        combinations = [[0, 1, 2], [0, 2, 4], [1, 3, 4]]  # 最初の3つのシェア  # 異なる3つのシェア  # 別の組み合わせ
 
         # 各組み合わせでキーを復元
         for combo in combinations:
@@ -188,9 +180,9 @@ class TestPrivateKeySharing(unittest.TestCase):
         """Test validation of share format."""
         # 不正なフォーマットのシェア
         invalid_shares = [
-            '45s4vLL2hFvqmxrarvbRT2vZoQYGZGocsmaEksZ64o5M.A7nZrGux15nEsQGNZ1mbfnMKugNnS6SYYEQwfhfbDZG8.3',  # 完全ではない
-            'invalid-format',  # 完全に無効
-            '45s4vLL2hFvqmxrarvbRT2vZoQYGZGocsmaEksZ64o5M'  # ドットがない
+            "45s4vLL2hFvqmxrarvbRT2vZoQYGZGocsmaEksZ64o5M.A7nZrGux15nEsQGNZ1mbfnMKugNnS6SYYEQwfhfbDZG8.3",  # 完全ではない
+            "invalid-format",  # 完全に無効
+            "45s4vLL2hFvqmxrarvbRT2vZoQYGZGocsmaEksZ64o5M",  # ドットがない
         ]
 
         # 各無効なシェアに対して、エラーが発生することを確認
@@ -199,5 +191,5 @@ class TestPrivateKeySharing(unittest.TestCase):
                 KeyShares.from_backup_format([invalid_share])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

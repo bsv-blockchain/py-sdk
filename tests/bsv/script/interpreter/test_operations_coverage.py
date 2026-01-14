@@ -6,16 +6,23 @@ by existing tests.
 """
 
 from typing import cast
-from bsv.script.interpreter.operations import (
-    cast_to_bool, encode_bool, bin2num, minimally_encode,
-    check_signature_encoding, check_public_key_encoding,
-    op_dup, op_hash160, op_equal_verify
-)
-from bsv.script.interpreter.errs import Error, ErrorCode
-from bsv.script.interpreter.stack import Stack
-from bsv.script.interpreter.config import BeforeGenesisConfig
-from bsv.script.interpreter.op_parser import ParsedOpcode
 from unittest.mock import Mock
+
+from bsv.script.interpreter.config import BeforeGenesisConfig
+from bsv.script.interpreter.errs import Error, ErrorCode
+from bsv.script.interpreter.op_parser import ParsedOpcode
+from bsv.script.interpreter.operations import (
+    bin2num,
+    cast_to_bool,
+    check_public_key_encoding,
+    check_signature_encoding,
+    encode_bool,
+    minimally_encode,
+    op_dup,
+    op_equal_verify,
+    op_hash160,
+)
+from bsv.script.interpreter.stack import Stack
 
 
 class TestOperationsUtilityFunctions:
@@ -80,7 +87,7 @@ class TestOperationsUtilityFunctions:
                 assert result == expected, f"Failed for {description}: got {result}"
 
         # Test that it returns bytes for edge cases
-        edge_cases = [128, 255, -127, -128, 0x7fffffff, -0x80000000]
+        edge_cases = [128, 255, -127, -128, 0x7FFFFFFF, -0x80000000]
         for num in edge_cases:
             result = minimally_encode(num)
             assert isinstance(result, bytes)

@@ -1,20 +1,19 @@
 # Make bsv.transaction a package and expose pushdrop helpers
-from .pushdrop import (
-    build_pushdrop_locking_script,
-    parse_pushdrop_locking_script,
-    parse_identity_reveal,
-    build_lock_before_pushdrop,
-    decode_lock_before_pushdrop,
-    create_minimally_encoded_script_chunk,
-)
-
 # ---------------------------------------------------------------------------
 # Legacy transaction module compatibility (lazy load to avoid circular import)
 # ---------------------------------------------------------------------------
-
 import importlib.util as _il_util
 import pathlib as _pl
 import sys as _sys
+
+from .pushdrop import (
+    build_lock_before_pushdrop,
+    build_pushdrop_locking_script,
+    create_minimally_encoded_script_chunk,
+    decode_lock_before_pushdrop,
+    parse_identity_reveal,
+    parse_pushdrop_locking_script,
+)
 
 _legacy_path = _pl.Path(__file__).resolve().parent.parent / "transaction.py"
 
@@ -30,19 +29,18 @@ TransactionOutput = _legacy_mod.TransactionOutput  # type: ignore[attr-defined]
 InsufficientFunds = _legacy_mod.InsufficientFunds  # type: ignore[attr-defined]
 
 __all__ = [
-    "build_pushdrop_locking_script",
-    "parse_pushdrop_locking_script",
-    "parse_identity_reveal",
-    "build_lock_before_pushdrop",
-    "decode_lock_before_pushdrop",
-    "create_minimally_encoded_script_chunk",
+    "InsufficientFunds",
     "Transaction",
     "TransactionInput",
     "TransactionOutput",
-    "InsufficientFunds",
+    "build_lock_before_pushdrop",
+    "build_pushdrop_locking_script",
+    "create_minimally_encoded_script_chunk",
+    "decode_lock_before_pushdrop",
+    "parse_identity_reveal",
+    "parse_pushdrop_locking_script",
 ]
 
-from .beef import Beef, new_beef_from_bytes, new_beef_from_atomic_bytes, parse_beef, parse_beef_ex
-__all__.extend(["Beef", "new_beef_from_bytes", "new_beef_from_atomic_bytes", "parse_beef", "parse_beef_ex"])
+from .beef import Beef, new_beef_from_atomic_bytes, new_beef_from_bytes, parse_beef, parse_beef_ex
 
-
+__all__.extend(["Beef", "new_beef_from_atomic_bytes", "new_beef_from_bytes", "parse_beef", "parse_beef_ex"])

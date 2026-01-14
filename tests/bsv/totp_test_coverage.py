@@ -1,6 +1,7 @@
 """
 Coverage tests for totp/ modules - untested branches.
 """
+
 import pytest
 
 # Constants for skip messages
@@ -11,13 +12,14 @@ SKIP_TOTP = "generate_totp not available"
 # TOTP generation branches
 # ========================================================================
 
+
 def test_totp_generate():
     """Test generating TOTP."""
     try:
         from bsv.totp import generate_totp
-        
-        secret = b'\x00' * 20
-        
+
+        secret = b"\x00" * 20
+
         try:
             totp = generate_totp(secret)
             assert isinstance(totp, str)
@@ -32,10 +34,10 @@ def test_totp_generate_with_timestamp():
     """Test generating TOTP with specific timestamp."""
     try:
         from bsv.totp import generate_totp
-        
-        secret = b'\x00' * 20
+
+        secret = b"\x00" * 20
         timestamp = 1234567890
-        
+
         try:
             totp = generate_totp(secret, timestamp=timestamp)
             assert isinstance(totp, str)
@@ -52,17 +54,18 @@ def test_totp_generate_with_timestamp():
 # TOTP verification branches
 # ========================================================================
 
+
 def test_totp_verify_valid():
     """Test verifying valid TOTP."""
     try:
         from bsv.totp import generate_totp, verify_totp
-        
-        secret = b'\x01' * 20
-        
+
+        secret = b"\x01" * 20
+
         try:
             totp = generate_totp(secret)
             is_valid = verify_totp(totp, secret)
-            assert is_valid == True
+            assert is_valid
         except (NameError, AttributeError):
             pytest.skip("TOTP functions not available")
     except ImportError:
@@ -73,10 +76,10 @@ def test_totp_verify_invalid():
     """Test verifying invalid TOTP."""
     try:
         from bsv.totp import verify_totp
-        
-        secret = b'\x00' * 20
+
+        secret = b"\x00" * 20
         invalid_totp = "000000"
-        
+
         try:
             is_valid = verify_totp(invalid_totp, secret)
             # Might be valid by chance, but usually not
@@ -91,13 +94,14 @@ def test_totp_verify_invalid():
 # TOTP configuration branches
 # ========================================================================
 
+
 def test_totp_with_custom_period():
     """Test TOTP with custom time period."""
     try:
         from bsv.totp import generate_totp
-        
-        secret = b'\x00' * 20
-        
+
+        secret = b"\x00" * 20
+
         try:
             totp = generate_totp(secret, period=60)
             assert isinstance(totp, str)
@@ -114,9 +118,9 @@ def test_totp_with_custom_digits():
     """Test TOTP with custom digits."""
     try:
         from bsv.totp import generate_totp
-        
-        secret = b'\x00' * 20
-        
+
+        secret = b"\x00" * 20
+
         try:
             totp = generate_totp(secret, digits=8)
             assert len(totp) == 8
@@ -133,14 +137,15 @@ def test_totp_with_custom_digits():
 # Edge cases
 # ========================================================================
 
+
 def test_totp_deterministic():
     """Test TOTP is deterministic for same timestamp."""
     try:
         from bsv.totp import generate_totp
-        
-        secret = b'\x02' * 20
+
+        secret = b"\x02" * 20
         timestamp = 1234567890
-        
+
         try:
             totp1 = generate_totp(secret, timestamp=timestamp)
             totp2 = generate_totp(secret, timestamp=timestamp)
@@ -151,4 +156,3 @@ def test_totp_deterministic():
             pytest.skip(SKIP_TOTP)
     except ImportError:
         pytest.skip(SKIP_TOTP)
-

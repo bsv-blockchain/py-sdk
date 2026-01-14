@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast
 import os
+from typing import Any, Dict, List, Optional, cast
 
-from bsv.registry.types import DefinitionType
 from bsv.registry.client import _parse_locking_script
+from bsv.registry.types import DefinitionType
 from bsv.transaction import Transaction
 from bsv.wallet.wallet_interface import WalletInterface
 
@@ -28,7 +28,7 @@ class WalletWireResolver:
         self.wallet = wallet
         self.originator = originator
 
-    def __call__(self, ctx: Any, service_name: str, query: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def __call__(self, ctx: Any, service_name: str, query: dict[str, Any]) -> list[dict[str, Any]]:
         # Map service name to definition type (TS/Go alias)
         # For responsibility separation and reusability
         # __call__(service_name, ...) is the interoperability entry point, query(definition_type, ...) is the actual logic.
@@ -46,19 +46,24 @@ class WalletWireResolver:
             return []
         return self.query(ctx, definition_type, query)
 
-    def query(self, ctx: Any, definition_type: DefinitionType, query: Dict[str, Any] = None) -> List[Dict[str, Any]]:  # NOSONAR - query parameter reserved for future filtering capability
-        lo = self.wallet.list_outputs(
-            {
-                "basket": _basket_name(definition_type),
-                "include": "entire transactions",
-            },
-            self.originator,
-        ) or {}
+    def query(
+        self, ctx: Any, definition_type: DefinitionType, query: dict[str, Any] = None
+    ) -> list[dict[str, Any]]:  # NOSONAR - query parameter reserved for future filtering capability
+        lo = (
+            self.wallet.list_outputs(
+                {
+                    "basket": _basket_name(definition_type),
+                    "include": "entire transactions",
+                },
+                self.originator,
+            )
+            or {}
+        )
 
-        outputs = cast(List[Dict[str, Any]], lo.get("outputs") or [])
+        outputs = cast(list[dict[str, Any]], lo.get("outputs") or [])
         # For WalletWire-backed resolver, prefer direct lockingScript from outputs (BEEF not required)
 
-        matches: List[Dict[str, Any]] = []
+        matches: list[dict[str, Any]] = []
         for out in outputs:
             idx = int(out.get("outputIndex", 0))
             try:
@@ -67,6 +72,7 @@ class WalletWireResolver:
                     ls_hex = ls_field
                 else:
                     from bsv.script.script import Script
+
                     ls_hex = Script(cast(bytes, ls_field)).hex()
                 _ = _parse_locking_script(definition_type, ls_hex)  # Validate script
             except Exception:
@@ -78,5 +84,3 @@ class WalletWireResolver:
             matches.append({"beef": b"", "outputIndex": idx})
 
         return matches
-
-

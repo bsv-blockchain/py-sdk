@@ -1,13 +1,16 @@
 """
 Coverage tests for auth/peer.py focusing on untested branches:
 - Initialization error paths
-- Default parameter handling  
+- Default parameter handling
 - Edge cases and error conditions
 """
+
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch
-from bsv.keys import PrivateKey
+
 from bsv.auth.peer import Peer, PeerOptions
+from bsv.keys import PrivateKey
 from bsv.wallet import ProtoWallet
 
 
@@ -29,6 +32,7 @@ def transport():
 # ========================================================================
 # Initialization Error Paths
 # ========================================================================
+
 
 def test_peer_init_without_wallet_raises_error(transport):
     """Test Peer initialization without wallet raises ValueError."""
@@ -55,6 +59,7 @@ def test_peer_init_with_none_for_both_raises_wallet_error():
 # PeerOptions Initialization Path
 # ========================================================================
 
+
 def test_peer_init_with_peer_options(wallet, transport):
     """Test Peer initialization with PeerOptions object."""
     options = PeerOptions(
@@ -62,7 +67,7 @@ def test_peer_init_with_peer_options(wallet, transport):
         transport=transport,
         certificates_to_request=None,
         session_manager=None,
-        auto_persist_last_session=True
+        auto_persist_last_session=True,
     )
     peer = Peer(options)
     assert peer.wallet == wallet
@@ -81,6 +86,7 @@ def test_peer_init_with_peer_options_no_logger(wallet, transport):
 def test_peer_init_with_peer_options_custom_logger(wallet, transport):
     """Test Peer initialization with PeerOptions uses custom logger."""
     import logging
+
     custom_logger = logging.getLogger("CustomLogger")
     options = PeerOptions(wallet=wallet, transport=transport, logger=custom_logger)
     peer = Peer(options)
@@ -90,6 +96,7 @@ def test_peer_init_with_peer_options_custom_logger(wallet, transport):
 # ========================================================================
 # Direct Parameters Initialization Path
 # ========================================================================
+
 
 def test_peer_init_direct_params_no_logger(wallet, transport):
     """Test Peer initialization with direct params creates default logger."""
@@ -101,6 +108,7 @@ def test_peer_init_direct_params_no_logger(wallet, transport):
 def test_peer_init_direct_params_custom_logger(wallet, transport):
     """Test Peer initialization with direct params uses custom logger."""
     import logging
+
     custom_logger = logging.getLogger("DirectCustom")
     peer = Peer(wallet=wallet, transport=transport, logger=custom_logger)
     assert peer.logger == custom_logger
@@ -109,6 +117,7 @@ def test_peer_init_direct_params_custom_logger(wallet, transport):
 # ========================================================================
 # SessionManager Default Handling
 # ========================================================================
+
 
 def test_peer_init_creates_default_session_manager(wallet, transport):
     """Test Peer initialization creates DefaultSessionManager when None."""
@@ -138,6 +147,7 @@ def test_peer_init_session_manager_import_failure(wallet, transport):
 # auto_persist_last_session Logic
 # ========================================================================
 
+
 def test_peer_init_auto_persist_none_defaults_to_true(wallet, transport):
     """Test auto_persist_last_session defaults to True when None."""
     peer = Peer(wallet=wallet, transport=transport, auto_persist_last_session=None)
@@ -159,6 +169,7 @@ def test_peer_init_auto_persist_explicit_false(wallet, transport):
 # ========================================================================
 # Callback Registry Initialization
 # ========================================================================
+
 
 def test_peer_init_callback_registries(wallet, transport):
     """Test Peer initializes all callback registries."""
@@ -207,6 +218,7 @@ def test_peer_init_last_interacted_with_peer_none(wallet, transport):
 # Certificates to Request Default Handling
 # ========================================================================
 
+
 def test_peer_init_certificates_to_request_none_creates_default(wallet, transport):
     """Test Peer creates default RequestedCertificateSet when None."""
     peer = Peer(wallet=wallet, transport=transport, certificates_to_request=None)
@@ -225,6 +237,7 @@ def test_peer_init_with_explicit_certificates_to_request(wallet, transport):
 # Edge Cases
 # ========================================================================
 
+
 def test_peer_init_with_all_optional_params_none(wallet, transport):
     """Test Peer initialization with all optional params as None."""
     peer = Peer(
@@ -233,7 +246,7 @@ def test_peer_init_with_all_optional_params_none(wallet, transport):
         certificates_to_request=None,
         session_manager=None,
         auto_persist_last_session=None,
-        logger=None
+        logger=None,
     )
     # Should initialize successfully with defaults
     assert peer.wallet == wallet
@@ -245,19 +258,20 @@ def test_peer_init_with_all_optional_params_none(wallet, transport):
 def test_peer_init_with_all_optional_params_explicit(wallet, transport):
     """Test Peer initialization with all optional params explicit."""
     import logging
+
     mock_certs = Mock()
     mock_sm = Mock()
     custom_logger = logging.getLogger("ExplicitTest")
-    
+
     peer = Peer(
         wallet=wallet,
         transport=transport,
         certificates_to_request=mock_certs,
         session_manager=mock_sm,
         auto_persist_last_session=False,
-        logger=custom_logger
+        logger=custom_logger,
     )
-    
+
     assert peer.wallet == wallet
     assert peer.transport == transport
     assert peer.certificates_to_request == mock_certs
@@ -269,6 +283,7 @@ def test_peer_init_with_all_optional_params_explicit(wallet, transport):
 # ========================================================================
 # PeerOptions Edge Cases
 # ========================================================================
+
 
 def test_peer_options_minimal_params(wallet, transport):
     """Test PeerOptions with minimal parameters."""
@@ -289,7 +304,7 @@ def test_peer_options_with_none_values(wallet, transport):
         certificates_to_request=None,
         session_manager=None,
         auto_persist_last_session=None,
-        logger=None
+        logger=None,
     )
     peer = Peer(options)
     # Should handle None values gracefully
@@ -301,14 +316,16 @@ def test_peer_options_with_none_values(wallet, transport):
 # Thread Safety
 # ========================================================================
 
+
 def test_peer_init_creates_callback_lock(wallet, transport):
     """Test Peer creates thread lock for callback counter."""
     peer = Peer(wallet=wallet, transport=transport)
     assert peer._callback_counter_lock is not None
     import threading
+
     # Check it's a lock-like object (has acquire/release methods)
-    assert hasattr(peer._callback_counter_lock, 'acquire')
-    assert hasattr(peer._callback_counter_lock, 'release')
+    assert hasattr(peer._callback_counter_lock, "acquire")
+    assert hasattr(peer._callback_counter_lock, "release")
     assert callable(peer._callback_counter_lock.acquire)
     assert callable(peer._callback_counter_lock.release)
 
@@ -316,6 +333,7 @@ def test_peer_init_creates_callback_lock(wallet, transport):
 # ========================================================================
 # Transport Error Handling
 # ========================================================================
+
 
 def test_start_with_transport_error(wallet, transport):
     """Test start() handles transport.on_data error."""
@@ -344,6 +362,7 @@ def test_start_success(wallet, transport):
 # ========================================================================
 # Message Handling Error Paths
 # ========================================================================
+
 
 def test_handle_incoming_message_none(wallet, transport):
     """Test handle_incoming_message with None message."""
@@ -378,6 +397,7 @@ def test_handle_incoming_message_unknown_type(wallet, transport):
 # ========================================================================
 # Initial Request Error Paths
 # ========================================================================
+
 
 def test_handle_initial_request_missing_nonce(wallet, transport):
     """Test handle_initial_request with missing initial_nonce."""
@@ -418,6 +438,7 @@ def test_handle_initial_request_wallet_get_identity_key_no_public_key(wallet, tr
 # Initial Response Error Paths
 # ========================================================================
 
+
 def test_handle_initial_response_missing_your_nonce(wallet, transport):
     """Test handle_initial_response with missing your_nonce."""
     peer = Peer(wallet=wallet, transport=transport)
@@ -439,7 +460,7 @@ def test_handle_initial_response_session_not_found(wallet, transport):
     peer.session_manager.get_session = Mock(return_value=None)
 
     # Mock verify_nonce to pass so we reach session lookup
-    with patch('bsv.auth.utils.verify_nonce', return_value=True):
+    with patch("bsv.auth.utils.verify_nonce", return_value=True):
         err = peer.handle_initial_response(message, Mock())
         assert err is not None
         assert "Session not found" in str(err)
@@ -448,6 +469,7 @@ def test_handle_initial_response_session_not_found(wallet, transport):
 # ========================================================================
 # Certificate Request Error Paths
 # ========================================================================
+
 
 def test_handle_certificate_request_session_not_found(wallet, transport):
     """Test handle_certificate_request when session is not found."""
@@ -466,6 +488,7 @@ def test_handle_certificate_request_session_not_found(wallet, transport):
 # Certificate Response Error Paths
 # ========================================================================
 
+
 def test_handle_certificate_response_session_not_found(wallet, transport):
     """Test handle_certificate_response when session is not found."""
     peer = Peer(wallet=wallet, transport=transport)
@@ -482,6 +505,7 @@ def test_handle_certificate_response_session_not_found(wallet, transport):
 # ========================================================================
 # General Message Error Paths
 # ========================================================================
+
 
 def test_handle_general_message_missing_your_nonce(wallet, transport):
     """Test handle_general_message with missing your_nonce."""
@@ -513,6 +537,7 @@ def test_handle_general_message_session_not_found(wallet, transport):
 # ========================================================================
 # Helper Methods - Canonicalization
 # ========================================================================
+
 
 def test_rcs_hex_certifiers_with_hex_method(wallet, transport):
     """Test _rcs_hex_certifiers with object having hex() method."""
@@ -568,8 +593,9 @@ def test_rcs_key_to_b64_with_non_32_byte_bytes(wallet, transport):
 def test_rcs_key_to_b64_with_base64_string(wallet, transport):
     """Test _rcs_key_to_b64 with base64 string."""
     import base64
+
     peer = Peer(wallet=wallet, transport=transport)
-    key = base64.b64encode(b"\x00" * 32).decode('ascii')
+    key = base64.b64encode(b"\x00" * 32).decode("ascii")
     result = peer._rcs_key_to_b64(key)
     assert result is not None
 
@@ -646,10 +672,11 @@ def test_pubkey_to_hex_with_bytes(wallet, transport):
 def test_pubkey_to_hex_with_base64_string(wallet, transport):
     """Test _pubkey_to_hex with base64 string."""
     import base64
+
     peer = Peer(wallet=wallet, transport=transport)
     # 33 bytes (compressed public key)
     key_bytes = b"\x02" + b"\x00" * 32
-    key_b64 = base64.b64encode(key_bytes).decode('ascii')
+    key_b64 = base64.b64encode(key_bytes).decode("ascii")
     result = peer._pubkey_to_hex(key_b64)
     assert isinstance(result, str)
 
@@ -671,6 +698,7 @@ def test_pubkey_to_hex_with_other_type(wallet, transport):
 # ========================================================================
 # Certificate Validation Helpers
 # ========================================================================
+
 
 def test_has_valid_signature_with_verify_method(wallet, transport):
     """Test _has_valid_signature with certificate having verify() method."""
@@ -754,6 +782,7 @@ def test_type_and_fields_valid_with_missing_field(wallet, transport):
 # Callback Management
 # ========================================================================
 
+
 def test_listen_for_general_messages(wallet, transport):
     """Test listen_for_general_messages registers callback."""
     peer = Peer(wallet=wallet, transport=transport)
@@ -810,6 +839,7 @@ def test_stop_listening_for_certificates_requested(wallet, transport):
 # Session Management
 # ========================================================================
 
+
 def test_expire_sessions_with_expire_older_than(wallet, transport):
     """Test expire_sessions uses expire_older_than if available."""
     peer = Peer(wallet=wallet, transport=transport)
@@ -847,6 +877,7 @@ def test_stop_clears_callbacks(wallet, transport):
 # ========================================================================
 # Serialization Helpers
 # ========================================================================
+
 
 def test_serialize_for_signature_with_bytes(wallet, transport):
     """Test _serialize_for_signature with bytes."""
@@ -892,10 +923,12 @@ def test_serialize_for_signature_with_other_type(wallet, transport):
 def test_serialize_for_signature_with_exception(wallet, transport):
     """Test _serialize_for_signature handles exceptions."""
     peer = Peer(wallet=wallet, transport=transport)
+
     # Create data that will cause exception in json.dumps
     class BadData:
         def __repr__(self):
             raise ValueError("Cannot serialize")
+
     data = BadData()
     result = peer._serialize_for_signature(data)
     assert result == b""
@@ -904,6 +937,7 @@ def test_serialize_for_signature_with_exception(wallet, transport):
 # ========================================================================
 # Loopback Detection
 # ========================================================================
+
 
 def test_is_loopback_echo_with_matching_keys(wallet, transport):
     """Test _is_loopback_echo with matching identity keys."""
@@ -933,4 +967,3 @@ def test_is_loopback_echo_with_exception(wallet, transport):
     wallet.get_public_key = Mock(side_effect=Exception("Error"))
     result = peer._is_loopback_echo(Mock())
     assert result is False
-

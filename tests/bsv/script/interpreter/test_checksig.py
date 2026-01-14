@@ -9,19 +9,26 @@ Ported from:
 """
 
 import pytest
-from bsv.script.script import Script, ScriptChunk
-from bsv.script.interpreter import Engine, with_scripts, with_tx, with_flags
-from bsv.script.interpreter.errs import ErrorCode, is_error_code
-from bsv.script.interpreter.scriptflag import Flag
-from bsv.script.interpreter.operations import op_checksig, op_codeseparator, _extract_sighash_from_signature, encode_bool
-from bsv.script.interpreter.op_parser import ParsedOpcode
-from bsv.transaction import Transaction, TransactionInput, TransactionOutput
-from bsv.keys import PrivateKey, PublicKey
+
 from bsv.constants import SIGHASH
+from bsv.keys import PrivateKey, PublicKey
+from bsv.script.interpreter import Engine, with_flags, with_scripts, with_tx
+from bsv.script.interpreter.errs import ErrorCode, is_error_code
+from bsv.script.interpreter.op_parser import ParsedOpcode
+from bsv.script.interpreter.operations import (
+    _extract_sighash_from_signature,
+    encode_bool,
+    op_checksig,
+    op_codeseparator,
+)
+from bsv.script.interpreter.scriptflag import Flag
+from bsv.script.script import Script, ScriptChunk
+from bsv.transaction import Transaction, TransactionInput, TransactionOutput
 
 
 class MockThread:
     """Mock thread for testing opcodes."""
+
     def __init__(self):
         self.dstack = MockStack()
         self.pc = 0
@@ -35,6 +42,7 @@ class MockThread:
 
 class MockStack:
     """Mock stack for testing."""
+
     def __init__(self):
         self.stack = []
 
@@ -59,6 +67,7 @@ class MockStack:
 
 class MockFlags:
     """Mock flags for testing."""
+
     VERIFY_DER_SIGNATURES = 1 << 6
     VERIFY_LOW_S = 1 << 7
     VERIFY_STRICT_ENCODING = 1 << 12
@@ -82,27 +91,100 @@ class TestCheckSigVectors:
             flags = flags.add_flag(Flag.VERIFY_STRICT_ENCODING)
         return flags
 
-    @pytest.mark.parametrize("sig_hex,pubkey_hex,script_after,flags,expected_result,description", [
-        # Ported from Go SDK script_tests.json - valid encoding tests
-        ("", "02865c40293a680cb9c020e7b1e106d8c1916d3cef99aa431a56d253e69256dac0", "OP_CHECKSIG NOT", "STRICTENC", "OK", "Overly long signature is correctly encoded"),
-        ("0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "0", "OP_CHECKSIG NOT", "", "OK", "Overly long signature is correctly encoded"),
-        ("30220220000000000000000000000000000000000000000000000000000000000000000000", "0", "OP_CHECKSIG NOT", "", "OK", "Missing S is correctly encoded"),
-        ("3024021077777777777777777777777777777777020a7777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "", "OK", "S with invalid S length is correctly encoded"),
-        ("302403107777777777777777777777777777777702107777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "", "OK", "Non-integer R is correctly encoded"),
-        ("302402107777777777777777777777777777777703107777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "", "OK", "Non-integer S is correctly encoded"),
-        ("3014020002107777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "", "OK", "Zero-length R is correctly encoded"),
-        ("3014021077777777777777777777777777777777020001", "0", "OP_CHECKSIG NOT", "", "OK", "Zero-length S is correctly encoded for DERSIG"),
-        ("302402107777777777777777777777777777777702108777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "", "OK", "Negative S is correctly encoded"),
-        # Empty signature case - valid, returns false
-        ("", "", "OP_CHECKSIG NOT", "STRICTENC", "OK", "OP_CHECKSIG with empty signature returns false, NOT makes true"),
-    ])
+    @pytest.mark.parametrize(
+        "sig_hex,pubkey_hex,script_after,flags,expected_result,description",
+        [
+            # Ported from Go SDK script_tests.json - valid encoding tests
+            (
+                "",
+                "02865c40293a680cb9c020e7b1e106d8c1916d3cef99aa431a56d253e69256dac0",
+                "OP_CHECKSIG NOT",
+                "STRICTENC",
+                "OK",
+                "Overly long signature is correctly encoded",
+            ),
+            (
+                "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "0",
+                "OP_CHECKSIG NOT",
+                "",
+                "OK",
+                "Overly long signature is correctly encoded",
+            ),
+            (
+                "30220220000000000000000000000000000000000000000000000000000000000000000000",
+                "0",
+                "OP_CHECKSIG NOT",
+                "",
+                "OK",
+                "Missing S is correctly encoded",
+            ),
+            (
+                "3024021077777777777777777777777777777777020a7777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "",
+                "OK",
+                "S with invalid S length is correctly encoded",
+            ),
+            (
+                "302403107777777777777777777777777777777702107777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "",
+                "OK",
+                "Non-integer R is correctly encoded",
+            ),
+            (
+                "302402107777777777777777777777777777777703107777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "",
+                "OK",
+                "Non-integer S is correctly encoded",
+            ),
+            (
+                "3014020002107777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "",
+                "OK",
+                "Zero-length R is correctly encoded",
+            ),
+            (
+                "3014021077777777777777777777777777777777020001",
+                "0",
+                "OP_CHECKSIG NOT",
+                "",
+                "OK",
+                "Zero-length S is correctly encoded for DERSIG",
+            ),
+            (
+                "302402107777777777777777777777777777777702108777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "",
+                "OK",
+                "Negative S is correctly encoded",
+            ),
+            # Empty signature case - valid, returns false
+            (
+                "",
+                "",
+                "OP_CHECKSIG NOT",
+                "STRICTENC",
+                "OK",
+                "OP_CHECKSIG with empty signature returns false, NOT makes true",
+            ),
+        ],
+    )
     def test_checksig_encoding_valid(self, sig_hex, pubkey_hex, script_after, flags, expected_result, description):
         """Test OP_CHECKSIG with valid encoding test vectors."""
         # Build the script bytes manually
         script_bytes = b""
         # Always push signature (even if empty)
         sig_bytes = bytes.fromhex(sig_hex) if sig_hex else b""
-        script_bytes += len(sig_bytes).to_bytes(1, 'little') + sig_bytes
+        script_bytes += len(sig_bytes).to_bytes(1, "little") + sig_bytes
 
         # Always push public key (even if empty)
         if pubkey_hex:
@@ -110,14 +192,14 @@ class TestCheckSigVectors:
             if len(pubkey_hex) % 2 != 0:
                 pubkey_hex = "0" + pubkey_hex
             pubkey_bytes = bytes.fromhex(pubkey_hex)
-            script_bytes += len(pubkey_bytes).to_bytes(1, 'little') + pubkey_bytes
+            script_bytes += len(pubkey_bytes).to_bytes(1, "little") + pubkey_bytes
         else:
-            script_bytes += b'\x00'  # Push empty byte array
+            script_bytes += b"\x00"  # Push empty byte array
 
         # Add the opcodes
-        script_bytes += b'\xac'  # OP_CHECKSIG
+        script_bytes += b"\xac"  # OP_CHECKSIG
         if "NOT" in script_after:
-            script_bytes += b'\x91'  # OP_NOT
+            script_bytes += b"\x91"  # OP_NOT
 
         locking_script = Script(script_bytes)
 
@@ -133,26 +215,92 @@ class TestCheckSigVectors:
         else:
             assert err is not None, "Expected error but got OK"
 
-    @pytest.mark.parametrize("sig_hex,pubkey_hex,script_after,flags,expected_error,description", [
-        # Ported from Go SDK script_tests.json - invalid encoding tests
-        ("0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "0", "OP_CHECKSIG NOT", "DERSIG", "SIG_DER", "Overly long signature is incorrectly encoded for DERSIG"),
-        ("30220220000000000000000000000000000000000000000000000000000000000000000000", "0", "OP_CHECKSIG NOT", "DERSIG", "SIG_DER", "Missing S is incorrectly encoded for DERSIG"),
-        ("3024021077777777777777777777777777777777020a7777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "DERSIG", "SIG_DER", "S with invalid S length is incorrectly encoded for DERSIG"),
-        ("302403107777777777777777777777777777777702107777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "DERSIG", "SIG_DER", "Non-integer R is incorrectly encoded for DERSIG"),
-        ("302402107777777777777777777777777777777703107777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "DERSIG", "SIG_DER", "Non-integer S is incorrectly encoded for DERSIG"),
-        ("3014020002107777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "DERSIG", "SIG_DER", "Zero-length R is incorrectly encoded for DERSIG"),
-        ("3014021077777777777777777777777777777777020001", "0", "OP_CHECKSIG NOT", "DERSIG", "SIG_DER", "Zero-length S is incorrectly encoded for DERSIG"),
-        ("302402107777777777777777777777777777777702108777777777777777777777777777777701", "0", "OP_CHECKSIG NOT", "DERSIG", "SIG_DER", "Negative S is incorrectly encoded for DERSIG"),
-        # Ported from TypeScript SDK invalid vectors
-        ("00", "", "OP_CHECKSIG NOT", "STRICTENC", "INVALID_STACK_OPERATION", "OP_CHECKSIG must error when there are not 2 stack items"),
-    ])
+    @pytest.mark.parametrize(
+        "sig_hex,pubkey_hex,script_after,flags,expected_error,description",
+        [
+            # Ported from Go SDK script_tests.json - invalid encoding tests
+            (
+                "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "0",
+                "OP_CHECKSIG NOT",
+                "DERSIG",
+                "SIG_DER",
+                "Overly long signature is incorrectly encoded for DERSIG",
+            ),
+            (
+                "30220220000000000000000000000000000000000000000000000000000000000000000000",
+                "0",
+                "OP_CHECKSIG NOT",
+                "DERSIG",
+                "SIG_DER",
+                "Missing S is incorrectly encoded for DERSIG",
+            ),
+            (
+                "3024021077777777777777777777777777777777020a7777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "DERSIG",
+                "SIG_DER",
+                "S with invalid S length is incorrectly encoded for DERSIG",
+            ),
+            (
+                "302403107777777777777777777777777777777702107777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "DERSIG",
+                "SIG_DER",
+                "Non-integer R is incorrectly encoded for DERSIG",
+            ),
+            (
+                "302402107777777777777777777777777777777703107777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "DERSIG",
+                "SIG_DER",
+                "Non-integer S is incorrectly encoded for DERSIG",
+            ),
+            (
+                "3014020002107777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "DERSIG",
+                "SIG_DER",
+                "Zero-length R is incorrectly encoded for DERSIG",
+            ),
+            (
+                "3014021077777777777777777777777777777777020001",
+                "0",
+                "OP_CHECKSIG NOT",
+                "DERSIG",
+                "SIG_DER",
+                "Zero-length S is incorrectly encoded for DERSIG",
+            ),
+            (
+                "302402107777777777777777777777777777777702108777777777777777777777777777777701",
+                "0",
+                "OP_CHECKSIG NOT",
+                "DERSIG",
+                "SIG_DER",
+                "Negative S is incorrectly encoded for DERSIG",
+            ),
+            # Ported from TypeScript SDK invalid vectors
+            (
+                "00",
+                "",
+                "OP_CHECKSIG NOT",
+                "STRICTENC",
+                "INVALID_STACK_OPERATION",
+                "OP_CHECKSIG must error when there are not 2 stack items",
+            ),
+        ],
+    )
     def test_checksig_encoding_invalid(self, sig_hex, pubkey_hex, script_after, flags, expected_error, description):
         """Test OP_CHECKSIG with invalid encoding test vectors."""
         # Build the script bytes manually
         script_bytes = b""
         # Always push signature (even if empty)
         sig_bytes = bytes.fromhex(sig_hex) if sig_hex else b""
-        script_bytes += len(sig_bytes).to_bytes(1, 'little') + sig_bytes
+        script_bytes += len(sig_bytes).to_bytes(1, "little") + sig_bytes
 
         # Always push public key (even if empty)
         if pubkey_hex:
@@ -160,14 +308,14 @@ class TestCheckSigVectors:
             if len(pubkey_hex) % 2 != 0:
                 pubkey_hex = "0" + pubkey_hex
             pubkey_bytes = bytes.fromhex(pubkey_hex)
-            script_bytes += len(pubkey_bytes).to_bytes(1, 'little') + pubkey_bytes
+            script_bytes += len(pubkey_bytes).to_bytes(1, "little") + pubkey_bytes
         else:
-            script_bytes += b'\x00'  # Push empty byte array
+            script_bytes += b"\x00"  # Push empty byte array
 
         # Add the opcodes
-        script_bytes += b'\xac'  # OP_CHECKSIG
+        script_bytes += b"\xac"  # OP_CHECKSIG
         if "NOT" in script_after:
-            script_bytes += b'\x91'  # OP_NOT
+            script_bytes += b"\x91"  # OP_NOT
 
         locking_script = Script(script_bytes)
 
@@ -182,11 +330,11 @@ class TestCheckSigVectors:
 
     def test_checksig_signature_verification(self):
         """Test OP_CHECKSIG with real signature verification test vectors.
-        
+
         Note: This test verifies that CHECKSIG correctly returns EVAL_FALSE when executed
         without proper transaction context. This is expected behavior - CHECKSIG needs
         transaction data to compute the sighash for verification.
-        
+
         Full signature verification with transaction context is tested in other test files
         (e.g., test_transaction.py::test_transaction_signing_hydrate_scripts).
         """
@@ -196,7 +344,7 @@ class TestCheckSigVectors:
                 "unlocking": "47 304402200a5c6163f07b8d3b013c4d1d6dba25e780b39658d79ba37af7057a3b7f15ffa102201fd9b4eaa9943f734928b99a83592c2e7bf342ea2680f6a2bb705167966b742001",
                 "locking": "41 0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8 OP_CHECKSIG",
                 "expected": "EVAL_FALSE",
-                "description": "P2PK signature verification (fails without tx context)"
+                "description": "P2PK signature verification (fails without tx context)",
             },
         ]
 
@@ -211,14 +359,16 @@ class TestCheckSigVectors:
             # CHECKSIG should execute and return EVAL_FALSE when signature verification fails
             # (which is expected without proper transaction context for sighash calculation)
             assert err is not None, f"Expected error for {test_case['description']}, got None"
-            assert is_error_code(err, ErrorCode.ERR_EVAL_FALSE), \
-                f"Expected EVAL_FALSE but got {err.code} ({err}) for {test_case['description']}. " \
+            assert is_error_code(err, ErrorCode.ERR_EVAL_FALSE), (
+                f"Expected EVAL_FALSE but got {err.code} ({err}) for {test_case['description']}. "
                 f"CHECKSIG requires transaction context to compute sighash for signature verification."
-            
+            )
+
             # Verify signature and pubkey were on stack (consumed by CHECKSIG)
             # If stack underflow occurred, we'd get ERR_INVALID_STACK_OPERATION instead
-            assert not is_error_code(err, ErrorCode.ERR_INVALID_STACK_OPERATION), \
-                "Should not be a stack operation error - signature and pubkey should be present"
+            assert not is_error_code(
+                err, ErrorCode.ERR_INVALID_STACK_OPERATION
+            ), "Should not be a stack operation error - signature and pubkey should be present"
 
     def test_checksig_stack_underflow_no_items(self):
         """Test OP_CHECKSIG with no stack items - ported from TypeScript invalid vectors."""
@@ -259,12 +409,15 @@ class TestCheckSig:
 
         # Create proper P2PKH script for this public key
         import hashlib
-        pubkey_hash = hashlib.new('ripemd160', hashlib.sha256(public_key.serialize()).digest()).digest()
-        p2pkh_script_hex = '76a914' + pubkey_hash.hex() + '88ac'
+
+        pubkey_hash = hashlib.new("ripemd160", hashlib.sha256(public_key.serialize()).digest()).digest()
+        p2pkh_script_hex = "76a914" + pubkey_hash.hex() + "88ac"
         locking_script = Script.from_bytes(bytes.fromhex(p2pkh_script_hex))
 
         # Create input with locking script and satoshis set (required for preimage calculation)
-        input_tx = TransactionInput(source_txid="00"*32, source_output_index=0, unlocking_script=Script(), sighash=SIGHASH.ALL)
+        input_tx = TransactionInput(
+            source_txid="00" * 32, source_output_index=0, unlocking_script=Script(), sighash=SIGHASH.ALL
+        )
         input_tx.locking_script = locking_script  # Set the locking script for preimage calculation
         input_tx.satoshis = 1000  # Set the value of the output being spent
         tx.add_input(input_tx)
@@ -273,20 +426,23 @@ class TestCheckSig:
         # Create unlocking script with signature
         preimage = tx.preimage(0)
         signature_der = private_key.sign(preimage)
-        
+
         # Construct unlocking script with proper pushdata operations
         # Signature with sighash: sig_bytes + sighash_byte
         sig_with_sighash = signature_der + bytes([SIGHASH.ALL])
         pubkey_bytes = public_key.serialize()
-        
+
         # Push signature (variable length, use appropriate push opcode)
         if len(sig_with_sighash) <= 75:
             unlocking_script_bytes = bytes([len(sig_with_sighash)]) + sig_with_sighash
         else:
             # Use OP_PUSHDATA1 for longer signatures
             from bsv.constants import OpCode
-            unlocking_script_bytes = bytes([OpCode.OP_PUSHDATA1.value[0]]) + bytes([len(sig_with_sighash)]) + sig_with_sighash
-        
+
+            unlocking_script_bytes = (
+                bytes([OpCode.OP_PUSHDATA1.value[0]]) + bytes([len(sig_with_sighash)]) + sig_with_sighash
+            )
+
         # Push pubkey (33 bytes for compressed)
         unlocking_script_bytes += bytes([len(pubkey_bytes)]) + pubkey_bytes
         unlocking_script = Script.from_bytes(unlocking_script_bytes)
@@ -299,10 +455,7 @@ class TestCheckSig:
         # Test OP_CHECKSIG
         prev_output = TransactionOutput(locking_script, 1000)  # Create a TransactionOutput for the spent output
         engine = Engine()
-        err = engine.execute(
-            with_tx(tx, 0, prev_output),
-            with_scripts(locking_script, unlocking_script)
-        )
+        err = engine.execute(with_tx(tx, 0, prev_output), with_scripts(locking_script, unlocking_script))
 
         # Should succeed
         assert err is None
@@ -313,15 +466,16 @@ class TestCheckSig:
     def test_checksig_with_invalid_signature(self):
         """Test OP_CHECKSIG with invalid signature."""
         # Create fake signature (all zeros)
-        fake_sig = b'\x00' * 64 + bytes([SIGHASH.ALL])
+        fake_sig = b"\x00" * 64 + bytes([SIGHASH.ALL])
 
         # Fake public key
-        fake_pubkey = b'\x02' + b'\x00' * 32
+        fake_pubkey = b"\x02" + b"\x00" * 32
 
         # Calculate hash160 of fake pubkey for P2PKH script
         import hashlib
-        pubkey_hash = hashlib.new('ripemd160', hashlib.sha256(fake_pubkey).digest()).digest()
-        p2pkh_script_hex = '76a914' + pubkey_hash.hex() + '88ac'
+
+        pubkey_hash = hashlib.new("ripemd160", hashlib.sha256(fake_pubkey).digest()).digest()
+        p2pkh_script_hex = "76a914" + pubkey_hash.hex() + "88ac"
         locking_script = Script.from_bytes(bytes.fromhex(p2pkh_script_hex))
 
         # Create a transaction
@@ -337,17 +491,14 @@ class TestCheckSig:
         prev_output = TransactionOutput(locking_script, 1000)
 
         # Create input with locking script and satoshis set (required for preimage calculation)
-        input_tx = TransactionInput(source_txid="00"*32, source_output_index=0, unlocking_script=unlocking_script)
+        input_tx = TransactionInput(source_txid="00" * 32, source_output_index=0, unlocking_script=unlocking_script)
         input_tx.locking_script = locking_script
         input_tx.satoshis = 1000
         tx.add_input(input_tx)
 
         # Test OP_CHECKSIG - should fail
         engine = Engine()
-        err = engine.execute(
-            with_tx(tx, 0, prev_output),
-            with_scripts(locking_script, unlocking_script)
-        )
+        err = engine.execute(with_tx(tx, 0, prev_output), with_scripts(locking_script, unlocking_script))
 
         # Script execution completes but leaves False on stack (invalid signature)
         # This is correct behavior - OP_CHECKSIG returns False for invalid signature
@@ -362,9 +513,7 @@ class TestCheckSig:
         locking_script = Script.from_bytes(bytes.fromhex("51ac"))  # OP_1 OP_OP_CHECKSIG
         unlocking_script = Script.from_bytes(bytes.fromhex(""))  # Empty
 
-        err = engine.execute(
-            with_scripts(locking_script, unlocking_script)
-        )
+        err = engine.execute(with_scripts(locking_script, unlocking_script))
 
         # Should fail with stack underflow
         assert err is not None
@@ -376,11 +525,9 @@ class TestCheckSig:
 
         # Empty signature
         locking_script = Script.from_bytes(bytes.fromhex("00ac"))  # OP_0 OP_OP_CHECKSIG
-        unlocking_script = Script.from_bytes(bytes.fromhex("02" + "00"*32))  # Empty sig, fake pubkey
+        unlocking_script = Script.from_bytes(bytes.fromhex("02" + "00" * 32))  # Empty sig, fake pubkey
 
-        err = engine.execute(
-            with_scripts(locking_script, unlocking_script)
-        )
+        err = engine.execute(with_scripts(locking_script, unlocking_script))
 
         # OP_CHECKSIG returns False for invalid signature encoding
         # Script execution completes but leaves False on stack
@@ -395,9 +542,7 @@ class TestCheckSig:
         locking_script = Script.from_bytes(bytes.fromhex("51ac"))  # OP_1 OP_OP_CHECKSIG
         unlocking_script = Script.from_bytes(bytes.fromhex("00" + "00"))  # Fake sig, invalid pubkey
 
-        err = engine.execute(
-            with_scripts(locking_script, unlocking_script)
-        )
+        err = engine.execute(with_scripts(locking_script, unlocking_script))
 
         # OP_CHECKSIG returns False for invalid public key encoding
         # Script execution completes but leaves False on stack
@@ -411,11 +556,9 @@ class TestCheckSig:
 
         # Simple script that should verify
         locking_script = Script.from_bytes(bytes.fromhex("51ad"))  # OP_1 OP_OP_OP_CHECKSIGVERIFY
-        unlocking_script = Script.from_bytes(bytes.fromhex("00" + "00"*32))  # Fake sig/pubkey
+        unlocking_script = Script.from_bytes(bytes.fromhex("00" + "00" * 32))  # Fake sig/pubkey
 
-        err = engine.execute(
-            with_scripts(locking_script, unlocking_script)
-        )
+        err = engine.execute(with_scripts(locking_script, unlocking_script))
 
         # Currently fails due to TODO implementation
         # With full implementation should either succeed or fail based on verification
@@ -427,11 +570,9 @@ class TestCheckSig:
 
         # OP_OP_CHECKSIGVERIFY with invalid sig should fail
         locking_script = Script.from_bytes(bytes.fromhex("00ad"))  # OP_0 OP_OP_OP_CHECKSIGVERIFY
-        unlocking_script = Script.from_bytes(bytes.fromhex("00" + "00"*32))  # Fake sig/pubkey
+        unlocking_script = Script.from_bytes(bytes.fromhex("00" + "00" * 32))  # Fake sig/pubkey
 
-        err = engine.execute(
-            with_scripts(locking_script, unlocking_script)
-        )
+        err = engine.execute(with_scripts(locking_script, unlocking_script))
 
         # Should fail with OP_OP_CHECKSIGVERIFY error
         assert err is not None
@@ -447,10 +588,10 @@ class TestCheckSig:
         thread.dstack.push_bytes(b"\x02" + b"\x00" * 32)  # compressed pubkey
 
         # Execute CHECKSIG - should push False for invalid sig
-        err = op_checksig(ParsedOpcode(0xac, "OP_CHECKSIG"), thread)
+        err = op_checksig(ParsedOpcode(0xAC, "OP_CHECKSIG"), thread)
         assert err is None
         assert thread.dstack.depth() == 1
-        assert thread.dstack.pop() == False  # Invalid signature
+        assert not thread.dstack.pop()  # Invalid signature
 
     @pytest.mark.skip(reason="Already tested in reference vectors")
     def test_checksig_different_sighash_types(self):
@@ -471,7 +612,7 @@ class TestCheckSig:
 
         # Test SINGLE sighash
         sig_single = b"dummy_der_sig\x03"  # SIGHASH_SINGLE
-        sighash, sig_bytes, err = _extract_sighash_from_signature(thread, sig_single)
+        sighash, _sig_bytes, err = _extract_sighash_from_signature(thread, sig_single)
         assert err is None
         assert sighash.value == 3  # SIGHASH_SINGLE
 
@@ -484,7 +625,7 @@ class TestCheckSig:
         thread.script_off = 5  # Simulate being at position 5 in script
 
         # Execute OP_CODESEPARATOR
-        err = op_codeseparator(ParsedOpcode(0xab, "OP_CODESEPARATOR"), thread)
+        err = op_codeseparator(ParsedOpcode(0xAB, "OP_CODESEPARATOR"), thread)
         assert err is None
         # The last_code_sep should be updated to mark the codeseparator position
         assert thread.last_code_sep == 5

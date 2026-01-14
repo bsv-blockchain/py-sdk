@@ -1,33 +1,37 @@
 """
 Coverage tests for Spend class error paths and edge cases.
 """
-import pytest
+
 from unittest.mock import Mock
 
-from bsv.script.spend import Spend
+import pytest
+
 from bsv.constants import OpCode
 from bsv.script import Script, ScriptChunk
+from bsv.script.spend import Spend
 
 
 def create_minimal_spend():
     """Create a minimal Spend instance for testing."""
     # Create a simple locking script that can execute with empty stack
-    locking_script = Script.from_chunks([
-        ScriptChunk(b'\x51'),  # OP_TRUE
-    ])
+    locking_script = Script.from_chunks(
+        [
+            ScriptChunk(b"\x51"),  # OP_TRUE
+        ]
+    )
 
     params = {
-        'sourceTXID': '00' * 32,
-        'sourceOutputIndex': 0,
-        'sourceSatoshis': 1000,
-        'lockingScript': locking_script,
-        'transactionVersion': 1,
-        'otherInputs': [],
-        'outputs': [{'satoshis': 900, 'lockingScript': Script.from_chunks([ScriptChunk(b'\x51')])}],  # OP_TRUE
-        'inputIndex': 0,
-        'unlockingScript': Script.from_chunks([ScriptChunk(b'\x51')]),  # OP_TRUE
-        'inputSequence': 0xffffffff,
-        'lockTime': 0
+        "sourceTXID": "00" * 32,
+        "sourceOutputIndex": 0,
+        "sourceSatoshis": 1000,
+        "lockingScript": locking_script,
+        "transactionVersion": 1,
+        "otherInputs": [],
+        "outputs": [{"satoshis": 900, "lockingScript": Script.from_chunks([ScriptChunk(b"\x51")])}],  # OP_TRUE
+        "inputIndex": 0,
+        "unlockingScript": Script.from_chunks([ScriptChunk(b"\x51")]),  # OP_TRUE
+        "inputSequence": 0xFFFFFFFF,
+        "lockTime": 0,
     }
     return Spend(params)
 
@@ -48,7 +52,7 @@ def test_spend_non_minimal_push():
     spend = create_minimal_spend()
 
     # Create non-minimal push (OP_PUSHDATA1 for small data)
-    spend.unlocking_script = Script.from_chunks([ScriptChunk(b'\x4c', b'\x00')])  # OP_PUSHDATA1 with 1 byte of data
+    spend.unlocking_script = Script.from_chunks([ScriptChunk(b"\x4c", b"\x00")])  # OP_PUSHDATA1 with 1 byte of data
 
     with pytest.raises(Exception, match="not minimally-encoded"):
         spend.step()
@@ -66,7 +70,7 @@ def test_spend_verify_empty_stack():
 def test_spend_verify_false():
     """Test Spend OP_VERIFY with false value."""
     spend = create_minimal_spend()
-    spend.stack = [b'']  # Empty bytes = false
+    spend.stack = [b""]  # Empty bytes = false
     spend.unlocking_script = Script.from_chunks([ScriptChunk(OpCode.OP_VERIFY)])
 
     with pytest.raises(Exception, match="truthy"):
@@ -76,7 +80,7 @@ def test_spend_verify_false():
 def test_spend_2drop_insufficient_stack():
     """Test Spend OP_2DROP with insufficient stack items."""
     spend = create_minimal_spend()
-    spend.stack = [b'only_one_item']
+    spend.stack = [b"only_one_item"]
     spend.unlocking_script = Script.from_chunks([ScriptChunk(OpCode.OP_2DROP)])
 
     with pytest.raises(Exception, match="at least two items"):
@@ -131,7 +135,7 @@ def test_spend_fromaltstack_empty_alt():
 def test_spend_invalid_opcode():
     """Test Spend with invalid opcode."""
     spend = create_minimal_spend()
-    spend.unlocking_script = Script.from_chunks([ScriptChunk(b'\xff')])  # Invalid opcode
+    spend.unlocking_script = Script.from_chunks([ScriptChunk(b"\xff")])  # Invalid opcode
 
     with pytest.raises(Exception, match="Invalid opcode"):
         spend.step()
@@ -142,8 +146,8 @@ def test_spend_large_script_element():
     spend = create_minimal_spend()
 
     # Create chunk with data larger than MAX_SCRIPT_ELEMENT_SIZE
-    large_data = b'x' * (1024 * 1024 * 1024 + 1)  # Larger than 1GB limit
-    spend.unlocking_script = Script.from_chunks([ScriptChunk(b'\x4c', large_data)])  # OP_PUSHDATA1
+    large_data = b"x" * (1024 * 1024 * 1024 + 1)  # Larger than 1GB limit
+    spend.unlocking_script = Script.from_chunks([ScriptChunk(b"\x4c", large_data)])  # OP_PUSHDATA1
 
     with pytest.raises(Exception, match="larger than"):
         spend.step()
@@ -158,7 +162,7 @@ def test_spend_context_switch():
 
     # Should switch to locking script context
     spend.step()
-    assert spend.context == 'LockingScript'
+    assert spend.context == "LockingScript"
     assert spend.program_counter == 1  # OP_TRUE executed and counter incremented
 
 
@@ -176,7 +180,7 @@ def test_spend_clean_stack_policy():
     # This would require setting the REQUIRE_CLEAN_STACK flag
     # For now, just test that the code path exists
     spend = create_minimal_spend()
-    spend.stack = [b'leftover_item']  # Non-empty stack at end
+    spend.stack = [b"leftover_item"]  # Non-empty stack at end
 
     # The clean stack check happens elsewhere, but we test the stack operations
     assert len(spend.stack) > 0

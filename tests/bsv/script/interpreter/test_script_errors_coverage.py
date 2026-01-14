@@ -1,12 +1,13 @@
 """
 Coverage tests for script/interpreter/errs/error.py - untested branches.
 """
-import pytest
 
+import pytest
 
 # ========================================================================
 # Script error classes branches
 # ========================================================================
+
 
 def test_script_error_base_class():
     """Test base Error class."""
@@ -129,6 +130,7 @@ def test_script_error_unsatisfied_locktime():
 # Edge cases
 # ========================================================================
 
+
 def test_script_error_with_message():
     """Test script error with custom message."""
     from bsv.script.interpreter.errs.error import Error, ErrorCode
@@ -145,4 +147,3 @@ def test_script_error_raising():
         raise Error(ErrorCode.ERR_OK, "test")
     except Error as e:
         assert "test" in str(e)
-

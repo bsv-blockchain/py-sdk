@@ -1,12 +1,13 @@
 """
 Coverage tests for overlay/lookup.py - untested branches.
 """
-import pytest
 
+import pytest
 
 # ========================================================================
 # Overlay lookup branches
 # ========================================================================
+
 
 def test_overlay_lookup_init():
     """Test overlay lookup initialization."""
@@ -18,15 +19,15 @@ def test_overlay_lookup_init():
 
 def test_overlay_lookup_query():
     """Test overlay lookup query."""
-    from bsv.overlay.lookup import LookupResolver, LookupQuestion
-        
+    from bsv.overlay.lookup import LookupQuestion, LookupResolver
+
     lookup = LookupResolver()
-    
+
     # LookupResolver.query requires a LookupQuestion object
-    question = LookupQuestion(service='test', query={})
+    question = LookupQuestion(service="test", query={})
     result = lookup.query(None, question)
     assert result is not None
-    assert result.type == 'output-list'
+    assert result.type == "output-list"
 
 
 def test_overlay_lookup_with_protocol():
@@ -42,16 +43,16 @@ def test_overlay_lookup_with_protocol():
 # Edge cases
 # ========================================================================
 
+
 def test_overlay_lookup_empty_query():
     """Test overlay lookup with empty query."""
-    from bsv.overlay.lookup import LookupResolver, LookupQuestion
+    from bsv.overlay.lookup import LookupQuestion, LookupResolver
 
     lookup = LookupResolver()
 
-    if hasattr(lookup, 'query'):
+    if hasattr(lookup, "query"):
         # Query requires a LookupQuestion object
-        question = LookupQuestion(service='test', query={})
+        question = LookupQuestion(service="test", query={})
         result = lookup.query(None, question)
         assert result is not None
-        assert result.type == 'output-list'
-
+        assert result.type == "output-list"

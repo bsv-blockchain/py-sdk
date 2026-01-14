@@ -1,22 +1,19 @@
-from typing import Union, Optional, List
+from typing import List, Optional, Union
 
-from bsv.constants import OpCode, OPCODE_VALUE_NAME_DICT
+from bsv.constants import OPCODE_VALUE_NAME_DICT, OpCode
+
 # Import from utils package that should have these functions available
-from bsv.utils import encode_pushdata, unsigned_to_varint, Reader
+from bsv.utils import Reader, encode_pushdata, unsigned_to_varint
 
 # BRC-106 compliance: Opcode aliases for parsing
 # Build a comprehensive mapping of all opcode names (including aliases) to their byte values
-OPCODE_ALIASES = {
-    'OP_FALSE': b'\x00',
-    'OP_0': b'\x00',
-    'OP_TRUE': b'\x51',
-    'OP_1': b'\x51'
-}
+OPCODE_ALIASES = {"OP_FALSE": b"\x00", "OP_0": b"\x00", "OP_TRUE": b"\x51", "OP_1": b"\x51"}
 
 # Build name->value mapping for all OpCodes
 OPCODE_NAME_VALUE_DICT = {item.name: item.value for item in OpCode}
 # Merge with aliases
 OPCODE_NAME_VALUE_DICT.update(OPCODE_ALIASES)
+
 
 class ScriptChunk:
     """
@@ -44,7 +41,7 @@ class Script:
         Create script from hex string or bytes
         """
         if script is None:
-            self.script: bytes = b''
+            self.script: bytes = b""
         elif isinstance(script, str):
             # script in hex string
             self.script: bytes = bytes.fromhex(script)
@@ -52,9 +49,9 @@ class Script:
             # script in bytes
             self.script: bytes = script
         else:
-            raise TypeError('unsupported script type')
+            raise TypeError("unsupported script type")
         # An array of script chunks that make up the script.
-        self.chunks: List[ScriptChunk] = []
+        self.chunks: list[ScriptChunk] = []
         self._build_chunks()
 
     def _build_chunks(self):
@@ -64,8 +61,8 @@ class Script:
             op = reader.read_bytes(1)
             chunk = ScriptChunk(op)
             data = None
-            if b'\x01' <= op <= b'\x4b':
-                data = reader.read_bytes(int.from_bytes(op, 'big'))
+            if b"\x01" <= op <= b"\x4b":
+                data = reader.read_bytes(int.from_bytes(op, "big"))
             elif op == OpCode.OP_PUSHDATA1:  # 0x4c
                 length = reader.read_uint8()
                 if length is not None:
@@ -110,10 +107,7 @@ class Script:
         Checks if the script contains only push data operations.
         :return: True if the script is push-only, otherwise false.
         """
-        for chunk in self.chunks:
-            if chunk.op > OpCode.OP_16:
-                return False
-        return True
+        return all(chunk.op <= OpCode.OP_16 for chunk in self.chunks)
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, Script):
@@ -127,8 +121,8 @@ class Script:
         return self.__str__()
 
     @classmethod
-    def from_chunks(cls, chunks: List[ScriptChunk]) -> 'Script':
-        script = b''
+    def from_chunks(cls, chunks: list[ScriptChunk]) -> "Script":
+        script = b""
         for chunk in chunks:
             script += encode_pushdata(chunk.data) if chunk.data is not None else chunk.op
         s = Script(script)
@@ -136,13 +130,13 @@ class Script:
         return s
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> 'Script':
+    def from_bytes(cls, data: bytes) -> "Script":
         """
         Create a Script object from bytes data.
-        
+
         Args:
             data: Raw script bytes
-            
+
         Returns:
             Script: A new Script object
         """
@@ -151,18 +145,18 @@ class Script:
     def to_bytes(self) -> bytes:
         """
         Convert the Script object to bytes.
-        
+
         Returns:
             bytes: The serialized script bytes
         """
         return self.serialize()
 
     @classmethod
-    def from_asm(cls, asm: str) -> 'Script':
+    def from_asm(cls, asm: str) -> "Script":
         chunks: [ScriptChunk] = []
         if not asm:  # Handle empty string
             return Script.from_chunks(chunks)
-        tokens = asm.split(' ')
+        tokens = asm.split(" ")
         i = 0
         while i < len(tokens):
             token = tokens[i]
@@ -172,12 +166,12 @@ class Script:
                 opcode_value = OPCODE_NAME_VALUE_DICT[token]
                 chunks.append(ScriptChunk(opcode_value))
                 i += 1
-            elif token == '0':
+            elif token == "0":
                 # Numeric literal 0
-                opcode_value = b'\x00'
+                opcode_value = b"\x00"
                 chunks.append(ScriptChunk(opcode_value))
                 i += 1
-            elif token == '-1':
+            elif token == "-1":
                 # Numeric literal -1
                 opcode_value = OpCode.OP_1NEGATE
                 chunks.append(ScriptChunk(opcode_value))
@@ -186,13 +180,13 @@ class Script:
                 # Assume it's hex data to push
                 hex_string = token
                 if len(hex_string) % 2 != 0:
-                    hex_string = '0' + hex_string
+                    hex_string = "0" + hex_string
                 hex_bytes = bytes.fromhex(hex_string)
                 if hex_bytes.hex() != hex_string.lower():
-                    raise ValueError('invalid hex string in script')
+                    raise ValueError("invalid hex string in script")
                 hex_len = len(hex_bytes)
-                if 0 <= hex_len < int.from_bytes(OpCode.OP_PUSHDATA1, 'big'):
-                    op_value = int.to_bytes(hex_len, 1, 'big')
+                if 0 <= hex_len < int.from_bytes(OpCode.OP_PUSHDATA1, "big"):
+                    op_value = int.to_bytes(hex_len, 1, "big")
                 elif hex_len < pow(2, 8):
                     op_value = OpCode.OP_PUSHDATA1
                 elif hex_len < pow(2, 16):
@@ -204,10 +198,10 @@ class Script:
         return Script.from_chunks(chunks)
 
     def to_asm(self) -> str:
-        return ' '.join(str(chunk) for chunk in self.chunks)
+        return " ".join(str(chunk) for chunk in self.chunks)
 
     @classmethod
-    def find_and_delete(cls, source: 'Script', pattern: 'Script') -> 'Script':
+    def find_and_delete(cls, source: "Script", pattern: "Script") -> "Script":
         chunks = []
         for chunk in source.chunks:
             if Script.from_chunks([chunk]).hex() != pattern.hex():
@@ -215,5 +209,5 @@ class Script:
         return Script.from_chunks(chunks)
 
     @classmethod
-    def write_bin(cls, octets: bytes) -> 'Script':
+    def write_bin(cls, octets: bytes) -> "Script":
         return Script(encode_pushdata(octets))

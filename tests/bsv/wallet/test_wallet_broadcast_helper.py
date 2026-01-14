@@ -1,16 +1,17 @@
 import types
+
 import pytest
 
+from bsv.chaintrackers.whatsonchain import WhatsOnChainTracker
 from bsv.keys import PrivateKey
 from bsv.wallet import ProtoWallet
-from bsv.chaintrackers.whatsonchain import WhatsOnChainTracker
 
 
 @pytest.fixture(autouse=True)
 def restore_real_whatsonchain_tracker(monkeypatch):
     """Restore the real WhatsOnChainTracker for these tests."""
-    import bsv.chaintrackers as chaintrackers
     import bsv.chaintrackers.whatsonchain as whatsonchain_module
+    from bsv import chaintrackers
 
     # Patch back the real WhatsOnChainTracker
     monkeypatch.setattr(chaintrackers, "WhatsOnChainTracker", WhatsOnChainTracker, raising=False)
@@ -22,9 +23,11 @@ class _Resp:
         self.status_code = status
         self._json = json_obj
         self.ok = status == 200
+
     def raise_for_status(self):
         if self.status_code >= 400:
             raise RuntimeError(f"status {self.status_code}")
+
     def json(self):
         return self._json
 
@@ -32,7 +35,9 @@ class _Resp:
 def test_query_tx_mempool_404(monkeypatch):
     def fake_get(url, headers=None, timeout=10):
         return _Resp(404, {})
+
     import requests
+
     monkeypatch.setattr(requests, "get", fake_get, raising=False)
     w = ProtoWallet(PrivateKey(), permission_callback=lambda a: True)
     res = w.query_tx_mempool("00" * 32)
@@ -42,7 +47,9 @@ def test_query_tx_mempool_404(monkeypatch):
 def test_query_tx_mempool_known_unconfirmed(monkeypatch):
     def fake_get(url, headers=None, timeout=10):
         return _Resp(200, {})
+
     import requests
+
     monkeypatch.setattr(requests, "get", fake_get, raising=False)
     w = ProtoWallet(PrivateKey(), permission_callback=lambda a: True)
     res = w.query_tx_mempool("11" * 32)
@@ -52,10 +59,10 @@ def test_query_tx_mempool_known_unconfirmed(monkeypatch):
 def test_query_tx_mempool_confirmed(monkeypatch):
     def fake_get(url, headers=None, timeout=10):
         return _Resp(200, {"confirmations": 3})
+
     import requests
+
     monkeypatch.setattr(requests, "get", fake_get, raising=False)
     w = ProtoWallet(PrivateKey(), permission_callback=lambda a: True)
     res = w.query_tx_mempool("22" * 32)
     assert res.get("known") is True and res.get("confirmations") == 3
-
-

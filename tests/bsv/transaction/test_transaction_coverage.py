@@ -2,12 +2,14 @@
 Coverage tests for transaction.py focusing on untested branches.
 Targeting error paths, edge cases, and branch coverage.
 """
+
 import pytest
+
+from bsv.keys import PrivateKey
+from bsv.script.script import Script
 from bsv.transaction import Transaction
 from bsv.transaction_input import TransactionInput
 from bsv.transaction_output import TransactionOutput
-from bsv.script.script import Script
-from bsv.keys import PrivateKey
 
 
 @pytest.fixture
@@ -19,6 +21,7 @@ def simple_tx():
 # ========================================================================
 # Initialization Edge Cases
 # ========================================================================
+
 
 def test_transaction_init_with_none_inputs():
     """Test Transaction handles None inputs list."""
@@ -58,6 +61,7 @@ def test_transaction_init_empty():
 # Serialization Edge Cases
 # ========================================================================
 
+
 def test_transaction_serialize_empty(simple_tx):
     """Test serializing empty transaction."""
     serialized = simple_tx.serialize()
@@ -68,15 +72,18 @@ def test_transaction_serialize_empty(simple_tx):
 def test_transaction_serialize_with_single_input():
     """Test serialization with one input."""
     # Create a simple mock transaction for input
-    mock_prev_tx = Transaction(version=1, tx_inputs=[], tx_outputs=[
-        TransactionOutput(satoshis=1000, locking_script=Script.from_asm(""))
-    ], locktime=0)
-    
+    mock_prev_tx = Transaction(
+        version=1,
+        tx_inputs=[],
+        tx_outputs=[TransactionOutput(satoshis=1000, locking_script=Script.from_asm(""))],
+        locktime=0,
+    )
+
     inp = TransactionInput(
         source_transaction=mock_prev_tx,
         source_output_index=0,
         unlocking_script=Script.from_asm(""),
-        sequence=0xFFFFFFFF
+        sequence=0xFFFFFFFF,
     )
     tx = Transaction(version=1, tx_inputs=[inp], tx_outputs=[], locktime=0)
     serialized = tx.serialize()
@@ -86,8 +93,7 @@ def test_transaction_serialize_with_single_input():
 def test_transaction_serialize_with_single_output():
     """Test serialization with one output."""
     out = TransactionOutput(
-        satoshis=1000,
-        locking_script=Script.from_asm("OP_DUP OP_HASH160 OP_EQUALVERIFY OP_CHECKSIG")
+        satoshis=1000, locking_script=Script.from_asm("OP_DUP OP_HASH160 OP_EQUALVERIFY OP_CHECKSIG")
     )
     tx = Transaction(version=1, tx_inputs=[], tx_outputs=[out], locktime=0)
     serialized = tx.serialize()
@@ -97,6 +103,7 @@ def test_transaction_serialize_with_single_output():
 # ========================================================================
 # Hash Edge Cases
 # ========================================================================
+
 
 def test_transaction_hash_empty(simple_tx):
     """Test hash of empty transaction."""
@@ -117,25 +124,29 @@ def test_transaction_hex_method(simple_tx):
     hex_str = simple_tx.hex()
     assert isinstance(hex_str, str)
     # Should be valid hex
-    assert all(c in '0123456789abcdef' for c in hex_str.lower())
+    assert all(c in "0123456789abcdef" for c in hex_str.lower())
 
 
 # ========================================================================
 # Input/Output Mutation
 # ========================================================================
 
+
 def test_transaction_add_input_after_creation(simple_tx):
     """Test adding input after creation."""
     # Create a simple mock transaction for input
-    mock_prev_tx = Transaction(version=1, tx_inputs=[], tx_outputs=[
-        TransactionOutput(satoshis=1000, locking_script=Script.from_asm(""))
-    ], locktime=0)
-    
+    mock_prev_tx = Transaction(
+        version=1,
+        tx_inputs=[],
+        tx_outputs=[TransactionOutput(satoshis=1000, locking_script=Script.from_asm(""))],
+        locktime=0,
+    )
+
     inp = TransactionInput(
         source_transaction=mock_prev_tx,
         source_output_index=0,
         unlocking_script=Script.from_asm(""),
-        sequence=0xFFFFFFFF
+        sequence=0xFFFFFFFF,
     )
     simple_tx.inputs.append(inp)
     assert len(simple_tx.inputs) == 1
@@ -143,10 +154,7 @@ def test_transaction_add_input_after_creation(simple_tx):
 
 def test_transaction_add_output_after_creation(simple_tx):
     """Test adding output after creation."""
-    out = TransactionOutput(
-        satoshis=1000,
-        locking_script=Script.from_asm("")
-    )
+    out = TransactionOutput(satoshis=1000, locking_script=Script.from_asm(""))
     simple_tx.outputs.append(out)
     assert len(simple_tx.outputs) == 1
 
@@ -154,16 +162,19 @@ def test_transaction_add_output_after_creation(simple_tx):
 def test_transaction_multiple_inputs():
     """Test transaction with multiple inputs."""
     # Create a simple mock transaction for inputs
-    mock_prev_tx = Transaction(version=1, tx_inputs=[], tx_outputs=[
-        TransactionOutput(satoshis=1000, locking_script=Script.from_asm(""))
-    ], locktime=0)
-    
+    mock_prev_tx = Transaction(
+        version=1,
+        tx_inputs=[],
+        tx_outputs=[TransactionOutput(satoshis=1000, locking_script=Script.from_asm(""))],
+        locktime=0,
+    )
+
     inputs = [
         TransactionInput(
             source_transaction=mock_prev_tx,
             source_output_index=0,
             unlocking_script=Script.from_asm(""),
-            sequence=0xFFFFFFFF
+            sequence=0xFFFFFFFF,
         )
         for i in range(3)
     ]
@@ -173,13 +184,7 @@ def test_transaction_multiple_inputs():
 
 def test_transaction_multiple_outputs():
     """Test transaction with multiple outputs."""
-    outputs = [
-        TransactionOutput(
-            satoshis=1000 * (i + 1),
-            locking_script=Script.from_asm("")
-        )
-        for i in range(3)
-    ]
+    outputs = [TransactionOutput(satoshis=1000 * (i + 1), locking_script=Script.from_asm("")) for i in range(3)]
     tx = Transaction(version=1, tx_inputs=[], tx_outputs=outputs, locktime=0)
     assert len(tx.outputs) == 3
 
@@ -187,6 +192,7 @@ def test_transaction_multiple_outputs():
 # ========================================================================
 # Boundary Conditions
 # ========================================================================
+
 
 def test_transaction_zero_satoshi_output():
     """Test output with zero satoshis."""
@@ -228,6 +234,7 @@ def test_transaction_with_locktime_timestamp():
 # Version Variations
 # ========================================================================
 
+
 def test_transaction_version_1():
     """Test transaction with version 1 (standard)."""
     tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
@@ -244,4 +251,3 @@ def test_transaction_negative_version():
     """Test transaction with negative version."""
     tx = Transaction(version=-1, tx_inputs=[], tx_outputs=[], locktime=0)
     assert tx.version == -1
-

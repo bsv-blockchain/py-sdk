@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, TypedDict, Dict, Union, List, Any, Optional
+from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
 
 DefinitionType = Literal["basket", "protocol", "certificate"]
 
@@ -21,18 +21,18 @@ class BasketDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     iconURL: str
     description: str
     documentationURL: str
-    registryOperator: Optional[str] = None
+    registryOperator: str | None = None
 
 
 @dataclass
 class ProtocolDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     definitionType: Literal["protocol"]
-    protocolID: Dict[str, Any]  # WalletProtocol-like: {securityLevel, protocol}
+    protocolID: dict[str, Any]  # WalletProtocol-like: {securityLevel, protocol}
     name: str
     iconURL: str
     description: str
     documentationURL: str
-    registryOperator: Optional[str] = None
+    registryOperator: str | None = None
 
 
 @dataclass
@@ -43,8 +43,8 @@ class CertificateDefinitionData:  # NOSONAR - camelCase matches TS/Go registry A
     iconURL: str
     description: str
     documentationURL: str
-    fields: Dict[str, CertificateFieldDescriptor]
-    registryOperator: Optional[str] = None
+    fields: dict[str, CertificateFieldDescriptor]
+    registryOperator: str | None = None
 
 
 DefinitionData = Union[
@@ -68,5 +68,3 @@ RegistryRecord = Union[
     ProtocolDefinitionData,
     CertificateDefinitionData,
 ]  # will be merged with TokenData at runtime where needed
-
-

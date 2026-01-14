@@ -1,6 +1,7 @@
 """
 Coverage tests for wallet/serializer/discover_by_identity_key.py - untested branches.
 """
+
 import pytest
 
 
@@ -9,7 +10,7 @@ def test_serialize_discover_by_identity_key_args_basic():
     try:
         from bsv.wallet.serializer.discover_by_identity_key import serialize_discover_by_identity_key_args
 
-        args = {"identityKey": b'\x02' * 33}
+        args = {"identityKey": b"\x02" * 33}
         result = serialize_discover_by_identity_key_args(args)
         assert isinstance(result, bytes)
         assert len(result) >= 33  # identityKey + nil markers for optional fields
@@ -22,12 +23,7 @@ def test_serialize_discover_by_identity_key_args_with_options():
     try:
         from bsv.wallet.serializer.discover_by_identity_key import serialize_discover_by_identity_key_args
 
-        args = {
-            "identityKey": b'\x03' * 33,
-            "limit": 20,
-            "offset": 10,
-            "seekPermission": True
-        }
+        args = {"identityKey": b"\x03" * 33, "limit": 20, "offset": 10, "seekPermission": True}
         result = serialize_discover_by_identity_key_args(args)
         assert isinstance(result, bytes)
         assert len(result) > 33  # identityKey + options
@@ -40,7 +36,7 @@ def test_serialize_discover_by_identity_key_args_none_values():
     try:
         from bsv.wallet.serializer.discover_by_identity_key import serialize_discover_by_identity_key_args
 
-        args = {"identityKey": b'\x04' * 33}
+        args = {"identityKey": b"\x04" * 33}
         result = serialize_discover_by_identity_key_args(args)
         assert isinstance(result, bytes)
         # Includes nil markers for optional fields even when None
@@ -53,12 +49,12 @@ def test_deserialize_discover_by_identity_key_args_basic():
     """Test deserialize_discover_by_identity_key_args with basic data."""
     try:
         from bsv.wallet.serializer.discover_by_identity_key import (
+            deserialize_discover_by_identity_key_args,
             serialize_discover_by_identity_key_args,
-            deserialize_discover_by_identity_key_args
         )
 
         # Create test data
-        identity_key = b'\x05' * 33
+        identity_key = b"\x05" * 33
         args = {"identityKey": identity_key}
         serialized = serialize_discover_by_identity_key_args(args)
 
@@ -75,18 +71,13 @@ def test_deserialize_discover_by_identity_key_args_with_options():
     """Test deserialize_discover_by_identity_key_args with all options."""
     try:
         from bsv.wallet.serializer.discover_by_identity_key import (
+            deserialize_discover_by_identity_key_args,
             serialize_discover_by_identity_key_args,
-            deserialize_discover_by_identity_key_args
         )
 
         # Create test data
-        identity_key = b'\x06' * 33
-        args = {
-            "identityKey": identity_key,
-            "limit": 15,
-            "offset": 3,
-            "seekPermission": False
-        }
+        identity_key = b"\x06" * 33
+        args = {"identityKey": identity_key, "limit": 15, "offset": 3, "seekPermission": False}
         serialized = serialize_discover_by_identity_key_args(args)
 
         # Deserialize
@@ -104,12 +95,12 @@ def test_deserialize_discover_by_identity_key_args_none_values():
     """Test deserialize_discover_by_identity_key_args with None optional values."""
     try:
         from bsv.wallet.serializer.discover_by_identity_key import (
+            deserialize_discover_by_identity_key_args,
             serialize_discover_by_identity_key_args,
-            deserialize_discover_by_identity_key_args
         )
 
         # Create test data with None values
-        identity_key = b'\x07' * 33
+        identity_key = b"\x07" * 33
         args = {"identityKey": identity_key}
         serialized = serialize_discover_by_identity_key_args(args)
 
@@ -128,16 +119,16 @@ def test_discover_by_identity_key_roundtrip():
     """Test full roundtrip serialization/deserialization."""
     try:
         from bsv.wallet.serializer.discover_by_identity_key import (
+            deserialize_discover_by_identity_key_args,
             serialize_discover_by_identity_key_args,
-            deserialize_discover_by_identity_key_args
         )
 
         test_cases = [
-            {"identityKey": b'\x01' * 33},
-            {"identityKey": b'\x02' * 33, "limit": 10},
-            {"identityKey": b'\x03' * 33, "offset": 5},
-            {"identityKey": b'\x04' * 33, "seekPermission": True},
-            {"identityKey": b'\x05' * 33, "limit": 20, "offset": 10, "seekPermission": False},
+            {"identityKey": b"\x01" * 33},
+            {"identityKey": b"\x02" * 33, "limit": 10},
+            {"identityKey": b"\x03" * 33, "offset": 5},
+            {"identityKey": b"\x04" * 33, "seekPermission": True},
+            {"identityKey": b"\x05" * 33, "limit": 20, "offset": 10, "seekPermission": False},
         ]
 
         for args in test_cases:
@@ -155,12 +146,12 @@ def test_discover_by_identity_key_edge_cases():
     """Test discover_by_identity_key with edge cases."""
     try:
         from bsv.wallet.serializer.discover_by_identity_key import (
+            deserialize_discover_by_identity_key_args,
             serialize_discover_by_identity_key_args,
-            deserialize_discover_by_identity_key_args
         )
 
         # Test with different identity key lengths (should be 33 bytes)
-        identity_key_33 = b'\x08' * 33
+        identity_key_33 = b"\x08" * 33
         args = {"identityKey": identity_key_33}
         serialized = serialize_discover_by_identity_key_args(args)
         deserialized = deserialize_discover_by_identity_key_args(serialized)

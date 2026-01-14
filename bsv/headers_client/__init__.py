@@ -10,20 +10,19 @@ Ported from Go-SDK's transaction/chaintracker/headers_client package.
 from .client import HeadersClient
 from .types import (
     Header,
-    State,
     MerkleRootInfo,
+    RequiredAuth,
+    State,
     Webhook,
     WebhookRequest,
-    RequiredAuth,
 )
 
 __all__ = [
-    'HeadersClient',
-    'Header',
-    'State',
-    'MerkleRootInfo',
-    'Webhook',
-    'WebhookRequest',
-    'RequiredAuth',
+    "Header",
+    "HeadersClient",
+    "MerkleRootInfo",
+    "RequiredAuth",
+    "State",
+    "Webhook",
+    "WebhookRequest",
 ]
-

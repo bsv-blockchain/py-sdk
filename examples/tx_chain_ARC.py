@@ -1,21 +1,9 @@
 import asyncio
-from bsv import (
-    Transaction,
-    TransactionInput,
-    TransactionOutput,
-    PrivateKey,
-    P2PKH,
-    BroadcastResponse,
-    ARC,
-    ARCConfig
-)
 
-arc_broadcaster = ARC(
-    url='https://api.taal.com/arc',
-    config=ARCConfig(
-        api_key='mainnet_xxxxx...'
-    )
-)
+from bsv import ARC, P2PKH, ARCConfig, BroadcastResponse, PrivateKey, Transaction, TransactionInput, TransactionOutput
+
+arc_broadcaster = ARC(url="https://api.taal.com/arc", config=ARCConfig(api_key="mainnet_xxxxx..."))
+
 
 async def main():
     private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
@@ -38,12 +26,8 @@ async def main():
             )
         ],
         [
-            TransactionOutput(
-                locking_script=P2PKH().lock(public_key_2.address()), satoshis=300
-            ),
-            TransactionOutput(
-                locking_script=P2PKH().lock(public_key.address()), change=True
-            ),
+            TransactionOutput(locking_script=P2PKH().lock(public_key_2.address()), satoshis=300),
+            TransactionOutput(locking_script=P2PKH().lock(public_key.address()), change=True),
         ],
     )
 
@@ -67,9 +51,7 @@ async def main():
             )
         ],
         [
-            TransactionOutput(
-                locking_script=P2PKH().lock(public_key.address()), change=True
-            ),
+            TransactionOutput(locking_script=P2PKH().lock(public_key.address()), change=True),
         ],
     )
 

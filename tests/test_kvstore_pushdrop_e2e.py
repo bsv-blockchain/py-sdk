@@ -1,7 +1,7 @@
-from bsv.wallet import ProtoWallet
 from bsv.keys import PrivateKey
-from bsv.keystore.local_kv_store import LocalKVStore
 from bsv.keystore.interfaces import KVStoreConfig
+from bsv.keystore.local_kv_store import LocalKVStore
+from bsv.wallet import ProtoWallet
 
 
 def _make_kv(encrypt=False, lock_position="before"):
@@ -9,7 +9,7 @@ def _make_kv(encrypt=False, lock_position="before"):
     wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     cfg = KVStoreConfig(wallet=wallet, context="ctx", originator="org", encrypt=encrypt)
     # inject optional attributes expected in LocalKVStore
-    setattr(cfg, "lock_position", lock_position)
+    cfg.lock_position = lock_position
     return LocalKVStore(cfg)
 
 
@@ -47,4 +47,3 @@ def test_kv_set_get_remove_lock_after_signed_encrypted():
     # TypeScript SDK returns plain txids, not "removed:key" format
     assert removed and len(removed) > 0
     assert isinstance(removed[0], str) and len(removed[0]) == 64  # txid is 64 hex chars
-

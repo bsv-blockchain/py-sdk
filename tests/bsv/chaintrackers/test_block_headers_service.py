@@ -5,6 +5,7 @@ Ported from TypeScript SDK.
 """
 
 import pytest
+
 from bsv.chaintrackers.block_headers_service import BlockHeadersService, BlockHeadersServiceConfig
 
 
@@ -19,7 +20,7 @@ class TestBlockHeadersService:
 
     def test_constructor_with_config(self):
         """Test BlockHeadersService constructor with config."""
-        config = BlockHeadersServiceConfig(api_key="test-key")  # noqa: S106  # NOSONAR - Mock API key for tests
+        config = BlockHeadersServiceConfig(api_key="test-key")  # NOSONAR - Mock API key for tests
         service = BlockHeadersService("https://headers.spv.money", config)
         assert service.base_url == "https://headers.spv.money"
         assert service.api_key == "test-key"

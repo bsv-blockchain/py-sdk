@@ -1,19 +1,20 @@
 """
 Coverage tests for utils/pushdata.py - untested branches.
 """
-import pytest
 
+import pytest
 
 # ========================================================================
 # Pushdata encoding branches
 # ========================================================================
 
+
 def test_encode_pushdata_small():
     """Test encoding small pushdata."""
     try:
         from bsv.utils.pushdata import encode_pushdata
-        
-        data = b'\x01\x02\x03'
+
+        data = b"\x01\x02\x03"
         encoded = encode_pushdata(data)
         assert isinstance(encoded, bytes)
         assert len(encoded) > len(data)
@@ -25,8 +26,8 @@ def test_encode_pushdata_empty():
     """Test encoding empty pushdata."""
     try:
         from bsv.utils.pushdata import encode_pushdata
-        
-        encoded = encode_pushdata(b'')
+
+        encoded = encode_pushdata(b"")
         assert isinstance(encoded, bytes)
     except ImportError:
         pytest.skip("encode_pushdata not available")
@@ -36,8 +37,8 @@ def test_encode_pushdata_single_byte():
     """Test encoding single byte."""
     try:
         from bsv.utils.pushdata import encode_pushdata
-        
-        encoded = encode_pushdata(b'\x42')
+
+        encoded = encode_pushdata(b"\x42")
         assert isinstance(encoded, bytes)
     except ImportError:
         pytest.skip("encode_pushdata not available")
@@ -47,8 +48,8 @@ def test_encode_pushdata_75_bytes():
     """Test encoding 75 bytes (OP_PUSHDATA threshold)."""
     try:
         from bsv.utils.pushdata import encode_pushdata
-        
-        data = b'\x00' * 75
+
+        data = b"\x00" * 75
         encoded = encode_pushdata(data)
         assert isinstance(encoded, bytes)
     except ImportError:
@@ -59,8 +60,8 @@ def test_encode_pushdata_76_bytes():
     """Test encoding 76 bytes (requires OP_PUSHDATA1)."""
     try:
         from bsv.utils.pushdata import encode_pushdata
-        
-        data = b'\x00' * 76
+
+        data = b"\x00" * 76
         encoded = encode_pushdata(data)
         assert isinstance(encoded, bytes)
     except ImportError:
@@ -71,8 +72,8 @@ def test_encode_pushdata_256_bytes():
     """Test encoding 256 bytes (requires OP_PUSHDATA2)."""
     try:
         from bsv.utils.pushdata import encode_pushdata
-        
-        data = b'\x00' * 256
+
+        data = b"\x00" * 256
         encoded = encode_pushdata(data)
         assert isinstance(encoded, bytes)
     except ImportError:
@@ -83,8 +84,8 @@ def test_encode_pushdata_large():
     """Test encoding large pushdata."""
     try:
         from bsv.utils.pushdata import encode_pushdata
-        
-        data = b'\x00' * 10000
+
+        data = b"\x00" * 10000
         encoded = encode_pushdata(data)
         assert isinstance(encoded, bytes)
     except ImportError:
@@ -95,14 +96,15 @@ def test_encode_pushdata_large():
 # Pushdata decoding branches
 # ========================================================================
 
+
 def test_decode_pushdata():
     """Test decoding pushdata."""
     try:
-        from bsv.utils.pushdata import encode_pushdata, decode_pushdata
-        
-        data = b'\x01\x02\x03'
+        from bsv.utils.pushdata import decode_pushdata, encode_pushdata
+
+        data = b"\x01\x02\x03"
         encoded = encode_pushdata(data)
-        
+
         try:
             decoded = decode_pushdata(encoded)
             assert decoded == data
@@ -116,12 +118,13 @@ def test_decode_pushdata():
 # Minimal push branches
 # ========================================================================
 
+
 def test_encode_pushdata_minimal():
     """Test encoding with minimal push."""
     try:
         from bsv.utils.pushdata import encode_pushdata
-        
-        data = b'\x01'
+
+        data = b"\x01"
         try:
             encoded = encode_pushdata(data, minimal_push=True)
             assert isinstance(encoded, bytes)
@@ -136,13 +139,14 @@ def test_encode_pushdata_minimal():
 # Edge cases
 # ========================================================================
 
+
 def test_encode_pushdata_max_size():
     """Test encoding maximum size pushdata."""
     try:
         from bsv.utils.pushdata import encode_pushdata
 
         # Bitcoin script pushdata max is usually around 520 bytes
-        data = b'\x00' * 520
+        data = b"\x00" * 520
         encoded = encode_pushdata(data)
         assert isinstance(encoded, bytes)
     except ImportError:
@@ -153,14 +157,15 @@ def test_encode_pushdata_max_size():
 # Pushdata decoding error cases and edge cases
 # ========================================================================
 
+
 def test_decode_pushdata_empty_input():
     """Test decode_pushdata with empty input."""
     try:
         from bsv.utils.pushdata import decode_pushdata
 
         try:
-            decode_pushdata(b'')
-            assert False, "Should raise ValueError for empty input"
+            decode_pushdata(b"")
+            raise AssertionError("Should raise ValueError for empty input")
         except ValueError as e:
             assert "Empty encoded data" in str(e)
     except ImportError:
@@ -174,7 +179,7 @@ def test_decode_pushdata_op_0():
 
         # OP_0 should return empty bytes
         result = decode_pushdata(bytes([0x00]))
-        assert result == b''
+        assert result == b""
     except ImportError:
         pytest.skip("decode_pushdata not available")
 
@@ -186,11 +191,11 @@ def test_decode_pushdata_op_1_to_op_16():
 
         # Test OP_1 (0x51) should return b'\x01'
         result = decode_pushdata(bytes([0x51]))
-        assert result == b'\x01'
+        assert result == b"\x01"
 
         # Test OP_16 (0x60) should return b'\x10'
         result = decode_pushdata(bytes([0x60]))
-        assert result == b'\x10'
+        assert result == b"\x10"
     except ImportError:
         pytest.skip("decode_pushdata not available")
 
@@ -201,8 +206,8 @@ def test_decode_pushdata_op_1negate():
         from bsv.utils.pushdata import decode_pushdata
 
         # OP_1NEGATE should return 0x81
-        result = decode_pushdata(bytes([0x4f]))
-        assert result == b'\x81'
+        result = decode_pushdata(bytes([0x4F]))
+        assert result == b"\x81"
     except ImportError:
         pytest.skip("decode_pushdata not available")
 
@@ -215,7 +220,7 @@ def test_decode_pushdata_direct_push_truncated():
         # Direct push with length 5 but only 3 bytes of data
         try:
             decode_pushdata(bytes([0x05, 0x01, 0x02, 0x03]))
-            assert False, "Should raise ValueError for truncated data"
+            raise AssertionError("Should raise ValueError for truncated data")
         except ValueError as e:
             assert "too short for direct push" in str(e)
     except ImportError:
@@ -229,8 +234,8 @@ def test_decode_pushdata_pusdata1_truncated():
 
         # OP_PUSHDATA1 with length 5 but insufficient data
         try:
-            decode_pushdata(bytes([0x4c, 0x05, 0x01, 0x02]))
-            assert False, "Should raise ValueError for truncated data"
+            decode_pushdata(bytes([0x4C, 0x05, 0x01, 0x02]))
+            raise AssertionError("Should raise ValueError for truncated data")
         except ValueError as e:
             assert "too short for OP_PUSHDATA1" in str(e)
     except ImportError:
@@ -244,8 +249,8 @@ def test_decode_pushdata_pusdata2_truncated():
 
         # OP_PUSHDATA2 with length 5 but insufficient data
         try:
-            decode_pushdata(bytes([0x4d, 0x05, 0x00, 0x01, 0x02]))
-            assert False, "Should raise ValueError for truncated data"
+            decode_pushdata(bytes([0x4D, 0x05, 0x00, 0x01, 0x02]))
+            raise AssertionError("Should raise ValueError for truncated data")
         except ValueError as e:
             assert "too short for OP_PUSHDATA2" in str(e)
     except ImportError:
@@ -259,8 +264,8 @@ def test_decode_pushdata_pusdata4_truncated():
 
         # OP_PUSHDATA4 with length 5 but insufficient data
         try:
-            decode_pushdata(bytes([0x4e, 0x05, 0x00, 0x00, 0x00, 0x01, 0x02]))
-            assert False, "Should raise ValueError for truncated data"
+            decode_pushdata(bytes([0x4E, 0x05, 0x00, 0x00, 0x00, 0x01, 0x02]))
+            raise AssertionError("Should raise ValueError for truncated data")
         except ValueError as e:
             assert "too short for OP_PUSHDATA4" in str(e)
     except ImportError:
@@ -274,8 +279,8 @@ def test_decode_pushdata_unknown_opcode():
 
         # Unknown opcode 0xFF
         try:
-            decode_pushdata(bytes([0xff, 0x01, 0x02]))
-            assert False, "Should raise ValueError for unknown opcode"
+            decode_pushdata(bytes([0xFF, 0x01, 0x02]))
+            raise AssertionError("Should raise ValueError for unknown opcode")
         except ValueError as e:
             assert "Unknown pushdata opcode" in str(e)
     except ImportError:
@@ -289,14 +294,14 @@ def test_decode_pushdata_edge_cases():
 
         # Test various pushdata formats work correctly
         test_cases = [
-            (b'\x00', b''),  # OP_0
-            (b'\x51', b'\x01'),  # OP_1
-            (b'\x60', b'\x10'),  # OP_16
-            (b'\x4f', b'\x81'),  # OP_1NEGATE
-            (b'\x05\x01\x02\x03\x04\x05', b'\x01\x02\x03\x04\x05'),  # Direct push
-            (b'\x4c\x03\x01\x02\x03', b'\x01\x02\x03'),  # OP_PUSHDATA1
-            (b'\x4d\x03\x00\x01\x02\x03', b'\x01\x02\x03'),  # OP_PUSHDATA2
-            (b'\x4e\x03\x00\x00\x00\x01\x02\x03', b'\x01\x02\x03'),  # OP_PUSHDATA4
+            (b"\x00", b""),  # OP_0
+            (b"\x51", b"\x01"),  # OP_1
+            (b"\x60", b"\x10"),  # OP_16
+            (b"\x4f", b"\x81"),  # OP_1NEGATE
+            (b"\x05\x01\x02\x03\x04\x05", b"\x01\x02\x03\x04\x05"),  # Direct push
+            (b"\x4c\x03\x01\x02\x03", b"\x01\x02\x03"),  # OP_PUSHDATA1
+            (b"\x4d\x03\x00\x01\x02\x03", b"\x01\x02\x03"),  # OP_PUSHDATA2
+            (b"\x4e\x03\x00\x00\x00\x01\x02\x03", b"\x01\x02\x03"),  # OP_PUSHDATA4
         ]
 
         for encoded, expected in test_cases:
@@ -305,4 +310,3 @@ def test_decode_pushdata_edge_cases():
 
     except ImportError:
         pytest.skip("decode_pushdata not available")
-

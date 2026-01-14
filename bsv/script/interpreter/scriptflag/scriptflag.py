@@ -73,4 +73,3 @@ class Flag(int):
     def remove_flag(self, flag: "Flag") -> "Flag":
         """Remove the passed flag from this flag."""
         return Flag(self & ~flag)
-

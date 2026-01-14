@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import Optional, List
+from typing import List, Optional
 
-from bsv.utils import to_hex, to_bytes
 from bsv.hash import hash256
 from bsv.merkle_path import MerklePath
+from bsv.utils import to_bytes, to_hex
+
 from .beef import Beef, BeefTx
 
 
-def find_bump(beef: Beef, txid: str) -> Optional[MerklePath]:
+def find_bump(beef: Beef, txid: str) -> MerklePath | None:
     for bump in getattr(beef, "bumps", []) or []:
         try:
             for leaf in bump.path[0]:
@@ -25,7 +26,8 @@ def to_log_string(beef: Beef) -> str:
     _append_txs_log(lines, beef.txs)
     return "\n".join(lines)
 
-def _append_bumps_log(lines: List[str], bumps):
+
+def _append_bumps_log(lines: list[str], bumps):
     """Append BUMP information to log lines."""
     for i, bump in enumerate(bumps):
         lines.append(f"  BUMP {i}")
@@ -36,7 +38,8 @@ def _append_bumps_log(lines: List[str], bumps):
             lines.append(f"      '{t}',")
         lines.append("    ]")
 
-def _extract_txids_from_bump(bump) -> List[str]:
+
+def _extract_txids_from_bump(bump) -> list[str]:
     """Extract TXIDs from bump path."""
     txids = []
     try:
@@ -47,7 +50,8 @@ def _extract_txids_from_bump(bump) -> List[str]:
         pass
     return txids
 
-def _append_txs_log(lines: List[str], txs):
+
+def _append_txs_log(lines: list[str], txs):
     """Append transaction information to log lines."""
     for i, btx in enumerate(txs.values()):
         lines.append(f"  TX {i}")
@@ -57,12 +61,13 @@ def _append_txs_log(lines: List[str], txs):
         else:
             _append_tx_details(lines, btx)
 
-def _append_tx_details(lines: List[str], btx):
+
+def _append_tx_details(lines: list[str], btx):
     """Append detailed transaction information."""
     if btx.bump_index is not None:
         lines.append(f"    bumpIndex: {btx.bump_index}")
     lines.append(f"    rawTx length={len(btx.tx_bytes) if btx.tx_bytes else 0}")
-    if btx.tx_obj is not None and getattr(btx.tx_obj, 'inputs', None):
+    if btx.tx_obj is not None and getattr(btx.tx_obj, "inputs", None):
         lines.append("    inputs: [")
         for txin in btx.tx_obj.inputs:
             sid = getattr(txin, "source_txid", "")
@@ -74,6 +79,7 @@ def add_computed_leaves(beef: Beef) -> None:
     """
     Add computable leaves to each MerklePath by using row-0 leaves as base.
     """
+
     def _hash(m: str) -> str:
         return to_hex(hash256(to_bytes(m, "hex")[::-1])[::-1])
 
@@ -85,32 +91,35 @@ def add_computed_leaves(beef: Beef) -> None:
             # best-effort only
             pass
 
+
 def _process_merkle_row(bump, row: int, hash_fn):  # NOSONAR - leafL/leafR are standard binary tree notation
     """Process a single row of merkle path, computing parent leaves."""
     for leafL in bump.path[row - 1]:  # NOSONAR - Binary tree notation (Left leaf)
         if not _should_compute_parent_leaf(leafL, bump.path[row]):
             continue
-        
+
         leafR = _find_sibling_leaf(bump.path[row - 1], leafL["offset"])  # NOSONAR - Binary tree notation (Right leaf)
         if leafR:
             parent_leaf = _compute_parent_leaf(leafL, leafR, hash_fn)
             bump.path[row].append(parent_leaf)
 
-def _should_compute_parent_leaf(leaf, parent_row: List) -> bool:
+
+def _should_compute_parent_leaf(leaf, parent_row: list) -> bool:
     """Check if a leaf can be used to compute a parent leaf."""
     if not isinstance(leaf, dict) or not isinstance(leaf.get("offset"), int):
         return False
-    
+
     # Only even offsets can be left children
     if (leaf["offset"] & 1) != 0 or "hash_str" not in leaf:
         return False
-    
+
     # Skip if parent already exists
     offset_on_row = leaf["offset"] >> 1
     exists = any(l.get("offset") == offset_on_row for l in parent_row)
     return not exists
 
-def _find_sibling_leaf(row: List, left_offset: int):  # NOSONAR - leafR is binary tree notation
+
+def _find_sibling_leaf(row: list, left_offset: int):  # NOSONAR - leafR is binary tree notation
     """Find the right sibling leaf for a given left leaf offset."""
     right_offset = left_offset + 1
     leafR = next((l for l in row if l.get("offset") == right_offset), None)  # NOSONAR - Binary tree notation
@@ -118,17 +127,15 @@ def _find_sibling_leaf(row: List, left_offset: int):  # NOSONAR - leafR is binar
         return leafR
     return None
 
+
 def _compute_parent_leaf(leafL, leafR, hash_fn) -> dict:  # NOSONAR - Binary tree notation (Left/Right leaves)
     """Compute parent leaf from two sibling leaves."""
     offset_on_row = leafL["offset"] >> 1
     # String concatenation puts the right leaf on the left of the left leaf hash
-    return {
-        "offset": offset_on_row,
-        "hash_str": hash_fn(leafR["hash_str"] + leafL["hash_str"])
-    }
+    return {"offset": offset_on_row, "hash_str": hash_fn(leafR["hash_str"] + leafL["hash_str"])}
 
 
-def trim_known_txids(beef: Beef, known_txids: List[str]) -> None:  # NOSONAR - Complexity (23), requires refactoring
+def trim_known_txids(beef: Beef, known_txids: list[str]) -> None:  # NOSONAR - Complexity (23), requires refactoring
     known = set(known_txids)
     to_delete = [txid for txid, btx in beef.txs.items() if btx.data_format == 2 and txid in known]
     for txid in to_delete:
@@ -142,13 +149,14 @@ def _attach_input_transaction(beef: Beef, txin) -> None:
         if parent and parent.tx_obj:
             txin.source_transaction = parent.tx_obj
 
+
 def _attach_merkle_path_recursive(beef: Beef, tx) -> None:
     """Recursively attach merkle paths to transaction and its parents."""
     mp = find_bump(beef, tx.txid())
     if mp is not None:
         tx.merkle_path = mp
         return
-    
+
     for txin in getattr(tx, "inputs", []) or []:
         _attach_input_transaction(beef, txin)
         if getattr(txin, "source_transaction", None) is not None:
@@ -158,6 +166,7 @@ def _attach_merkle_path_recursive(beef: Beef, tx) -> None:
                 source_tx.merkle_path = p
             else:
                 _attach_merkle_path_recursive(beef, source_tx)
+
 
 def find_atomic_transaction(beef: Beef, txid: str):
     """
@@ -181,9 +190,7 @@ def txid_only_clone(beef: Beef) -> Beef:
     c = Beef(version=beef.version)
     # shallow copy bumps
     c.bumps = list(getattr(beef, "bumps", []) or [])
-    for txid, tx in beef.txs.items():
+    for txid, _tx in beef.txs.items():
         entry = BeefTx(txid=txid, tx_bytes=b"", tx_obj=None, data_format=2, bump_index=None)
         c.txs[txid] = entry
     return c
-
-

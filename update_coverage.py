@@ -16,7 +16,7 @@ def update_readme_coverage(coverage_percentage: str):
         print(f"README.md not found at {readme_path}")
         return False
 
-    content = readme_path.read_text(encoding='utf-8')
+    content = readme_path.read_text(encoding="utf-8")
 
     # Determine badge color based on coverage percentage
     coverage_float = float(coverage_percentage)
@@ -32,8 +32,8 @@ def update_readme_coverage(coverage_percentage: str):
         color = "red"
 
     # Update the coverage badge at the top (link-wrapped format)
-    badge_pattern = r'\[!\[Coverage\]\(https://img\.shields\.io/badge/coverage-[\d.]+%25-[a-z-]+\)\]\([^)]+\)'
-    new_badge = f'[![Coverage](https://img.shields.io/badge/coverage-{coverage_percentage}%25-{color})](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)'
+    badge_pattern = r"\[!\[Coverage\]\(https://img\.shields\.io/badge/coverage-[\d.]+%25-[a-z-]+\)\]\([^)]+\)"
+    new_badge = f"[![Coverage](https://img.shields.io/badge/coverage-{coverage_percentage}%25-{color})](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)"
 
     new_content = re.sub(badge_pattern, new_badge, content)
     if new_content == content:
@@ -42,8 +42,8 @@ def update_readme_coverage(coverage_percentage: str):
     content = new_content
 
     # Update the coverage percentage in the Testing & Quality section
-    coverage_text_pattern = r'\*\*(\d+(?:\.\d+)?)%\+ code coverage\*\* across the entire codebase'
-    new_coverage_text = f'**{coverage_percentage}%+ code coverage** across the entire codebase'
+    coverage_text_pattern = r"\*\*(\d+(?:\.\d+)?)%\+ code coverage\*\* across the entire codebase"
+    new_coverage_text = f"**{coverage_percentage}%+ code coverage** across the entire codebase"
 
     new_content = re.sub(coverage_text_pattern, new_coverage_text, content)
     if new_content == content:
@@ -52,7 +52,7 @@ def update_readme_coverage(coverage_percentage: str):
     content = new_content
 
     # Write the updated content back to the file
-    readme_path.write_text(content, encoding='utf-8')
+    readme_path.write_text(content, encoding="utf-8")
     print(f"Updated README.md with coverage percentage: {coverage_percentage}%")
     return True
 

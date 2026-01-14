@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from bsv.constants import OpCode
 
-from .config import BeforeGenesisConfig, AfterGenesisConfig, Config
+from .config import AfterGenesisConfig, BeforeGenesisConfig, Config
 from .errs import Error, ErrorCode, is_error_code
 from .op_parser import DefaultOpcodeParser, ParsedOpcode, ParsedScript
 from .operations import OPCODE_DISPATCH
@@ -29,10 +29,10 @@ class Thread:
         self.dstack: Optional[Stack] = None
         self.astack: Optional[Stack] = None
         self.cfg: Config = BeforeGenesisConfig()
-        self.scripts: List[ParsedScript] = []
-        self.cond_stack: List[int] = []
-        self.else_stack: List[bool] = []
-        self.saved_first_stack: List[bytes] = []
+        self.scripts: list[ParsedScript] = []
+        self.cond_stack: list[int] = []
+        self.else_stack: list[bool] = []
+        self.saved_first_stack: list[bytes] = []
         self.script_idx: int = 0
         self.script_off: int = 0
         self.last_code_sep: int = 0
@@ -57,12 +57,12 @@ class Thread:
         # In go-sdk, enabling forkid also enables strict encoding.
         if self.flags.has_flag(Flag.ENABLE_SIGHASH_FORK_ID):
             self.flags = self.flags.add_flag(Flag.VERIFY_STRICT_ENCODING)
-        
+
         # Initialize stacks
         verify_minimal = self.flags.has_flag(Flag.VERIFY_MINIMAL_DATA)
         self.dstack = Stack(self.cfg, verify_minimal)
         self.astack = Stack(self.cfg, verify_minimal)
-        
+
         # Get scripts
         if self.opts.locking_script is not None:
             locking_script = self.opts.locking_script
@@ -70,7 +70,7 @@ class Thread:
             locking_script = self.prev_output.locking_script
         else:
             return Error(ErrorCode.ERR_INVALID_PARAMS, "no locking script available")
-        
+
         if self.opts.unlocking_script is not None:
             unlocking_script = self.opts.unlocking_script
         elif self.tx is not None and self.tx.inputs and len(self.tx.inputs) > self.input_idx:
@@ -100,7 +100,7 @@ class Thread:
                 ErrorCode.ERR_SCRIPT_TOO_BIG,
                 f"locking script size {len(ls_bytes)} is larger than the max allowed size {self.cfg.max_script_size()}",
             )
-        
+
         # Parse scripts (malformed pushes are script errors, not invalid params).
         try:
             parsed_unlocking = self.script_parser.parse(unlocking_script)
@@ -109,7 +109,7 @@ class Thread:
             return e
         except Exception as e:
             return Error(ErrorCode.ERR_INVALID_PARAMS, f"failed to parse scripts: {e}")
-        
+
         self.scripts = [parsed_unlocking, parsed_locking]
 
         # Detect P2SH locking script when enabled (BIP16).
@@ -127,7 +127,7 @@ class Thread:
             for pop in parsed_unlocking:
                 if pop.opcode > OpCode.OP_16:
                     return Error(ErrorCode.ERR_NOT_PUSH_ONLY, "signature script is not push only")
-        
+
         # Skip unlocking script if empty
         if len(parsed_unlocking) == 0:
             self.script_idx = 1
@@ -136,7 +136,7 @@ class Thread:
         if self.tx is not None and self.prev_output is not None and len(self.tx.inputs) > self.input_idx:
             self.tx.inputs[self.input_idx].locking_script = self.prev_output.locking_script
             self.tx.inputs[self.input_idx].satoshis = self.prev_output.satoshis
-        
+
         return None
 
     def is_branch_executing(self) -> bool:
@@ -204,7 +204,12 @@ class Thread:
 
     def _check_minimal_data(self, pop: ParsedOpcode, _exec: bool) -> Optional[Error]:
         """Check minimal data encoding."""
-        if self.dstack.verify_minimal_data and self.is_branch_executing() and pop.opcode <= OpCode.OP_PUSHDATA4 and _exec:
+        if (
+            self.dstack.verify_minimal_data
+            and self.is_branch_executing()
+            and pop.opcode <= OpCode.OP_PUSHDATA4
+            and _exec
+        ):
             err_msg = pop.enforce_minimum_data_push()
             if err_msg:
                 return Error(ErrorCode.ERR_MINIMAL_DATA, err_msg)
@@ -216,9 +221,9 @@ class Thread:
         err = self._check_element_size(pop)
         if err:
             return err
-        
+
         _exec = self.should_exec(pop)  # NOSONAR - renamed to avoid shadowing builtin
-        
+
         # Check disabled opcodes
         err = self._check_disabled_opcode(pop, _exec)
         if err:
@@ -227,30 +232,30 @@ class Thread:
         # Always-illegal opcodes are fail on program counter before genesis.
         if pop.always_illegal() and not self.after_genesis:
             return Error(ErrorCode.ERR_RESERVED_OPCODE, f"attempt to execute reserved opcode {pop.name()}")
-        
+
         # Count operations
         err = self._check_operation_count(pop)
         if err:
             return err
-        
+
         # Skip if not executing branch and not conditional
         if not self.is_branch_executing() and not pop.is_conditional():
             return None
-        
+
         # Check minimal data encoding
         err = self._check_minimal_data(pop, _exec)
         if err:
             return err
-        
+
         # Skip if early return and not conditional
         if not _exec and not pop.is_conditional():
             return None
-        
+
         # Execute opcode
         handler = OPCODE_DISPATCH.get(pop.opcode)
         if handler:
             return handler(pop, self)
-        
+
         # Unknown opcode
         return Error(ErrorCode.ERR_RESERVED_OPCODE, f"attempt to execute invalid opcode {pop.name()}")
 
@@ -259,21 +264,21 @@ class Thread:
         err = self.valid_pc()
         if err:
             return True, err
-        
+
         pop = self.scripts[self.script_idx][self.script_off]
         err = self.execute_opcode(pop)
-        
+
         if err:
             return self._handle_execution_error(err)
-        
+
         self.script_off += 1
-        
+
         err = self._check_stack_overflow()
         if err:
             return False, err
-        
+
         return self._check_script_completion()
-    
+
     def _handle_execution_error(self, err: Error) -> tuple[bool, Optional[Error]]:
         """Handle opcode execution error."""
         # In go-sdk, OP_RETURN after genesis can return ERR_OK to signal a successful early termination.
@@ -281,7 +286,7 @@ class Thread:
             self.shift_script()
             return self.script_idx >= len(self.scripts), None
         return True, err
-    
+
     def _check_stack_overflow(self) -> Optional[Error]:
         """Check if combined stack size exceeds maximum."""
         combined_size = self.dstack.depth() + self.astack.depth()
@@ -291,12 +296,14 @@ class Thread:
                 f"combined stack size {combined_size} > max allowed {self.cfg.max_stack_size()}",
             )
         return None
-    
-    def _check_script_completion(self) -> tuple[bool, Optional[Error]]:  # NOSONAR - Complexity (22), requires refactoring
+
+    def _check_script_completion(
+        self,
+    ) -> tuple[bool, Optional[Error]]:  # NOSONAR - Complexity (22), requires refactoring
         """Check if current script is complete and prepare for next."""
         if self.script_off < len(self.scripts[self.script_idx]):
             return False, None
-        
+
         if len(self.cond_stack) != 0:
             return False, Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, "end of script reached in conditional execution")
 
@@ -306,7 +313,7 @@ class Thread:
                 self.astack.drop_n(self.astack.depth())
             except Exception:
                 pass
-        
+
         self.shift_script()
 
         # P2SH (BIP16) evaluation (go-sdk behavior before genesis only):
@@ -325,6 +332,7 @@ class Thread:
                 redeem_script_bytes = self.saved_first_stack[-1]
                 try:
                     from bsv.script.script import Script
+
                     parsed_redeem = self.script_parser.parse(Script.from_bytes(redeem_script_bytes))
                 except Error as e:
                     return False, e
@@ -360,14 +368,14 @@ class Thread:
         """Check final error condition."""
         if self.dstack.depth() < 1:
             return Error(ErrorCode.ERR_EMPTY_STACK, "stack empty at end of script execution")
-        
+
         if final_script and self.flags.has_flag(Flag.VERIFY_CLEAN_STACK) and self.dstack.depth() != 1:
             return Error(ErrorCode.ERR_CLEAN_STACK, f"stack contains {self.dstack.depth() - 1} unexpected items")
-        
+
         val = self.dstack.pop_bool()
         if not val:
             return Error(ErrorCode.ERR_EVAL_FALSE, ERR_FALSE_STACK_ENTRY_AT_END)
-        
+
         return None
 
     def execute(self) -> Optional[Error]:
@@ -378,11 +386,9 @@ class Thread:
                 return err
             if done:
                 break
-        
+
         return self.check_error_condition(True)
 
     def after_error(self, err: Error) -> None:
         """Handle error after execution."""
         # Placeholder for error handling
-        pass
-

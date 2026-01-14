@@ -4,19 +4,21 @@ Tests for SHIPBroadcaster.
 Ported from TypeScript SDK.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from bsv.broadcasters.broadcaster import BroadcastFailure, BroadcastResponse
 from bsv.overlay_tools.ship_broadcaster import (
-    TopicBroadcaster,
-    SHIPBroadcaster,
-    SHIPCast,
-    SHIPBroadcasterConfig,
-    TaggedBEEF,
     AdmittanceInstructions,
-    HTTPSOverlayBroadcastFacilitator
+    HTTPSOverlayBroadcastFacilitator,
+    SHIPBroadcaster,
+    SHIPBroadcasterConfig,
+    SHIPCast,
+    TaggedBEEF,
+    TopicBroadcaster,
 )
 from bsv.transaction import Transaction
-from bsv.broadcasters.broadcaster import BroadcastResponse, BroadcastFailure
 
 
 class TestSHIPBroadcaster:
@@ -33,11 +35,7 @@ class TestSHIPBroadcaster:
 
     def test_admittance_instructions_creation(self):
         """Test AdmittanceInstructions can be created."""
-        instructions = AdmittanceInstructions(
-            outputs_to_admit=[0, 1],
-            coins_to_retain=[1000],
-            coins_removed=[500]
-        )
+        instructions = AdmittanceInstructions(outputs_to_admit=[0, 1], coins_to_retain=[1000], coins_removed=[500])
         assert instructions.outputs_to_admit == [0, 1]
         assert instructions.coins_to_retain == [1000]
         assert instructions.coins_removed == [500]
@@ -132,19 +130,11 @@ class TestSHIPBroadcaster:
         broadcaster = TopicBroadcaster(["tm_test"])
 
         # Test with meaningful instructions
-        instructions = AdmittanceInstructions(
-            outputs_to_admit=[0],
-            coins_to_retain=[],
-            coins_removed=[]
-        )
+        instructions = AdmittanceInstructions(outputs_to_admit=[0], coins_to_retain=[], coins_removed=[])
         assert broadcaster._has_meaningful_instructions(instructions)
 
         # Test with no meaningful instructions
-        empty_instructions = AdmittanceInstructions(
-            outputs_to_admit=[],
-            coins_to_retain=[],
-            coins_removed=[]
-        )
+        empty_instructions = AdmittanceInstructions(outputs_to_admit=[], coins_to_retain=[], coins_removed=[])
         assert not broadcaster._has_meaningful_instructions(empty_instructions)
 
     def test_check_acknowledgment_requirements_no_requirements(self):
@@ -182,9 +172,7 @@ class TestSHIPBroadcaster:
         broadcaster = TopicBroadcaster(["tm_test"])
         broadcaster.require_acknowledgment_from_any_host_for_topics = None
         broadcaster.require_acknowledgment_from_all_hosts_for_topics = None
-        broadcaster.require_acknowledgment_from_specific_hosts_for_topics = {
-            "host1": ["tm_test"]
-        }
+        broadcaster.require_acknowledgment_from_specific_hosts_for_topics = {"host1": ["tm_test"]}
 
         # Should pass if specific host acknowledges required topic
         host_acknowledgments = {"host1": {"tm_test"}}
@@ -200,123 +188,114 @@ class TestSHIPBroadcaster:
         host_acknowledgments = {"host2": {"tm_test"}}
         result = broadcaster._check_acknowledgment_requirements(host_acknowledgments)
         assert not result
-    
+
     @pytest.mark.asyncio
     async def test_https_facilitator_send_success(self):
         """Test HTTPSOverlayBroadcastFacilitator send succeeds."""
-        from unittest.mock import patch, AsyncMock, MagicMock
-        
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         facilitator = HTTPSOverlayBroadcastFacilitator()
         tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
-        
+
         # Mock aiohttp response
         mock_response = MagicMock()
         mock_response.ok = True
         mock_response.json = AsyncMock(return_value={"host1": {"outputs_to_admit": [0], "coins_to_retain": []}})
         mock_response.__aenter__ = AsyncMock(return_value=mock_response)
         mock_response.__aexit__ = AsyncMock()
-        
+
         # Mock session
         mock_session = MagicMock()
         mock_session.post.return_value = mock_response
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock()
-        
-        with patch('aiohttp.ClientSession', return_value=mock_session):
+
+        with patch("aiohttp.ClientSession", return_value=mock_session):
             result = await facilitator.send("https://example.com", tagged_beef)
             assert result is not None
-    
+
     @pytest.mark.asyncio
     async def test_https_facilitator_send_with_http_not_allowed(self):
         """Test HTTPSOverlayBroadcastFacilitator rejects HTTP URLs."""
         facilitator = HTTPSOverlayBroadcastFacilitator(allow_http=False)
         tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
-        
+
         with pytest.raises(ValueError, match='HTTPS facilitator can only use URLs that start with "https:"'):
             # Using HTTP intentionally to test security feature that rejects insecure URLs
-            await facilitator.send("http://example.com", tagged_beef)  # noqa: S113  # NOSONAR
-    
+            await facilitator.send("http://example.com", tagged_beef)  # NOSONAR
+
     @pytest.mark.asyncio
     async def test_https_facilitator_send_with_http_allowed(self):
         """Test HTTPSOverlayBroadcastFacilitator allows HTTP when configured."""
-        from unittest.mock import patch, AsyncMock, MagicMock
-        
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         facilitator = HTTPSOverlayBroadcastFacilitator(allow_http=True)
         tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
-        
+
         mock_response = MagicMock()
         mock_response.ok = True
         mock_response.json = AsyncMock(return_value={})
         mock_response.__aenter__ = AsyncMock(return_value=mock_response)
         mock_response.__aexit__ = AsyncMock()
-        
+
         mock_session = MagicMock()
         mock_session.post.return_value = mock_response
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock()
-        
-        with patch('aiohttp.ClientSession', return_value=mock_session):
+
+        with patch("aiohttp.ClientSession", return_value=mock_session):
             result = await facilitator.send("https://example.com", tagged_beef)
             assert result is not None
-    
+
     # Note: Off-chain values and failure paths tested implicitly through integration
-    
+
     @pytest.mark.asyncio
     async def test_https_facilitator_send_network_error(self):
         """Test HTTPSOverlayBroadcastFacilitator handles network errors."""
-        from unittest.mock import patch, AsyncMock
-        
+        from unittest.mock import AsyncMock, patch
+
         facilitator = HTTPSOverlayBroadcastFacilitator()
         tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
-        
-        with patch('aiohttp.ClientSession', side_effect=Exception("Network error")):
+
+        with patch("aiohttp.ClientSession", side_effect=Exception("Network error")):
             with pytest.raises(Exception, match="Broadcast failed"):
                 await facilitator.send("https://example.com", tagged_beef)
-    
+
     def test_check_acknowledgment_requirements_all_hosts(self):
         """Test acknowledgment requirements for all hosts."""
         broadcaster = TopicBroadcaster(["tm_test"])
         broadcaster.require_acknowledgment_from_any_host_for_topics = None
         broadcaster.require_acknowledgment_from_all_hosts_for_topics = ["tm_test"]
         broadcaster.require_acknowledgment_from_specific_hosts_for_topics = {}
-        
+
         # Should pass if all hosts acknowledge the topic
-        host_acknowledgments = {
-            "host1": {"tm_test"},
-            "host2": {"tm_test"}
-        }
+        host_acknowledgments = {"host1": {"tm_test"}, "host2": {"tm_test"}}
         result = broadcaster._check_acknowledgment_requirements(host_acknowledgments)
         assert result
-        
+
         # Should fail if not all hosts acknowledge
-        host_acknowledgments = {
-            "host1": {"tm_test"},
-            "host2": {"tm_other"}
-        }
+        host_acknowledgments = {"host1": {"tm_test"}, "host2": {"tm_other"}}
         result = broadcaster._check_acknowledgment_requirements(host_acknowledgments)
         assert not result
-    
+
     def test_tagged_beef_with_off_chain_values(self):
         """Test TaggedBEEF with off-chain values."""
         beef = b"test_beef"
         topics = ["tm_test"]
         off_chain = b"off_chain_data"
-        
+
         tagged = TaggedBEEF(beef=beef, topics=topics, off_chain_values=off_chain)
         assert tagged.beef == beef
         assert tagged.topics == topics
         assert tagged.off_chain_values == off_chain
-    
+
     def test_admittance_instructions_minimal(self):
         """Test AdmittanceInstructions with minimal data."""
-        instructions = AdmittanceInstructions(
-            outputs_to_admit=[],
-            coins_to_retain=[]
-        )
+        instructions = AdmittanceInstructions(outputs_to_admit=[], coins_to_retain=[])
         assert instructions.outputs_to_admit == []
         assert instructions.coins_to_retain == []
         assert instructions.coins_removed is None
-    
+
     def test_ship_broadcaster_config_all_options(self):
         """Test SHIPBroadcasterConfig with all options."""
         facilitator = HTTPSOverlayBroadcastFacilitator()
@@ -325,9 +304,9 @@ class TestSHIPBroadcaster:
             facilitator=facilitator,
             require_acknowledgment_from_all_hosts_for_topics=["tm_test"],
             require_acknowledgment_from_any_host_for_topics=["tm_other"],
-            require_acknowledgment_from_specific_hosts_for_topics={"host1": ["tm_specific"]}
+            require_acknowledgment_from_specific_hosts_for_topics={"host1": ["tm_specific"]},
         )
-        
+
         assert config.network_preset == "testnet"
         assert config.facilitator is facilitator
         assert config.require_acknowledgment_from_all_hosts_for_topics == ["tm_test"]

@@ -5,12 +5,14 @@ These tests verify that Transaction.verify() correctly validates scripts
 using the Engine-based interpreter, matching Go SDK behavior.
 """
 
-import pytest
 import base64
-from bsv.transaction import Transaction, TransactionInput, TransactionOutput
+
+import pytest
+
 from bsv.keys import PrivateKey
 from bsv.script.type import P2PKH
 from bsv.spv import GullibleHeadersClient
+from bsv.transaction import Transaction, TransactionInput, TransactionOutput
 
 # BEEF transaction from Go SDK test (BRC62Hex)
 BRC62_HEX = "0100beef01fe636d0c0007021400fe507c0c7aa754cef1f7889d5fd395cf1f785dd7de98eed895dbedfe4e5bc70d1502ac4e164f5bc16746bb0868404292ac8318bbac3800e4aad13a014da427adce3e010b00bc4ff395efd11719b277694cface5aa50d085a0bb81f613f70313acd28cf4557010400574b2d9142b8d28b61d88e3b2c3f44d858411356b49a28a4643b6d1a6a092a5201030051a05fc84d531b5d250c23f4f886f6812f9fe3f402d61607f977b4ecd2701c19010000fd781529d58fc2523cf396a7f25440b409857e7e221766c57214b1d38c7b481f01010062f542f45ea3660f86c013ced80534cb5fd4c19d66c56e7e8c5d4bf2d40acc5e010100b121e91836fd7cd5102b654e9f72f3cf6fdbfd0b161c53a9c54b12c841126331020100000001cd4e4cac3c7b56920d1e7655e7e260d31f29d9a388d04910f1bbd72304a79029010000006b483045022100e75279a205a547c445719420aa3138bf14743e3f42618e5f86a19bde14bb95f7022064777d34776b05d816daf1699493fcdf2ef5a5ab1ad710d9c97bfb5b8f7cef3641210263e2dee22b1ddc5e11f6fab8bcd2378bdd19580d640501ea956ec0e786f93e76ffffffff013e660000000000001976a9146bfd5c7fbe21529d45803dbcf0c87dd3c71efbc288ac0000000001000100000001ac4e164f5bc16746bb0868404292ac8318bbac3800e4aad13a014da427adce3e000000006a47304402203a61a2e931612b4bda08d541cfb980885173b8dcf64a3471238ae7abcd368d6402204cbf24f04b9aa2256d8901f0ed97866603d2be8324c2bfb7a37bf8fc90edd5b441210263e2dee22b1ddc5e11f6fab8bcd2378bdd19580d640501ea956ec0e786f93e76ffffffff013c660000000000001976a9146bfd5c7fbe21529d45803dbcf0c87dd3c71efbc288ac0000000000"
@@ -26,7 +28,7 @@ class TestTransactionVerify:
     async def test_verify_simple_p2pkh_transaction(self):
         """
         Test basic P2PKH transaction verification.
-        
+
         This is a simpler test than the Go SDK's BEEF tests, verifying
         that the Engine-based interpreter works correctly for a standard
         P2PKH spend.
@@ -34,42 +36,36 @@ class TestTransactionVerify:
         # Create keys
         priv_key = PrivateKey()
         address = priv_key.address()
-        
+
         # Create source transaction
-        source_tx = Transaction([], [
-            TransactionOutput(
-                locking_script=P2PKH().lock(address),
-                satoshis=1000
-            )
-        ])
-        
+        source_tx = Transaction([], [TransactionOutput(locking_script=P2PKH().lock(address), satoshis=1000)])
+
         # Create spending transaction
         tx = Transaction(
-            [TransactionInput(
-                source_transaction=source_tx,
-                source_output_index=0,
-                unlocking_script_template=P2PKH().unlock(priv_key)
-            )],
-            [TransactionOutput(
-                locking_script=P2PKH().lock(address),
-                satoshis=500
-            )]
+            [
+                TransactionInput(
+                    source_transaction=source_tx,
+                    source_output_index=0,
+                    unlocking_script_template=P2PKH().unlock(priv_key),
+                )
+            ],
+            [TransactionOutput(locking_script=P2PKH().lock(address), satoshis=500)],
         )
-        
+
         # Sign the transaction
         tx.sign()
-        
+
         # Verify with GullibleHeadersClient (scripts_only mode)
         chaintracker = GullibleHeadersClient()
         result = await tx.verify(chaintracker, scripts_only=True)
-        
+
         assert result is True, "Valid P2PKH transaction should verify successfully"
 
     @pytest.mark.asyncio
     async def test_verify_rejects_invalid_signature(self):
         """
         Test that verification correctly rejects invalid signatures.
-        
+
         This tests that the Engine properly validates signatures and returns
         False when a transaction is signed with the wrong key.
         """
@@ -77,62 +73,53 @@ class TestTransactionVerify:
         priv_key = PrivateKey()
         wrong_key = PrivateKey()
         address = priv_key.address()
-        
+
         # Create source transaction locked to priv_key's address
-        source_tx = Transaction([], [
-            TransactionOutput(
-                locking_script=P2PKH().lock(address),
-                satoshis=1000
-            )
-        ])
-        
+        source_tx = Transaction([], [TransactionOutput(locking_script=P2PKH().lock(address), satoshis=1000)])
+
         # Create spending transaction but sign with wrong key
         tx = Transaction(
-            [TransactionInput(
-                source_transaction=source_tx,
-                source_output_index=0,
-                unlocking_script_template=P2PKH().unlock(wrong_key)
-            )],
-            [TransactionOutput(
-                locking_script=P2PKH().lock(address),
-                satoshis=500
-            )]
+            [
+                TransactionInput(
+                    source_transaction=source_tx,
+                    source_output_index=0,
+                    unlocking_script_template=P2PKH().unlock(wrong_key),
+                )
+            ],
+            [TransactionOutput(locking_script=P2PKH().lock(address), satoshis=500)],
         )
-        
+
         # Sign with wrong key
         tx.sign()
-        
+
         # Verification should fail
         chaintracker = GullibleHeadersClient()
         result = await tx.verify(chaintracker, scripts_only=True)
-        
+
         assert result is False, "Transaction with invalid signature should fail verification"
 
     @pytest.mark.asyncio
     async def test_verify_raises_error_missing_source_transaction(self):
         """
         Test that verify() raises ValueError when source transaction is missing.
-        
+
         Ported from Go SDK test that expects error for missing source.
         """
         priv_key = PrivateKey()
         address = priv_key.address()
-        
+
         # Create transaction without source_transaction
         tx = Transaction(
-            [TransactionInput(
-                source_txid="0" * 64,
-                source_output_index=0,
-                unlocking_script_template=P2PKH().unlock(priv_key)
-            )],
-            [TransactionOutput(
-                locking_script=P2PKH().lock(address),
-                satoshis=500
-            )]
+            [
+                TransactionInput(
+                    source_txid="0" * 64, source_output_index=0, unlocking_script_template=P2PKH().unlock(priv_key)
+                )
+            ],
+            [TransactionOutput(locking_script=P2PKH().lock(address), satoshis=500)],
         )
-        
+
         chaintracker = GullibleHeadersClient()
-        
+
         with pytest.raises(ValueError, match="missing an associated source transaction"):
             await tx.verify(chaintracker, scripts_only=True)
 
@@ -143,30 +130,24 @@ class TestTransactionVerify:
         """
         priv_key = PrivateKey()
         address = priv_key.address()
-        
+
         # Create source transaction
-        source_tx = Transaction([], [
-            TransactionOutput(
-                locking_script=P2PKH().lock(address),
-                satoshis=1000
-            )
-        ])
-        
+        source_tx = Transaction([], [TransactionOutput(locking_script=P2PKH().lock(address), satoshis=1000)])
+
         # Create transaction without unlocking script
         tx = Transaction(
-            [TransactionInput(
-                source_transaction=source_tx,
-                source_output_index=0
-                # No unlocking_script_template
-            )],
-            [TransactionOutput(
-                locking_script=P2PKH().lock(address),
-                satoshis=500
-            )]
+            [
+                TransactionInput(
+                    source_transaction=source_tx,
+                    source_output_index=0,
+                    # No unlocking_script_template
+                )
+            ],
+            [TransactionOutput(locking_script=P2PKH().lock(address), satoshis=500)],
         )
-        
+
         chaintracker = GullibleHeadersClient()
-        
+
         with pytest.raises(ValueError, match="missing an associated unlocking script"):
             await tx.verify(chaintracker, scripts_only=True)
 
@@ -174,14 +155,14 @@ class TestTransactionVerify:
     async def test_spv_verify_from_beef_hex(self):
         """
         Test SPV verification from BEEF hex - ported from Go SDK TestSPVVerify.
-        
+
         This test uses real BEEF data from the Go SDK test suite to ensure
         compatibility.
-        
+
         Note: Currently skipped due to BEEF parsing issues.
         """
         pytest.skip("BEEF parsing from hex needs investigation - see test_verify_scripts.py")
-        
+
         # This would be the full test once BEEF parsing is fixed:
         # tx = Transaction.from_beef_hex(BRC62_HEX)
         # chaintracker = GullibleHeadersClient()
@@ -192,15 +173,14 @@ class TestTransactionVerify:
     async def test_spv_verify_scripts_from_beef(self):
         """
         Test VerifyScripts from BEEF - ported from Go SDK TestSPVVerifyScripts.
-        
+
         Note: Currently skipped due to BEEF parsing issues.
         """
         pytest.skip("BEEF parsing from base64 needs investigation - see test_verify_scripts.py")
-        
+
         # This would be the full test once BEEF parsing is fixed:
         # beef_bytes = base64.b64decode(BEEF_BASE64 + '=')  # Add padding
         # tx = Transaction.from_beef(beef_bytes)
         # chaintracker = GullibleHeadersClient()
         # result = await tx.verify(chaintracker, scripts_only=True)
         # assert result is True
-

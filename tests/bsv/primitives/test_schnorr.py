@@ -3,10 +3,12 @@ Tests for Schnorr Zero-Knowledge Proof implementation.
 
 Translated from ts-sdk/src/primitives/__tests/Schnorr.test.ts
 """
+
 import pytest
-from bsv.primitives.schnorr import Schnorr
+
+from bsv.curve import Point, curve, curve_add, curve_multiply
 from bsv.keys import PrivateKey, PublicKey
-from bsv.curve import Point, curve, curve_multiply, curve_add
+from bsv.primitives.schnorr import Schnorr
 
 
 class TestSchnorrZeroKnowledgeProof:
@@ -47,8 +49,8 @@ class TestSchnorrZeroKnowledgeProof:
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
         # Tamper with R
-        tampered_r = curve_add(proof['R'], curve.g) if proof['R'] else curve.g
-        tampered_proof = {**proof, 'R': tampered_r}
+        tampered_r = curve_add(proof["R"], curve.g) if proof["R"] else curve.g
+        tampered_proof = {**proof, "R": tampered_r}
 
         result = self.schnorr.verify_proof(A.point(), B.point(), S_point, tampered_proof)
         assert result is False
@@ -64,8 +66,8 @@ class TestSchnorrZeroKnowledgeProof:
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
         # Tamper with z
-        tampered_z = (proof['z'] + 1) % curve.n
-        tampered_proof = {**proof, 'z': tampered_z}
+        tampered_z = (proof["z"] + 1) % curve.n
+        tampered_proof = {**proof, "z": tampered_z}
 
         result = self.schnorr.verify_proof(A.point(), B.point(), S_point, tampered_proof)
         assert result is False
@@ -81,8 +83,8 @@ class TestSchnorrZeroKnowledgeProof:
         proof = self.schnorr.generate_proof(a, A, B, S_point)
 
         # Tamper with S'
-        tampered_s_prime = curve_add(proof['SPrime'], curve.g) if proof['SPrime'] else curve.g
-        tampered_proof = {**proof, 'SPrime': tampered_s_prime}
+        tampered_s_prime = curve_add(proof["SPrime"], curve.g) if proof["SPrime"] else curve.g
+        tampered_proof = {**proof, "SPrime": tampered_s_prime}
 
         result = self.schnorr.verify_proof(A.point(), B.point(), S_point, tampered_proof)
         assert result is False
@@ -187,8 +189,8 @@ class TestSchnorrZeroKnowledgeProof:
     def test_should_verify_a_valid_proof_with_fixed_keys(self):
         """Test that a valid proof verifies with fixed keys for determinism."""
         # Use fixed private keys for determinism
-        a_int = int('123456789abcdef123456789abcdef123456789abcdef123456789abcdef', 16)
-        b_int = int('abcdef123456789abcdef123456789abcdef123456789abcdef123456789', 16)
+        a_int = int("123456789abcdef123456789abcdef123456789abcdef123456789abcdef", 16)
+        b_int = int("abcdef123456789abcdef123456789abcdef123456789abcdef123456789", 16)
         a = PrivateKey(a_int)
         b = PrivateKey(b_int)
 
@@ -200,4 +202,3 @@ class TestSchnorrZeroKnowledgeProof:
 
         result = self.schnorr.verify_proof(A.point(), B.point(), S_point, proof)
         assert result is True
-

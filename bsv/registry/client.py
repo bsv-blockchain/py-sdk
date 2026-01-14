@@ -3,32 +3,31 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
+from bsv.broadcasters import default_broadcaster
+from bsv.overlay.lookup import LookupQuestion, LookupResolver
+from bsv.overlay.topic import BroadcasterConfig, TopicBroadcaster
 from bsv.registry.types import (
-    DefinitionType,
     BasketDefinitionData,
-    ProtocolDefinitionData,
     CertificateDefinitionData,
     DefinitionData,
+    DefinitionType,
+    ProtocolDefinitionData,
     TokenData,
 )
-from bsv.wallet.wallet_interface import WalletInterface
-from bsv.wallet.key_deriver import Protocol as WalletProtocol
+from bsv.transaction import Transaction
 from bsv.transaction.pushdrop import (
+    SignOutputsMode,
     build_lock_before_pushdrop,
     decode_lock_before_pushdrop,
     make_pushdrop_unlocker,
-    SignOutputsMode,
 )
-from bsv.transaction import Transaction
-from bsv.broadcasters import default_broadcaster
-from bsv.overlay.lookup import LookupResolver, LookupQuestion
-from bsv.overlay.topic import TopicBroadcaster, BroadcasterConfig
-
+from bsv.wallet.key_deriver import Protocol as WalletProtocol
+from bsv.wallet.wallet_interface import WalletInterface
 
 REGISTRANT_TOKEN_AMOUNT = 1
 
 
-def _map_definition_type_to_wallet_protocol(definition_type: DefinitionType) -> Dict[str, Any]:
+def _map_definition_type_to_wallet_protocol(definition_type: DefinitionType) -> dict[str, Any]:
     if definition_type == "basket":
         return {"securityLevel": 1, "protocol": "basketmap"}
     if definition_type == "protocol":
@@ -46,7 +45,7 @@ def _map_definition_type_to_basket_name(definition_type: DefinitionType) -> str:
     }[definition_type]
 
 
-def _build_pushdrop_fields(data: DefinitionData, registry_operator: str) -> List[bytes]:
+def _build_pushdrop_fields(data: DefinitionData, registry_operator: str) -> list[bytes]:
     if isinstance(data, BasketDefinitionData):
         fields = [
             data.basketID,
@@ -91,7 +90,7 @@ def _parse_locking_script(definition_type: DefinitionType, locking_script_hex: s
     if not decoded or not decoded.get("fields"):
         raise ValueError("Not a valid registry pushdrop script")
 
-    fields: List[bytes] = cast(List[bytes], decoded["fields"])
+    fields: list[bytes] = cast(list[bytes], decoded["fields"])
 
     # Expect last field is registry operator
     if definition_type == "basket":
@@ -125,7 +124,7 @@ def _parse_locking_script(definition_type: DefinitionType, locking_script_hex: s
             raise ValueError("Unexpected field count for certificate type")
         import json
 
-        parsed_fields: Dict[str, Any]
+        parsed_fields: dict[str, Any]
         try:
             parsed_fields = json.loads(fields[5].decode())
         except Exception:
@@ -137,7 +136,7 @@ def _parse_locking_script(definition_type: DefinitionType, locking_script_hex: s
             iconURL=fields[2].decode(),
             description=fields[3].decode(),
             documentationURL=fields[4].decode(),
-            fields=cast(Dict[str, Any], parsed_fields),
+            fields=cast(dict[str, Any], parsed_fields),
             registryOperator=fields[6].decode(),
         )
     raise ValueError(f"Unsupported definition type: {definition_type}")
@@ -149,7 +148,7 @@ class RegistryClient:
         self.originator = originator
         self._resolver = LookupResolver()
 
-    def register_definition(self, _ctx: Any, data: DefinitionData) -> Dict[str, Any]:
+    def register_definition(self, _ctx: Any, data: DefinitionData) -> dict[str, Any]:
         pub = self.wallet.get_public_key({"identityKey": True}, self.originator) or {}
         operator = cast(str, pub.get("publicKey") or "")
 
@@ -164,43 +163,49 @@ class RegistryClient:
 
         # Create transaction
         randomize_outputs = False
-        ca_res = self.wallet.create_action(
-            {
-                "description": f"Register a new {data.definitionType} item",
-                "outputs": [
-                    {
-                        "satoshis": REGISTRANT_TOKEN_AMOUNT,
-                        "lockingScript": locking_script_bytes,
-                        "outputDescription": f"New {data.definitionType} registration token",
-                        "basket": _map_definition_type_to_basket_name(data.definitionType),
-                    }
-                ],
-                "options": {"randomizeOutputs": randomize_outputs},
-            },
-            self.originator,
-        ) or {}
+        ca_res = (
+            self.wallet.create_action(
+                {
+                    "description": f"Register a new {data.definitionType} item",
+                    "outputs": [
+                        {
+                            "satoshis": REGISTRANT_TOKEN_AMOUNT,
+                            "lockingScript": locking_script_bytes,
+                            "outputDescription": f"New {data.definitionType} registration token",
+                            "basket": _map_definition_type_to_basket_name(data.definitionType),
+                        }
+                    ],
+                    "options": {"randomizeOutputs": randomize_outputs},
+                },
+                self.originator,
+            )
+            or {}
+        )
 
         # For now, return create_action-like structure; broadcasting can be done by caller via Transaction.broadcast
         return ca_res
 
-    def list_own_registry_entries(self, _ctx: Any, definition_type: DefinitionType) -> List[Dict[str, Any]]:
+    def list_own_registry_entries(self, _ctx: Any, definition_type: DefinitionType) -> list[dict[str, Any]]:
         include_instructions = True
         include_tags = True
         include_labels = True
-        lo = self.wallet.list_outputs(
-            {
-                "basket": _map_definition_type_to_basket_name(definition_type),
-                "include": "entire transactions",
-                "includeCustomInstructions": include_instructions,
-                "includeTags": include_tags,
-                "includeLabels": include_labels,
-            },
-            self.originator,
-        ) or {}
+        lo = (
+            self.wallet.list_outputs(
+                {
+                    "basket": _map_definition_type_to_basket_name(definition_type),
+                    "include": "entire transactions",
+                    "includeCustomInstructions": include_instructions,
+                    "includeTags": include_tags,
+                    "includeLabels": include_labels,
+                },
+                self.originator,
+            )
+            or {}
+        )
 
-        outputs = cast(List[Dict[str, Any]], lo.get("outputs") or [])
+        outputs = cast(list[dict[str, Any]], lo.get("outputs") or [])
         beef = cast(bytes, lo.get("BEEF") or b"")
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         if not outputs or not beef:
             return results
 
@@ -235,7 +240,9 @@ class RegistryClient:
 
         return results
 
-    def revoke_own_registry_entry(self, ctx: Any, record: Dict[str, Any]) -> Dict[str, Any]:  # NOSONAR - Complexity (26), requires refactoring
+    def revoke_own_registry_entry(
+        self, ctx: Any, record: dict[str, Any]
+    ) -> dict[str, Any]:  # NOSONAR - Complexity (26), requires refactoring
         # Owner check: ensure this wallet controls the registry operator key
         me = self.wallet.get_public_key({"identityKey": True}, self.originator) or {}
         my_pub = cast(str, me.get("publicKey") or "")
@@ -251,33 +258,39 @@ class RegistryClient:
             raise ValueError("Invalid registry record - missing txid or beef")
 
         # Create partial transaction that spends the registry UTXO
-        ca_res = self.wallet.create_action(
-            {
-                "description": f"Revoke {record.get('definitionType', 'registry')} item",
-                "inputBEEF": beef,
-                "inputs": [
-                    {
-                        "outpoint": f"{txid}.{output_index}",
-                        "unlockingScriptLength": 73,
-                        "inputDescription": "Revoking registry token",
-                    }
-                ],
-            },
-            self.originator,
-        ) or {}
+        ca_res = (
+            self.wallet.create_action(
+                {
+                    "description": f"Revoke {record.get('definitionType', 'registry')} item",
+                    "inputBEEF": beef,
+                    "inputs": [
+                        {
+                            "outpoint": f"{txid}.{output_index}",
+                            "unlockingScriptLength": 73,
+                            "inputDescription": "Revoking registry token",
+                        }
+                    ],
+                },
+                self.originator,
+            )
+            or {}
+        )
 
-        signable = cast(Dict[str, Any], (ca_res.get("signableTransaction") or {}))
+        signable = cast(dict[str, Any], (ca_res.get("signableTransaction") or {}))
         reference = signable.get("reference") or b""
 
         # Build a real unlocker and sign the partial transaction input
         # signableTransaction.tx is expected to be raw tx bytes (WalletWire signable), not BEEF
         # signable["tx"] holds raw transaction bytes; use from_reader for consistency with ProtoWallet
         from bsv.utils import Reader
+
         tx_bytes = cast(bytes, signable.get("tx") or b"")
         partial_tx = Transaction.from_reader(Reader(tx_bytes)) if tx_bytes else Transaction()
         unlocker = make_pushdrop_unlocker(
             self.wallet,
-            protocol_id=_map_definition_type_to_wallet_protocol(cast(DefinitionType, record.get("definitionType", "basket"))),
+            protocol_id=_map_definition_type_to_wallet_protocol(
+                cast(DefinitionType, record.get("definitionType", "basket"))
+            ),
             key_id="1",
             counterparty={"type": 2},  # anyone
             sign_outputs_mode=SignOutputsMode.ALL,
@@ -285,20 +298,25 @@ class RegistryClient:
             prev_txid=txid,
             prev_vout=output_index,
             prev_satoshis=satoshis,
-            prev_locking_script=bytes.fromhex(cast(str, record.get("lockingScript", ""))) if record.get("lockingScript") else None,
+            prev_locking_script=(
+                bytes.fromhex(cast(str, record.get("lockingScript", ""))) if record.get("lockingScript") else None
+            ),
         )
         unlocking_script = unlocker.sign(partial_tx, 0)
 
         spends = {0: {"unlockingScript": unlocking_script}}
-        sign_res = self.wallet.sign_action(
-            {
-                "reference": reference,
-                "spends": spends,
-                "tx": tx_bytes,
-                "options": {"acceptDelayedBroadcast": False},
-            },
-            self.originator,
-        ) or {}
+        sign_res = (
+            self.wallet.sign_action(
+                {
+                    "reference": reference,
+                    "spends": spends,
+                    "tx": tx_bytes,
+                    "options": {"acceptDelayedBroadcast": False},
+                },
+                self.originator,
+            )
+            or {}
+        )
 
         # Broadcast via default broadcaster if tx present
         tx_bytes = cast(bytes, sign_res.get("tx") or tx_bytes)
@@ -324,7 +342,9 @@ class RegistryClient:
                 pass
         return sign_res
 
-    def resolve(self, ctx: Any, definition_type: DefinitionType, query: Dict[str, Any], resolver: Optional[Any] = None) -> List[DefinitionData]:
+    def resolve(
+        self, ctx: Any, definition_type: DefinitionType, query: dict[str, Any], resolver: Any | None = None
+    ) -> list[DefinitionData]:
         """Resolve registry records using a provided resolver compatible with TS/Go.
 
         Resolver signature: resolver(ctx, service_name: str, query: Dict) -> List[{"beef": bytes, "outputIndex": int}]
@@ -333,11 +353,13 @@ class RegistryClient:
         if resolver is None:
             return []
 
-        service_name = {"basket": "ls_basketmap", "protocol": "ls_protomap", "certificate": "ls_certmap"}[definition_type]
+        service_name = {"basket": "ls_basketmap", "protocol": "ls_protomap", "certificate": "ls_certmap"}[
+            definition_type
+        ]
         self._resolver.set_backend(resolver)
         ans = self._resolver.query(ctx, LookupQuestion(service=service_name, query=query))
         outputs = [{"beef": o.beef, "outputIndex": o.outputIndex} for o in ans.outputs]
-        parsed: List[DefinitionData] = []
+        parsed: list[DefinitionData] = []
         for o in outputs:
             try:
                 tx = Transaction.from_beef(cast(bytes, o.get("beef") or b""))
@@ -362,5 +384,3 @@ class RegistryClient:
         if definition_type == "basket" and "basketID" in query:
             parsed = [r for r in parsed if getattr(r, "basketID", None) == query.get("basketID")]
         return parsed
-
-

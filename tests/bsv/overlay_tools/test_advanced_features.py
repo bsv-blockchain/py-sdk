@@ -5,31 +5,29 @@ These tests cover advanced functionality and edge cases that may be missing
 from the current overlay tools implementation.
 """
 
-import pytest
 import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from bsv.overlay_tools.historian import Historian
+from bsv.overlay_tools.host_reputation_tracker import HostReputationEntry, HostReputationTracker, RankedHost
 from bsv.overlay_tools.lookup_resolver import (
-    LookupResolver,
-    LookupResolverConfig,
-    LookupQuestion,
+    HTTPSOverlayLookupFacilitator,
     LookupAnswer,
     LookupOutput,
-    HTTPSOverlayLookupFacilitator,
-    LookupTimeoutError
+    LookupQuestion,
+    LookupResolver,
+    LookupResolverConfig,
+    LookupTimeoutError,
 )
 from bsv.overlay_tools.ship_broadcaster import (
+    AdmittanceInstructions,
     SHIPBroadcaster,
     SHIPBroadcasterConfig,
     TaggedBEEF,
-    AdmittanceInstructions
 )
-from bsv.overlay_tools.host_reputation_tracker import (
-    HostReputationTracker,
-    HostReputationEntry,
-    RankedHost
-)
-from bsv.overlay_tools.historian import Historian
 from bsv.transaction import Transaction
 
 
@@ -46,10 +44,7 @@ class TestAdvancedLookupResolver:
             LookupAnswer(outputs=[LookupOutput(beef=b"result2", output_index=1)]),
         ]
 
-        config = LookupResolverConfig(
-            network_preset="testnet",
-            facilitator=mock_facilitator
-        )
+        config = LookupResolverConfig(network_preset="testnet", facilitator=mock_facilitator)
 
         resolver = LookupResolver(config)
 
@@ -92,6 +87,7 @@ class TestAdvancedLookupResolver:
     async def test_lookup_timeout_handling(self):
         """Test lookup timeout handling."""
         mock_facilitator = AsyncMock()
+
         # Simulate timeout by delaying
         async def delayed_lookup(*args, **kwargs):
             await asyncio.sleep(0.1)  # Longer than timeout
@@ -175,23 +171,16 @@ class TestAdvancedSHIPBroadcaster:
         """Test broadcasting with topic-specific acknowledgments."""
         mock_facilitator = AsyncMock()
         mock_facilitator.broadcast.return_value = {
-            "host1": AdmittanceInstructions(
-                outputs_to_admit=[0],
-                coins_to_retain=[1]
-            )
+            "host1": AdmittanceInstructions(outputs_to_admit=[0], coins_to_retain=[1])
         }
 
         config = SHIPBroadcasterConfig(
-            facilitator=mock_facilitator,
-            require_acknowledgment_from_all_hosts_for_topics=["important_topic"]
+            facilitator=mock_facilitator, require_acknowledgment_from_all_hosts_for_topics=["important_topic"]
         )
 
         broadcaster = SHIPBroadcaster(["tm_test"], config)
 
-        tagged_beef = TaggedBEEF(
-            beef=b"test_beef",
-            topics=["important_topic"]
-        )
+        tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["important_topic"])
 
         # This should require acknowledgment
         try:
@@ -223,11 +212,7 @@ class TestAdvancedSHIPBroadcaster:
 
     def test_admittance_instructions_parsing(self):
         """Test parsing of admittance instructions."""
-        instructions = AdmittanceInstructions(
-            outputs_to_admit=[0, 2, 5],
-            coins_to_retain=[1, 3],
-            coins_removed=[4]
-        )
+        instructions = AdmittanceInstructions(outputs_to_admit=[0, 2, 5], coins_to_retain=[1, 3], coins_removed=[4])
 
         assert instructions.outputs_to_admit == [0, 2, 5]
         assert instructions.coins_to_retain == [1, 3]
@@ -239,13 +224,11 @@ class TestAdvancedHistorian:
 
     def test_history_caching_with_versions(self):
         """Test history caching with version handling."""
+
         def simple_interpreter(tx, output_index, context):
             return f"tx_{tx.txid()}_{output_index}"
 
-        options = {
-            'historyCache': {},
-            'interpreterVersion': 'v2'
-        }
+        options = {"historyCache": {}, "interpreterVersion": "v2"}
 
         historian = Historian(simple_interpreter, options)
 
@@ -263,6 +246,7 @@ class TestAdvancedHistorian:
 
     def test_history_with_complex_context(self):
         """Test history building with complex context."""
+
         def context_interpreter(tx, output_index, context):
             if context and "filter" in context:
                 return f"filtered_{tx.txid()}_{output_index}"
@@ -281,10 +265,11 @@ class TestAdvancedHistorian:
 
     def test_debug_logging(self):
         """Test debug logging functionality."""
+
         def logging_interpreter(tx, output_index, context):
             return "logged_result"
 
-        options = {'debug': True}
+        options = {"debug": True}
         historian = Historian(logging_interpreter, options)
 
         assert historian.debug is True
@@ -305,9 +290,7 @@ class TestOverlayIntegration:
         """Test LookupResolver integration with reputation tracker."""
         # This tests the integration between components
         mock_facilitator = AsyncMock()
-        mock_facilitator.lookup.return_value = LookupAnswer(
-            outputs=[LookupOutput(beef=b"integrated", output_index=0)]
-        )
+        mock_facilitator.lookup.return_value = LookupAnswer(outputs=[LookupOutput(beef=b"integrated", output_index=0)])
 
         config = LookupResolverConfig(facilitator=mock_facilitator)
         resolver = LookupResolver(config)

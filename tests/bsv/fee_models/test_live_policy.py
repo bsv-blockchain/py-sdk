@@ -1,13 +1,17 @@
 from unittest.mock import MagicMock, patch
+
 from bsv.fee_models.live_policy import LivePolicy
+
 
 # Reset the singleton instance before each test
 def setup_function(_):
     LivePolicy._instance = None
 
+
 # Reset the singleton instance after each test
 def teardown_function(_):
     LivePolicy._instance = None
+
 
 @patch("bsv.fee_models.live_policy.default_sync_http_client", autospec=True)
 def test_parses_mining_fee(mock_http_client_factory):
@@ -17,21 +21,11 @@ def test_parses_mining_fee(mock_http_client_factory):
 
     # Set up a mock response
     mock_http_client.get.return_value.json_data = {
-        "data": {
-            "policy": {
-                "fees": {
-                    "miningFee": {"satoshis": 5, "bytes": 250}
-                }
-            }
-        }
+        "data": {"policy": {"fees": {"miningFee": {"satoshis": 5, "bytes": 250}}}}
     }
 
     # Create the test instance
-    policy = LivePolicy(
-        cache_ttl_ms=60000,
-        fallback_sat_per_kb=1,
-        arc_policy_url="https://arc.mock/policy"
-    )
+    policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=1, arc_policy_url="https://arc.mock/policy")
 
     # Execute and verify the result
     rate = policy.current_rate_sat_per_kb()
@@ -46,17 +40,9 @@ def test_cache_reused_when_valid(mock_http_client_factory):
     mock_http_client_factory.return_value = mock_http_client
 
     # Set up a mock response
-    mock_http_client.get.return_value.json_data = {
-        "data": {
-            "policy": {"satPerKb": 50}
-        }
-    }
+    mock_http_client.get.return_value.json_data = {"data": {"policy": {"satPerKb": 50}}}
 
-    policy = LivePolicy(
-        cache_ttl_ms=60000,
-        fallback_sat_per_kb=1,
-        arc_policy_url="https://arc.mock/policy"
-    )
+    policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=1, arc_policy_url="https://arc.mock/policy")
 
     # Call multiple times within the cache validity period
     first_rate = policy.current_rate_sat_per_kb()
@@ -78,14 +64,10 @@ def test_uses_cached_value_when_fetch_fails(mock_log, mock_http_client_factory):
     # Set up mock responses (success first, then failure)
     mock_http_client.get.side_effect = [
         MagicMock(json_data={"data": {"policy": {"satPerKb": 75}}}),
-        Exception("Network down")
+        Exception("Network down"),
     ]
 
-    policy = LivePolicy(
-        cache_ttl_ms=1,
-        fallback_sat_per_kb=5,
-        arc_policy_url="https://arc.mock/policy"
-    )
+    policy = LivePolicy(cache_ttl_ms=1, fallback_sat_per_kb=5, arc_policy_url="https://arc.mock/policy")
 
     # The first execution succeeds
     first_rate = policy.current_rate_sat_per_kb()
@@ -116,11 +98,7 @@ def test_falls_back_to_default_when_no_cache(mock_log, mock_http_client_factory)
     # Set up a mock response (always failing)
     mock_http_client.get.side_effect = Exception("Network failure")
 
-    policy = LivePolicy(
-        cache_ttl_ms=60000,
-        fallback_sat_per_kb=9,
-        arc_policy_url="https://arc.mock/policy"
-    )
+    policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=9, arc_policy_url="https://arc.mock/policy")
 
     # Fallback value is returned during execution
     rate = policy.current_rate_sat_per_kb()
@@ -142,15 +120,9 @@ def test_invalid_response_triggers_fallback(mock_log, mock_http_client_factory):
     mock_http_client_factory.return_value = mock_http_client
 
     # Set up an invalid response
-    mock_http_client.get.return_value.json_data = {
-        "data": {"policy": {"invalid": True}}
-    }
+    mock_http_client.get.return_value.json_data = {"data": {"policy": {"invalid": True}}}
 
-    policy = LivePolicy(
-        cache_ttl_ms=60000,
-        fallback_sat_per_kb=3,
-        arc_policy_url="https://arc.mock/policy"
-    )
+    policy = LivePolicy(cache_ttl_ms=60000, fallback_sat_per_kb=3, arc_policy_url="https://arc.mock/policy")
 
     # Fallback value is returned due to the invalid response
     rate = policy.current_rate_sat_per_kb()

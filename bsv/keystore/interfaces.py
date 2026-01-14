@@ -28,6 +28,7 @@ except ImportError:  # pragma: no cover
 # Errors (mirrors go-sdk/kvstore/interfaces.go)
 # ---------------------------------------------------------------------------
 
+
 class KVStoreError(Exception):
     """Base-class for all KV-Store related exceptions."""
 
@@ -92,17 +93,18 @@ class ErrInvalidValue(KVStoreError):
 # Data structures / configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class KVStoreConfig:
     """Configuration required to create a new key-value store instance."""
 
     wallet: WalletInterface  # Wallet abstraction used for signing/creating txs
-    context: str             # Developer-supplied logical namespace (basket)
-    originator: str = ""     # Name/id of the app using the store (optional)
-    encrypt: bool = False    # Whether to encrypt values before storage
+    context: str  # Developer-supplied logical namespace (basket)
+    originator: str = ""  # Name/id of the app using the store (optional)
+    encrypt: bool = False  # Whether to encrypt values before storage
     # Optional TS/GO-style defaults for call arguments
-    fee_rate: Optional[int] = None
-    default_ca: Optional[dict] = None
+    fee_rate: int | None = None
+    default_ca: dict | None = None
     # Optional options parity with TS
     accept_delayed_broadcast: bool = False
 
@@ -131,6 +133,7 @@ class KeyValue:
 # Public interface
 # ---------------------------------------------------------------------------
 
+
 class KVStoreInterface(ABC):
     """Python equivalent of `kvstore.KVStoreInterface` in the Go SDK."""
 
@@ -139,14 +142,13 @@ class KVStoreInterface(ABC):
     # object they deem appropriate.
 
     @abstractmethod
-    def get(self, ctx: Any, key: str, default_value: str = "") -> str:  # noqa: N802
+    def get(self, ctx: Any, key: str, default_value: str = "") -> str:
         """Retrieve a value for *key* or *default_value* if not found."""
 
     @abstractmethod
-    def set(self, ctx: Any, key: str, value: str) -> str:  # noqa: N802
+    def set(self, ctx: Any, key: str, value: str) -> str:
         """Store *value* under *key* – returns the out-point reference."""
 
     @abstractmethod
-    def remove(self, ctx: Any, key: str) -> List[str]:  # noqa: N802
+    def remove(self, ctx: Any, key: str) -> list[str]:
         """Delete *key* from the store – returns txids that performed removal."""
-

@@ -1,11 +1,11 @@
 import base64
 
 from bsv.keys import PrivateKey
-from bsv.wallet import ProtoWallet
-from bsv.wallet.key_deriver import CounterpartyType
 from bsv.keystore.interfaces import KVStoreConfig
 from bsv.keystore.local_kv_store import LocalKVStore
 from bsv.transaction.pushdrop import build_lock_before_pushdrop, decode_lock_before_pushdrop
+from bsv.wallet import ProtoWallet
+from bsv.wallet.key_deriver import CounterpartyType
 
 
 def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
@@ -14,11 +14,10 @@ def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
     wallet = ProtoWallet(priv, permission_callback=lambda action: True)
 
     # KV with proper protocol configuration
-    default_ca = {
-        "protocolID": {"securityLevel": 2, "protocol": "kvctx"},
-        "keyID": "foo"
-    }
-    kv = LocalKVStore(KVStoreConfig(wallet=wallet, context="kv.ctx", originator="org", encrypt=True, default_ca=default_ca))
+    default_ca = {"protocolID": {"securityLevel": 2, "protocol": "kvctx"}, "keyID": "foo"}
+    kv = LocalKVStore(
+        KVStoreConfig(wallet=wallet, context="kv.ctx", originator="org", encrypt=True, default_ca=default_ca)
+    )
 
     # Set encrypted
     outp = kv.set(None, "foo", "bar")
@@ -27,10 +26,20 @@ def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
     # get() should return encrypted data with enc: prefix when encrypt=True
     val = kv.get(None, "foo", "")
     assert val.startswith("enc:"), f"Expected encrypted value with 'enc:' prefix, got: {val}"
-    
+
     # Manually decrypt to validate compatibility
     ct = base64.b64decode(val[4:])
-    dec = wallet.decrypt({"encryption_args": {"protocolID": {"securityLevel": 2, "protocol": "kvctx"}, "keyID": "foo", "counterparty": {"type": CounterpartyType.SELF}}, "ciphertext": ct}, "org")
+    dec = wallet.decrypt(
+        {
+            "encryption_args": {
+                "protocolID": {"securityLevel": 2, "protocol": "kvctx"},
+                "keyID": "foo",
+                "counterparty": {"type": CounterpartyType.SELF},
+            },
+            "ciphertext": ct,
+        },
+        "org",
+    )
     # ProtoWallet.decrypt returns plaintext as list of ints (TS SDK parity)
     plaintext = dec.get("plaintext")
     if isinstance(plaintext, list):
@@ -40,8 +49,9 @@ def test_kvstore_set_get_encrypt_with_pushdrop_lock_before():
 
 def test_pushdrop_multiple_fields():
     from bsv.keys import PrivateKey
-    from bsv.wallet import ProtoWallet
     from bsv.transaction.pushdrop import build_lock_before_pushdrop, decode_lock_before_pushdrop, read_script_chunks
+    from bsv.wallet import ProtoWallet
+
     priv = PrivateKey()
     pubkey = priv.public_key().serialize()
     print("pubkey (hex):", pubkey.hex(), "len:", len(pubkey))
@@ -56,17 +66,21 @@ def test_pushdrop_multiple_fields():
     assert decoded["pubkey"] == pubkey
     assert decoded["fields"] == fields
 
+
 def test_pushdrop_with_signature():
     from bsv.keys import PrivateKey
-    from bsv.wallet import ProtoWallet
     from bsv.transaction.pushdrop import build_lock_before_pushdrop, decode_lock_before_pushdrop, read_script_chunks
+    from bsv.wallet import ProtoWallet
+
     priv = PrivateKey()
     pubkey = priv.public_key().serialize()
     print("pubkey (hex):", pubkey.hex(), "len:", len(pubkey))
     fields = [b"data"]
     # ダミー署名
     signature = b"sigdata123"
-    script = build_lock_before_pushdrop(fields, pubkey, include_signature=True, signature=signature, lock_position="before")
+    script = build_lock_before_pushdrop(
+        fields, pubkey, include_signature=True, signature=signature, lock_position="before"
+    )
     print("script (hex):", script)
     chunks = read_script_chunks(bytes.fromhex(script))
     print("chunks:", [(c.op, c.data.hex() if c.data else None) for c in chunks])
@@ -76,10 +90,12 @@ def test_pushdrop_with_signature():
     assert decoded["pubkey"] == pubkey
     assert decoded["fields"] == [b"data", signature]
 
+
 def test_pushdrop_lock_after():
     from bsv.keys import PrivateKey
-    from bsv.wallet import ProtoWallet
     from bsv.transaction.pushdrop import build_lock_before_pushdrop, decode_lock_before_pushdrop, read_script_chunks
+    from bsv.wallet import ProtoWallet
+
     priv = PrivateKey()
     pubkey = priv.public_key().serialize()
     print("pubkey (hex):", pubkey.hex(), "len:", len(pubkey))
@@ -94,10 +110,9 @@ def test_pushdrop_lock_after():
     assert decoded["pubkey"] == pubkey
     assert decoded["fields"] == fields
 
+
 def test_pushdrop_invalid_script():
     # 不正なスクリプト
     script = b"\x00\x00\x00"
     decoded = decode_lock_before_pushdrop(script, lock_position="before")
     assert decoded is None
-
-

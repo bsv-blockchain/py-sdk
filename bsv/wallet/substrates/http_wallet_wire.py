@@ -1,7 +1,10 @@
-import requests
 from typing import Optional
+
+import requests
+
 from .wallet_wire import WalletWire
 from .wallet_wire_calls import WalletWireCall
+
 
 class HTTPWalletWire(WalletWire):
     def __init__(self, originator: str, base_url: Optional[str] = None, http_client: Optional[requests.Session] = None):

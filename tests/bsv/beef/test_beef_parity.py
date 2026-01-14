@@ -1,7 +1,7 @@
 def test_parse_beef_ex_from_transaction_beef_v1():
-    from bsv.transaction import Transaction, TransactionOutput
     from bsv.script.script import Script
-    from bsv.transaction import parse_beef_ex
+    from bsv.transaction import Transaction, TransactionOutput, parse_beef_ex
+
     # Build simple tx and convert to BEEF (legacy V1 path)
     t = Transaction()
     t.outputs = [TransactionOutput(Script(b"\x51"), 1)]
@@ -12,9 +12,10 @@ def test_parse_beef_ex_from_transaction_beef_v1():
 
 
 def test_find_transaction_for_signing_links_inputs():
-    from bsv.transaction import Transaction, TransactionInput, TransactionOutput
     from bsv.script.script import Script
-    from bsv.transaction.beef import Beef, BeefTx, BEEF_V2
+    from bsv.transaction import Transaction, TransactionInput, TransactionOutput
+    from bsv.transaction.beef import BEEF_V2, Beef, BeefTx
+
     # Parent tx
     parent = Transaction()
     parent.outputs = [TransactionOutput(Script(b"\x51"), 1000)]
@@ -34,5 +35,3 @@ def test_find_transaction_for_signing_links_inputs():
     assert btx.tx_obj is not None
     # After linking, child's input should reference parent in source_transaction
     assert btx.tx_obj.inputs[0].source_transaction is parent
-
-

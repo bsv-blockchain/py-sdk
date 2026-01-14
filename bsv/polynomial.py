@@ -1,7 +1,7 @@
 import secrets
 from typing import List, Optional, Union
 
-from .base58 import b58_encode, b58_decode
+from .base58 import b58_decode, b58_encode
 from .curve import curve
 
 
@@ -23,9 +23,9 @@ class PointInFiniteField:
         """
         # Convert inputs to integers if they are bytes
         if isinstance(x, bytes):
-            x = int.from_bytes(x, 'big')
+            x = int.from_bytes(x, "big")
         if isinstance(y, bytes):
-            y = int.from_bytes(y, 'big')
+            y = int.from_bytes(y, "big")
 
         # Take modulo of coordinates with prime field size
         self.x = x % curve.p
@@ -39,13 +39,13 @@ class PointInFiniteField:
             String in format x.y where x and y are base58 encoded
         """
         # Convert integers to bytes and then base58 encode
-        x_bytes = self.x.to_bytes((self.x.bit_length() + 7) // 8, 'big')
-        y_bytes = self.y.to_bytes((self.y.bit_length() + 7) // 8, 'big')
+        x_bytes = self.x.to_bytes((self.x.bit_length() + 7) // 8, "big")
+        y_bytes = self.y.to_bytes((self.y.bit_length() + 7) // 8, "big")
 
         return f"{b58_encode(x_bytes)}.{b58_encode(y_bytes)}"
 
     @staticmethod
-    def from_string(s: str) -> 'PointInFiniteField':
+    def from_string(s: str) -> "PointInFiniteField":
         """
         Create a point from its string representation.
 
@@ -58,15 +58,15 @@ class PointInFiniteField:
         Raises:
             ValueError: If the string is not in the correct format
         """
-        parts = s.split('.')
+        parts = s.split(".")
         if len(parts) < 2:
             raise ValueError(f"Invalid point format: {s}")
 
         x, y = parts[0], parts[1]
 
         # Decode base58 strings to bytes, then to integers
-        x_int = int.from_bytes(b58_decode(x), 'big')
-        y_int = int.from_bytes(b58_decode(y), 'big')
+        x_int = int.from_bytes(b58_decode(x), "big")
+        y_int = int.from_bytes(b58_decode(y), "big")
 
         return PointInFiniteField(x_int, y_int)
 
@@ -79,7 +79,7 @@ class Polynomial:
     threshold of shares is required to reconstruct the key.
     """
 
-    def __init__(self, points: List[PointInFiniteField], threshold: Optional[int] = None):
+    def __init__(self, points: list[PointInFiniteField], threshold: Optional[int] = None):
         """
         Initialize a polynomial with the given points.
 
@@ -93,7 +93,7 @@ class Polynomial:
         self.threshold = threshold if threshold is not None else len(points)
 
     @staticmethod
-    def from_private_key(private_key_int: int, threshold: int) -> 'Polynomial':
+    def from_private_key(private_key_int: int, threshold: int) -> "Polynomial":
         """
         Create a polynomial from a private key.
 
@@ -112,15 +112,15 @@ class Polynomial:
         points = [PointInFiniteField(0, private_key_int)]
 
         # Generate additional random coefficients (as points)
-        for i in range(1, threshold):
+        for _i in range(1, threshold):
             # Generate cryptographically secure random values for x and y
             # The random function from secrets should be more secure than random
             random_x_bytes = secrets.token_bytes(32)
             random_y_bytes = secrets.token_bytes(32)
 
             # Convert to integers and take modulo p
-            random_x = int.from_bytes(random_x_bytes, 'big') % curve.p
-            random_y = int.from_bytes(random_y_bytes, 'big') % curve.p
+            random_x = int.from_bytes(random_x_bytes, "big") % curve.p
+            random_y = int.from_bytes(random_y_bytes, "big") % curve.p
 
             points.append(PointInFiniteField(random_x, random_y))
 
@@ -138,7 +138,7 @@ class Polynomial:
         """
         # Convert x to integer if it's bytes
         if isinstance(x, bytes):
-            x = int.from_bytes(x, 'big')
+            x = int.from_bytes(x, "big")
 
         # Ensure x is within the field
         x = x % curve.p
@@ -185,7 +185,7 @@ class KeyShares:
     metadata like threshold and integrity hash.
     """
 
-    def __init__(self, points: List[PointInFiniteField], threshold: int, integrity: str):
+    def __init__(self, points: list[PointInFiniteField], threshold: int, integrity: str):
         """
         Initialize key shares.
 
@@ -199,7 +199,7 @@ class KeyShares:
         self.integrity = integrity
 
     @staticmethod
-    def from_backup_format(shares: List[str]) -> 'KeyShares':
+    def from_backup_format(shares: list[str]) -> "KeyShares":
         """
         Create KeyShares from backup format strings.
 
@@ -213,34 +213,33 @@ class KeyShares:
             ValueError: If shares have invalid format or inconsistent threshold/integrity
         """
         threshold = 0
-        integrity = ''
+        integrity = ""
         points = []
 
         for idx, share in enumerate(shares):
             # Split the share string into parts
-            share_parts = share.split('.')
+            share_parts = share.split(".")
             if len(share_parts) != 4:
                 raise ValueError(
-                    f'Invalid share format in share {idx}. '
-                    f'Expected format: "x.y.t.i" - received {share}'
+                    f"Invalid share format in share {idx}. " f'Expected format: "x.y.t.i" - received {share}'
                 )
 
             # Parse the parts
             x, y, t, i = share_parts
 
             if not t:
-                raise ValueError(f'Threshold not found in share {idx}')
+                raise ValueError(f"Threshold not found in share {idx}")
             if not i:
-                raise ValueError(f'Integrity not found in share {idx}')
+                raise ValueError(f"Integrity not found in share {idx}")
 
             # Parse threshold as integer
             t_int = int(t)
 
             # Check consistency across shares
             if idx > 0 and threshold != t_int:
-                raise ValueError(f'Threshold mismatch in share {idx}')
+                raise ValueError(f"Threshold mismatch in share {idx}")
             if idx > 0 and integrity != i:
-                raise ValueError(f'Integrity mismatch in share {idx}')
+                raise ValueError(f"Integrity mismatch in share {idx}")
 
             threshold = t_int
             integrity = i
@@ -251,14 +250,11 @@ class KeyShares:
 
         return KeyShares(points, threshold, integrity)
 
-    def to_backup_format(self) -> List[str]:
+    def to_backup_format(self) -> list[str]:
         """
         Convert shares to backup format strings.
 
         Returns:
             List of share strings in format "x.y.t.i"
         """
-        return [
-            f"{point}.{self.threshold}.{self.integrity}"
-            for point in map(str, self.points)
-        ]
+        return [f"{point}.{self.threshold}.{self.integrity}" for point in map(str, self.points)]

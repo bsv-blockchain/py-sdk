@@ -5,47 +5,48 @@ This module provides script-only verification functionality, ported from
 Go-SDK's spv/verify.go package.
 """
 
-from typing import TYPE_CHECKING, List, Dict, Union
 import time
+from typing import TYPE_CHECKING, Dict, List, Union
 
 if TYPE_CHECKING:
     from bsv.transaction import Transaction
 
+from bsv.hash import double_sha256, hash256
+
 from .gullible_headers_client import GullibleHeadersClient
-from bsv.hash import hash256, double_sha256
 
 
 async def verify_scripts(tx: "Transaction") -> bool:
     """
     Verify transaction scripts without merkle proof validation.
-    
+
     This function verifies that all input scripts are valid, but skips
     merkle proof verification. It uses GullibleHeadersClient which accepts
     any merkle root as valid (for testing purposes).
-    
+
     This is useful for:
     - Testing script validation logic
     - Verifying scripts in transactions that don't have merkle proofs yet
     - Development and debugging
-    
+
     WARNING: This function does NOT verify merkle proofs. For full SPV
     verification including merkle proofs, use Transaction.verify() with
     a real ChainTracker.
-    
+
     Args:
         tx: Transaction to verify
-        
+
     Returns:
         True if all scripts are valid, False otherwise
-        
+
     Raises:
         ValueError: If transaction is missing required data (source transactions, scripts)
         Exception: If verification fails for other reasons
-        
+
     Example:
         >>> from bsv import Transaction
         >>> from bsv.spv import verify_scripts
-        >>> 
+        >>>
         >>> tx = Transaction.from_hex("...")
         >>> is_valid = await verify_scripts(tx)
         >>> print(f"Scripts valid: {is_valid}")
@@ -53,13 +54,13 @@ async def verify_scripts(tx: "Transaction") -> bool:
     # Use GullibleHeadersClient which accepts any merkle root
     # This allows script verification without merkle proof validation
     gullible_client = GullibleHeadersClient()
-    
+
     # Call transaction verify with scripts_only=True
     # This skips merkle path verification but still verifies scripts
     return await tx.verify(chaintracker=gullible_client, scripts_only=True)
 
 
-def verify_merkle_proof(txid: bytes, merkle_root: bytes, proof: List[Dict[str, Union[bytes, str]]]) -> bool:
+def verify_merkle_proof(txid: bytes, merkle_root: bytes, proof: list[dict[str, Union[bytes, str]]]) -> bool:
     """
     Verify that a transaction ID is included in a merkle tree with the given root.
 
@@ -103,19 +104,19 @@ def verify_merkle_proof(txid: bytes, merkle_root: bytes, proof: List[Dict[str, U
     return current_hash == merkle_root
 
 
-def _validate_proof_element(element: Dict[str, Union[bytes, str]]) -> tuple[bytes, str]:
+def _validate_proof_element(element: dict[str, Union[bytes, str]]) -> tuple[bytes, str]:
     """Validate and extract hash and side from proof element."""
     if not isinstance(element, dict):
         raise ValueError("Proof elements must be dictionaries")
-    if 'hash' not in element or 'side' not in element:
+    if "hash" not in element or "side" not in element:
         raise ValueError("Proof elements must contain 'hash' and 'side' keys")
 
-    sibling_hash = element['hash']
-    side = element['side']
+    sibling_hash = element["hash"]
+    side = element["side"]
 
     if not isinstance(sibling_hash, bytes) or len(sibling_hash) != 32:
         raise ValueError("Sibling hash must be 32 bytes")
-    if side not in ('left', 'right'):
+    if side not in ("left", "right"):
         raise ValueError("Side must be 'left' or 'right'")
 
     return sibling_hash, side
@@ -123,7 +124,7 @@ def _validate_proof_element(element: Dict[str, Union[bytes, str]]) -> tuple[byte
 
 def _combine_hashes(current_hash: bytes, sibling_hash: bytes, side: str) -> bytes:
     """Combine hashes in the correct order based on side."""
-    if side == 'left':
+    if side == "left":
         # Sibling is on the left, current hash is on the right
         combined = sibling_hash + current_hash
     else:
@@ -170,12 +171,12 @@ def verify_block_header(header: bytes) -> bool:
         return False
 
     # Parse header fields
-    version = int.from_bytes(header[0:4], 'little')
-    prev_block_hash = header[4:36]  # Not used in basic validation
-    merkle_root = header[36:68]     # Not used in basic validation
-    timestamp = int.from_bytes(header[68:72], 'little')
-    bits = int.from_bytes(header[72:76], 'little')
-    nonce = int.from_bytes(header[76:80], 'little')
+    version = int.from_bytes(header[0:4], "little")
+    header[4:36]  # Not used in basic validation
+    header[36:68]  # Not used in basic validation
+    timestamp = int.from_bytes(header[68:72], "little")
+    bits = int.from_bytes(header[72:76], "little")
+    int.from_bytes(header[76:80], "little")
 
     # Basic version validation (must be positive, reasonable range)
     if version < 1 or version > 0x7FFFFFFF:
@@ -189,13 +190,13 @@ def verify_block_header(header: bytes) -> bool:
 
     # Bits validation (difficulty target)
     # Bits must be in valid range and represent a valid difficulty
-    if bits < 0x1d00ffff or bits > 0x2100ffff:  # Reasonable range
+    if bits < 0x1D00FFFF or bits > 0x2100FFFF:  # Reasonable range
         return False
 
     # Extract target from bits
     # Bits format: 0x1dffffff -> difficulty 1, etc.
     exponent = bits >> 24
-    mantissa = bits & 0x00ffffff
+    mantissa = bits & 0x00FFFFFF
 
     if exponent < 3 or exponent > 32:
         return False
@@ -206,7 +207,6 @@ def verify_block_header(header: bytes) -> bool:
     # Proof of work validation
     # Hash the header and check if it's below target
     header_hash = double_sha256(header)
-    header_value = int.from_bytes(header_hash[::-1], 'big')  # Reverse for big-endian
+    header_value = int.from_bytes(header_hash[::-1], "big")  # Reverse for big-endian
 
     return header_value < target
-

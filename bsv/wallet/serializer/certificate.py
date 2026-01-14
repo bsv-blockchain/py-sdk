@@ -1,9 +1,9 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
 
-def serialize_certificate_base(cert: Dict[str, Any]) -> bytes:
+def serialize_certificate_base(cert: dict[str, Any]) -> bytes:
     """Serialize the certificate base (without signature) to bytes.
 
     Layout (Go/TS compatible):
@@ -25,7 +25,7 @@ def serialize_certificate_base(cert: Dict[str, Any]) -> bytes:
     w.write_bytes_reverse(ro.get("txid", b"\x00" * 32))
     w.write_varint(int(ro.get("index", 0)))
     # Fields (sorted by key)
-    fields: Dict[str, str] = cert.get("fields", {}) or {}
+    fields: dict[str, str] = cert.get("fields", {}) or {}
     keys = sorted(fields.keys())
     w.write_varint(len(keys))
     for k in keys:
@@ -34,10 +34,10 @@ def serialize_certificate_base(cert: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_certificate_base(data: bytes) -> Dict[str, Any]:
+def deserialize_certificate_base(data: bytes) -> dict[str, Any]:
     """Deserialize bytes into the certificate base (without signature)."""
     r = Reader(data)
-    cert: Dict[str, Any] = {}
+    cert: dict[str, Any] = {}
     cert["type"] = r.read_bytes(32)
     cert["serialNumber"] = r.read_bytes(32)
     cert["subject"] = r.read_bytes(33)
@@ -46,7 +46,7 @@ def deserialize_certificate_base(data: bytes) -> Dict[str, Any]:
     idx = r.read_varint()
     cert["revocationOutpoint"] = {"txid": txid, "index": int(idx)}
     # Fields
-    fields: Dict[str, str] = {}
+    fields: dict[str, str] = {}
     fcnt = r.read_varint()
     for _ in range(int(fcnt)):
         k = r.read_int_bytes() or b""
@@ -56,12 +56,12 @@ def deserialize_certificate_base(data: bytes) -> Dict[str, Any]:
     return cert
 
 
-def serialize_certificate_no_signature(cert: Dict[str, Any]) -> bytes:
+def serialize_certificate_no_signature(cert: dict[str, Any]) -> bytes:
     """Alias for serialize_certificate_base for clarity."""
     return serialize_certificate_base(cert)
 
 
-def serialize_certificate(cert: Dict[str, Any]) -> bytes:
+def serialize_certificate(cert: dict[str, Any]) -> bytes:
     """Serialize full certificate including trailing signature bytes (no length prefix)."""
     base = bytearray(serialize_certificate_base(cert))
     sig: bytes = cert.get("signature", b"") or b""
@@ -70,11 +70,11 @@ def serialize_certificate(cert: Dict[str, Any]) -> bytes:
     return bytes(base)
 
 
-def deserialize_certificate(data: bytes) -> Dict[str, Any]:
+def deserialize_certificate(data: bytes) -> dict[str, Any]:
     """Deserialize full certificate including optional trailing signature (no length prefix)."""
     # Parse base first
     r = Reader(data)
-    cert: Dict[str, Any] = {}
+    cert: dict[str, Any] = {}
     cert["type"] = r.read_bytes(32)
     cert["serialNumber"] = r.read_bytes(32)
     cert["subject"] = r.read_bytes(33)
@@ -82,7 +82,7 @@ def deserialize_certificate(data: bytes) -> Dict[str, Any]:
     txid = r.read_bytes_reverse(32)
     idx = r.read_varint()
     cert["revocationOutpoint"] = {"txid": txid, "index": int(idx)}
-    fields: Dict[str, str] = {}
+    fields: dict[str, str] = {}
     fcnt = r.read_varint()
     for _ in range(int(fcnt)):
         k = r.read_int_bytes() or b""
@@ -90,17 +90,15 @@ def deserialize_certificate(data: bytes) -> Dict[str, Any]:
         fields[k.decode()] = v.decode()
     cert["fields"] = fields
     # Remaining bytes (if any) are the signature
-    remaining = data[r.pos:]
+    remaining = data[r.pos :]
     cert["signature"] = remaining if remaining else b""
     return cert
 
 
 __all__ = [
-    "serialize_certificate_base",
-    "deserialize_certificate_base",
-    "serialize_certificate_no_signature",
-    "serialize_certificate",
     "deserialize_certificate",
+    "deserialize_certificate_base",
+    "serialize_certificate",
+    "serialize_certificate_base",
+    "serialize_certificate_no_signature",
 ]
-
-

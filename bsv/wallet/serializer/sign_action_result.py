@@ -1,15 +1,19 @@
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
-from bsv.wallet.substrates.serializer import Reader, Writer
+from bsv.wallet.serializer.status import (
+    CODE_TO_STATUS as _code_to_status,
+)
 from bsv.wallet.serializer.status import (
     STATUS_TO_CODE as _status_to_code,
-    CODE_TO_STATUS as _code_to_status,
-    write_txid_slice_with_status,
-    read_txid_slice_with_status,
 )
+from bsv.wallet.serializer.status import (
+    read_txid_slice_with_status,
+    write_txid_slice_with_status,
+)
+from bsv.wallet.substrates.serializer import Reader, Writer
 
 
-def serialize_sign_action_result(result: Dict[str, Any]) -> bytes:
+def serialize_sign_action_result(result: dict[str, Any]) -> bytes:
     w = Writer()
     # optional txid (with presence flag and fixed 32 bytes)
     txid: bytes = result.get("txid", b"")
@@ -29,15 +33,15 @@ def serialize_sign_action_result(result: Dict[str, Any]) -> bytes:
     else:
         w.write_byte(0)
     # sendWithResults: list of {txid: bytes32, status: str}
-    results: List[Dict[str, Any]] = result.get("sendWithResults", []) or []
+    results: list[dict[str, Any]] = result.get("sendWithResults", []) or []
     # delegate to shared helper for Go-compatible encoding
     write_txid_slice_with_status(w, results)  # type: ignore[arg-type]
     return w.to_bytes()
 
 
-def deserialize_sign_action_result(data: bytes) -> Dict[str, Any]:
+def deserialize_sign_action_result(data: bytes) -> dict[str, Any]:
     r = Reader(data)
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     # optional txid
     if r.read_byte() == 1:
         out["txid"] = r.read_bytes(32)

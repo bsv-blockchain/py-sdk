@@ -9,19 +9,30 @@ References:
 - TypeScript SDK: ts-sdk/src/script/Spend.ts
 """
 
-from bsv.script.interpreter.operations import (
-    op_1add, op_1sub, op_negate, op_abs, op_not,
-    op_0notequal, op_add, op_sub,
-    op_booland, op_boolor, op_numequal,
-    op_lessthan, op_greaterthan,
-    op_min, op_max, op_within
-)
-from bsv.script.interpreter.op_parser import ParsedOpcode
-from bsv.script.interpreter.stack import Stack
-from bsv.script.interpreter.config import BeforeGenesisConfig
-from bsv.script.interpreter.number import ScriptNumber
-from bsv.script.interpreter.errs import ErrorCode
 from bsv.constants import OpCode
+from bsv.script.interpreter.config import BeforeGenesisConfig
+from bsv.script.interpreter.errs import ErrorCode
+from bsv.script.interpreter.number import ScriptNumber
+from bsv.script.interpreter.op_parser import ParsedOpcode
+from bsv.script.interpreter.operations import (
+    op_0notequal,
+    op_1add,
+    op_1sub,
+    op_abs,
+    op_add,
+    op_booland,
+    op_boolor,
+    op_greaterthan,
+    op_lessthan,
+    op_max,
+    op_min,
+    op_negate,
+    op_not,
+    op_numequal,
+    op_sub,
+    op_within,
+)
+from bsv.script.interpreter.stack import Stack
 
 
 class MockThread:

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Optional, Dict, Set, Tuple
+from typing import Dict, Optional, Set, Tuple
 
-from bsv.utils import Reader
-from bsv.transaction import Transaction
 from bsv.merkle_path import MerklePath
-from .beef import Beef, BeefTx, BEEF_V2
+from bsv.transaction import Transaction
+from bsv.utils import Reader
+
+from .beef import BEEF_V2, Beef, BeefTx
 
 
 def remove_existing_txid(beef: Beef, txid: str) -> None:
@@ -22,14 +23,15 @@ def _leaf_exists_in_bump(bump: MerklePath, txid: str) -> bool:  # NOSONAR - Comp
     return False
 
 
-def _find_identical_bump(beef: Beef, bump: MerklePath) -> Optional[int]:
+def _find_identical_bump(beef: Beef, bump: MerklePath) -> int | None:
     """Check if identical bump instance already exists."""
     for i, existing in enumerate(getattr(beef, "bumps", []) or []):
         if existing is bump:
             return i
     return None
 
-def _find_combinable_bump(beef: Beef, bump: MerklePath) -> Optional[int]:
+
+def _find_combinable_bump(beef: Beef, bump: MerklePath) -> int | None:
     """Find bump with same height and root that can be combined."""
     for i, existing in enumerate(beef.bumps):
         if getattr(existing, "block_height", None) == getattr(bump, "block_height", None):
@@ -41,6 +43,7 @@ def _find_combinable_bump(beef: Beef, bump: MerklePath) -> Optional[int]:
                 pass
     return None
 
+
 def _attach_bump_to_transactions(beef: Beef, bump: MerklePath, bump_index: int) -> None:
     """Attach bump to transactions that it proves."""
     for btx in beef.txs.values():
@@ -51,6 +54,7 @@ def _attach_bump_to_transactions(beef: Beef, bump: MerklePath, bump_index: int) 
                     btx.tx_obj.merkle_path = bump
             except Exception:
                 pass
+
 
 def merge_bump(beef: Beef, bump: MerklePath) -> int:
     """
@@ -94,7 +98,7 @@ def _try_validate_bump_index(beef: Beef, btx: BeefTx) -> None:
             return
 
 
-def merge_raw_tx(beef: Beef, raw_tx: bytes, bump_index: Optional[int] = None) -> BeefTx:
+def merge_raw_tx(beef: Beef, raw_tx: bytes, bump_index: int | None = None) -> BeefTx:
     """
     Merge a serialized transaction (raw bytes).
     If bump_index is provided, it must be a valid index in beef.bumps.
@@ -125,7 +129,7 @@ def merge_transaction(beef: Beef, tx: Transaction) -> BeefTx:
     txid = tx.txid()
     remove_existing_txid(beef, txid)
 
-    bump_index: Optional[int] = None
+    bump_index: int | None = None
     if getattr(tx, "merkle_path", None) is not None:
         bump_index = merge_bump(beef, tx.merkle_path)
 
@@ -154,7 +158,7 @@ def merge_txid_only(beef: Beef, txid: str) -> BeefTx:
     return btx
 
 
-def make_txid_only(beef: Beef, txid: str) -> Optional[BeefTx]:
+def make_txid_only(beef: Beef, txid: str) -> BeefTx | None:
     """
     Replace an existing BeefTx for txid with txid-only form.
     """
@@ -188,5 +192,3 @@ def merge_beef(beef: Beef, other: Beef) -> None:
         merge_bump(beef, bump)
     for btx in getattr(other, "txs", {}).values():
         merge_beef_tx(beef, btx)
-
-

@@ -2,9 +2,11 @@ import pytest
 
 pytestmark = pytest.mark.skip(reason="Deprecated integration; covered by full E2E tests")
 import asyncio
-import aiohttp
 import base64
 import json
+
+import aiohttp
+
 
 @pytest.mark.asyncio
 async def test_authfetch_server_flow():

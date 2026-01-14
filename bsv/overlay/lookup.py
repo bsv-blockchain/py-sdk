@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 @dataclass
 class LookupQuestion:
     service: str
-    query: Dict[str, Any]
+    query: dict[str, Any]
 
 
 @dataclass
@@ -19,12 +19,12 @@ class LookupOutput:
 @dataclass
 class LookupAnswer:
     type: str  # 'output-list'
-    outputs: List[LookupOutput]
+    outputs: list[LookupOutput]
 
 
 @runtime_checkable
 class Backend(Protocol):
-    def __call__(self, ctx: Any, service_name: str, query: Dict[str, Any]) -> List[Dict[str, Any]]: ...
+    def __call__(self, ctx: Any, service_name: str, query: dict[str, Any]) -> list[dict[str, Any]]: ...
 
 
 class LookupResolver:
@@ -35,7 +35,7 @@ class LookupResolver:
     and returns a typed LookupAnswer with type='output-list'.
     """
 
-    def __init__(self, backend: Optional[Backend] = None) -> None:
+    def __init__(self, backend: Backend | None = None) -> None:
         self._backend = backend
 
     def set_backend(self, backend: Backend) -> None:
@@ -47,5 +47,3 @@ class LookupResolver:
         raw = self._backend(ctx, question.service, question.query) or []
         outputs = [LookupOutput(beef=o.get("beef") or b"", outputIndex=int(o.get("outputIndex") or 0)) for o in raw]
         return LookupAnswer(type="output-list", outputs=outputs)
-
-

@@ -1,15 +1,16 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from bsv.wallet.substrates.serializer import Reader, Writer
+
 from .common import (
-    serialize_encryption_args,
     deserialize_encryption_args,
-    serialize_seek_permission,
     deserialize_seek_permission,
+    serialize_encryption_args,
+    serialize_seek_permission,
 )
 
 
-def serialize_verify_signature_args(args: Dict[str, Any]) -> bytes:
+def serialize_verify_signature_args(args: dict[str, Any]) -> bytes:
     w = Writer()
     # Common encryption args
     serialize_encryption_args(
@@ -42,7 +43,7 @@ def serialize_verify_signature_args(args: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_verify_signature_args(data: bytes) -> Dict[str, Any]:
+def deserialize_verify_signature_args(data: bytes) -> dict[str, Any]:
     r = Reader(data)
     # Common encryption args
     out = deserialize_encryption_args(r)
@@ -62,7 +63,7 @@ def deserialize_verify_signature_args(data: bytes) -> Dict[str, Any]:
     return out
 
 
-def verify_signature(wallet: Any, args: Dict[str, Any], _origin: str) -> Dict[str, Any]:
+def verify_signature(wallet: Any, args: dict[str, Any], _origin: str) -> dict[str, Any]:
     """
     Verify a signature using the wallet.
 
@@ -81,7 +82,7 @@ def verify_signature(wallet: Any, args: Dict[str, Any], _origin: str) -> Dict[st
     Raises:
         AttributeError: If wallet doesn't have verify_signature method
     """
-    if not hasattr(wallet, 'verify_signature'):
+    if not hasattr(wallet, "verify_signature"):
         raise AttributeError("Wallet must have verify_signature method")
 
     # Extract signature verification parameters
@@ -97,11 +98,7 @@ def verify_signature(wallet: Any, args: Dict[str, Any], _origin: str) -> Dict[st
     try:
         if data is not None:
             result = wallet.verify_signature(
-                data=data,
-                signature=signature,
-                protocol_id=protocol_id,
-                key_id=key_id,
-                counterparty=counterparty
+                data=data, signature=signature, protocol_id=protocol_id, key_id=key_id, counterparty=counterparty
             )
         elif hash_to_verify is not None:
             result = wallet.verify_signature(
@@ -109,7 +106,7 @@ def verify_signature(wallet: Any, args: Dict[str, Any], _origin: str) -> Dict[st
                 signature=signature,
                 protocol_id=protocol_id,
                 key_id=key_id,
-                counterparty=counterparty
+                counterparty=counterparty,
             )
         else:
             # Fallback - try calling with all available args

@@ -1,12 +1,13 @@
 """
 Coverage tests for Peer handshake and general message flows.
 """
+
 import base64
 import time
 from unittest.mock import Mock, patch
 
-from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.auth_message import AuthMessage
+from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
 
@@ -26,10 +27,7 @@ def test_peer_initial_handshake_request_response():
     client_nonce = base64.b64encode(b"C" * 32).decode()
 
     initial_msg = AuthMessage(
-        version="0.1",
-        message_type="initialRequest",
-        identity_key=client_pub,
-        initial_nonce=client_nonce
+        version="0.1", message_type="initialRequest", identity_key=client_pub, initial_nonce=client_nonce
     )
 
     # Handle initial request
@@ -58,7 +56,7 @@ def test_peer_initial_handshake_missing_nonce():
     initial_msg = AuthMessage(
         version="0.1",
         message_type="initialRequest",
-        identity_key=client_pub
+        identity_key=client_pub,
         # nonce is missing
     )
 
@@ -141,9 +139,9 @@ def test_peer_listen_for_general_messages():
 
     # Register listener
     received_messages = []
+
     def on_message(sender_key, payload):
         received_messages.append((sender_key, payload))
-        return None
 
     listener_id = peer.listen_for_general_messages(on_message)
     assert listener_id is not None
@@ -155,7 +153,7 @@ def test_peer_listen_for_general_messages():
         message_type="general",
         identity_key=sender_pub,
         payload=test_payload,
-        your_nonce=session_manager.get_session(sender_pub.hex()).peer_nonce
+        your_nonce=session_manager.get_session(sender_pub.hex()).peer_nonce,
     )
 
     # Handle the message
@@ -203,7 +201,7 @@ def test_peer_handle_general_message_missing_nonce():
         version="0.1",
         message_type="general",
         identity_key=sender_pub,
-        payload=b"test"
+        payload=b"test",
         # your_nonce is missing
     )
 
@@ -227,7 +225,7 @@ def test_peer_handle_general_message_with_session():
         message_type="general",
         identity_key=sender_pub,
         payload=b"test",
-        your_nonce=session.session_nonce  # Use correct nonce from session
+        your_nonce=session.session_nonce,  # Use correct nonce from session
     )
 
     err = peer.handle_general_message(general_msg, sender_pub)
@@ -246,11 +244,11 @@ def test_peer_request_certificates_timeout():
     _seed_authenticated_session(session_manager, target_pub)
 
     # Request certificates with very short timeout
-    err = peer.request_certificates(target_pub, {"types": {"t": ["f"]}}, max_wait_time=1)
+    peer.request_certificates(target_pub, {"types": {"t": ["f"]}}, max_wait_time=1)
 
     # Should timeout or return error (depending on implementation)
     # The test mainly ensures the timeout parameter is handled
-    pass  # Either succeeds or fails gracefully
+    # Either succeeds or fails gracefully
 
 
 def test_peer_send_certificate_response():

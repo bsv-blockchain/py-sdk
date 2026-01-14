@@ -4,16 +4,17 @@ Opcode operations for script interpreter.
 Ported from go-sdk/script/interpreter/operations.go and py-sdk/bsv/script/spend.py
 """
 
-from typing import Optional, List
+# Type hint for Thread to avoid circular import
+from typing import TYPE_CHECKING, List, Optional
 
-from bsv.constants import OpCode, SIGHASH
+from bsv.constants import SIGHASH, OpCode
 from bsv.curve import curve
-from bsv.hash import sha1, sha256, ripemd160, hash256, hash160
+from bsv.hash import hash160, hash256, ripemd160, sha1, sha256
 from bsv.keys import PublicKey
 from bsv.script.script import Script
 from bsv.transaction_input import TransactionInput
 from bsv.transaction_preimage import tx_preimage
-from bsv.utils import unsigned_to_bytes, unsigned_to_varint, deserialize_ecdsa_der, serialize_ecdsa_der
+from bsv.utils import deserialize_ecdsa_der, serialize_ecdsa_der, unsigned_to_bytes, unsigned_to_varint
 
 from .errs import Error, ErrorCode
 from .number import ScriptNumber
@@ -21,8 +22,6 @@ from .op_parser import ParsedOpcode
 from .scriptflag import Flag
 from .stack import Stack
 
-# Type hint for Thread to avoid circular import
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .thread import Thread
 
@@ -74,6 +73,7 @@ def minimally_encode(num: int) -> bytes:
         octets[-1] |= 0x80
     return bytes(octets)
 
+
 def _pop_script_int(t: "Thread") -> tuple[Optional[ScriptNumber], Optional[Error]]:
     """
     Pop a ScriptNumber from the data stack and convert common parsing failures into interpreter errors.
@@ -91,7 +91,9 @@ def _pop_script_int(t: "Thread") -> tuple[Optional[ScriptNumber], Optional[Error
         return None, Error(ErrorCode.ERR_INVALID_NUMBER_RANGE, msg)
 
 
-def check_signature_encoding(sig: bytes, require_low_s: bool = True, require_der: bool = True, require_strict: bool = False) -> Optional[Error]:  # NOSONAR - Complexity (26), requires refactoring
+def check_signature_encoding(
+    sig: bytes, require_low_s: bool = True, require_der: bool = True, require_strict: bool = False
+) -> Optional[Error]:  # NOSONAR - Complexity (26), requires refactoring
     """
     Check signature encoding with detailed DER validation.
 
@@ -138,13 +140,18 @@ def check_signature_encoding(sig: bytes, require_low_s: bool = True, require_der
 
         # The signature must start with the ASN.1 sequence identifier.
         if sig[sequence_offset] != asn1_sequence_id:
-            return Error(ErrorCode.ERR_SIG_INVALID_SEQ_ID, f"malformed signature: format has wrong type: {sig[sequence_offset]:#x}")
+            return Error(
+                ErrorCode.ERR_SIG_INVALID_SEQ_ID,
+                f"malformed signature: format has wrong type: {sig[sequence_offset]:#x}",
+            )
 
         # The signature must indicate the correct amount of data for all elements
         # related to R and S.
         if int(sig[data_len_offset]) != sig_len - 2:
-            return Error(ErrorCode.ERR_SIG_INVALID_DATA_LEN,
-                        f"malformed signature: bad length: {sig[data_len_offset]} != {sig_len - 2}")
+            return Error(
+                ErrorCode.ERR_SIG_INVALID_DATA_LEN,
+                f"malformed signature: bad length: {sig[data_len_offset]} != {sig_len - 2}",
+            )
 
         # Calculate the offsets of the elements related to S and ensure S is inside
         # the signature.
@@ -167,8 +174,10 @@ def check_signature_encoding(sig: bytes, require_low_s: bool = True, require_der
 
         # R elements must be ASN.1 integers.
         if sig[r_type_offset] != asn1_integer_id:
-            return Error(ErrorCode.ERR_SIG_INVALID_R_INT_ID,
-                        f"malformed signature: R integer marker: {sig[r_type_offset]:#x} != {asn1_integer_id:#x}")
+            return Error(
+                ErrorCode.ERR_SIG_INVALID_R_INT_ID,
+                f"malformed signature: R integer marker: {sig[r_type_offset]:#x} != {asn1_integer_id:#x}",
+            )
 
         # Zero-length integers are not allowed for R.
         if r_len == 0:
@@ -185,8 +194,10 @@ def check_signature_encoding(sig: bytes, require_low_s: bool = True, require_der
 
         # S elements must be ASN.1 integers.
         if sig[s_type_offset] != asn1_integer_id:
-            return Error(ErrorCode.ERR_SIG_INVALID_S_INT_ID,
-                        f"malformed signature: S integer marker: {sig[s_type_offset]:#x} != {asn1_integer_id:#x}")
+            return Error(
+                ErrorCode.ERR_SIG_INVALID_S_INT_ID,
+                f"malformed signature: S integer marker: {sig[s_type_offset]:#x} != {asn1_integer_id:#x}",
+            )
 
         # Zero-length integers are not allowed for S.
         if s_len == 0:
@@ -228,7 +239,7 @@ def check_signature_encoding(sig: bytes, require_low_s: bool = True, require_der
                 return Error(ErrorCode.ERR_SIG_HIGH_S, "empty S value")
 
             # Convert to integer and check if > curve.n // 2
-            s_value = int.from_bytes(s_bytes, byteorder='big')
+            s_value = int.from_bytes(s_bytes, byteorder="big")
             curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
             if s_value > curve_order // 2:
                 return Error(ErrorCode.ERR_SIG_HIGH_S, "signature is not canonical due to unnecessarily high S value")
@@ -236,6 +247,7 @@ def check_signature_encoding(sig: bytes, require_low_s: bool = True, require_der
             return Error(ErrorCode.ERR_SIG_HIGH_S, "failed to parse S value from DER signature")
 
     return None
+
 
 def _deserialize_ecdsa_der_lax(data: bytes) -> tuple[int, int]:
     """
@@ -255,7 +267,7 @@ def _deserialize_ecdsa_der_lax(data: bytes) -> tuple[int, int]:
     r_off = 4
     if r_off + r_len + 2 > len(der):
         raise ValueError("bad DER R length")
-    r = int.from_bytes(der[r_off:r_off + r_len], "big", signed=False)
+    r = int.from_bytes(der[r_off : r_off + r_len], "big", signed=False)
     s_type_off = r_off + r_len
     if der[s_type_off] != 0x02:
         raise ValueError("bad DER S marker")
@@ -263,11 +275,11 @@ def _deserialize_ecdsa_der_lax(data: bytes) -> tuple[int, int]:
     s_off = s_type_off + 2
     if s_off + s_len != len(der):
         raise ValueError("bad DER S length")
-    s = int.from_bytes(der[s_off:s_off + s_len], "big", signed=False)
+    s = int.from_bytes(der[s_off : s_off + s_len], "big", signed=False)
     return r, s
 
 
-def remove_signature_from_script(script: List[ParsedOpcode], sig: bytes) -> List[ParsedOpcode]:
+def remove_signature_from_script(script: list[ParsedOpcode], sig: bytes) -> list[ParsedOpcode]:
     """
     Remove all occurrences of the signature from the script.
 
@@ -292,12 +304,12 @@ def remove_signature_from_script(script: List[ParsedOpcode], sig: bytes) -> List
     return [pop for pop in script if not (pop.data == sig and pop.opcode == want_opcode)]
 
 
-def remove_opcode(script: List[ParsedOpcode], opcode: bytes) -> List[ParsedOpcode]:
+def remove_opcode(script: list[ParsedOpcode], opcode: bytes) -> list[ParsedOpcode]:
     """Remove all occurrences of an opcode (by opcode byte) from the script."""
     return [pop for pop in script if pop.opcode != opcode]
 
 
-def _serialize_parsed_script(script: List[ParsedOpcode]) -> bytes:
+def _serialize_parsed_script(script: list[ParsedOpcode]) -> bytes:
     """Serialize ParsedScript back into raw script bytes (sufficient for sighash scriptCode)."""
     out = bytearray()
     for pop in script:
@@ -322,6 +334,7 @@ def _serialize_parsed_script(script: List[ParsedOpcode]) -> bytes:
             # Defensive: if parser ever attaches data to non-push ops, just append data.
             out += pop.data
     return bytes(out)
+
 
 def _sighash_from_int(v: int) -> SIGHASH:
     """
@@ -622,10 +635,9 @@ def op_else(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
         if t.else_stack[-1]:
             return Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, ERR_OP_ELSE_REQUIRES_PRECEDING_OP_IF)
         t.else_stack[-1] = True
-    else:
-        # Pre-genesis: multiple ELSE toggles are permitted.
-        if len(t.else_stack) > 0:
-            t.else_stack[-1] = True
+    # Pre-genesis: multiple ELSE toggles are permitted.
+    elif len(t.else_stack) > 0:
+        t.else_stack[-1] = True
 
     if t.cond_stack[-1] == opCondTrue:
         t.cond_stack[-1] = opCondFalse
@@ -683,7 +695,9 @@ def op_to_alt_stack(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
 def op_from_alt_stack(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_FROMALTSTACK."""
     if t.astack.depth() < 1:
-        return Error(ErrorCode.ERR_INVALID_ALTSTACK_OPERATION, "OP_FROMALTSTACK requires at least one item on alt stack")
+        return Error(
+            ErrorCode.ERR_INVALID_ALTSTACK_OPERATION, "OP_FROMALTSTACK requires at least one item on alt stack"
+        )
     val = t.astack.pop_byte_array()
     t.dstack.push_byte_array(val)
     return None
@@ -1175,7 +1189,9 @@ def op_lessthanorequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
 def op_greaterthanorequal(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_GREATERTHANOREQUAL."""
     if t.dstack.depth() < 2:
-        return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_GREATERTHANOREQUAL requires at least two items on stack")
+        return Error(
+            ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_GREATERTHANOREQUAL requires at least two items on stack"
+        )
     v0, err = _pop_script_int(t)
     if err:
         return err
@@ -1319,20 +1335,21 @@ def op_checksig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
         err = check_public_key_encoding(pub_key)
         if err:
             return err
-    
+
     # Compute signature hash
     sighash = _compute_signature_hash(t, sig, sighash_flag)
     if sighash is None:
         t.dstack.push_byte_array(encode_bool(False))
         return None
-    
+
     # Verify signature and check null fail
     result = _verify_signature_with_nullfail(t, pub_key, sig_bytes, sighash)
     if isinstance(result, Error):
         return result
-    
+
     t.dstack.push_byte_array(encode_bool(result))
     return None
+
 
 def _validate_signature_and_pubkey_encoding(t: "Thread", sig: bytes, pub_key: bytes) -> Optional[Error]:
     """Validate signature and public key encodings based on flags."""
@@ -1343,10 +1360,11 @@ def _validate_signature_and_pubkey_encoding(t: "Thread", sig: bytes, pub_key: by
     err = check_signature_encoding(sig, require_low_s, require_der, require_strict)
     if err:
         return err
-    
+
     if require_strict:
         return check_public_key_encoding(pub_key)
     return None
+
 
 def _extract_sighash_from_signature(t: "Thread", sig: bytes) -> tuple:
     """Extract sighash type from signature."""
@@ -1360,6 +1378,7 @@ def _extract_sighash_from_signature(t: "Thread", sig: bytes) -> tuple:
 
     sighash_flag = _sighash_from_int(shf_val)
     return sighash_flag, sig_bytes, None
+
 
 def _compute_sighash_internal(t: "Thread", script_bytes: bytes, sighash_flag) -> Optional[bytes]:
     """
@@ -1413,7 +1432,9 @@ def _compute_legacy_sighash(t: "Thread", script_bytes: bytes, shf_val: int) -> b
     return hash256(bytes(raw))
 
 
-def _serialize_legacy_inputs(raw: bytearray, t: "Thread", script_bytes: bytes, hash_type: int, anyone_can_pay: bool) -> None:
+def _serialize_legacy_inputs(
+    raw: bytearray, t: "Thread", script_bytes: bytes, hash_type: int, anyone_can_pay: bool
+) -> None:
     """Serialize inputs for legacy sighash computation."""
     if anyone_can_pay:
         raw += unsigned_to_varint(1)
@@ -1454,20 +1475,23 @@ def _serialize_legacy_outputs(raw: bytearray, t: "Thread", hash_type: int) -> No
             raw += o.serialize()
 
 
-def _compute_signature_hash(t: "Thread", sig: bytes, sighash_flag) -> Optional[bytes]:  # NOSONAR - Complexity (25), requires refactoring
+def _compute_signature_hash(
+    t: "Thread", sig: bytes, sighash_flag
+) -> Optional[bytes]:  # NOSONAR - Complexity (25), requires refactoring
     """Compute the signature hash digest (32 bytes) for verification."""
     sub_script = t.sub_script()
-    
+
     # Mirror go-sdk: remove signature and OP_CODESEPARATOR when not using forkid mode.
     if (not t.flags.has_flag(t.flags.ENABLE_SIGHASH_FORK_ID)) or not (int(sighash_flag) & int(SIGHASH.FORKID)):
         sub_script = remove_signature_from_script(sub_script, sig)
         sub_script = remove_opcode(sub_script, OpCode.OP_CODESEPARATOR.value)
-    
+
     try:
         script_bytes = _serialize_parsed_script(sub_script)
         return _compute_sighash_internal(t, script_bytes, sighash_flag)
     except Exception:
         return None
+
 
 def _verify_signature_with_nullfail(t: "Thread", pub_key: bytes, sig_bytes: bytes, sighash: bytes):
     """Verify signature and check null fail condition."""
@@ -1488,10 +1512,10 @@ def _verify_signature_with_nullfail(t: "Thread", pub_key: bytes, sig_bytes: byte
         result = pubkey_obj.verify(sig_to_verify, sighash, hasher=lambda m: m)
     except Exception:
         result = False
-    
+
     if not result and len(sig_bytes) > 0 and t.flags.has_flag(t.flags.VERIFY_NULL_FAIL):
         return Error(ErrorCode.ERR_SIG_NULLFAIL, "signature not empty on failed checksig")
-    
+
     return result
 
 
@@ -1506,7 +1530,9 @@ def op_checksig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSONAR - Complexity (82), requires refactoring
+def op_checkmultisig(
+    pop: ParsedOpcode, t: "Thread"
+) -> Optional[Error]:  # NOSONAR - Complexity (82), requires refactoring
     """Handle OP_CHECKMULTISIG."""
     # Consensus stack handling + (partial) verification semantics aligned to go-sdk.
     #
@@ -1607,7 +1633,9 @@ def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSO
         shf = _sighash_from_int(shf_val)
 
         # Signature encoding checks (before pubkey checks).
-        require_der = t.flags.has_flag(t.flags.VERIFY_DER_SIGNATURES) or t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
+        require_der = t.flags.has_flag(t.flags.VERIFY_DER_SIGNATURES) or t.flags.has_flag(
+            t.flags.VERIFY_STRICT_ENCODING
+        )
         require_low_s = t.flags.has_flag(t.flags.VERIFY_LOW_S)
         require_strict = t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
         err = check_signature_encoding(sig_bytes, require_low_s, require_der, require_strict)
@@ -1732,7 +1760,9 @@ def op_bin2num(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     result = bin2num(x)
     b = minimally_encode(result)
     if len(b) > t.cfg.max_script_number_length():
-        return Error(ErrorCode.ERR_NUMBER_TOO_BIG, f"script numbers are limited to {t.cfg.max_script_number_length()} bytes")
+        return Error(
+            ErrorCode.ERR_NUMBER_TOO_BIG, f"script numbers are limited to {t.cfg.max_script_number_length()} bytes"
+        )
     t.dstack.push_byte_array(b)
     return None
 
@@ -2031,4 +2061,3 @@ OPCODE_DISPATCH = {
     OpCode.OP_LSHIFT: op_lshift,
     OpCode.OP_RSHIFT: op_rshift,
 }
-

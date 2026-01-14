@@ -1,15 +1,18 @@
 import hashlib
 from typing import Optional
-from bsv.base58 import to_base58check, from_base58check
+
+from bsv.base58 import from_base58check, to_base58check
 
 UHRP_PREFIX = b"\xce\x00"  # 2-byte prefix for UHRP URLs (same as TS/GO SDK)
 UHRP_PREFIX_STR = "uhrp://"
+
 
 class StorageUtils:
     """
     Utility functions for UHRP URL validation, normalization, hash extraction, and URL generation.
     Compatible with TS/GO SDK UHRP conventions.
     """
+
     @staticmethod
     def normalize_url(uhrp_url: str) -> str:
         """

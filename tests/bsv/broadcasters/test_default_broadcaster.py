@@ -5,8 +5,9 @@ Ported from TypeScript SDK.
 """
 
 import pytest
-from bsv.broadcasters.default_broadcaster import default_broadcaster
+
 from bsv.broadcasters.arc import ARC
+from bsv.broadcasters.default_broadcaster import default_broadcaster
 from bsv.constants import Network
 
 
@@ -33,7 +34,7 @@ class TestDefaultBroadcaster:
         """Test default_broadcaster with custom config."""
         from bsv.broadcasters.arc import ARCConfig
 
-        config = ARCConfig(api_key="test-key")  # noqa: S106  # NOSONAR - Mock API key for tests
+        config = ARCConfig(api_key="test-key")  # NOSONAR - Mock API key for tests
         broadcaster = default_broadcaster(is_testnet=False, config=config)
 
         # Should create an ARC broadcaster with config
@@ -45,7 +46,7 @@ class TestDefaultBroadcaster:
         """Test default_broadcaster for testnet with custom config."""
         from bsv.broadcasters.arc import ARCConfig
 
-        config = ARCConfig(api_key="test-key")  # noqa: S106  # NOSONAR - Mock API key for tests
+        config = ARCConfig(api_key="test-key")  # NOSONAR - Mock API key for tests
         broadcaster = default_broadcaster(is_testnet=True, config=config)
 
         # Should create an ARC broadcaster with testnet URL and config

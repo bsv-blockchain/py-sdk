@@ -1,14 +1,14 @@
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
 
-def serialize_list_outputs_args(args: Dict[str, Any]) -> bytes:  # NOSONAR - Complexity (21), requires refactoring
+def serialize_list_outputs_args(args: dict[str, Any]) -> bytes:  # NOSONAR - Complexity (21), requires refactoring
     w = Writer()
     # basket
     w.write_string(args.get("basket", ""))
     # tags
-    tags: Optional[List[str]] = args.get("tags")
+    tags: Optional[list[str]] = args.get("tags")
     if tags:
         w.write_varint(len(tags))
         for tag in tags:
@@ -50,12 +50,12 @@ def serialize_list_outputs_args(args: Dict[str, Any]) -> bytes:  # NOSONAR - Com
     return w.to_bytes()
 
 
-def deserialize_list_outputs_args(data: bytes) -> Dict[str, Any]:
+def deserialize_list_outputs_args(data: bytes) -> dict[str, Any]:
     r = Reader(data)
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     out["basket"] = r.read_string()
     tcnt = r.read_varint()
-    tags: List[str] = []
+    tags: list[str] = []
     if tcnt != (1 << 64) - 1:
         for _ in range(int(tcnt)):
             tags.append(r.read_string())
@@ -84,14 +84,15 @@ def deserialize_list_outputs_args(data: bytes) -> Dict[str, Any]:
     return out
 
 
-def serialize_list_outputs_result(result: Dict[str, Any]) -> bytes:
+def serialize_list_outputs_result(result: dict[str, Any]) -> bytes:
     w = Writer()
-    outputs: List[Dict[str, Any]] = result.get("outputs", [])
+    outputs: list[dict[str, Any]] = result.get("outputs", [])
     w.write_varint(len(outputs))
     _serialize_beef(w, result.get("beef"))
     for out in outputs:
         _serialize_output(w, out)
     return w.to_bytes()
+
 
 def _serialize_beef(w: Writer, beef: Optional[bytes]):
     """Serialize optional BEEF."""
@@ -100,15 +101,18 @@ def _serialize_beef(w: Writer, beef: Optional[bytes]):
     else:
         w.write_int_bytes(beef)
 
-def _serialize_output(w: Writer, out: Dict[str, Any]):
+
+def _serialize_output(w: Writer, out: dict[str, Any]):
     """Serialize a single output."""
     from bsv.wallet.serializer.common import encode_outpoint
-    w.write_bytes(encode_outpoint(out.get("outpoint", {"txid": b"\x00"*32, "index": 0})))
+
+    w.write_bytes(encode_outpoint(out.get("outpoint", {"txid": b"\x00" * 32, "index": 0})))
     w.write_varint(int(out.get("satoshis", 0)))
     _serialize_optional_locking_script(w, out.get("lockingScript"))
     _serialize_optional_custom_instructions(w, out.get("customInstructions"))
     _serialize_string_list(w, out.get("tags") or [])
     _serialize_string_list(w, out.get("labels") or [])
+
 
 def _serialize_optional_locking_script(w: Writer, ls: Optional[bytes]):
     """Serialize optional locking script."""
@@ -117,6 +121,7 @@ def _serialize_optional_locking_script(w: Writer, ls: Optional[bytes]):
     else:
         w.write_int_bytes(ls)
 
+
 def _serialize_optional_custom_instructions(w: Writer, ci: Optional[str]):
     """Serialize optional custom instructions."""
     if ci is None or ci == "":
@@ -124,14 +129,15 @@ def _serialize_optional_custom_instructions(w: Writer, ci: Optional[str]):
     else:
         w.write_string(ci)
 
-def _serialize_string_list(w: Writer, items: List[str]):
+
+def _serialize_string_list(w: Writer, items: list[str]):
     """Serialize a list of strings."""
     w.write_varint(len(items))
     for item in items:
         w.write_string(item)
 
 
-def deserialize_list_outputs_result(data: bytes) -> Dict[str, Any]:
+def deserialize_list_outputs_result(data: bytes) -> dict[str, Any]:
     r = Reader(data)
     cnt = r.read_varint()
     beef = _deserialize_beef(r)
@@ -141,6 +147,7 @@ def deserialize_list_outputs_result(data: bytes) -> Dict[str, Any]:
         result["beef"] = beef
     return result
 
+
 def _deserialize_beef(r: Reader) -> Optional[bytes]:
     """Deserialize optional BEEF."""
     beef_len = r.read_varint()
@@ -148,13 +155,16 @@ def _deserialize_beef(r: Reader) -> Optional[bytes]:
         return None
     return r.read_bytes(int(beef_len)) if beef_len > 0 else b""
 
-def _deserialize_output(r: Reader) -> Dict[str, Any]:
+
+def _deserialize_output(r: Reader) -> dict[str, Any]:
     """Deserialize a single output."""
     txid = r.read_bytes_reverse(32)
     idx = r.read_varint()
     satoshis = int(r.read_varint())
     ls_len = r.read_varint()
-    lockingScript = b"" if ls_len == (1 << 64) - 1 else r.read_bytes(int(ls_len))  # NOSONAR - camelCase matches wallet wire API
+    lockingScript = (
+        b"" if ls_len == (1 << 64) - 1 else r.read_bytes(int(ls_len))
+    )  # NOSONAR - camelCase matches wallet wire API
     customInstructions = r.read_string()  # NOSONAR - camelCase matches wallet wire API
     tcnt = r.read_varint()
     tags = [r.read_string() for _ in range(int(tcnt))]

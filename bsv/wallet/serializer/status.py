@@ -6,16 +6,16 @@ from bsv.wallet.substrates.serializer import Reader, Writer
 # actionResultStatusCodeUnproven = 1
 # actionResultStatusCodeSending  = 2
 # actionResultStatusCodeFailed   = 3
-STATUS_TO_CODE: Dict[str, int] = {
+STATUS_TO_CODE: dict[str, int] = {
     "unproven": 1,
     "sending": 2,
     "failed": 3,
 }
 
-CODE_TO_STATUS: Dict[int, str] = {v: k for k, v in STATUS_TO_CODE.items()}
+CODE_TO_STATUS: dict[int, str] = {v: k for k, v in STATUS_TO_CODE.items()}
 
 
-def write_txid_slice_with_status(writer: Writer, results: List[Dict[str, bytes]]) -> None:
+def write_txid_slice_with_status(writer: Writer, results: list[dict[str, bytes]]) -> None:
     """Write a slice of {txid, status} pairs.
 
     - txid: 32-byte little-endian hash as bytes (written as-is, not reversed)
@@ -40,10 +40,10 @@ def write_txid_slice_with_status(writer: Writer, results: List[Dict[str, bytes]]
         writer.write_byte(code)
 
 
-def read_txid_slice_with_status(reader: Reader) -> List[Dict[str, bytes]]:
+def read_txid_slice_with_status(reader: Reader) -> list[dict[str, bytes]]:
     """Read a slice of {txid, status} pairs written by write_txid_slice_with_status."""
     count = reader.read_varint()
-    out: List[Dict[str, bytes]] = []
+    out: list[dict[str, bytes]] = []
     for _ in range(int(count)):
         txid = reader.read_bytes(32)
         code = reader.read_byte()
@@ -55,10 +55,8 @@ def read_txid_slice_with_status(reader: Reader) -> List[Dict[str, bytes]]:
 
 
 __all__ = [
-    "STATUS_TO_CODE",
     "CODE_TO_STATUS",
-    "write_txid_slice_with_status",
+    "STATUS_TO_CODE",
     "read_txid_slice_with_status",
+    "write_txid_slice_with_status",
 ]
-
-

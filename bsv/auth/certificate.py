@@ -1,12 +1,15 @@
 import base64
-from typing import Dict, Optional, Any, NamedTuple
-from bsv.keys import PublicKey, PrivateKey
-from bsv.utils import unsigned_to_varint, Reader, Writer, serialize_ecdsa_der, deserialize_ecdsa_der, hash256
+from typing import Any, Dict, NamedTuple, Optional
+
+from bsv.keys import PrivateKey, PublicKey
+from bsv.utils import Reader, Writer, deserialize_ecdsa_der, hash256, serialize_ecdsa_der, unsigned_to_varint
+
 
 # Simple representation of Outpoint
 class Outpoint(NamedTuple):
     txid: str  # 32byte hex string
     index: int
+
 
 class Certificate:
     def __init__(
@@ -16,7 +19,7 @@ class Certificate:
         subject: PublicKey,
         certifier: PublicKey,
         revocation_outpoint: Optional[Outpoint],
-        fields: Dict[str, str],
+        fields: dict[str, str],
         signature: Optional[bytes] = None,
     ):
         self.type = cert_type  # base64 string

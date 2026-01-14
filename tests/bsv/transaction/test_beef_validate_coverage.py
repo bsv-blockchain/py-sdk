@@ -1,14 +1,22 @@
 """
 Coverage tests for beef_validate.py - untested branches.
 """
-import pytest
-from bsv.transaction.beef_validate import validate_transactions, ValidationResult, is_valid, verify_valid, get_valid_txids
-from bsv.transaction.beef import Beef
 
+import pytest
+
+from bsv.transaction.beef import Beef
+from bsv.transaction.beef_validate import (
+    ValidationResult,
+    get_valid_txids,
+    is_valid,
+    validate_transactions,
+    verify_valid,
+)
 
 # ========================================================================
 # validate_transactions branches
 # ========================================================================
+
 
 def test_validate_transactions_with_empty_beef():
     """Test validate_transactions with empty BEEF."""
@@ -32,7 +40,8 @@ def test_validate_transactions_with_no_bumps():
 def test_validate_transactions_with_missing_bumps_attr():
     """Test validate_transactions when bumps attribute is missing."""
     from types import SimpleNamespace
-    from typing import cast, Any
+    from typing import Any, cast
+
     beef = SimpleNamespace()
     beef.txs = {}
     # No bumps attribute - test with incomplete mock object
@@ -47,6 +56,7 @@ def test_validate_transactions_with_missing_bumps_attr():
 # ========================================================================
 # is_valid branches
 # ========================================================================
+
 
 def test_is_valid_with_empty_beef():
     """Test is_valid with empty BEEF."""
@@ -69,6 +79,7 @@ def test_is_valid_with_allow_txid_only():
 # ========================================================================
 # verify_valid branches
 # ========================================================================
+
 
 def test_verify_valid_with_empty_beef():
     """Test verify_valid with empty BEEF."""
@@ -94,6 +105,7 @@ def test_verify_valid_with_allow_txid_only():
 # get_valid_txids branches
 # ========================================================================
 
+
 def test_get_valid_txids_with_empty_beef():
     """Test get_valid_txids with empty BEEF."""
     beef = Beef(version=4)
@@ -108,6 +120,7 @@ def test_get_valid_txids_with_empty_beef():
 # ValidationResult class
 # ========================================================================
 
+
 def test_validation_result_str():
     """Test ValidationResult string representation."""
     result = ValidationResult()
@@ -117,4 +130,3 @@ def test_validation_result_str():
     str_repr = str(result)
     assert "valid" in str_repr
     assert "tx1" in str_repr
-

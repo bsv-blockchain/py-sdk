@@ -1,7 +1,8 @@
-import time
 import threading
-from bsv.auth.session_manager import DefaultSessionManager
+import time
+
 from bsv.auth.peer_session import PeerSession
+from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
 
 
@@ -35,6 +36,7 @@ def test_session_expiry_removes_old_sessions():
     class _DummyTransport:
         def on_data(self, cb):
             return None
+
         def send(self, msg):
             return None
 
@@ -51,7 +53,7 @@ def test_concurrent_session_expiration():
     sm = DefaultSessionManager()
     now_ms = int(time.time() * 1000)
     identity_key = PrivateKey(1).public_key()
-    
+
     # Create multiple old sessions
     sessions = []
     for i in range(10):
@@ -64,7 +66,7 @@ def test_concurrent_session_expiration():
         )
         sm.add_session(session)
         sessions.append(session)
-    
+
     # Create one fresh session
     fresh = PeerSession(
         is_authenticated=True,
@@ -74,24 +76,24 @@ def test_concurrent_session_expiration():
         last_update=now_ms,
     )
     sm.add_session(fresh)
-    
+
     # Expire sessions concurrently from multiple threads
     def expire_sessions():
         sm.expire_older_than(max_age_sec=1)
-    
+
     threads = []
     for _ in range(5):
         t = threading.Thread(target=expire_sessions)
         threads.append(t)
         t.start()
-    
+
     for t in threads:
         t.join()
-    
+
     # All old sessions should be removed
     for session in sessions:
         assert sm.get_session(session.session_nonce) is None
-    
+
     # Fresh session should remain
     assert sm.get_session("fresh") is not None
 
@@ -101,7 +103,7 @@ def test_expiration_during_active_operations():
     sm = DefaultSessionManager()
     now_ms = int(time.time() * 1000)
     identity_key = PrivateKey(1).public_key()
-    
+
     old_session = PeerSession(
         is_authenticated=True,
         session_nonce="old-active",
@@ -110,7 +112,7 @@ def test_expiration_during_active_operations():
         last_update=now_ms - 20_000,
     )
     sm.add_session(old_session)
-    
+
     fresh_session = PeerSession(
         is_authenticated=True,
         session_nonce="fresh-active",
@@ -119,9 +121,10 @@ def test_expiration_during_active_operations():
         last_update=now_ms,
     )
     sm.add_session(fresh_session)
-    
+
     # Access sessions while expiring
     access_count = [0]
+
     def access_sessions():
         for _ in range(10):
             s1 = sm.get_session("old-active")
@@ -131,19 +134,17 @@ def test_expiration_during_active_operations():
             if s2:
                 access_count[0] += 1
             time.sleep(0.01)
-    
+
     expire_thread = threading.Thread(target=lambda: sm.expire_older_than(max_age_sec=1))
     access_thread = threading.Thread(target=access_sessions)
-    
+
     expire_thread.start()
     access_thread.start()
-    
+
     expire_thread.join()
     access_thread.join()
-    
+
     # Old session should be removed
     assert sm.get_session("old-active") is None
     # Fresh session should remain
     assert sm.get_session("fresh-active") is not None
-
-

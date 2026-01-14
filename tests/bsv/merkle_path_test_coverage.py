@@ -1,13 +1,15 @@
 """
 Coverage tests for merkle_path.py - untested branches.
 """
-import pytest
-from bsv.merkle_path import MerklePath
 
+import pytest
+
+from bsv.merkle_path import MerklePath
 
 # ========================================================================
 # MerklePath initialization branches
 # ========================================================================
+
 
 def test_merkle_path_init_empty():
     """Test MerklePath with empty path."""
@@ -18,10 +20,7 @@ def test_merkle_path_init_empty():
 
 def test_merkle_path_init_with_path():
     """Test MerklePath with path data."""
-    path = [
-        {"offset": 0, "hash": "00" * 32},
-        {"offset": 1, "hash": "11" * 32}
-    ]
+    path = [{"offset": 0, "hash": "00" * 32}, {"offset": 1, "hash": "11" * 32}]
     mp = MerklePath(block_height=100, path=path)
     assert mp.block_height == 100
     assert len(mp.path) == 2
@@ -37,6 +36,7 @@ def test_merkle_path_init_with_txid():
 # MerklePath methods
 # ========================================================================
 
+
 def test_merkle_path_to_dict():
     """Test MerklePath to_dict."""
     path = [{"offset": 0, "hash": "00" * 32}]
@@ -48,10 +48,7 @@ def test_merkle_path_to_dict():
 
 def test_merkle_path_from_dict():
     """Test MerklePath from_dict."""
-    data = {
-        "blockHeight": 100,
-        "path": [{"offset": 0, "hash": "00" * 32}]
-    }
+    data = {"blockHeight": 100, "path": [{"offset": 0, "hash": "00" * 32}]}
     mp = MerklePath.from_dict(data)
     assert mp.block_height == 100
 
@@ -60,7 +57,7 @@ def test_merkle_path_compute_root_empty():
     """Test compute_root with empty path."""
     mp = MerklePath(block_height=0, path=[])
     try:
-        root = mp.compute_root(b'\x00' * 32)
+        root = mp.compute_root(b"\x00" * 32)
         assert isinstance(root, bytes) or root is None
     except Exception:
         # May require valid path
@@ -71,7 +68,7 @@ def test_merkle_path_verify():
     """Test merkle path verification."""
     mp = MerklePath(block_height=0, path=[])
     try:
-        is_valid = mp.verify(b'\x00' * 32, b'\x00' * 32)
+        is_valid = mp.verify(b"\x00" * 32, b"\x00" * 32)
         assert isinstance(is_valid, bool)
     except (AttributeError, Exception):
         # May not have verify method
@@ -81,6 +78,7 @@ def test_merkle_path_verify():
 # ========================================================================
 # Edge cases
 # ========================================================================
+
 
 def test_merkle_path_with_large_height():
     """Test MerklePath with large block height."""
@@ -113,4 +111,3 @@ def test_merkle_path_str_representation():
     mp = MerklePath(block_height=100, path=[])
     str_repr = str(mp)
     assert isinstance(str_repr, str)
-

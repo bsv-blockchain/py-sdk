@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
@@ -7,7 +7,7 @@ DIRECT = 1
 ISSUANCE = 2
 
 
-def serialize_acquire_certificate_args(args: Dict[str, Any]) -> bytes:
+def serialize_acquire_certificate_args(args: dict[str, Any]) -> bytes:
     w = Writer()
     # type (32), certifier (33)
     w.write_bytes(args.get("type", b""))
@@ -58,13 +58,13 @@ def serialize_acquire_certificate_args(args: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_acquire_certificate_args(data: bytes) -> Dict[str, Any]:
+def deserialize_acquire_certificate_args(data: bytes) -> dict[str, Any]:
     r = Reader(data)
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     out["type"] = r.read_bytes(32)
     out["certifier"] = r.read_bytes(33)
     flen = r.read_varint()
-    fields: Dict[str, str] = {}
+    fields: dict[str, str] = {}
     for _ in range(int(flen)):
         k = r.read_string()
         v = r.read_string()
@@ -87,7 +87,7 @@ def deserialize_acquire_certificate_args(data: bytes) -> Dict[str, Any]:
             pub_rest = r.read_bytes(32)
             out["keyringRevealer"] = {"pubKey": bytes([kr_id]) + pub_rest}
         kcnt = r.read_varint()
-        kfs: Dict[str, bytes] = {}
+        kfs: dict[str, bytes] = {}
         for _ in range(int(kcnt)):
             key = r.read_string()
             val = r.read_int_bytes() or b""

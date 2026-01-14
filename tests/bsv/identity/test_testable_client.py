@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import Mock, patch
+
 from bsv.identity.testable_client import TestableIdentityClient
 from bsv.identity.types import DisplayableIdentity
 
@@ -25,8 +26,7 @@ class TestTestableIdentityClient(unittest.TestCase):
 
     def test_initialization_without_wallet(self):
         """Test initialization without providing a wallet."""
-        with patch('bsv.wallet.wallet_impl.ProtoWallet'), \
-             patch('bsv.keys.PrivateKey'):
+        with patch("bsv.wallet.wallet_impl.ProtoWallet"), patch("bsv.keys.PrivateKey"):
             client = TestableIdentityClient()
             self.assertIsNotNone(client.wallet)
             self.assertTrue(client.record_calls)
@@ -129,5 +129,5 @@ class TestTestableIdentityClient(unittest.TestCase):
         self.assertEqual(result.identity_key, "")  # empty string from DisplayableIdentity default
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

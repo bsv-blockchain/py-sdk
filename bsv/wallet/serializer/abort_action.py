@@ -1,9 +1,9 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
 
-def serialize_abort_action_args(args: Dict[str, Any]) -> bytes:
+def serialize_abort_action_args(args: dict[str, Any]) -> bytes:
     w = Writer()
     # reference: optional bytes, encoded as IntBytes or negative-one
     ref = args.get("reference")
@@ -14,16 +14,16 @@ def serialize_abort_action_args(args: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_abort_action_args(data: bytes) -> Dict[str, Any]:
+def deserialize_abort_action_args(data: bytes) -> dict[str, Any]:
     r = Reader(data)
     ref = r.read_int_bytes() or b""
     return {"reference": ref}
 
 
-def serialize_abort_action_result(_: Dict[str, Any]) -> bytes:
+def serialize_abort_action_result(_: dict[str, Any]) -> bytes:
     # no payload
     return b""
 
 
-def deserialize_abort_action_result(_: bytes) -> Dict[str, Any]:
+def deserialize_abort_action_result(_: bytes) -> dict[str, Any]:
     return {}

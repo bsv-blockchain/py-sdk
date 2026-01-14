@@ -1,7 +1,7 @@
 import base64
 
-from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.auth_message import AuthMessage
+from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
 
@@ -85,5 +85,3 @@ def test_handle_certificate_request_uses_callback_when_registered():
     assert called["n"] == 1
     assert len(transport.sent_messages) >= 1
     assert transport.sent_messages[-1].message_type == "certificateResponse"
-
-

@@ -16,7 +16,7 @@ class TopicBroadcaster:
     In TS/Go, the broadcast destination is the topic name (e.g., tm_basketmap). In Python, it delegates to the existing Broadcaster.
     """
 
-    def __init__(self, topics: List[str], config: BroadcasterConfig) -> None:
+    def __init__(self, topics: list[str], config: BroadcasterConfig) -> None:
         self._topics = topics
         self._config = config
         self._broadcaster = default_broadcaster()
@@ -30,5 +30,3 @@ class TopicBroadcaster:
             return self._broadcaster.sync_broadcast(tx)  # type: ignore[attr-defined]
         # If only asynchronous implementation exists, this is equivalent to a No-Op
         return {"status": "noop"}
-
-

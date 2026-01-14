@@ -1,14 +1,16 @@
 """
 Coverage tests for auth/verifiable_certificate.py - security-critical component error conditions.
 """
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import base64
 
+import base64
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # ========================================================================
 # Comprehensive error condition testing and branch coverage for VerifiableCertificate
 # ========================================================================
+
 
 class TestVerifiableCertificateCoverage:
     """Test class for VerifiableCertificate comprehensive coverage."""
@@ -16,8 +18,8 @@ class TestVerifiableCertificateCoverage:
     def setup_method(self):
         """Set up test fixtures."""
         try:
-            from bsv.auth.verifiable_certificate import VerifiableCertificate, WalletInterface
             from bsv.auth.certificate import Certificate
+            from bsv.auth.verifiable_certificate import VerifiableCertificate, WalletInterface
 
             # Create mock certificate
             self.mock_cert = Mock(spec=Certificate)
@@ -71,13 +73,14 @@ class TestVerifiableCertificateCoverage:
     def test_from_binary_success(self):
         """Test VerifiableCertificate.from_binary success case."""
         try:
-            from bsv.auth.verifiable_certificate import VerifiableCertificate
             from unittest.mock import patch
+
+            from bsv.auth.verifiable_certificate import VerifiableCertificate
 
             mock_cert = Mock()
             mock_data = b"mock_binary_data"
 
-            with patch('bsv.auth.certificate.Certificate.from_binary', return_value=mock_cert):
+            with patch("bsv.auth.certificate.Certificate.from_binary", return_value=mock_cert):
                 result = VerifiableCertificate.from_binary(mock_data)
 
                 assert isinstance(result, VerifiableCertificate)
@@ -90,10 +93,11 @@ class TestVerifiableCertificateCoverage:
     def test_from_binary_invalid_data(self):
         """Test VerifiableCertificate.from_binary with invalid data."""
         try:
-            from bsv.auth.verifiable_certificate import VerifiableCertificate
             from unittest.mock import patch
 
-            with patch('bsv.auth.certificate.Certificate.from_binary', side_effect=Exception("Invalid binary data")):
+            from bsv.auth.verifiable_certificate import VerifiableCertificate
+
+            with patch("bsv.auth.certificate.Certificate.from_binary", side_effect=Exception("Invalid binary data")):
                 with pytest.raises(Exception, match="Invalid binary data"):
                     VerifiableCertificate.from_binary(b"invalid_data")
 
@@ -151,12 +155,13 @@ class TestVerifiableCertificateCoverage:
 
         pytest.skip("Skipped due to complex mocking requirements for certificate field decryption")
         pytest.skip("Skipped due to complex mocking requirements for certificate field decryption")
+
     def test_verify_certificate_success(self):
         """Test verify success case."""
         try:
             # Certificate has verify method that returns True
             result = self.verifiable_cert.verify()
-            assert result == True
+            assert result
 
         except ImportError:
             pytest.skip("VerifiableCertificate not available")
@@ -165,10 +170,10 @@ class TestVerifiableCertificateCoverage:
         """Test verify when certificate has no verify method."""
         try:
             # Remove verify method from certificate
-            delattr(self.verifiable_cert.certificate, 'verify')
+            delattr(self.verifiable_cert.certificate, "verify")
 
             result = self.verifiable_cert.verify()
-            assert result == False
+            assert not result
 
         except ImportError:
             pytest.skip("VerifiableCertificate not available")
@@ -180,7 +185,7 @@ class TestVerifiableCertificateCoverage:
             self.verifiable_cert.certificate.verify.side_effect = Exception("Verify failed")
 
             result = self.verifiable_cert.verify()
-            assert result == False
+            assert not result
 
         except ImportError:
             pytest.skip("VerifiableCertificate not available")
@@ -192,7 +197,7 @@ class TestVerifiableCertificateCoverage:
             self.verifiable_cert.certificate.verify.return_value = None
 
             result = self.verifiable_cert.verify()
-            assert result == False  # bool(None) is False
+            assert not result  # bool(None) is False
 
         except ImportError:
             pytest.skip("VerifiableCertificate not available")
@@ -204,7 +209,7 @@ class TestVerifiableCertificateCoverage:
             self.verifiable_cert.certificate.verify.return_value = False
 
             result = self.verifiable_cert.verify()
-            assert result == False
+            assert not result
 
         except ImportError:
             pytest.skip("VerifiableCertificate not available")
@@ -224,16 +229,18 @@ class TestVerifiableCertificateCoverage:
 
         pytest.skip("Skipped due to complex mocking requirements for certificate field decryption")
         pytest.skip("Skipped due to complex mocking requirements for certificate field decryption")
+
     def test_from_binary_with_keyring_data(self):
         """Test from_binary with keyring data in certificate."""
         try:
+            from unittest.mock import MagicMock, patch
+
             from bsv.auth.verifiable_certificate import VerifiableCertificate
-            from unittest.mock import patch, MagicMock
 
             mock_cert = MagicMock()
             mock_cert.keyring = {"field1": "key_data"}  # Simulate certificate with keyring
 
-            with patch('bsv.auth.certificate.Certificate.from_binary', return_value=mock_cert):
+            with patch("bsv.auth.certificate.Certificate.from_binary", return_value=mock_cert):
                 result = VerifiableCertificate.from_binary(b"data")
 
                 assert isinstance(result, VerifiableCertificate)
@@ -261,22 +268,21 @@ class TestVerifiableCertificateCoverage:
         """Test verify_certificate hasattr check for verify method."""
         try:
             # Test with object that has verify method
-            assert hasattr(self.verifiable_cert.certificate, 'verify') == True
+            assert hasattr(self.verifiable_cert.certificate, "verify")
 
             # Test with object that doesn't have verify method
             cert_without_verify = Mock()
             del cert_without_verify.verify
-            _ = type('VerifiableCertificate', (), {
-                'certificate': cert_without_verify
-            })()
+            _ = type("VerifiableCertificate", (), {"certificate": cert_without_verify})()
 
             # This would be False since hasattr check fails
-            assert not hasattr(cert_without_verify, 'verify')
+            assert not hasattr(cert_without_verify, "verify")
 
         except ImportError:
             pytest.skip("VerifiableCertificate not available")
 
         pytest.skip("Skipped due to complex mocking requirements for certificate field decryption")
+
     def test_verifiable_certificate_repr_and_str(self):
         """Test VerifiableCertificate string representations."""
         try:

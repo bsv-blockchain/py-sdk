@@ -1,9 +1,9 @@
 import json
-import types
 import os
+import types
 
-from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
 from bsv.auth.auth_message import AuthMessage
+from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
 from bsv.keys import PrivateKey
 from bsv.utils.reader_writer import Writer
 
@@ -27,9 +27,11 @@ def test_send_without_handler_returns_error(monkeypatch):
     assert "handler" in str(err).lower() or "no handler" in str(err).lower() or "not registered" in str(err).lower()
 
 
-def test_send_general_performs_http_and_notifies_handler(monkeypatch):  # NOSONAR - Complexity (19), requires refactoring
+def test_send_general_performs_http_and_notifies_handler(
+    monkeypatch,
+):  # NOSONAR - Complexity (19), requires refactoring
     # Stub requests.Session().request
-    def fake_request(self, method, url, headers=None, data=None):  # noqa: D401
+    def fake_request(self, method, url, headers=None, data=None):
         assert method == "GET"
         assert url == "https://api.test.local/health"
         # Response needs auth headers for parsing
@@ -54,7 +56,6 @@ def test_send_general_performs_http_and_notifies_handler(monkeypatch):  # NOSONA
 
     def on_data(message: AuthMessage):
         captured["msg"] = message
-        return None
 
     assert t.on_data(on_data) is None
 
@@ -66,12 +67,12 @@ def test_send_general_performs_http_and_notifies_handler(monkeypatch):  # NOSONA
     writer.write(request_id)
     # Method
     method = "GET"
-    method_bytes = method.encode('utf-8')
+    method_bytes = method.encode("utf-8")
     writer.write_var_int_num(len(method_bytes))
     writer.write(method_bytes)
     # Path
     path = "/health"
-    path_bytes = path.encode('utf-8')
+    path_bytes = path.encode("utf-8")
     writer.write_var_int_num(len(path_bytes))
     writer.write(path_bytes)
     # Search (query string) - empty
@@ -80,7 +81,7 @@ def test_send_general_performs_http_and_notifies_handler(monkeypatch):  # NOSONA
     writer.write_var_int_num(0)
     # Body - empty
     writer.write_var_int_num(0)
-    
+
     payload = writer.getvalue()
     identity_key = PrivateKey(6002).public_key()
     msg = AuthMessage(version="0.1", message_type="general", identity_key=identity_key, payload=payload, signature=b"")
@@ -90,8 +91,10 @@ def test_send_general_performs_http_and_notifies_handler(monkeypatch):  # NOSONA
     resp_msg = captured["msg"]
     assert isinstance(resp_msg, AuthMessage)
     # Parse binary response payload: request_id (32 bytes) + varint status_code + varint n_headers + headers + varint body_len + body
-    from bsv.utils.reader_writer import Reader
     import struct
+
+    from bsv.utils.reader_writer import Reader
+
     reader = Reader(resp_msg.payload)
     # Skip request_id (32 bytes)
     _ = reader.read(32)
@@ -100,22 +103,22 @@ def test_send_general_performs_http_and_notifies_handler(monkeypatch):  # NOSONA
     if status_first < 0xFD:
         status_code = status_first
     elif status_first == 0xFD:
-        status_code = struct.unpack('<H', reader.read(2))[0]
+        status_code = struct.unpack("<H", reader.read(2))[0]
     elif status_first == 0xFE:
-        status_code = struct.unpack('<I', reader.read(4))[0]
+        status_code = struct.unpack("<I", reader.read(4))[0]
     else:
-        status_code = struct.unpack('<Q', reader.read(8))[0]
+        status_code = struct.unpack("<Q", reader.read(8))[0]
     assert status_code == 200
     # Read headers count (varint)
     n_headers_first = reader.read(1)[0]
     if n_headers_first < 0xFD:
         n_headers = n_headers_first
     elif n_headers_first == 0xFD:
-        n_headers = struct.unpack('<H', reader.read(2))[0]
+        n_headers = struct.unpack("<H", reader.read(2))[0]
     elif n_headers_first == 0xFE:
-        n_headers = struct.unpack('<I', reader.read(4))[0]
+        n_headers = struct.unpack("<I", reader.read(4))[0]
     else:
-        n_headers = struct.unpack('<Q', reader.read(8))[0]
+        n_headers = struct.unpack("<Q", reader.read(8))[0]
     # Read headers
     headers = {}
     for _ in range(n_headers):
@@ -124,24 +127,22 @@ def test_send_general_performs_http_and_notifies_handler(monkeypatch):  # NOSONA
         if key_len_first < 0xFD:
             key_len = key_len_first
         elif key_len_first == 0xFD:
-            key_len = struct.unpack('<H', reader.read(2))[0]
+            key_len = struct.unpack("<H", reader.read(2))[0]
         elif key_len_first == 0xFE:
-            key_len = struct.unpack('<I', reader.read(4))[0]
+            key_len = struct.unpack("<I", reader.read(4))[0]
         else:
-            key_len = struct.unpack('<Q', reader.read(8))[0]
-        key = reader.read(key_len).decode('utf-8')
+            key_len = struct.unpack("<Q", reader.read(8))[0]
+        key = reader.read(key_len).decode("utf-8")
         # Read value length (varint)
         value_len_first = reader.read(1)[0]
         if value_len_first < 0xFD:
             value_len = value_len_first
         elif value_len_first == 0xFD:
-            value_len = struct.unpack('<H', reader.read(2))[0]
+            value_len = struct.unpack("<H", reader.read(2))[0]
         elif value_len_first == 0xFE:
-            value_len = struct.unpack('<I', reader.read(4))[0]
+            value_len = struct.unpack("<I", reader.read(4))[0]
         else:
-            value_len = struct.unpack('<Q', reader.read(8))[0]
-        value = reader.read(value_len).decode('utf-8')
+            value_len = struct.unpack("<Q", reader.read(8))[0]
+        value = reader.read(value_len).decode("utf-8")
         headers[key] = value
     assert headers.get("x-bsv-test") == "1"
-
-

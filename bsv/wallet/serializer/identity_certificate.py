@@ -1,10 +1,10 @@
-from typing import Dict, Any
 import base64
+from typing import Any, Dict
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
 
-def serialize_identity_certificate(identity: Dict[str, Any]) -> bytes:
+def serialize_identity_certificate(identity: dict[str, Any]) -> bytes:
     w = Writer()
     # Base certificate bytes as IntBytes
     w.write_int_bytes(identity.get("certificateBytes", b""))
@@ -15,7 +15,7 @@ def serialize_identity_certificate(identity: Dict[str, Any]) -> bytes:
     w.write_string(ci.get("description", ""))
     w.write_byte(int(ci.get("trust", 0)) & 0xFF)
     # PubliclyRevealedKeyring (map<string, base64 string>) sorted by key
-    keyring: Dict[str, str] = identity.get("publiclyRevealedKeyring", {}) or {}
+    keyring: dict[str, str] = identity.get("publiclyRevealedKeyring", {}) or {}
     keys = sorted(keyring.keys())
     w.write_varint(len(keys))
     for k in keys:
@@ -26,7 +26,7 @@ def serialize_identity_certificate(identity: Dict[str, Any]) -> bytes:
             raw = b""
         w.write_int_bytes(raw)
     # DecryptedFields (map<string, string>)
-    fields: Dict[str, str] = identity.get("decryptedFields", {}) or {}
+    fields: dict[str, str] = identity.get("decryptedFields", {}) or {}
     w.write_varint(len(fields))
     for k, v in fields.items():
         w.write_string(k)
@@ -34,8 +34,8 @@ def serialize_identity_certificate(identity: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_identity_certificate_from_reader(r: Reader) -> Dict[str, Any]:
-    identity: Dict[str, Any] = {}
+def deserialize_identity_certificate_from_reader(r: Reader) -> dict[str, Any]:
+    identity: dict[str, Any] = {}
     # Base certificate bytes
     cert_bytes = r.read_int_bytes() or b""
     identity["certificateBytes"] = cert_bytes
@@ -49,7 +49,7 @@ def deserialize_identity_certificate_from_reader(r: Reader) -> Dict[str, Any]:
     identity["certifierInfo"] = ci
     # PubliclyRevealedKeyring
     klen = r.read_varint()
-    keyring: Dict[str, str] = {}
+    keyring: dict[str, str] = {}
     for _ in range(int(klen)):
         k = r.read_string()
         v = r.read_int_bytes() or b""
@@ -57,7 +57,7 @@ def deserialize_identity_certificate_from_reader(r: Reader) -> Dict[str, Any]:
     identity["publiclyRevealedKeyring"] = keyring
     # DecryptedFields
     flen = r.read_varint()
-    fields: Dict[str, str] = {}
+    fields: dict[str, str] = {}
     for _ in range(int(flen)):
         k = r.read_string()
         v = r.read_string()

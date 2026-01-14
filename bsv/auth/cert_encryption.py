@@ -1,7 +1,7 @@
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 
-def get_certificate_encryption_details(field_name: str, serial_number: Optional[str]) -> Tuple[dict, str]:
+def get_certificate_encryption_details(field_name: str, serial_number: Optional[str]) -> tuple[dict, str]:
     """
     Returns certificate field encryption metadata compatible with TS/Go.
     - protocol_id: {'protocol': 'certificate field encryption', 'security_level': 1}
@@ -16,5 +16,3 @@ def get_certificate_encryption_details(field_name: str, serial_number: Optional[
     else:
         key_id = field_name
     return protocol_id, key_id
-
-

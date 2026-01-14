@@ -2,12 +2,12 @@ import base64
 import threading
 from typing import Optional
 
-from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.auth_message import AuthMessage
+from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey, PublicKey
 
-from .conftest import LocalTransport, GetPub, Sig, Ver
+from .conftest import GetPub, LocalTransport, Sig, Ver
 
 
 class HandshakeWallet:
@@ -41,12 +41,13 @@ class HandshakeWallet:
         # Fallback to our own pub if not provided
         pub = pub or self._pub
         return Ver(pub.verify(sig, data))
-    
+
     def verify_hmac(self, args=None, originator=None):
         # Always return valid for nonce verification to pass
         class HmacResult:
             def __init__(self):
                 self.valid = True
+
         return HmacResult()
 
 
@@ -61,8 +62,12 @@ def test_mutual_authentication_and_general_message():  # NOSONAR - Protocol nota
     wB = HandshakeWallet(PrivateKey(2222))  # NOSONAR - Protocol notation (wallet B)
 
     # Peers
-    pA = Peer(PeerOptions(wallet=wA, transport=tA, session_manager=DefaultSessionManager()))  # NOSONAR - Protocol notation (peer A)
-    pB = Peer(PeerOptions(wallet=wB, transport=tB, session_manager=DefaultSessionManager()))  # NOSONAR - Protocol notation (peer B)
+    pA = Peer(
+        PeerOptions(wallet=wA, transport=tA, session_manager=DefaultSessionManager())
+    )  # NOSONAR - Protocol notation (peer A)
+    pB = Peer(
+        PeerOptions(wallet=wB, transport=tB, session_manager=DefaultSessionManager())
+    )  # NOSONAR - Protocol notation (peer B)
 
     # Ensure peers are started (transport callbacks registered)
     pA.start()
@@ -92,5 +97,3 @@ def test_mutual_authentication_and_general_message():  # NOSONAR - Protocol nota
     # Wait for both directions
     assert got_from_bob.wait(timeout=5)
     assert got_from_alice.wait(timeout=5)
-
-

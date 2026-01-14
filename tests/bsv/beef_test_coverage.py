@@ -1,6 +1,7 @@
 """
 Coverage tests for beef/ modules - untested branches.
 """
+
 import pytest
 
 # Constants for skip messages
@@ -12,10 +13,12 @@ SKIP_IS_BEEF = "is_beef not available"
 # BEEF module branches
 # ========================================================================
 
+
 def test_beef_module_exists():
     """Test that beef module exists."""
     try:
         import bsv.beef
+
         assert bsv.beef is not None
     except ImportError:
         pytest.skip(SKIP_BEEF)
@@ -25,6 +28,7 @@ def test_beef_version_constant():
     """Test BEEF version constant."""
     try:
         from bsv.beef import BEEF_VERSION
+
         assert BEEF_VERSION is not None
         assert isinstance(BEEF_VERSION, int)
     except (ImportError, AttributeError):
@@ -35,6 +39,7 @@ def test_beef_magic_constant():
     """Test BEEF magic bytes constant."""
     try:
         from bsv.beef import BEEF_MAGIC
+
         assert BEEF_MAGIC is not None
         assert isinstance(BEEF_MAGIC, bytes)
     except (ImportError, AttributeError):
@@ -45,13 +50,14 @@ def test_beef_magic_constant():
 # BEEF utility functions branches
 # ========================================================================
 
+
 def test_is_beef_data():
     """Test checking if data is BEEF format."""
     try:
         from bsv.beef import is_beef
-        
+
         try:
-            result = is_beef(b'\x00\x00\xbe\xef')
+            result = is_beef(b"\x00\x00\xbe\xef")
             assert isinstance(result, bool)
         except (NameError, AttributeError):
             pytest.skip(SKIP_IS_BEEF)
@@ -63,10 +69,10 @@ def test_is_beef_invalid():
     """Test checking invalid BEEF data."""
     try:
         from bsv.beef import is_beef
-        
+
         try:
-            result = is_beef(b'invalid')
-            assert result == False
+            result = is_beef(b"invalid")
+            assert not result
         except (NameError, AttributeError):
             pytest.skip(SKIP_IS_BEEF)
     except ImportError:
@@ -77,16 +83,16 @@ def test_is_beef_invalid():
 # Edge cases
 # ========================================================================
 
+
 def test_is_beef_empty():
     """Test checking empty data."""
     try:
         from bsv.beef import is_beef
-        
+
         try:
-            result = is_beef(b'')
-            assert result == False
+            result = is_beef(b"")
+            assert not result
         except (NameError, AttributeError):
             pytest.skip(SKIP_IS_BEEF)
     except ImportError:
         pytest.skip(SKIP_BEEF)
-

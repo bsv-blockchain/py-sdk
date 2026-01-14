@@ -6,34 +6,35 @@ Ported from TypeScript SDK.
 
 import asyncio
 import time
-from typing import Dict, List, Optional, Any, Union, Protocol
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Protocol, Union
 
 from bsv.transaction import Transaction
-from .overlay_admin_token_template import OverlayAdminTokenTemplate
-from .host_reputation_tracker import HostReputationTracker, get_overlay_host_reputation_tracker
+
 from .constants import DEFAULT_SLAP_TRACKERS, DEFAULT_TESTNET_SLAP_TRACKERS, MAX_TRACKER_WAIT_TIME
+from .host_reputation_tracker import HostReputationTracker, get_overlay_host_reputation_tracker
+from .overlay_admin_token_template import OverlayAdminTokenTemplate
 
 
 class LookupError(Exception):
     """Base exception for lookup operations."""
-    pass
+
 
 
 class LookupTimeoutError(LookupError):
     """Exception raised when lookup operation times out."""
-    pass
+
 
 
 class LookupResponseError(LookupError):
     """Exception raised when lookup response is invalid."""
-    pass
+
 
 
 class HTTPProtocolError(LookupError):
     """Exception raised when HTTP protocol requirement is violated."""
-    pass
+
 
 
 class TimeoutContext:
@@ -58,6 +59,7 @@ class TimeoutContext:
 @dataclass
 class LookupQuestion:
     """The question asked to the Overlay Services Engine when a consumer of state wishes to look up information."""
+
     service: str
     query: Any
 
@@ -65,6 +67,7 @@ class LookupQuestion:
 @dataclass
 class LookupOutput:
     """Output from a lookup operation."""
+
     beef: bytes
     output_index: int
     context: Optional[bytes] = None
@@ -73,18 +76,15 @@ class LookupOutput:
 @dataclass
 class LookupAnswer:
     """How the Overlay Services Engine responds to a Lookup Question."""
+
     type: str = "output-list"
-    outputs: List[LookupOutput] = field(default_factory=list)
+    outputs: list[LookupOutput] = field(default_factory=list)
 
 
 class OverlayLookupFacilitator(Protocol):
     """Facilitates lookups to URLs that return answers."""
 
-    async def lookup(
-        self,
-        url: str,
-        question: LookupQuestion
-    ) -> LookupAnswer:
+    async def lookup(self, url: str, question: LookupQuestion) -> LookupAnswer:
         """Returns a lookup answer for a lookup question."""
         ...
 
@@ -92,6 +92,7 @@ class OverlayLookupFacilitator(Protocol):
 @dataclass
 class CacheOptions:
     """Internal cache options."""
+
     hosts_ttl_ms: Optional[int] = None  # How long (ms) a hosts entry is considered fresh. Default 5 minutes.
     hosts_max_entries: Optional[int] = None  # How many distinct services' hosts to cache before evicting. Default 128.
     tx_memo_ttl_ms: Optional[int] = None  # How long (ms) to keep txId memoization. Default 10 minutes.
@@ -100,11 +101,12 @@ class CacheOptions:
 @dataclass
 class LookupResolverConfig:
     """Configuration options for the Lookup resolver."""
+
     network_preset: Optional[str] = None  # 'mainnet', 'testnet', or 'local'
     facilitator: Optional[OverlayLookupFacilitator] = None
-    slap_trackers: Optional[List[str]] = None
-    host_overrides: Optional[Dict[str, List[str]]] = None
-    additional_hosts: Optional[Dict[str, List[str]]] = None
+    slap_trackers: Optional[list[str]] = None
+    host_overrides: Optional[dict[str, list[str]]] = None
+    additional_hosts: Optional[dict[str, list[str]]] = None
     cache: Optional[CacheOptions] = None
     reputation_storage: Optional[Any] = None  # Could be 'localStorage' or dict-like object
 
@@ -112,13 +114,15 @@ class LookupResolverConfig:
 @dataclass
 class HostEntry:
     """Cached host entry."""
-    hosts: List[str]
+
+    hosts: list[str]
     expires_at: int
 
 
 @dataclass
 class TxMemo:
     """Transaction ID memoization."""
+
     tx_id: str
     expires_at: int
 
@@ -129,15 +133,11 @@ class HTTPSOverlayLookupFacilitator:
     def __init__(self, allow_http: bool = False):
         self.allow_http = allow_http
 
-    async def lookup(
-        self,
-        url: str,
-        question: LookupQuestion
-    ) -> LookupAnswer:
+    async def lookup(self, url: str, question: LookupQuestion) -> LookupAnswer:
         """Returns a lookup answer for a lookup question."""
         import aiohttp
 
-        if not url.startswith('https:') and not self.allow_http:
+        if not url.startswith("https:") and not self.allow_http:
             raise HTTPProtocolError('HTTPS facilitator can only use URLs that start with "https:"')
 
         async def _perform_lookup():
@@ -145,34 +145,28 @@ class HTTPSOverlayLookupFacilitator:
                 async with session.post(
                     f"{url}/lookup",
                     json={"service": question.service, "query": question.query},
-                    headers={
-                        "Content-Type": "application/json",
-                        "X-Aggregation": "yes"
-                    }
+                    headers={"Content-Type": "application/json", "X-Aggregation": "yes"},
                 ) as response:
                     if response.status != 200:
                         raise LookupResponseError(f"Failed to facilitate lookup (HTTP {response.status})")
 
-                    if response.headers.get('content-type') == 'application/octet-stream':
+                    if response.headers.get("content-type") == "application/octet-stream":
                         # Binary response format
                         data = await response.read()
                         return self._parse_binary_response(data)
                     else:
                         # JSON response format
                         await response.json()
-                        return LookupAnswer(
-                            type="custom",
-                            outputs=[]  # Custom responses don't have outputs
-                        )
+                        return LookupAnswer(type="custom", outputs=[])  # Custom responses don't have outputs
 
         try:
             return await _perform_lookup()
         except asyncio.TimeoutError:
-            raise LookupTimeoutError('Request timed out')
+            raise LookupTimeoutError("Request timed out")
         except (LookupError, HTTPProtocolError):
             raise
         except Exception as e:
-            raise LookupError(f'Lookup failed: {str(e)}')
+            raise LookupError(f"Lookup failed: {e!s}")
 
     def _parse_binary_response(self, data: bytes) -> LookupAnswer:
         """Parse binary response format."""
@@ -193,11 +187,9 @@ class HTTPSOverlayLookupFacilitator:
 
             # For now, we'll store the txid and reconstruct BEEF later
             # This is a simplified implementation
-            outputs.append(LookupOutput(
-                beef=b'',  # Would need full transaction data
-                output_index=output_index,
-                context=context
-            ))
+            outputs.append(
+                LookupOutput(beef=b"", output_index=output_index, context=context)  # Would need full transaction data
+            )
 
         reader.read()  # beef (not used in simplified implementation)
         # In a full implementation, we'd reconstruct the BEEF transactions here
@@ -211,12 +203,12 @@ class LookupResolver:
     def __init__(self, config: Optional[LookupResolverConfig] = None):
         config = config or LookupResolverConfig()
 
-        self.network_preset = config.network_preset or 'mainnet'
+        self.network_preset = config.network_preset or "mainnet"
         self.facilitator = config.facilitator or HTTPSOverlayLookupFacilitator(
-            allow_http=self.network_preset == 'local'
+            allow_http=self.network_preset == "local"
         )
         self.slap_trackers = config.slap_trackers or (
-            DEFAULT_TESTNET_SLAP_TRACKERS if self.network_preset == 'testnet' else DEFAULT_SLAP_TRACKERS
+            DEFAULT_TESTNET_SLAP_TRACKERS if self.network_preset == "testnet" else DEFAULT_SLAP_TRACKERS
         )
 
         self.host_overrides = config.host_overrides or {}
@@ -229,19 +221,19 @@ class LookupResolver:
         self.tx_memo_ttl_ms = cache.tx_memo_ttl_ms or 10 * 60 * 1000  # 10 minutes
 
         # Initialize caches
-        self.hosts_cache: Dict[str, HostEntry] = {}
-        self.hosts_in_flight: Dict[str, asyncio.Future[List[str]]] = {}
-        self.tx_memo: Dict[str, TxMemo] = {}
+        self.hosts_cache: dict[str, HostEntry] = {}
+        self.hosts_in_flight: dict[str, asyncio.Future[list[str]]] = {}
+        self.tx_memo: dict[str, TxMemo] = {}
 
         # Host reputation tracking
-        if config.reputation_storage == 'localStorage':
+        if config.reputation_storage == "localStorage":
             self.host_reputation = HostReputationTracker()
         elif config.reputation_storage:
             self.host_reputation = HostReputationTracker(config.reputation_storage)
         else:
             self.host_reputation = get_overlay_host_reputation_tracker()
 
-    async def lookup(self, question: LookupQuestion) -> List[LookupOutput]:
+    async def lookup(self, question: LookupQuestion) -> list[LookupOutput]:
         """Lookup outputs for a given question. Delegates to query method."""
         answer = await self.query(question)
         return answer.outputs
@@ -252,7 +244,7 @@ class LookupResolver:
         host_responses = await self._query_all_hosts(ranked_hosts, question)
         return self._aggregate_host_responses(host_responses)
 
-    async def _prepare_ranked_hosts(self, service: str) -> List[str]:
+    async def _prepare_ranked_hosts(self, service: str) -> list[str]:
         """Prepare and validate ranked hosts for a service."""
         competent_hosts = await self._get_competent_hosts(service)
 
@@ -267,52 +259,43 @@ class LookupResolver:
         return ranked_hosts
 
     async def _query_all_hosts(
-        self,
-        ranked_hosts: List[str],
-        question: LookupQuestion
-    ) -> List[Union[LookupAnswer, Exception]]:
+        self, ranked_hosts: list[str], question: LookupQuestion
+    ) -> list[Union[LookupAnswer, Exception]]:
         """Query all ranked hosts in parallel."""
         return await asyncio.gather(
-            *[self._lookup_host_with_tracking(host, question) for host in ranked_hosts],
-            return_exceptions=True
+            *[self._lookup_host_with_tracking(host, question) for host in ranked_hosts], return_exceptions=True
         )
 
-    def _aggregate_host_responses(
-        self,
-        host_responses: List[Union[LookupAnswer, Exception]]
-    ) -> LookupAnswer:
+    def _aggregate_host_responses(self, host_responses: list[Union[LookupAnswer, Exception]]) -> LookupAnswer:
         """Aggregate results from successful host responses."""
-        outputs_map: Dict[str, LookupOutput] = {}
+        outputs_map: dict[str, LookupOutput] = {}
 
         for result in host_responses:
             if isinstance(result, Exception):
                 continue
 
             response = result
-            if response.type != 'output-list' or not response.outputs:
+            if response.type != "output-list" or not response.outputs:
                 continue
 
             for output in response.outputs:
                 key = self._create_output_key(output)
                 outputs_map[key] = output
 
-        return LookupAnswer(
-            type="output-list",
-            outputs=list(outputs_map.values())
-        )
+        return LookupAnswer(type="output-list", outputs=list(outputs_map.values()))
 
     def _create_output_key(self, output: LookupOutput) -> str:
         """Create unique key for output deduplication."""
-        beef_hex = output.beef.hex() if output.beef else 'empty'
+        beef_hex = output.beef.hex() if output.beef else "empty"
         return f"{beef_hex}.{output.output_index}"
 
-    async def _get_competent_hosts(self, service: str) -> List[str]:
+    async def _get_competent_hosts(self, service: str) -> list[str]:
         """Get competent hosts for a service, with caching."""
         # Check overrides first
         if service in self.host_overrides:
             hosts = self.host_overrides[service]
-        elif self.network_preset == 'local':
-            hosts = ['http://localhost:8080']
+        elif self.network_preset == "local":
+            hosts = ["http://localhost:8080"]
         else:
             hosts = await self._get_competent_hosts_cached(service)
 
@@ -327,7 +310,7 @@ class LookupResolver:
 
         return hosts
 
-    async def _get_competent_hosts_cached(self, service: str) -> List[str]:
+    async def _get_competent_hosts_cached(self, service: str) -> list[str]:
         """Cached wrapper for competent host discovery."""
         now = int(time.time() * 1000)
         cached = self.hosts_cache.get(service)
@@ -340,9 +323,7 @@ class LookupResolver:
         if cached and cached.expires_at <= now:
             if service not in self.hosts_in_flight:
                 self.hosts_in_flight[service] = asyncio.create_task(self._refresh_hosts(service))
-                self.hosts_in_flight[service].add_done_callback(
-                    lambda _: self.hosts_in_flight.pop(service, None)
-                )
+                self.hosts_in_flight[service].add_done_callback(lambda _: self.hosts_in_flight.pop(service, None))
             return cached.hosts.copy()
 
         # No cache - fetch fresh
@@ -359,7 +340,7 @@ class LookupResolver:
 
         return await promise
 
-    async def _refresh_hosts(self, service: str) -> List[str]:
+    async def _refresh_hosts(self, service: str) -> list[str]:
         """Actually resolve competent hosts and update cache."""
         hosts = await self._find_competent_hosts(service)
 
@@ -373,15 +354,12 @@ class LookupResolver:
         self.hosts_cache[service] = HostEntry(hosts=hosts, expires_at=expires_at)
         return hosts
 
-    async def _find_competent_hosts(self, service: str) -> List[str]:
+    async def _find_competent_hosts(self, service: str) -> list[str]:
         """Find competent hosts by querying SLAP trackers."""
-        question = LookupQuestion(service='ls_slap', query={'service': service})
+        question = LookupQuestion(service="ls_slap", query={"service": service})
 
         # Query all SLAP trackers
-        tracker_hosts = self._prepare_hosts_for_query(
-            self.slap_trackers,
-            'SLAP trackers'
-        )
+        tracker_hosts = self._prepare_hosts_for_query(self.slap_trackers, "SLAP trackers")
 
         if not tracker_hosts:
             return []
@@ -393,8 +371,7 @@ class LookupResolver:
                 return await timeout_ctx.run(self._lookup_host_with_tracking(host, q))
 
         tracker_responses = await asyncio.gather(
-            *[_lookup_with_timeout(tracker, question) for tracker in tracker_hosts],
-            return_exceptions=True
+            *[_lookup_with_timeout(tracker, question) for tracker in tracker_hosts], return_exceptions=True
         )
 
         hosts = set()
@@ -404,23 +381,21 @@ class LookupResolver:
                 continue
 
             answer = result
-            if answer.type != 'output-list':
+            if answer.type != "output-list":
                 continue
 
             for output in answer.outputs:
                 try:
                     # Parse the overlay admin token
                     decoded = OverlayAdminTokenTemplate.decode(output.beef)
-                    if (decoded['topicOrService'] == service and
-                        decoded['protocol'] == 'SLAP' and
-                        decoded['domain']):
-                        hosts.add(decoded['domain'])
+                    if decoded["topicOrService"] == service and decoded["protocol"] == "SLAP" and decoded["domain"]:
+                        hosts.add(decoded["domain"])
                 except Exception:
                     continue
 
         return list(hosts)
 
-    def _prepare_hosts_for_query(self, hosts: List[str], context: str) -> List[str]:
+    def _prepare_hosts_for_query(self, hosts: list[str], context: str) -> list[str]:
         """Prepare hosts for query by ranking and filtering out backoff hosts."""
         if not hosts:
             return []
@@ -433,15 +408,11 @@ class LookupResolver:
             return available
 
         # All hosts are in backoff - find soonest available
-        soonest = min((h.backoff_until for h in ranked_hosts), default=float('inf'))
+        soonest = min((h.backoff_until for h in ranked_hosts), default=float("inf"))
         wait_ms = max(soonest - now, 0)
         raise LookupError(f"All {context} hosts are backing off for approximately {wait_ms}ms")
 
-    async def _lookup_host_with_tracking(
-        self,
-        host: str,
-        question: LookupQuestion
-    ) -> LookupAnswer:
+    async def _lookup_host_with_tracking(self, host: str, question: LookupQuestion) -> LookupAnswer:
         """Lookup from a host with success/failure tracking."""
         started_at = int(time.time() * 1000)
 
@@ -451,15 +422,13 @@ class LookupResolver:
 
             # Check if response is valid
             is_valid = (
-                isinstance(answer, LookupAnswer) and
-                answer.type == 'output-list' and
-                isinstance(answer.outputs, list)
+                isinstance(answer, LookupAnswer) and answer.type == "output-list" and isinstance(answer.outputs, list)
             )
 
             if is_valid:
                 self.host_reputation.record_success(host, latency)
             else:
-                self.host_reputation.record_failure(host, 'Invalid lookup response')
+                self.host_reputation.record_failure(host, "Invalid lookup response")
 
             return answer
 

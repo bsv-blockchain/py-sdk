@@ -1,4 +1,5 @@
 import base64
+
 import pytest
 
 from bsv.auth.certificate import Certificate, Outpoint
@@ -65,6 +66,3 @@ class TestCertificate:
         # If signature is dropped by parser due to size, skip verification; otherwise verify true.
         if parsed.signature:
             assert parsed.verify() is True
-
-
-

@@ -1,23 +1,25 @@
 """
 Coverage tests for broadcasters/ modules (additional) - untested branches.
 """
+
 import pytest
 
 # Constants for skip messages
 SKIP_WOC_BROADCASTER = "WhatsOnChainBroadcaster not available"
 import asyncio
-from bsv.transaction import Transaction
 
+from bsv.transaction import Transaction
 
 # ========================================================================
 # WhatsOnChain broadcaster branches
 # ========================================================================
 
+
 def test_woc_broadcaster_init():
     """Test WhatsOnChain broadcaster initialization."""
     try:
-        from bsv.broadcasters import WhatsOnChainBroadcaster, BroadcastResponse, BroadcastFailure
-        
+        from bsv.broadcasters import BroadcastFailure, BroadcastResponse, WhatsOnChainBroadcaster
+
         broadcaster = WhatsOnChainBroadcaster()
         assert broadcaster is not None
     except (ImportError, AttributeError):
@@ -27,9 +29,9 @@ def test_woc_broadcaster_init():
 def test_woc_broadcaster_with_network():
     """Test WhatsOnChain broadcaster with network."""
     try:
-        from bsv.broadcasters import WhatsOnChainBroadcaster, BroadcastResponse, BroadcastFailure
-        
-        broadcaster = WhatsOnChainBroadcaster(network='testnet')
+        from bsv.broadcasters import BroadcastFailure, BroadcastResponse, WhatsOnChainBroadcaster
+
+        broadcaster = WhatsOnChainBroadcaster(network="testnet")
         assert broadcaster is not None
     except (ImportError, AttributeError, TypeError):
         pytest.skip("WhatsOnChainBroadcaster not available or different signature")
@@ -38,14 +40,14 @@ def test_woc_broadcaster_with_network():
 def test_woc_broadcaster_broadcast():
     """Test broadcasting with WhatsOnChain."""
     try:
-        from bsv.broadcasters import WhatsOnChainBroadcaster, BroadcastResponse, BroadcastFailure
-        
+        from bsv.broadcasters import BroadcastFailure, BroadcastResponse, WhatsOnChainBroadcaster
+
         broadcaster = WhatsOnChainBroadcaster()
         tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        
-        if hasattr(broadcaster, 'broadcast'):
+
+        if hasattr(broadcaster, "broadcast"):
             try:
-                result = broadcaster.broadcast(tx)
+                broadcaster.broadcast(tx)
             except Exception:
                 # Expected without valid tx or network
                 pytest.skip("Requires valid transaction and network")
@@ -57,11 +59,12 @@ def test_woc_broadcaster_broadcast():
 # GorillaPool broadcaster branches
 # ========================================================================
 
+
 def test_gorillapool_broadcaster_init():
     """Test GorillaPool broadcaster initialization."""
     try:
         from bsv.broadcasters import GorillaPoolBroadcaster
-        
+
         broadcaster = GorillaPoolBroadcaster()
         assert broadcaster is not None
     except (ImportError, AttributeError):
@@ -72,13 +75,13 @@ def test_gorillapool_broadcaster_broadcast():
     """Test broadcasting with GorillaPool."""
     try:
         from bsv.broadcasters import GorillaPoolBroadcaster
-        
+
         broadcaster = GorillaPoolBroadcaster()
         tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
-        
-        if hasattr(broadcaster, 'broadcast'):
+
+        if hasattr(broadcaster, "broadcast"):
             try:
-                result = broadcaster.broadcast(tx)
+                broadcaster.broadcast(tx)
             except Exception:
                 # Expected without valid tx or network
                 pytest.skip("Requires valid transaction and network")
@@ -90,11 +93,12 @@ def test_gorillapool_broadcaster_broadcast():
 # TAAL broadcaster branches
 # ========================================================================
 
+
 def test_taal_broadcaster_init():
     """Test TAAL broadcaster initialization."""
     try:
         from bsv.broadcasters import TaalBroadcaster
-        
+
         broadcaster = TaalBroadcaster()
         assert broadcaster is not None
     except (ImportError, AttributeError):
@@ -105,11 +109,12 @@ def test_taal_broadcaster_init():
 # Multi-broadcaster branches
 # ========================================================================
 
+
 def test_multi_broadcaster_init():
     """Test multi-broadcaster initialization."""
     try:
         from bsv.broadcasters import MultiBroadcaster
-        
+
         try:
             broadcaster = MultiBroadcaster(broadcasters=[])
             assert broadcaster is not None
@@ -124,18 +129,18 @@ def test_multi_broadcaster_init():
 # Edge cases
 # ========================================================================
 
+
 def test_broadcaster_with_none_transaction():
     """Test broadcasting None transaction."""
     try:
-        from bsv.broadcasters import WhatsOnChainBroadcaster, BroadcastResponse, BroadcastFailure
-        
+        from bsv.broadcasters import BroadcastFailure, BroadcastResponse, WhatsOnChainBroadcaster
+
         broadcaster = WhatsOnChainBroadcaster()
-        
-        if hasattr(broadcaster, 'broadcast'):
+
+        if hasattr(broadcaster, "broadcast"):
             try:
-                result = broadcaster.broadcast(None)
+                broadcaster.broadcast(None)
                 # Success case - acceptable
-                pass
             except (TypeError, AttributeError):
                 # Expected exception case - also acceptable
                 pass
@@ -147,14 +152,17 @@ def test_broadcaster_with_none_transaction():
 # Comprehensive error condition testing and branch coverage
 # ========================================================================
 
+
 @pytest.mark.asyncio
 async def test_woc_broadcaster_network_failures():
     """Test WhatsOnChain broadcaster with network failures."""
     try:
-        from bsv.broadcasters import WhatsOnChainBroadcaster, BroadcastFailure
-        from bsv.transaction import Transaction
         from unittest.mock import AsyncMock, Mock
+
         import aiohttp
+
+        from bsv.broadcasters import BroadcastFailure, WhatsOnChainBroadcaster
+        from bsv.transaction import Transaction
 
         broadcaster = WhatsOnChainBroadcaster()
 
@@ -185,7 +193,7 @@ async def test_woc_broadcaster_network_failures():
 async def test_woc_broadcaster_invalid_network():
     """Test WhatsOnChain broadcaster with invalid network."""
     try:
-        from bsv.broadcasters import WhatsOnChainBroadcaster, BroadcastResponse, BroadcastFailure
+        from bsv.broadcasters import BroadcastFailure, BroadcastResponse, WhatsOnChainBroadcaster
 
         # Test invalid network string
         with pytest.raises(ValueError, match="Invalid network string"):
@@ -203,8 +211,9 @@ async def test_woc_broadcaster_invalid_network():
 async def test_woc_broadcaster_malformed_responses():
     """Test WhatsOnChain broadcaster with malformed API responses."""
     try:
-        from bsv.broadcasters import WhatsOnChainBroadcaster, BroadcastFailure
         from unittest.mock import Mock
+
+        from bsv.broadcasters import BroadcastFailure, WhatsOnChainBroadcaster
 
         broadcaster = WhatsOnChainBroadcaster()
 

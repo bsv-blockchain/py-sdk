@@ -5,14 +5,14 @@ from typing import Dict
 import pytest
 
 from bsv.storage.downloader import Downloader
-from bsv.storage.exceptions import UploadError, DownloadError
-from bsv.storage.uploader import Uploader
+from bsv.storage.exceptions import DownloadError, UploadError
 from bsv.storage.interfaces import (
-    UploadMetadata,
+    DownloadResult,
     FindFileData,
     RenewFileResult,
-    DownloadResult,
+    UploadMetadata,
 )
+from bsv.storage.uploader import Uploader
 from bsv.storage.utils import StorageUtils
 
 
@@ -20,9 +20,9 @@ class FakeStorageBackend:
     """In-memory storage to satisfy storage E2E tests without network calls."""
 
     def __init__(self):
-        self._pending: Dict[str, Dict] = {}
-        self._files: Dict[str, Dict] = {}
-        self._download_map: Dict[str, str] = {}
+        self._pending: dict[str, dict] = {}
+        self._files: dict[str, dict] = {}
+        self._download_map: dict[str, str] = {}
         self._counter = 0
 
     def reserve_upload(self, retention_minutes: int) -> str:
@@ -35,7 +35,7 @@ class FakeStorageBackend:
         }
         return upload_url
 
-    def commit_upload(self, upload_url: str, file_data: bytes, mime_type: str) -> Dict:
+    def commit_upload(self, upload_url: str, file_data: bytes, mime_type: str) -> dict:
         pending = self._pending.pop(upload_url, {"retention": 60, "id": self._counter})
         uhrp_url = StorageUtils.get_url_for_file(file_data)
         expiry = int(time.time()) + pending["retention"] * 60
@@ -55,13 +55,13 @@ class FakeStorageBackend:
         self._download_map[entry["download_url"]] = uhrp_url
         return entry
 
-    def get_entry(self, uhrp_url: str) -> Dict:
+    def get_entry(self, uhrp_url: str) -> dict:
         return self._files.get(uhrp_url)  # type: ignore[return-value]
 
     def list_entries(self):
         return list(self._files.values())
 
-    def lookup_download_url(self, download_url: str) -> Dict:
+    def lookup_download_url(self, download_url: str) -> dict:
         uhrp = self._download_map.get(download_url)
         if not uhrp:
             return {}
@@ -172,8 +172,7 @@ def fake_storage(monkeypatch, request):
         result = original_publish(self, file_data, mime_type, retention_period)
         entry = backend.get_entry(StorageUtils.get_url_for_file(file_data))
         if entry:
-            setattr(result, "_", entry)
+            result._ = entry
         return result
 
     monkeypatch.setattr(Uploader, "publish_file", _publish_with_metadata)
-

@@ -1,6 +1,7 @@
 """
 Coverage tests for wallet/serializer/discover_by_attributes.py - untested branches.
 """
+
 import pytest
 
 
@@ -22,12 +23,7 @@ def test_serialize_discover_by_attributes_args_with_options():
     try:
         from bsv.wallet.serializer.discover_by_attributes import serialize_discover_by_attributes_args
 
-        args = {
-            "attributes": {"name": "alice"},
-            "limit": 10,
-            "offset": 5,
-            "seekPermission": True
-        }
+        args = {"attributes": {"name": "alice"}, "limit": 10, "offset": 5, "seekPermission": True}
         result = serialize_discover_by_attributes_args(args)
         assert isinstance(result, bytes)
         assert len(result) > 0
@@ -67,8 +63,8 @@ def test_deserialize_discover_by_attributes_args_basic():
     """Test deserialize_discover_by_attributes_args with basic data."""
     try:
         from bsv.wallet.serializer.discover_by_attributes import (
+            deserialize_discover_by_attributes_args,
             serialize_discover_by_attributes_args,
-            deserialize_discover_by_attributes_args
         )
 
         # Create test data
@@ -88,8 +84,8 @@ def test_deserialize_discover_by_attributes_args_with_options():
     """Test deserialize_discover_by_attributes_args with all options."""
     try:
         from bsv.wallet.serializer.discover_by_attributes import (
+            deserialize_discover_by_attributes_args,
             serialize_discover_by_attributes_args,
-            deserialize_discover_by_attributes_args
         )
 
         # Create test data
@@ -97,7 +93,7 @@ def test_deserialize_discover_by_attributes_args_with_options():
             "attributes": {"name": "alice", "email": "alice@example.com"},
             "limit": 10,
             "offset": 5,
-            "seekPermission": True
+            "seekPermission": True,
         }
         serialized = serialize_discover_by_attributes_args(args)
 
@@ -116,8 +112,8 @@ def test_deserialize_discover_by_attributes_args_empty():
     """Test deserialize_discover_by_attributes_args with empty attributes."""
     try:
         from bsv.wallet.serializer.discover_by_attributes import (
+            deserialize_discover_by_attributes_args,
             serialize_discover_by_attributes_args,
-            deserialize_discover_by_attributes_args
         )
 
         # Create test data with empty attributes
@@ -136,8 +132,8 @@ def test_deserialize_discover_by_attributes_args_none_values():
     """Test deserialize_discover_by_attributes_args with None optional values."""
     try:
         from bsv.wallet.serializer.discover_by_attributes import (
+            deserialize_discover_by_attributes_args,
             serialize_discover_by_attributes_args,
-            deserialize_discover_by_attributes_args
         )
 
         # Create test data with None values
@@ -159,8 +155,8 @@ def test_discover_by_attributes_roundtrip():
     """Test full roundtrip serialization/deserialization."""
     try:
         from bsv.wallet.serializer.discover_by_attributes import (
+            deserialize_discover_by_attributes_args,
             serialize_discover_by_attributes_args,
-            deserialize_discover_by_attributes_args
         )
 
         test_cases = [

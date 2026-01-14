@@ -5,11 +5,13 @@ These tests ensure the script interpreter performs well under various loads
 and handles resource-intensive operations appropriately.
 """
 
-import pytest
 import time
-from bsv.script.script import Script
-from bsv.script.interpreter import Engine, with_scripts, with_after_genesis, with_fork_id
+
+import pytest
+
+from bsv.script.interpreter import Engine, with_after_genesis, with_fork_id, with_scripts
 from bsv.script.interpreter.errs import ErrorCode
+from bsv.script.script import Script
 
 
 class TestScriptInterpreterPerformance:
@@ -25,7 +27,7 @@ class TestScriptInterpreterPerformance:
 
         # Add 1000 OP_1 opcodes (0x51 each)
         for _ in range(script_size):
-            script_bytes += b'\x51'  # OP_1
+            script_bytes += b"\x51"  # OP_1
 
         locking_script = Script(script_bytes)
         unlocking_script = Script.from_bytes(b"")
@@ -77,10 +79,10 @@ class TestScriptInterpreterPerformance:
         # Create a script that adds 500 ones together
         script_bytes = b""
         for _ in range(num_operations):
-            script_bytes += b'\x51'  # OP_1
+            script_bytes += b"\x51"  # OP_1
 
         for _ in range(num_operations - 1):
-            script_bytes += b'\x93'  # OP_ADD
+            script_bytes += b"\x93"  # OP_ADD
 
         locking_script = Script(script_bytes)
         unlocking_script = Script.from_bytes(b"")
@@ -101,9 +103,9 @@ class TestScriptInterpreterPerformance:
         # Test DUP operations on a growing stack
         stack_depth = 100
 
-        script_bytes = b'\x51'  # Start with OP_1
+        script_bytes = b"\x51"  # Start with OP_1
         for _ in range(stack_depth - 1):
-            script_bytes += b'\x76'  # OP_DUP
+            script_bytes += b"\x76"  # OP_DUP
 
         locking_script = Script(script_bytes)
         unlocking_script = Script.from_bytes(b"")
@@ -126,13 +128,13 @@ class TestScriptInterpreterPerformance:
 
         script_bytes = b""
         for _ in range(nesting_depth):
-            script_bytes += b'\x51'  # OP_1 (always true)
-            script_bytes += b'\x63'  # OP_IF
+            script_bytes += b"\x51"  # OP_1 (always true)
+            script_bytes += b"\x63"  # OP_IF
 
-        script_bytes += b'\x51'  # Final OP_1 result
+        script_bytes += b"\x51"  # Final OP_1 result
 
         for _ in range(nesting_depth):
-            script_bytes += b'\x68'  # OP_ENDIF
+            script_bytes += b"\x68"  # OP_ENDIF
 
         locking_script = Script(script_bytes)
         unlocking_script = Script.from_bytes(b"")
@@ -248,4 +250,3 @@ class TestScriptInterpreterPerformance:
 
         # Memory should not be growing significantly
         # (This is a basic check - more sophisticated memory profiling would be needed)
-        pass

@@ -1,11 +1,11 @@
-#this will be deprecated in the future. Please use bsv/broadcasters/broadcaster.py
+# this will be deprecated in the future. Please use bsv/broadcasters/broadcaster.py
 
 from abc import ABC, abstractmethod
-from typing import Union, Dict, Any, TYPE_CHECKING
-
+from typing import TYPE_CHECKING, Any, Dict, Union
 
 if TYPE_CHECKING:
     from .transaction import Transaction
+
 
 class BroadcastResponse:
     def __init__(self, status: str, txid: str, message: str):
@@ -16,12 +16,12 @@ class BroadcastResponse:
 
 class BroadcastFailure:
     def __init__(
-            self,
-            status: str,
-            code: str,
-            description: str,
-            txid: str = None,
-            more: Dict[str, Any] = None,
+        self,
+        status: str,
+        code: str,
+        description: str,
+        txid: str = None,
+        more: dict[str, Any] = None,
     ):
         self.status = status
         self.code = code
@@ -35,9 +35,7 @@ class Broadcaster(ABC):
         self.URL = None
 
     @abstractmethod
-    async def broadcast(
-            self, transaction: 'Transaction'
-    ) -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, transaction: "Transaction") -> Union[BroadcastResponse, BroadcastFailure]:
         pass
 
 

@@ -2,8 +2,8 @@ from contextlib import suppress
 from io import BytesIO
 from typing import Optional, Union
 
-from .constants import SIGHASH
 from .constants import (
+    SIGHASH,
     TRANSACTION_SEQUENCE,
 )
 from .script.script import Script
@@ -14,14 +14,14 @@ from .utils import Reader
 class TransactionInput:
 
     def __init__(
-            self,
-            source_transaction=None,
-            source_txid: Optional[str] = None,
-            source_output_index: int = 0,
-            unlocking_script: Optional[Script] = None,
-            unlocking_script_template: UnlockingScriptTemplate = None,
-            sequence: int = TRANSACTION_SEQUENCE,
-            sighash: SIGHASH = SIGHASH.ALL_FORKID,
+        self,
+        source_transaction=None,
+        source_txid: Optional[str] = None,
+        source_output_index: int = 0,
+        unlocking_script: Optional[Script] = None,
+        unlocking_script_template: UnlockingScriptTemplate = None,
+        sequence: int = TRANSACTION_SEQUENCE,
+        sighash: SIGHASH = SIGHASH.ALL_FORKID,
     ):
         utxo = None
         if source_transaction:
@@ -44,20 +44,16 @@ class TransactionInput:
         stream = BytesIO()
         stream.write(bytes.fromhex(self.source_txid)[::-1])
         stream.write(self.source_output_index.to_bytes(4, "little"))
-        stream.write(
-            self.unlocking_script.byte_length_varint()
-            if self.unlocking_script
-            else b"\x00"
-        )
-        stream.write(
-            self.unlocking_script.serialize() if self.unlocking_script else b""
-        )
+        stream.write(self.unlocking_script.byte_length_varint() if self.unlocking_script else b"\x00")
+        stream.write(self.unlocking_script.serialize() if self.unlocking_script else b"")
         stream.write(self.sequence.to_bytes(4, "little"))
         return stream.getvalue()
 
     def __str__(self) -> str:  # pragma: no cover
-        return (f"<TransactionInput outpoint={self.source_txid}:{self.source_output_index} "
-                f"value={self.satoshis} locking_script={self.locking_script}>")
+        return (
+            f"<TransactionInput outpoint={self.source_txid}:{self.source_output_index} "
+            f"value={self.satoshis} locking_script={self.locking_script}>"
+        )
 
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
@@ -72,9 +68,7 @@ class TransactionInput:
             stream = (
                 stream
                 if isinstance(stream, Reader)
-                else Reader(
-                    stream if isinstance(stream, bytes) else bytes.fromhex(stream)
-                )
+                else Reader(stream if isinstance(stream, bytes) else bytes.fromhex(stream))
             )
         except ValueError:
             return None

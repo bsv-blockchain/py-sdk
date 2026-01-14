@@ -1,6 +1,6 @@
 import pytest
 
-from bsv.utils import Writer, Reader
+from bsv.utils import Reader, Writer
 
 
 class TestWriterVarInt:
@@ -8,11 +8,11 @@ class TestWriterVarInt:
         "num,expected",
         [
             (0, b"\x00"),
-            (0xfc, b"\xfc"),
-            (0xfd, b"\xfd\xfd\x00"),
-            (0xffff, b"\xfd\xff\xff"),
+            (0xFC, b"\xfc"),
+            (0xFD, b"\xfd\xfd\x00"),
+            (0xFFFF, b"\xfd\xff\xff"),
             (0x10000, b"\xfe\x00\x00\x01\x00"),
-            (0xffffffff, b"\xfe\xff\xff\xff\xff"),
+            (0xFFFFFFFF, b"\xfe\xff\xff\xff\xff"),
             (0x100000000, b"\xff\x00\x00\x00\x00\x01\x00\x00\x00"),
         ],
     )
@@ -29,10 +29,10 @@ class TestWriterPrimitives:
         w = Writer()
         # little endian
         w.write_uint16_le(0x1234)
-        w.write_uint32_le(0x89abcdef)
+        w.write_uint32_le(0x89ABCDEF)
         # big endian
         w.write_uint16_be(0x1234)
-        w.write_uint32_be(0x89abcdef)
+        w.write_uint32_be(0x89ABCDEF)
         # varint count 3
         w.write_var_int_num(3)
         buf = w.to_bytes()
@@ -47,13 +47,7 @@ class TestWriterPrimitives:
 
 class TestReaderPrimitives:
     def test_read_endianness_and_varint(self):
-        data = (
-            b"\x34\x12"
-            b"\xef\xcd\xab\x89"
-            b"\x12\x34"
-            b"\x89\xab\xcd\xef"
-            b"\x03"
-        )
+        data = b"\x34\x12" b"\xef\xcd\xab\x89" b"\x12\x34" b"\x89\xab\xcd\xef" b"\x03"
         r = Reader(data)
 
         # Reader has BE/LE helpers for 16/32
@@ -73,7 +67,7 @@ class TestReaderPrimitives:
 
     @pytest.mark.parametrize(
         "num",
-        [0, 1, 252, 253, 254, 255, 1000, 65535, 65536, 2 ** 32 - 1, 2 ** 32],
+        [0, 1, 252, 253, 254, 255, 1000, 65535, 65536, 2**32 - 1, 2**32],
     )
     def test_varint_roundtrip(self, num: int):
         w = Writer()
@@ -94,5 +88,3 @@ class TestReaderPrimitives:
 
         if parsed is not None:
             assert parsed == num
-
-

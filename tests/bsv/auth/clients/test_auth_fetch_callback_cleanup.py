@@ -1,10 +1,13 @@
 """
 Tests for auth_fetch callback cleanup mechanisms
 """
-import pytest
+
 import threading
 import time
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+
 from bsv.auth.clients.auth_fetch import AuthFetch, SimplifiedFetchRequestOptions
 
 
@@ -25,12 +28,12 @@ class TestAuthFetchCallbackCleanup:
 
         # Check event and holder
         assert isinstance(response_event, threading.Event)
-        assert response_holder == {'resp': None, 'err': None}
+        assert response_holder == {"resp": None, "err": None}
 
         # Check callbacks are registered
         assert request_nonce_b64 in self.auth_fetch.callbacks
-        assert 'resolve' in self.auth_fetch.callbacks[request_nonce_b64]
-        assert 'reject' in self.auth_fetch.callbacks[request_nonce_b64]
+        assert "resolve" in self.auth_fetch.callbacks[request_nonce_b64]
+        assert "reject" in self.auth_fetch.callbacks[request_nonce_b64]
 
     def test_callback_resolve_sets_response(self):
         """Test callback resolve sets response and signals event."""
@@ -41,11 +44,11 @@ class TestAuthFetchCallbackCleanup:
         mock_response.status_code = 200
 
         # Call resolve callback
-        self.auth_fetch.callbacks[request_nonce_b64]['resolve'](mock_response)
+        self.auth_fetch.callbacks[request_nonce_b64]["resolve"](mock_response)
 
         # Check response is set and event is signaled
-        assert response_holder['resp'] == mock_response
-        assert response_holder['err'] is None
+        assert response_holder["resp"] == mock_response
+        assert response_holder["err"] is None
         assert response_event.is_set()
 
     def test_callback_reject_sets_error(self):
@@ -56,42 +59,42 @@ class TestAuthFetchCallbackCleanup:
         test_error = Exception("Test error")
 
         # Call reject callback
-        self.auth_fetch.callbacks[request_nonce_b64]['reject'](test_error)
+        self.auth_fetch.callbacks[request_nonce_b64]["reject"](test_error)
 
         # Check error is set and event is signaled
-        assert response_holder['err'] == test_error
-        assert response_holder['resp'] is None
+        assert response_holder["err"] == test_error
+        assert response_holder["resp"] is None
         assert response_event.is_set()
 
-    @patch('bsv.auth.clients.auth_fetch.threading.Event')
+    @patch("bsv.auth.clients.auth_fetch.threading.Event")
     def test_callback_exception_handling(self, mock_event_class):
         """Test exception handling in callback lambdas."""
         mock_event = Mock()
         mock_event_class.return_value = mock_event
 
         request_nonce_b64 = "test_nonce"
-        response_event, response_holder = self.auth_fetch._setup_callbacks(request_nonce_b64)
+        _response_event, _response_holder = self.auth_fetch._setup_callbacks(request_nonce_b64)
 
         # Test resolve callback with exception - should propagate (this is expected behavior)
         def failing_resolve(resp):
             raise RuntimeError("Resolve failed")
 
         # Replace the lambda with failing version
-        self.auth_fetch.callbacks[request_nonce_b64]['resolve'] = failing_resolve
+        self.auth_fetch.callbacks[request_nonce_b64]["resolve"] = failing_resolve
 
         # This should raise an exception (expected behavior)
         with pytest.raises(RuntimeError, match="Resolve failed"):
-            self.auth_fetch.callbacks[request_nonce_b64]['resolve']("test_resp")
+            self.auth_fetch.callbacks[request_nonce_b64]["resolve"]("test_resp")
 
         # Test reject callback with exception - should propagate
         def failing_reject(err):
             raise RuntimeError("Reject failed")
 
-        self.auth_fetch.callbacks[request_nonce_b64]['reject'] = failing_reject
+        self.auth_fetch.callbacks[request_nonce_b64]["reject"] = failing_reject
 
         # This should raise an exception (expected behavior)
         with pytest.raises(RuntimeError, match="Reject failed"):
-            self.auth_fetch.callbacks[request_nonce_b64]['reject']("test_err")
+            self.auth_fetch.callbacks[request_nonce_b64]["reject"]("test_err")
 
     def test_cleanup_and_get_response_success(self):
         """Test _cleanup_and_get_response with successful response."""
@@ -99,17 +102,17 @@ class TestAuthFetchCallbackCleanup:
         mock_peer = Mock()
         listener_id = "test_listener_id"
         request_nonce_b64 = "test_nonce"
-        response_holder = {'resp': Mock(), 'err': None}
+        response_holder = {"resp": Mock(), "err": None}
 
         # Set up callback
-        self.auth_fetch.callbacks[request_nonce_b64] = {'resolve': Mock(), 'reject': Mock()}
+        self.auth_fetch.callbacks[request_nonce_b64] = {"resolve": Mock(), "reject": Mock()}
 
         result = self.auth_fetch._cleanup_and_get_response(mock_peer, listener_id, request_nonce_b64, response_holder)
 
         # Verify cleanup
         mock_peer.peer.stop_listening_for_general_messages.assert_called_once_with(listener_id)
         assert request_nonce_b64 not in self.auth_fetch.callbacks
-        assert result == response_holder['resp']
+        assert result == response_holder["resp"]
 
     def test_cleanup_and_get_response_error(self):
         """Test _cleanup_and_get_response with error response."""
@@ -117,10 +120,10 @@ class TestAuthFetchCallbackCleanup:
         listener_id = "test_listener_id"
         request_nonce_b64 = "test_nonce"
         test_error = Exception("Test error")
-        response_holder = {'resp': None, 'err': test_error}
+        response_holder = {"resp": None, "err": test_error}
 
         # Set up callback
-        self.auth_fetch.callbacks[request_nonce_b64] = {'resolve': Mock(), 'reject': Mock()}
+        self.auth_fetch.callbacks[request_nonce_b64] = {"resolve": Mock(), "reject": Mock()}
 
         with pytest.raises(RuntimeError, match="Test error"):
             self.auth_fetch._cleanup_and_get_response(mock_peer, listener_id, request_nonce_b64, response_holder)
@@ -134,31 +137,31 @@ class TestAuthFetchCallbackCleanup:
         mock_peer = Mock()
         listener_id = None
         request_nonce_b64 = "test_nonce"
-        response_holder = {'resp': Mock(), 'err': None}
+        response_holder = {"resp": Mock(), "err": None}
 
         # Set up callback
-        self.auth_fetch.callbacks[request_nonce_b64] = {'resolve': Mock(), 'reject': Mock()}
+        self.auth_fetch.callbacks[request_nonce_b64] = {"resolve": Mock(), "reject": Mock()}
 
         result = self.auth_fetch._cleanup_and_get_response(mock_peer, listener_id, request_nonce_b64, response_holder)
 
         # Verify cleanup with None listener_id
         mock_peer.peer.stop_listening_for_general_messages.assert_called_once_with(None)
         assert request_nonce_b64 not in self.auth_fetch.callbacks
-        assert result == response_holder['resp']
+        assert result == response_holder["resp"]
 
     def test_cleanup_and_get_response_missing_callback(self):
         """Test _cleanup_and_get_response with missing callback (should not crash)."""
         mock_peer = Mock()
         listener_id = "test_listener_id"
         request_nonce_b64 = "missing_nonce"
-        response_holder = {'resp': Mock(), 'err': None}
+        response_holder = {"resp": Mock(), "err": None}
 
         # Don't set up callback - it should handle missing gracefully
         result = self.auth_fetch._cleanup_and_get_response(mock_peer, listener_id, request_nonce_b64, response_holder)
 
         # Should still work and clean up listener
         mock_peer.peer.stop_listening_for_general_messages.assert_called_once_with(listener_id)
-        assert result == response_holder['resp']
+        assert result == response_holder["resp"]
 
     def test_multiple_callbacks_cleanup(self):
         """Test cleanup with multiple pending callbacks."""
@@ -172,7 +175,7 @@ class TestAuthFetchCallbackCleanup:
         # Clean up each one
         mock_peer = Mock()
         for nonce in nonces:
-            response_holder = {'resp': Mock(), 'err': None}
+            response_holder = {"resp": Mock(), "err": None}
             self.auth_fetch._cleanup_and_get_response(mock_peer, "listener_id", nonce, response_holder)
 
         # All callbacks should be cleaned up
@@ -193,9 +196,9 @@ class TestAuthFetchCallbackCleanup:
         elif error_type == "dict_error":
             test_error = {"error": "Dict error"}
 
-        self.auth_fetch.callbacks[request_nonce_b64]['reject'](test_error)
+        self.auth_fetch.callbacks[request_nonce_b64]["reject"](test_error)
 
-        assert response_holder['err'] == test_error
+        assert response_holder["err"] == test_error
         assert response_event.is_set()
 
     def test_callback_thread_safety(self):
@@ -203,14 +206,14 @@ class TestAuthFetchCallbackCleanup:
         import concurrent.futures
 
         request_nonce_b64 = "test_nonce"
-        response_event, response_holder = self.auth_fetch._setup_callbacks(request_nonce_b64)
+        _response_event, response_holder = self.auth_fetch._setup_callbacks(request_nonce_b64)
 
         results = []
 
         def call_resolve():
             time.sleep(0.01)  # Small delay to ensure concurrent execution
             try:
-                self.auth_fetch.callbacks[request_nonce_b64]['resolve']("test_response")
+                self.auth_fetch.callbacks[request_nonce_b64]["resolve"]("test_response")
                 results.append("resolve_success")
             except Exception as e:
                 results.append(f"resolve_error: {e}")
@@ -243,14 +246,16 @@ class TestAuthFetchCallbackCleanup:
 
         # Simulate timeout - event never gets set
         assert not response_event.is_set()
-        assert response_holder['resp'] is None
-        assert response_holder['err'] is None
+        assert response_holder["resp"] is None
+        assert response_holder["err"] is None
 
         # Callback should still be registered
         assert request_nonce_b64 in self.auth_fetch.callbacks
 
         # Manual cleanup should work
         mock_peer = Mock()
-        response_holder_timeout = {'resp': None, 'err': "timeout"}
+        response_holder_timeout = {"resp": None, "err": "timeout"}
         with pytest.raises(RuntimeError, match="timeout"):
-            self.auth_fetch._cleanup_and_get_response(mock_peer, "listener_id", request_nonce_b64, response_holder_timeout)
+            self.auth_fetch._cleanup_and_get_response(
+                mock_peer, "listener_id", request_nonce_b64, response_holder_timeout
+            )

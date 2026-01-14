@@ -1,5 +1,7 @@
 import unittest
+
 import pytest
+
 from bsv.script.interpreter.number import ScriptNumber
 
 
@@ -37,7 +39,7 @@ class TestScriptNumber(unittest.TestCase):
         # b"\x80" is negative zero, which should fail minimal encoding
         with self.assertRaises(ValueError):
             ScriptNumber.from_bytes(b"\x80", require_minimal=True)
-        
+
         # But works without minimal encoding (decodes to 0)
         num = ScriptNumber.from_bytes(b"\x80", require_minimal=False)
         self.assertEqual(num.value, 0)
@@ -45,11 +47,11 @@ class TestScriptNumber(unittest.TestCase):
         # -1 is encoded as 0x81
         num = ScriptNumber.from_bytes(b"\x81")
         self.assertEqual(num.value, -1)
-        
+
         # -127 is encoded as 0xFF
         num = ScriptNumber.from_bytes(b"\xff")
         self.assertEqual(num.value, -127)
-        
+
         # -128 requires two bytes: 0x8080
         num = ScriptNumber.from_bytes(b"\x80\x80")
         self.assertEqual(num.value, -128)
@@ -127,8 +129,7 @@ class TestScriptNumber(unittest.TestCase):
             num = ScriptNumber(value)
             bytes_data = num.bytes()
             reconstructed = ScriptNumber.from_bytes(bytes_data)
-            self.assertEqual(reconstructed.value, value,
-                           f"Roundtrip failed for value {value}")
+            self.assertEqual(reconstructed.value, value, f"Roundtrip failed for value {value}")
 
     def test_roundtrip_negative(self):
         """Test roundtrip conversion for negative numbers."""
@@ -138,8 +139,7 @@ class TestScriptNumber(unittest.TestCase):
             num = ScriptNumber(value)
             bytes_data = num.bytes()
             reconstructed = ScriptNumber.from_bytes(bytes_data)
-            self.assertEqual(reconstructed.value, value,
-                           f"Roundtrip failed for value {value}")
+            self.assertEqual(reconstructed.value, value, f"Roundtrip failed for value {value}")
 
     def test_edge_cases(self):
         """Test edge cases."""
@@ -167,5 +167,5 @@ class TestScriptNumber(unittest.TestCase):
         self.assertEqual(reconstructed.value, 0x80)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

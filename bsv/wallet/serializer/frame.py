@@ -1,6 +1,6 @@
 from typing import Optional
 
-from bsv.wallet.substrates.serializer import Writer, Reader
+from bsv.wallet.substrates.serializer import Reader, Writer
 
 
 def write_request_frame(call: int, originator: str, params: bytes) -> bytes:

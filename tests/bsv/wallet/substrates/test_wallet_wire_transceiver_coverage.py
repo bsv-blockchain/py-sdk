@@ -1,18 +1,21 @@
 """
 Coverage tests for wallet_wire_transceiver.py - untested branches.
 """
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
 
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 # ========================================================================
 # Initialization branches
 # ========================================================================
 
+
 def test_transceiver_init_with_websocket_url():
     """Test transceiver init with WebSocket URL."""
     try:
         from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
+
         t = WalletWireTransceiver(Mock())
         assert t is not None
     except (ImportError, AttributeError):
@@ -22,7 +25,8 @@ def test_transceiver_init_with_websocket_url():
 def test_transceiver_init_with_wss_url():
     """Test transceiver init with secure WebSocket URL."""
     try:
-        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver  
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
+
         t = WalletWireTransceiver(Mock())
         assert t is not None
     except (ImportError, AttributeError):
@@ -33,14 +37,16 @@ def test_transceiver_init_with_wss_url():
 # Connection branches
 # ========================================================================
 
+
 @pytest.mark.asyncio
 async def test_transceiver_connect_success():
     """Test successful connection."""
     try:
         from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
+
         t = WalletWireTransceiver("ws://localhost:8080")
-        
-        with patch('websockets.connect') as mock_connect:
+
+        with patch("websockets.connect") as mock_connect:
             mock_connect.return_value = AsyncMock()
             try:
                 await t.connect()
@@ -55,11 +61,12 @@ async def test_transceiver_connect_failure():
     """Test connection failure handling."""
     try:
         from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
+
         t = WalletWireTransceiver("ws://invalid:9999")
-        
-        with patch('websockets.connect') as mock_connect:
+
+        with patch("websockets.connect") as mock_connect:
             mock_connect.side_effect = Exception("Connection failed")
-            
+
             with pytest.raises(Exception):
                 await t.connect()
     except ImportError:
@@ -70,14 +77,16 @@ async def test_transceiver_connect_failure():
 # Message handling branches
 # ========================================================================
 
+
 @pytest.mark.asyncio
 async def test_transceiver_send_message():
     """Test sending message."""
     try:
         from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
+
         t = WalletWireTransceiver("ws://localhost:8080")
         t.ws = AsyncMock()
-        
+
         await t.send({"type": "test", "data": "value"})
         assert t.ws.send.called
     except (ImportError, AttributeError):
@@ -89,10 +98,11 @@ async def test_transceiver_receive_message():
     """Test receiving message."""
     try:
         from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
+
         t = WalletWireTransceiver("ws://localhost:8080")
         t.ws = AsyncMock()
         t.ws.recv = AsyncMock(return_value='{"type":"response"}')
-        
+
         msg = await t.receive()
         assert msg is not None
     except (ImportError, AttributeError):
@@ -103,10 +113,12 @@ async def test_transceiver_receive_message():
 # Edge cases
 # ========================================================================
 
+
 def test_transceiver_str_representation():
     """Test string representation."""
     try:
         from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
+
         t = WalletWireTransceiver("ws://localhost:8080")
         str_repr = str(t)
         assert isinstance(str_repr, str)
@@ -118,11 +130,12 @@ def test_transceiver_str_representation():
 # Error handling branches
 # ========================================================================
 
+
 def test_transceiver_transmit_error():
     """Test transmit method error handling."""
     try:
-        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
         from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 
         mock_wire = Mock()
         mock_wire.transmit_to_wallet.side_effect = Exception("Transmission failed")
@@ -144,7 +157,10 @@ def test_transceiver_create_action_serialize_error():
         t = WalletWireTransceiver(mock_wire)
 
         # Mock serialization to fail
-        with patch('bsv.wallet.serializer.create_action_args.serialize_create_action_args', side_effect=Exception("Serialize failed")):
+        with patch(
+            "bsv.wallet.serializer.create_action_args.serialize_create_action_args",
+            side_effect=Exception("Serialize failed"),
+        ):
             with pytest.raises(Exception):
                 t.create_action(None, {"invalid": "args"}, "test")
     except ImportError:
@@ -161,7 +177,10 @@ def test_transceiver_create_action_deserialize_error():
         t = WalletWireTransceiver(mock_wire)
 
         # Mock deserialization to fail
-        with patch('bsv.wallet.serializer.create_action_result.deserialize_create_action_result', side_effect=Exception("Deserialize failed")):
+        with patch(
+            "bsv.wallet.serializer.create_action_result.deserialize_create_action_result",
+            side_effect=Exception("Deserialize failed"),
+        ):
             with pytest.raises(Exception):
                 t.create_action(None, {"action": "test"}, "test")
     except ImportError:
@@ -178,7 +197,10 @@ def test_transceiver_sign_action_serialize_error():
         t = WalletWireTransceiver(mock_wire)
 
         # Mock serialization to fail
-        with patch('bsv.wallet.serializer.sign_action_args.serialize_sign_action_args', side_effect=Exception("Serialize failed")):
+        with patch(
+            "bsv.wallet.serializer.sign_action_args.serialize_sign_action_args",
+            side_effect=Exception("Serialize failed"),
+        ):
             with pytest.raises(Exception):
                 t.sign_action(None, {"invalid": "args"}, "test")
     except ImportError:
@@ -195,7 +217,10 @@ def test_transceiver_sign_action_deserialize_error():
         t = WalletWireTransceiver(mock_wire)
 
         # Mock deserialization to fail
-        with patch('bsv.wallet.serializer.sign_action_result.deserialize_sign_action_result', side_effect=Exception("Deserialize failed")):
+        with patch(
+            "bsv.wallet.serializer.sign_action_result.deserialize_sign_action_result",
+            side_effect=Exception("Deserialize failed"),
+        ):
             with pytest.raises(Exception):
                 t.sign_action(None, {"action_id": "test"}, "test")
     except ImportError:
@@ -212,7 +237,9 @@ def test_transceiver_list_actions_serialize_error():
         t = WalletWireTransceiver(mock_wire)
 
         # Mock serialization to fail
-        with patch('bsv.wallet.serializer.list_actions.serialize_list_actions_args', side_effect=Exception("Serialize failed")):
+        with patch(
+            "bsv.wallet.serializer.list_actions.serialize_list_actions_args", side_effect=Exception("Serialize failed")
+        ):
             with pytest.raises(Exception):
                 t.list_actions(None, {"invalid": "args"}, "test")
     except ImportError:
@@ -229,7 +256,10 @@ def test_transceiver_list_actions_deserialize_error():
         t = WalletWireTransceiver(mock_wire)
 
         # Mock deserialization to fail
-        with patch('bsv.wallet.serializer.list_actions.deserialize_list_actions_result', side_effect=Exception("Deserialize failed")):
+        with patch(
+            "bsv.wallet.serializer.list_actions.deserialize_list_actions_result",
+            side_effect=Exception("Deserialize failed"),
+        ):
             with pytest.raises(Exception):
                 t.list_actions(None, {}, "test")
     except ImportError:
@@ -240,6 +270,7 @@ def test_transceiver_list_actions_deserialize_error():
 # Decoded methods coverage
 # ========================================================================
 
+
 def test_transceiver_create_action_decoded():
     """Test create_action_decoded method."""
     try:
@@ -249,8 +280,10 @@ def test_transceiver_create_action_decoded():
         t = WalletWireTransceiver(mock_wire)
 
         # Mock the create_action method to return a decoded response
-        with patch.object(t, 'create_action', return_value=b"mock_decoded_response"), \
-             patch('bsv.wallet.serializer.create_action_result.deserialize_create_action_result') as mock_deserialize:
+        with (
+            patch.object(t, "create_action", return_value=b"mock_decoded_response"),
+            patch("bsv.wallet.serializer.create_action_result.deserialize_create_action_result") as mock_deserialize,
+        ):
 
             mock_deserialize.return_value = {"result": "decoded"}
             result = t.create_action_decoded(None, {"action": "test"}, "test")
@@ -267,8 +300,10 @@ def test_transceiver_sign_action_decoded():
         mock_wire = Mock()
         t = WalletWireTransceiver(mock_wire)
 
-        with patch.object(t, 'sign_action', return_value=b"mock_decoded_response"), \
-             patch('bsv.wallet.serializer.sign_action_result.deserialize_sign_action_result') as mock_deserialize:
+        with (
+            patch.object(t, "sign_action", return_value=b"mock_decoded_response"),
+            patch("bsv.wallet.serializer.sign_action_result.deserialize_sign_action_result") as mock_deserialize,
+        ):
 
             mock_deserialize.return_value = {"signature": "decoded"}
             result = t.sign_action_decoded(None, {"action_id": "test"}, "test")
@@ -285,8 +320,10 @@ def test_transceiver_abort_action_decoded():
         mock_wire = Mock()
         t = WalletWireTransceiver(mock_wire)
 
-        with patch.object(t, 'abort_action', return_value=b"mock_decoded_response"), \
-             patch('bsv.wallet.serializer.abort_action.deserialize_abort_action_result') as mock_deserialize:
+        with (
+            patch.object(t, "abort_action", return_value=b"mock_decoded_response"),
+            patch("bsv.wallet.serializer.abort_action.deserialize_abort_action_result") as mock_deserialize,
+        ):
 
             mock_deserialize.return_value = {"aborted": True}
             result = t.abort_action_decoded(None, {"action_id": "test"}, "test")
@@ -303,8 +340,10 @@ def test_transceiver_list_actions_decoded():
         mock_wire = Mock()
         t = WalletWireTransceiver(mock_wire)
 
-        with patch.object(t, 'list_actions', return_value=b"mock_decoded_response"), \
-             patch('bsv.wallet.serializer.list_actions.deserialize_list_actions_result') as mock_deserialize:
+        with (
+            patch.object(t, "list_actions", return_value=b"mock_decoded_response"),
+            patch("bsv.wallet.serializer.list_actions.deserialize_list_actions_result") as mock_deserialize,
+        ):
 
             mock_deserialize.return_value = {"actions": []}
             result = t.list_actions_decoded(None, {}, "test")
@@ -317,12 +356,14 @@ def test_transceiver_list_actions_decoded():
 # Comprehensive error condition testing
 # ========================================================================
 
+
 def test_transceiver_network_failures():
     """Test transceiver with network failures."""
     try:
-        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
-        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
         from unittest.mock import Mock
+
+        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 
         mock_wire = Mock()
         t = WalletWireTransceiver(mock_wire)
@@ -331,7 +372,7 @@ def test_transceiver_network_failures():
         mock_wire.transmit_to_wallet.side_effect = [
             ConnectionError("Network unreachable"),
             TimeoutError("Request timeout"),
-            OSError("Connection reset")
+            OSError("Connection reset"),
         ]
 
         # These should propagate the network errors
@@ -344,9 +385,10 @@ def test_transceiver_network_failures():
 def test_transceiver_invalid_inputs():
     """Test transceiver with invalid inputs."""
     try:
-        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
-        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
         from unittest.mock import Mock
+
+        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 
         # Test with None context
         mock_wire = Mock()
@@ -372,9 +414,10 @@ def test_transceiver_invalid_inputs():
 def test_transceiver_timeout_scenarios():
     """Test transceiver timeout scenarios."""
     try:
-        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
-        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
         from unittest.mock import Mock
+
+        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 
         mock_wire = Mock()
         mock_wire.transmit_to_wallet.side_effect = TimeoutError("Operation timed out")
@@ -391,19 +434,19 @@ def test_transceiver_timeout_scenarios():
 def test_transceiver_malformed_responses():
     """Test transceiver with malformed responses."""
     try:
-        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
         from unittest.mock import Mock
+
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 
         mock_wire = Mock()
         mock_wire.transmit_to_wallet.return_value = b"valid_response"
         t = WalletWireTransceiver(mock_wire)
 
         # Test with malformed frame data
-        with patch('bsv.wallet.serializer.frame.read_result_frame', side_effect=[
-            ValueError("Malformed frame"),
-            EOFError("Incomplete frame"),
-            Exception("Corrupted data")
-        ]):
+        with patch(
+            "bsv.wallet.serializer.frame.read_result_frame",
+            side_effect=[ValueError("Malformed frame"), EOFError("Incomplete frame"), Exception("Corrupted data")],
+        ):
             with pytest.raises((ValueError, EOFError, Exception)):
                 t.transmit(None, 1, "test", b"data")
 
@@ -427,16 +470,17 @@ def test_transceiver_wire_none():
 def test_transceiver_invalid_call_types():
     """Test transceiver with invalid call types."""
     try:
-        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
-        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
         from unittest.mock import Mock
+
+        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 
         mock_wire = Mock()
         mock_wire.transmit_to_wallet.return_value = b"response"
         t = WalletWireTransceiver(mock_wire)
 
         # Test with invalid call values (using integers instead of enum)
-        with patch('bsv.wallet.serializer.frame.read_result_frame', return_value=b"response"):
+        with patch("bsv.wallet.serializer.frame.read_result_frame", return_value=b"response"):
             # Should handle invalid call types - these will cause AttributeError on call.value
             with pytest.raises(AttributeError):
                 t.transmit(None, 999, "test", b"data")  # Invalid call number
@@ -451,9 +495,10 @@ def test_transceiver_invalid_call_types():
 def test_transceiver_large_payloads():
     """Test transceiver with large payloads."""
     try:
-        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
-        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
         from unittest.mock import Mock
+
+        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 
         mock_wire = Mock()
         mock_wire.transmit_to_wallet.return_value = b"\x00response_data"  # Properly formatted frame
@@ -476,10 +521,11 @@ def test_transceiver_large_payloads():
 def test_transceiver_concurrent_access():
     """Test transceiver concurrent access scenarios."""
     try:
-        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
-        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
-        from unittest.mock import Mock
         import threading
+        from unittest.mock import Mock
+
+        from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 
         mock_wire = Mock()
         mock_wire.transmit_to_wallet.return_value = b"\x00response_data"  # Properly formatted frame
@@ -512,4 +558,3 @@ def test_transceiver_concurrent_access():
 
     except ImportError:
         pytest.skip("WalletWireTransceiver not available")
-

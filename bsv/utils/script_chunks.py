@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List, Union
+from typing import List, Optional, Union
 
 
 @dataclass
@@ -8,7 +8,9 @@ class ScriptChunk:
     data: Optional[bytes]
 
 
-def read_script_chunks(script: Union[bytes, str]) -> List[ScriptChunk]:  # NOSONAR - Complexity (33), requires refactoring
+def read_script_chunks(
+    script: Union[bytes, str],
+) -> list[ScriptChunk]:  # NOSONAR - Complexity (33), requires refactoring
     # Accept hex string input for convenience (tests may pass hex)
     if isinstance(script, str):
         try:
@@ -16,7 +18,7 @@ def read_script_chunks(script: Union[bytes, str]) -> List[ScriptChunk]:  # NOSON
         except Exception:
             # If conversion fails, treat as empty
             script = b""
-    chunks: List[ScriptChunk] = []
+    chunks: list[ScriptChunk] = []
     i = 0
     n = len(script)
     while i < n:
@@ -26,7 +28,7 @@ def read_script_chunks(script: Union[bytes, str]) -> List[ScriptChunk]:  # NOSON
             ln = op
             if i + ln > n:
                 break
-            chunks.append(ScriptChunk(op=op, data=script[i:i+ln]))
+            chunks.append(ScriptChunk(op=op, data=script[i : i + ln]))
             i += ln
             continue
         if op == 0x4C:  # OP_PUSHDATA1
@@ -36,27 +38,27 @@ def read_script_chunks(script: Union[bytes, str]) -> List[ScriptChunk]:  # NOSON
             i += 1
             if i + ln > n:
                 break
-            chunks.append(ScriptChunk(op=op, data=script[i:i+ln]))
+            chunks.append(ScriptChunk(op=op, data=script[i : i + ln]))
             i += ln
             continue
         if op == 0x4D:  # OP_PUSHDATA2
             if i + 1 >= n:
                 break
-            ln = int.from_bytes(script[i:i+2], 'little')
+            ln = int.from_bytes(script[i : i + 2], "little")
             i += 2
             if i + ln > n:
                 break
-            chunks.append(ScriptChunk(op=op, data=script[i:i+ln]))
+            chunks.append(ScriptChunk(op=op, data=script[i : i + ln]))
             i += ln
             continue
         if op == 0x4E:  # OP_PUSHDATA4
             if i + 3 >= n:
                 break
-            ln = int.from_bytes(script[i:i+4], 'little')
+            ln = int.from_bytes(script[i : i + 4], "little")
             i += 4
             if i + ln > n:
                 break
-            chunks.append(ScriptChunk(op=op, data=script[i:i+ln]))
+            chunks.append(ScriptChunk(op=op, data=script[i : i + ln]))
             i += ln
             continue
         # Non-push opcodes
@@ -64,7 +66,7 @@ def read_script_chunks(script: Union[bytes, str]) -> List[ScriptChunk]:  # NOSON
     return chunks
 
 
-def serialize_chunks(chunks: List[ScriptChunk]) -> bytes:
+def serialize_chunks(chunks: list[ScriptChunk]) -> bytes:
     """
     Serialize a list of ScriptChunk objects back to script bytes.
 
@@ -90,7 +92,7 @@ def serialize_chunks(chunks: List[ScriptChunk]) -> bytes:
 def _serialize_chunk_data(result: bytearray, chunk: ScriptChunk) -> None:
     """Serialize chunk data based on opcode type."""
     data = chunk.data
-    
+
     if chunk.op <= 75:  # direct push
         _serialize_direct_push(result, chunk, data)
     elif chunk.op == 0x4C:  # OP_PUSHDATA1
@@ -123,7 +125,7 @@ def _serialize_pushdata2(result: bytearray, data: bytes) -> None:
     """Serialize OP_PUSHDATA2 opcode."""
     if len(data) > 65535:
         raise ValueError(f"OP_PUSHDATA2 data too long: {len(data)} bytes")
-    result.extend(len(data).to_bytes(2, 'little'))
+    result.extend(len(data).to_bytes(2, "little"))
     result.extend(data)
 
 
@@ -131,7 +133,5 @@ def _serialize_pushdata4(result: bytearray, data: bytes) -> None:
     """Serialize OP_PUSHDATA4 opcode."""
     if len(data) > 4294967295:
         raise ValueError(f"OP_PUSHDATA4 data too long: {len(data)} bytes")
-    result.extend(len(data).to_bytes(4, 'little'))
+    result.extend(len(data).to_bytes(4, "little"))
     result.extend(data)
-
-

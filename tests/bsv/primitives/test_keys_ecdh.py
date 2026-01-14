@@ -21,8 +21,3 @@ def test_ecdh_shared_secret_symmetry_and_length():
     c_pub = c.public_key()
     secret_ac = a.derive_shared_secret(c_pub)
     assert secret_ac != secret_ab
-
-
-
-
-

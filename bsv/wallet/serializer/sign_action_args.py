@@ -1,11 +1,11 @@
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
 NEGATIVE_ONE = (1 << 64) - 1
 
 
-def deserialize_sign_action_args(data: bytes) -> Dict[str, Any]:
+def deserialize_sign_action_args(data: bytes) -> dict[str, Any]:
     r = Reader(data)
     args = {
         "spends": _deserialize_spends(r),
@@ -15,7 +15,8 @@ def deserialize_sign_action_args(data: bytes) -> Dict[str, Any]:
         args["options"] = _deserialize_sign_options(r)
     return args
 
-def _deserialize_spends(r: Reader) -> Dict[str, Dict[str, Any]]:
+
+def _deserialize_spends(r: Reader) -> dict[str, dict[str, Any]]:
     """Deserialize spends map."""
     spends = {}
     spend_count = r.read_varint()
@@ -29,26 +30,28 @@ def _deserialize_spends(r: Reader) -> Dict[str, Dict[str, Any]]:
         spends[str(int(input_index))] = spend
     return spends
 
-def _deserialize_sign_options(r: Reader) -> Dict[str, Optional[Any]]:
+
+def _deserialize_sign_options(r: Reader) -> dict[str, Optional[Any]]:
     """Deserialize sign action options."""
     opts = {}
     for key in ("acceptDelayedBroadcast", "returnTXIDOnly", "noSend"):
         b = r.read_byte()
         opts[key] = None if b == 0xFF else bool(b)
-    
+
     count = r.read_varint()
     opts["sendWith"] = None if count == NEGATIVE_ONE else [r.read_bytes(32).hex() for _ in range(int(count))]
     return opts
 
 
-def serialize_sign_action_args(args: Dict[str, Any]) -> bytes:
+def serialize_sign_action_args(args: dict[str, Any]) -> bytes:
     w = Writer()
     _serialize_spends(w, args.get("spends", {}))
     w.write_int_bytes(args.get("reference", b""))
     _serialize_sign_options(w, args.get("options"))
     return w.to_bytes()
 
-def _serialize_spends(w: Writer, spends: Dict[str, Dict[str, Any]]):
+
+def _serialize_spends(w: Writer, spends: dict[str, dict[str, Any]]):
     """Serialize spends map."""
     w.write_varint(len(spends))
     for key in sorted(spends.keys(), key=lambda x: int(x)):
@@ -61,12 +64,13 @@ def _serialize_spends(w: Writer, spends: Dict[str, Dict[str, Any]]):
         else:
             w.write_varint(int(seq))
 
-def _serialize_sign_options(w: Writer, options: Optional[Dict[str, Any]]):
+
+def _serialize_sign_options(w: Writer, options: Optional[dict[str, Any]]):
     """Serialize sign action options."""
     if not options:
         w.write_byte(0)
         return
-    
+
     w.write_byte(1)
     for key in ("acceptDelayedBroadcast", "returnTXIDOnly", "noSend"):
         val = options.get(key)
@@ -74,7 +78,7 @@ def _serialize_sign_options(w: Writer, options: Optional[Dict[str, Any]]):
             w.write_negative_one_byte()
         else:
             w.write_byte(1 if val else 0)
-    
+
     send_with = options.get("sendWith")
     if send_with is None:
         w.write_negative_one()

@@ -6,7 +6,7 @@ from bsv.transaction.beef import BEEF_V2
 from bsv.utils import Writer
 
 
-def build_beef_v2_from_raw_hexes(tx_hex_list: List[str]) -> bytes:
+def build_beef_v2_from_raw_hexes(tx_hex_list: list[str]) -> bytes:
     """Build a minimal BEEF v2 bundle from a list of raw transaction hex strings.
 
     - No bumps are included (bump_cnt = 0)
@@ -31,5 +31,3 @@ def build_beef_v2_from_raw_hexes(tx_hex_list: List[str]) -> bytes:
         except Exception:
             continue
     return w.to_bytes()
-
-

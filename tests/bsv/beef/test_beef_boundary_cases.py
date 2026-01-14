@@ -4,8 +4,9 @@ import pytest
 def test_parse_beef_v2_varint_fd_zero_counts_ok():
     """BEEF V2 with varint(0xFD) encoded zero counts for bumps/txs should parse as empty Beef."""
     from bsv.transaction.beef import BEEF_V2, new_beef_from_bytes
+
     # version + bumps=VarInt(0xFD 00 00) + txs=VarInt(0xFD 00 00)
-    data = int(BEEF_V2).to_bytes(4, "little") + b"\xFD\x00\x00" + b"\xFD\x00\x00"
+    data = int(BEEF_V2).to_bytes(4, "little") + b"\xfd\x00\x00" + b"\xfd\x00\x00"
     beef = new_beef_from_bytes(data)
     assert beef.version == BEEF_V2
     assert len(beef.bumps) == 0
@@ -14,21 +15,23 @@ def test_parse_beef_v2_varint_fd_zero_counts_ok():
 
 def test_verify_valid_fails_on_inconsistent_roots_in_single_bump():
     """A single BUMP with two txid leaves that compute different roots should invalidate."""
-    from bsv.transaction.beef import Beef, BEEF_V2
+    from bsv.transaction.beef import BEEF_V2, Beef
 
     class DummyBump:
         def __init__(self, height, a, b):
             self.block_height = height
-            self.path = [[
-                {"offset": 0, "hash_str": a, "txid": True},
-                {"offset": 1, "hash_str": b, "txid": True},
-            ]]
+            self.path = [
+                [
+                    {"offset": 0, "hash_str": a, "txid": True},
+                    {"offset": 1, "hash_str": b, "txid": True},
+                ]
+            ]
 
         # Python verify_valid calls compute_root(txid) and expects a consistent root per height
         def compute_root(self, txid=None):
-            if txid == "aa"*32:
+            if txid == "aa" * 32:
                 return "rootA"
-            if txid == "bb"*32:
+            if txid == "bb" * 32:
                 return "rootB"
             return "rootX"
 
@@ -42,11 +45,11 @@ def test_verify_valid_fails_on_inconsistent_roots_in_single_bump():
 
 
 def test_merge_raw_tx_invalid_bump_index_raises():
-    from bsv.transaction.beef import Beef, BEEF_V2
-    from bsv.transaction import Transaction, TransactionOutput
     from bsv.script.script import Script
-    from bsv.transaction.beef_serialize import to_binary
+    from bsv.transaction import Transaction, TransactionOutput
+    from bsv.transaction.beef import BEEF_V2, Beef
     from bsv.transaction.beef_builder import merge_raw_tx
+    from bsv.transaction.beef_serialize import to_binary
 
     t = Transaction()
     t.outputs = [TransactionOutput(Script(b"\x51"), 1)]
@@ -58,9 +61,9 @@ def test_merge_raw_tx_invalid_bump_index_raises():
 
 def test_to_binary_dedupes_txid_only_and_raw_for_same_txid():
     """If txidOnly and RawTx of same txid exist, serialization should write once."""
-    from bsv.transaction.beef import Beef, BEEF_V2, BeefTx
-    from bsv.transaction import Transaction, TransactionOutput
     from bsv.script.script import Script
+    from bsv.transaction import Transaction, TransactionOutput
+    from bsv.transaction.beef import BEEF_V2, Beef, BeefTx
 
     beef = Beef(version=BEEF_V2)
     t = Transaction()
@@ -79,7 +82,6 @@ def test_to_binary_dedupes_txid_only_and_raw_for_same_txid():
 def test_new_beef_from_atomic_bytes_too_short_raises():
     """AtomicBEEF shorter than 36 bytes must raise."""
     from bsv.transaction.beef import new_beef_from_atomic_bytes
+
     with pytest.raises(ValueError, match="too short"):
         new_beef_from_atomic_bytes(b"\x01\x01\x01")  # shorter than 36
-
-

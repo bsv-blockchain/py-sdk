@@ -8,12 +8,12 @@ from .transaction_output import TransactionOutput
 
 
 def _preimage(
-        tx_input: TransactionInput,
-        tx_version: int,
-        tx_locktime: int,
-        hash_prevouts: bytes,
-        hash_sequence: bytes,
-        hash_outputs: bytes,
+    tx_input: TransactionInput,
+    tx_version: int,
+    tx_locktime: int,
+    hash_prevouts: bytes,
+    hash_sequence: bytes,
+    hash_outputs: bytes,
 ) -> bytes:
     """
     BIP-143 https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
@@ -55,26 +55,19 @@ def _preimage(
 
 
 def tx_preimages(
-        inputs: List[TransactionInput],
-        outputs: List[TransactionOutput],
-        tx_version: int,
-        tx_locktime: int,
-) -> List[bytes]:
+    inputs: list[TransactionInput],
+    outputs: list[TransactionOutput],
+    tx_version: int,
+    tx_locktime: int,
+) -> list[bytes]:
     """
     :returns: the digests of unsigned transaction
     """
     _hash_prevouts = hash256(
-        b"".join(
-            bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little")
-            for _in in inputs
-        )
+        b"".join(bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little") for _in in inputs)
     )
-    _hash_sequence = hash256(
-        b"".join(_in.sequence.to_bytes(4, "little") for _in in inputs)
-    )
-    _hash_outputs = hash256(
-        b"".join(tx_output.serialize() for tx_output in outputs)
-    )
+    _hash_sequence = hash256(b"".join(_in.sequence.to_bytes(4, "little") for _in in inputs))
+    _hash_outputs = hash256(b"".join(tx_output.serialize() for tx_output in outputs))
     digests = []
     for i in range(len(inputs)):
         sighash = inputs[i].sighash
@@ -85,11 +78,7 @@ def tx_preimages(
         else:
             hash_prevouts = b"\x00" * 32
         # hash sequence
-        if (
-                not sighash & SIGHASH.ANYONECANPAY
-                and sighash & 0x1F != SIGHASH.SINGLE
-                and sighash & 0x1F != SIGHASH.NONE
-        ):
+        if not sighash & SIGHASH.ANYONECANPAY and sighash & 0x1F != SIGHASH.SINGLE and sighash & 0x1F != SIGHASH.NONE:
             # if none of anyone can pay, single, none is set
             hash_sequence = _hash_sequence
         else:
@@ -103,18 +92,16 @@ def tx_preimages(
             hash_outputs = hash256(outputs[i].serialize())
         else:
             hash_outputs = b"\x00" * 32
-        digests.append(
-            _preimage(inputs[i], tx_version, tx_locktime, hash_prevouts, hash_sequence, hash_outputs)
-        )
+        digests.append(_preimage(inputs[i], tx_version, tx_locktime, hash_prevouts, hash_sequence, hash_outputs))
     return digests
 
 
 def tx_preimage(
-        input_index: int,
-        inputs: List[TransactionInput],
-        outputs: List[TransactionOutput],
-        tx_version: int,
-        tx_locktime: int,
+    input_index: int,
+    inputs: list[TransactionInput],
+    outputs: list[TransactionOutput],
+    tx_version: int,
+    tx_locktime: int,
 ) -> bytes:
     """
     Calculates and returns the preimage for a specific input index.
@@ -125,30 +112,21 @@ def tx_preimage(
     if not sighash & SIGHASH.ANYONECANPAY:
         hash_prevouts = hash256(
             b"".join(
-                bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little")
-                for _in in inputs
+                bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little") for _in in inputs
             )
         )
     else:
         hash_prevouts = b"\x00" * 32
 
     # hash sequence
-    if (
-            not sighash & SIGHASH.ANYONECANPAY
-            and sighash & 0x1F != SIGHASH.SINGLE
-            and sighash & 0x1F != SIGHASH.NONE
-    ):
-        hash_sequence = hash256(
-            b"".join(_in.sequence.to_bytes(4, "little") for _in in inputs)
-        )
+    if not sighash & SIGHASH.ANYONECANPAY and sighash & 0x1F != SIGHASH.SINGLE and sighash & 0x1F != SIGHASH.NONE:
+        hash_sequence = hash256(b"".join(_in.sequence.to_bytes(4, "little") for _in in inputs))
     else:
         hash_sequence = b"\x00" * 32
 
     # hash outputs
     if sighash & 0x1F != SIGHASH.SINGLE and sighash & 0x1F != SIGHASH.NONE:
-        hash_outputs = hash256(
-            b"".join(tx_output.serialize() for tx_output in outputs)
-        )
+        hash_outputs = hash256(b"".join(tx_output.serialize() for tx_output in outputs))
     elif sighash & 0x1F == SIGHASH.SINGLE and input_index < len(outputs):
         hash_outputs = hash256(outputs[input_index].serialize())
     else:

@@ -1,43 +1,45 @@
 """
 Shared test functions for AuthFetch coverage tests.
 """
-import pytest
+
 import base64
 import json
 import struct
 from unittest.mock import Mock, patch
 
-from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
+import pytest
 
+from bsv.auth.clients.auth_fetch import SimplifiedFetchRequestOptions
 
 # ========================================================================
 # Binary Response Parsing Tests
 # ========================================================================
 
+
 def test_parse_binary_general_response_success(auth_fetch):
     """Test successful binary response parsing."""
     # Create a mock binary response: nonce(32) + status(8) + headers(1) + body
-    request_nonce = b'A' * 32
+    request_nonce = b"A" * 32
     response_nonce = request_nonce  # Echo back
     status_code = 200
-    headers = {b'content-type': b'application/json'}
+    headers = {b"content-type": b"application/json"}
     body = b'{"result": "success"}'
 
     # Build binary payload
     payload = bytearray()
     payload.extend(response_nonce)
-    payload.extend(struct.pack('<Q', status_code))  # varint status
-    payload.extend(struct.pack('<Q', len(headers)))  # header count
+    payload.extend(struct.pack("<Q", status_code))  # varint status
+    payload.extend(struct.pack("<Q", len(headers)))  # header count
 
     # Add headers
     for key, value in headers.items():
-        payload.extend(struct.pack('<Q', len(key)))
+        payload.extend(struct.pack("<Q", len(key)))
         payload.extend(key)
-        payload.extend(struct.pack('<Q', len(value)))
+        payload.extend(struct.pack("<Q", len(value)))
         payload.extend(value)
 
     # Add body
-    payload.extend(struct.pack('<Q', len(body)))
+    payload.extend(struct.pack("<Q", len(body)))
     payload.extend(body)
 
     # Mock the _parse_general_response method inputs
@@ -46,7 +48,7 @@ def test_parse_binary_general_response_success(auth_fetch):
         payload=bytes(payload),
         request_nonce_b64=base64.b64encode(request_nonce).decode(),
         url_str="http://test.com",  # NOSONAR - Test URL, not used in production
-        config=SimplifiedFetchRequestOptions()
+        config=SimplifiedFetchRequestOptions(),
     )
 
     assert result is not None
@@ -56,22 +58,22 @@ def test_parse_binary_general_response_success(auth_fetch):
 
 def test_parse_binary_general_response_nonce_mismatch(auth_fetch):
     """Test binary parsing fails with nonce mismatch."""
-    request_nonce = b'A' * 32
-    wrong_nonce = b'B' * 32
+    request_nonce = b"A" * 32
+    wrong_nonce = b"B" * 32
 
     # Build payload with wrong nonce
     payload = bytearray()
     payload.extend(wrong_nonce)
-    payload.extend(struct.pack('<Q', 200))  # status
-    payload.extend(struct.pack('<Q', 0))   # no headers
-    payload.extend(struct.pack('<Q', 0))   # empty body
+    payload.extend(struct.pack("<Q", 200))  # status
+    payload.extend(struct.pack("<Q", 0))  # no headers
+    payload.extend(struct.pack("<Q", 0))  # empty body
 
     result = auth_fetch._parse_general_response(
         sender_public_key=None,
         payload=bytes(payload),
         request_nonce_b64=base64.b64encode(request_nonce).decode(),
         url_str="http://test.com",  # NOSONAR - Test URL, not used in production
-        config=SimplifiedFetchRequestOptions()
+        config=SimplifiedFetchRequestOptions(),
     )
 
     assert result is None
@@ -79,14 +81,14 @@ def test_parse_binary_general_response_nonce_mismatch(auth_fetch):
 
 def test_parse_binary_general_response_short_payload(auth_fetch):
     """Test binary parsing fails with payload too short."""
-    short_payload = b'too_short'
+    short_payload = b"too_short"
 
     result = auth_fetch._parse_general_response(
         sender_public_key=None,
         payload=short_payload,
-        request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
+        request_nonce_b64=base64.b64encode(b"A" * 32).decode(),
         url_str="http://test.com",  # NOSONAR - Test URL, not used in production
-        config=SimplifiedFetchRequestOptions()
+        config=SimplifiedFetchRequestOptions(),
     )
 
     assert result is None
@@ -96,37 +98,36 @@ def test_parse_binary_general_response_short_payload(auth_fetch):
 # JSON Fallback Parsing Tests
 # ========================================================================
 
+
 def test_parse_json_fallback_success(auth_fetch):
     """Test JSON fallback parsing success."""
-    json_payload = json.dumps({
-        'status_code': 200,
-        'headers': {'content-type': 'application/json'},
-        'body': '{"result": "success"}'
-    }).encode('utf-8')
+    json_payload = json.dumps(
+        {"status_code": 200, "headers": {"content-type": "application/json"}, "body": '{"result": "success"}'}
+    ).encode("utf-8")
 
     result = auth_fetch._parse_general_response(
         sender_public_key=None,
         payload=json_payload,
-        request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
+        request_nonce_b64=base64.b64encode(b"A" * 32).decode(),
         url_str="http://test.com",  # NOSONAR - Test URL, not used in production
-        config=SimplifiedFetchRequestOptions()
+        config=SimplifiedFetchRequestOptions(),
     )
 
     assert result is not None
     assert result.status_code == 200
-    assert 'content-type' in result.headers
+    assert "content-type" in result.headers
 
 
 def test_parse_json_fallback_invalid_json(auth_fetch):
     """Test JSON fallback fails with invalid JSON."""
-    invalid_json = b'invalid json content'
+    invalid_json = b"invalid json content"
 
     result = auth_fetch._parse_general_response(
         sender_public_key=None,
         payload=invalid_json,
-        request_nonce_b64=base64.b64encode(b'A' * 32).decode(),
+        request_nonce_b64=base64.b64encode(b"A" * 32).decode(),
         url_str="http://test.com",  # NOSONAR - Test URL, not used in production
-        config=SimplifiedFetchRequestOptions()
+        config=SimplifiedFetchRequestOptions(),
     )
 
     assert result is None
@@ -135,6 +136,7 @@ def test_parse_json_fallback_invalid_json(auth_fetch):
 # ========================================================================
 # Retry Logic Tests
 # ========================================================================
+
 
 def test_check_retry_limit_success(auth_fetch):
     """Test retry limit check allows retries when available."""
@@ -156,30 +158,25 @@ def test_check_retry_limit_exhausted(auth_fetch):
 def test_handle_peer_error_session_not_found(auth_fetch, mock_wallet):
     """Test peer error handling for 'Session not found' triggers retry."""
     # Mock the callbacks
-    callbacks = {
-        'test_nonce': {
-            'resolve': Mock(),
-            'reject': Mock()
-        }
-    }
+    callbacks = {"test_nonce": {"resolve": Mock(), "reject": Mock()}}
     auth_fetch.callbacks = callbacks
 
     # Add a peer to the peers dict so it can be deleted
     auth_fetch.peers["http://test.com"] = Mock()  # NOSONAR - Test URL, not used in production
 
     # Mock fetch method to return success
-    with patch.object(auth_fetch, 'fetch', return_value='retry_result'):
+    with patch.object(auth_fetch, "fetch", return_value="retry_result"):
         auth_fetch._handle_peer_error(
             Exception("Session not found for nonce"),
             "http://test.com",  # NOSONAR - Test URL, not used in production
             "http://test.com",  # NOSONAR - Test URL, not used in production
             SimplifiedFetchRequestOptions(),
             "test_nonce",
-            Mock()
+            Mock(),
         )
 
         # Should have called resolve with retry result
-        callbacks['test_nonce']['resolve'].assert_called_once_with('retry_result')
+        callbacks["test_nonce"]["resolve"].assert_called_once_with("retry_result")
 
         # Should have removed the peer
         assert "http://test.com" not in auth_fetch.peers  # NOSONAR - Test URL, not used in production
@@ -188,58 +185,54 @@ def test_handle_peer_error_session_not_found(auth_fetch, mock_wallet):
 def test_handle_peer_error_http_auth_failed(auth_fetch):
     """Test peer error handling for HTTP auth failure falls back to regular HTTP."""
     # Mock the callbacks
-    callbacks = {
-        'test_nonce': {
-            'resolve': Mock(),
-            'reject': Mock()
-        }
-    }
+    callbacks = {"test_nonce": {"resolve": Mock(), "reject": Mock()}}
     auth_fetch.callbacks = callbacks
 
     mock_peer = Mock()
     fallback_response = Mock()
 
     # Mock handle_fetch_and_validate to return success
-    with patch.object(auth_fetch, 'handle_fetch_and_validate', return_value=fallback_response):
+    with patch.object(auth_fetch, "handle_fetch_and_validate", return_value=fallback_response):
         auth_fetch._handle_peer_error(
             Exception("HTTP server failed to authenticate"),
             "http://test.com",  # NOSONAR - Test URL, not used in production
             "http://test.com",  # NOSONAR - Test URL, not used in production
             SimplifiedFetchRequestOptions(),
             "test_nonce",
-            mock_peer
+            mock_peer,
         )
 
         # Should have called resolve with fallback response
-        callbacks['test_nonce']['resolve'].assert_called_once_with(fallback_response)
+        callbacks["test_nonce"]["resolve"].assert_called_once_with(fallback_response)
 
 
 # ========================================================================
 # Payment Flow Tests
 # ========================================================================
 
+
 def test_validate_payment_headers_success(auth_fetch):
     """Test payment header validation success."""
     response = Mock()
     response.headers = {
-        'x-bsv-payment-version': '1.0',
-        'x-bsv-payment-satoshis-required': '1000',
-        'x-bsv-auth-identity-key': 'server_key',
-        'x-bsv-payment-derivation-prefix': 'prefix'
+        "x-bsv-payment-version": "1.0",
+        "x-bsv-payment-satoshis-required": "1000",
+        "x-bsv-auth-identity-key": "server_key",
+        "x-bsv-payment-derivation-prefix": "prefix",
     }
 
     result = auth_fetch._validate_payment_headers(response)
 
-    assert result['satoshis_required'] == 1000
-    assert result['server_identity_key'] == 'server_key'
-    assert result['derivation_prefix'] == 'prefix'
+    assert result["satoshis_required"] == 1000
+    assert result["server_identity_key"] == "server_key"
+    assert result["derivation_prefix"] == "prefix"
 
 
 def test_validate_payment_headers_missing_version(auth_fetch):
     """Test payment header validation fails with missing version."""
     response = Mock()
     response.headers = {
-        'x-bsv-payment-satoshis-required': '1000',
+        "x-bsv-payment-satoshis-required": "1000",
     }
 
     with pytest.raises(ValueError, match="unsupported.*version"):
@@ -250,8 +243,8 @@ def test_validate_payment_headers_invalid_satoshis(auth_fetch):
     """Test payment header validation fails with invalid satoshis."""
     response = Mock()
     response.headers = {
-        'x-bsv-payment-version': '1.0',
-        'x-bsv-payment-satoshis-required': '-100',
+        "x-bsv-payment-version": "1.0",
+        "x-bsv-payment-satoshis-required": "-100",
     }
 
     with pytest.raises(ValueError, match="invalid.*satoshis"):
@@ -260,7 +253,7 @@ def test_validate_payment_headers_invalid_satoshis(auth_fetch):
 
 def test_generate_derivation_suffix(auth_fetch):
     """Test derivation suffix generation."""
-    with patch('os.urandom', return_value=b'\x01' * 8):
+    with patch("os.urandom", return_value=b"\x01" * 8):
         suffix = auth_fetch._generate_derivation_suffix()
         assert len(base64.b64decode(suffix)) == 8
 
@@ -280,7 +273,7 @@ def test_peer_creation_and_certificates_listener(auth_fetch, mock_wallet):
     assert peer == auth_fetch.peers[base_url]
 
     # Should have set up certificates listener
-    assert hasattr(peer.peer, 'listen_for_certificates_received')
+    assert hasattr(peer.peer, "listen_for_certificates_received")
 
 
 def test_serialize_request_binary_format(auth_fetch):
@@ -291,7 +284,7 @@ def test_serialize_request_binary_format(auth_fetch):
     parsed_url = Mock()
     parsed_url.path = "/api/test"
     parsed_url.query = ""
-    request_nonce = b'N' * 32
+    request_nonce = b"N" * 32
 
     result = auth_fetch.serialize_request(method, headers, body, parsed_url, request_nonce)
 
@@ -310,7 +303,7 @@ def test_select_headers_filters_correctly(auth_fetch):
         "authorization": "Bearer token",
         "x-bsv-custom": "bsv-value",
         "x-bsv-auth-internal": "filtered-out",  # Should be filtered
-        "normal-header": "normal-value",       # Should be filtered
+        "normal-header": "normal-value",  # Should be filtered
     }
 
     selected = auth_fetch._select_headers(headers)
@@ -334,16 +327,15 @@ def test_determine_body_adds_json_for_post(auth_fetch):
 
     result = auth_fetch._determine_body(body, method, [("content-type", "application/json")])
 
-    assert result == b'{}'
+    assert result == b"{}"
 
 
 def test_determine_body_preserves_existing_body(auth_fetch):
     """Test body determination preserves existing body."""
     method = "POST"
     headers = []
-    body = b'existing body'
+    body = b"existing body"
 
     result = auth_fetch._determine_body(body, method, headers)
 
     assert result == body
-

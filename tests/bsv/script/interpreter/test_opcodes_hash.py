@@ -10,14 +10,13 @@ References:
 """
 
 import hashlib
-from bsv.script.interpreter.operations import (
-    op_ripemd160, op_sha1, op_sha256, op_hash160, op_hash256
-)
-from bsv.script.interpreter.op_parser import ParsedOpcode
-from bsv.script.interpreter.stack import Stack
+
+from bsv.constants import OpCode
 from bsv.script.interpreter.config import BeforeGenesisConfig
 from bsv.script.interpreter.errs import ErrorCode
-from bsv.constants import OpCode
+from bsv.script.interpreter.op_parser import ParsedOpcode
+from bsv.script.interpreter.operations import op_hash160, op_hash256, op_ripemd160, op_sha1, op_sha256
+from bsv.script.interpreter.stack import Stack
 
 
 class MockThread:
@@ -49,7 +48,7 @@ class TestHashOpcodes:
         assert err is None
         assert self.thread.dstack.depth() == 1
         result = self.thread.dstack.pop_byte_array()
-        expected = hashlib.new('ripemd160', test_data).digest()
+        expected = hashlib.new("ripemd160", test_data).digest()
         assert result == expected
 
     def test_op_ripemd160_stack_underflow(self):
@@ -77,7 +76,7 @@ class TestHashOpcodes:
         assert self.thread.dstack.depth() == 1
         result = self.thread.dstack.pop_byte_array()
         # SHA1 is required by Bitcoin Script OP_SHA1 opcode, not for security
-        expected = hashlib.sha1(test_data).digest()  # noqa: S324  # NOSONAR
+        expected = hashlib.sha1(test_data).digest()  # NOSONAR
         assert result == expected
 
     def test_op_sha256_success(self):
@@ -112,7 +111,7 @@ class TestHashOpcodes:
         assert self.thread.dstack.depth() == 1
         result = self.thread.dstack.pop_byte_array()
         sha256_hash = hashlib.sha256(test_data).digest()
-        expected = hashlib.new('ripemd160', sha256_hash).digest()
+        expected = hashlib.new("ripemd160", sha256_hash).digest()
         assert result == expected
 
     def test_op_hash256_success(self):
@@ -147,7 +146,7 @@ class TestHashOpcodes:
         assert self.thread.dstack.depth() == 1
         result = self.thread.dstack.pop_byte_array()
         sha256_hash = hashlib.sha256(test_data).digest()
-        expected = hashlib.new('ripemd160', sha256_hash).digest()
+        expected = hashlib.new("ripemd160", sha256_hash).digest()
         assert result == expected
         # HASH160 of empty should be: RIPEMD160(SHA256(""))
         assert len(result) == 20  # RIPEMD160 produces 20 bytes

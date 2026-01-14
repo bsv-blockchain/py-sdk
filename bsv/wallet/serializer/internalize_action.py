@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
@@ -10,14 +10,14 @@ BASKET_INSERTION = 2
 PROTOCOL_WALLET_PAYMENT = "wallet payment"
 
 
-def serialize_internalize_action_args(args: Dict[str, Any]) -> bytes:
+def serialize_internalize_action_args(args: dict[str, Any]) -> bytes:
     w = Writer()
     # tx (beef)
     tx = args.get("tx", b"")
     w.write_varint(len(tx))
     w.write_bytes(tx)
     # outputs
-    outputs: List[Dict[str, Any]] = args.get("outputs", [])
+    outputs: list[dict[str, Any]] = args.get("outputs", [])
     w.write_varint(len(outputs))
     for out in outputs:
         w.write_varint(int(out.get("outputIndex", 0)))
@@ -46,7 +46,7 @@ def serialize_internalize_action_args(args: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_internalize_action_args(data: bytes) -> Dict[str, Any]:
+def deserialize_internalize_action_args(data: bytes) -> dict[str, Any]:
     r = Reader(data)
     tx_len = r.read_varint()
     return {
@@ -57,16 +57,18 @@ def deserialize_internalize_action_args(data: bytes) -> Dict[str, Any]:
         "seekPermission": r.read_optional_bool(),
     }
 
-def _deserialize_internalize_outputs(r: Reader) -> List[Dict[str, Any]]:
+
+def _deserialize_internalize_outputs(r: Reader) -> list[dict[str, Any]]:
     """Deserialize internalize action outputs."""
     count = r.read_varint()
     return [_deserialize_internalize_output(r) for _ in range(int(count))]
 
-def _deserialize_internalize_output(r: Reader) -> Dict[str, Any]:
+
+def _deserialize_internalize_output(r: Reader) -> dict[str, Any]:
     """Deserialize a single internalize output."""
     item = {"outputIndex": int(r.read_varint())}
     proto_b = r.read_byte()
-    
+
     if proto_b == WALLET_PAYMENT:
         item["protocol"] = PROTOCOL_WALLET_PAYMENT
         item["paymentRemittance"] = {
@@ -84,10 +86,10 @@ def _deserialize_internalize_output(r: Reader) -> Dict[str, Any]:
     return item
 
 
-def serialize_internalize_action_result(_: Dict[str, Any]) -> bytes:
+def serialize_internalize_action_result(_: dict[str, Any]) -> bytes:
     # result uses frame for error; no payload
     return b""
 
 
-def deserialize_internalize_action_result(_: bytes) -> Dict[str, Any]:
+def deserialize_internalize_action_result(_: bytes) -> dict[str, Any]:
     return {"accepted": True}

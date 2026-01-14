@@ -70,7 +70,7 @@ def wallet_shims(monkeypatch):
     monkeypatch.setattr(ProtoWallet, "_get_outputs_from_mock", _get_outputs_from_mock)
 
     try:
-        import bsv.chaintrackers as chaintrackers
+        from bsv import chaintrackers
 
         monkeypatch.setattr(chaintrackers, "WhatsOnChainTracker", DummyWhatsOnChainTracker)
     except ImportError:
@@ -82,4 +82,3 @@ def wallet_shims(monkeypatch):
         monkeypatch.setattr(whatsonchain_module, "WhatsOnChainTracker", DummyWhatsOnChainTracker)
     except ImportError:
         pass
-

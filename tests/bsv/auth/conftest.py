@@ -12,11 +12,9 @@ class CaptureTransport:
 
     def on_data(self, callback):
         self._on_data_callback = callback
-        return None
 
     def send(self, message):
         self.sent_messages.append(message)
-        return None
 
 
 class MockSigResult:
@@ -37,6 +35,7 @@ class WalletOK:
     def get_public_key(self, args=None, originator=None):
         class R:
             pass
+
         r = R()
         r.public_key = self._pub
         return r
@@ -55,7 +54,9 @@ class WalletOK:
                 "type": args.get("cert_type") if args else None,
                 "serialNumber": base64.b64encode(b"S" * 32).decode(),
                 "subject": args.get("subject") if args else None,
-                "certifier": args.get("certifiers", [self._pub.hex()])[0] if args and args.get("certifiers") else self._pub.hex(),
+                "certifier": (
+                    args.get("certifiers", [self._pub.hex()])[0] if args and args.get("certifiers") else self._pub.hex()
+                ),
                 "fields": dict.fromkeys(args.get("fields", []), "v") if args else {},
             },
             "keyring": {},
@@ -89,7 +90,6 @@ class LocalTransport:
 
     def on_data(self, callback):
         self._on_data_callback = callback
-        return None
 
     def send(self, message):
         self.sent_messages.append(message)
@@ -111,4 +111,3 @@ class Sig:
 class Ver:
     def __init__(self, valid: bool):
         self.valid = valid
-

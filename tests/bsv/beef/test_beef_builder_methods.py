@@ -1,10 +1,12 @@
-import pytest
 from typing import cast
+
+import pytest
 
 
 def test_merge_txid_only_and_make_txid_only():
-    from bsv.transaction.beef import Beef, BEEF_V2
+    from bsv.transaction.beef import BEEF_V2, Beef
     from bsv.transaction.beef_builder import merge_txid_only
+
     beef = Beef(version=BEEF_V2)
     txid = "aa" * 32
     _ = merge_txid_only(beef, txid)
@@ -16,10 +18,10 @@ def test_merge_txid_only_and_make_txid_only():
 
 
 def test_merge_transaction_sets_bump_index_when_bump_proves_txid():
-    from bsv.transaction.beef import Beef, BeefTx, BEEF_V2
-    from bsv.transaction.beef_builder import merge_bump, merge_transaction
     from bsv.merkle_path import MerklePath
     from bsv.transaction import Transaction
+    from bsv.transaction.beef import BEEF_V2, Beef, BeefTx
+    from bsv.transaction.beef_builder import merge_bump, merge_transaction
 
     class DummyBump:
         def __init__(self, height, txid):
@@ -60,7 +62,7 @@ def test_merge_transaction_sets_bump_index_when_bump_proves_txid():
 
 
 def test_merge_beef_merges_bumps_and_txs():
-    from bsv.transaction.beef import Beef, BEEF_V2, BeefTx
+    from bsv.transaction.beef import BEEF_V2, Beef, BeefTx
     from bsv.transaction.beef_builder import merge_beef, merge_txid_only
 
     class DummyBump:
@@ -89,10 +91,10 @@ def test_merge_beef_merges_bumps_and_txs():
 
 
 def test_merge_bump_combines_same_root_objects_and_sets_bump_index():
-    from bsv.transaction.beef import Beef, BEEF_V2, BeefTx
-    from bsv.transaction.beef_builder import merge_bump
     from bsv.merkle_path import MerklePath
     from bsv.transaction import Transaction
+    from bsv.transaction.beef import BEEF_V2, Beef, BeefTx
+    from bsv.transaction.beef_builder import merge_bump
 
     class DummyBump:
         def __init__(self, height, txid, root):
@@ -139,5 +141,3 @@ def test_merge_bump_combines_same_root_objects_and_sets_bump_index():
 
     btx = merge_transaction(beef, cast(Transaction, DummyTx(txid)))
     assert btx.bump_index == 0
-
-

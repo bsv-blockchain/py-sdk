@@ -4,13 +4,15 @@ Tests for Teranode broadcaster.
 Ported from TypeScript SDK.
 """
 
-import pytest
-import aiohttp
 from unittest.mock import AsyncMock, patch
+
+import aiohttp
+import pytest
+
+from bsv.broadcasters.broadcaster import BroadcastFailure, BroadcastResponse
 from bsv.broadcasters.teranode import Teranode
-from bsv.broadcasters.broadcaster import BroadcastResponse, BroadcastFailure
-from bsv.transaction import Transaction
 from bsv.script.script import Script
+from bsv.transaction import Transaction
 
 
 class TestTeranode:
@@ -36,9 +38,9 @@ class TestTeranode:
 
         # Should return some kind of response/failure
         assert result is not None
-        assert hasattr(result, 'status')
+        assert hasattr(result, "status")
         # In test environment, it will likely fail due to network
-        assert result.status in ['success', 'error']
+        assert result.status in ["success", "error"]
 
     @pytest.mark.asyncio
     async def test_broadcast_with_invalid_url(self):
@@ -60,7 +62,7 @@ class TestTeranode:
         """Test URL property is set correctly."""
         url = "https://teranode.example.com/api"
         broadcaster = Teranode(url)
-        assert broadcaster.URL == url
+        assert url == broadcaster.URL
 
     @pytest.mark.asyncio
     async def test_broadcast_http_error_response(self):
@@ -83,13 +85,15 @@ class TestTeranode:
         class MockPostContext:
             def __init__(self, response):
                 self.response = response
+
             async def __aenter__(self):
                 return self.response
+
             async def __aexit__(self, *args):
                 return None
 
         # Mock the session post method
-        with patch('aiohttp.ClientSession') as mock_session_class:
+        with patch("aiohttp.ClientSession") as mock_session_class:
             mock_session = AsyncMock()
             mock_session.post = MagicMock(return_value=MockPostContext(mock_response))
             mock_session_class.return_value.__aenter__ = AsyncMock(return_value=mock_session)
@@ -105,7 +109,8 @@ class TestTeranode:
     @pytest.mark.asyncio
     async def test_broadcast_network_error(self):
         """Test broadcast with network error."""
-        from unittest.mock import AsyncMock, patch, MagicMock
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         tx = Transaction()
         tx.version = 1
         tx.lock_time = 0
@@ -113,15 +118,17 @@ class TestTeranode:
         broadcaster = Teranode("https://api.teranode.com")
 
         # Mock network error - raise when post() is called
-        with patch('aiohttp.ClientSession') as mock_session_class:
+        with patch("aiohttp.ClientSession") as mock_session_class:
             mock_session = AsyncMock()
+
             # Create a context manager that raises the error
             class MockPostContextError:
                 async def __aenter__(self):
                     raise aiohttp.ClientError("Connection timeout")
+
                 async def __aexit__(self, *args):
                     return None
-            
+
             mock_session.post = MagicMock(return_value=MockPostContextError())
             mock_session_class.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_class.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -136,7 +143,8 @@ class TestTeranode:
     @pytest.mark.asyncio
     async def test_broadcast_unexpected_error(self):
         """Test broadcast with unexpected error."""
-        from unittest.mock import AsyncMock, patch, MagicMock
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         tx = Transaction()
         tx.version = 1
         tx.lock_time = 0
@@ -144,15 +152,17 @@ class TestTeranode:
         broadcaster = Teranode("https://api.teranode.com")
 
         # Mock unexpected error - raise when post() context is entered
-        with patch('aiohttp.ClientSession') as mock_session_class:
+        with patch("aiohttp.ClientSession") as mock_session_class:
             mock_session = AsyncMock()
+
             # Create a context manager that raises the error
             class MockPostContextError:
                 async def __aenter__(self):
                     raise ValueError("Unexpected error")
+
                 async def __aexit__(self, *args):
                     return None
-            
+
             mock_session.post = MagicMock(return_value=MockPostContextError())
             mock_session_class.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_class.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -167,7 +177,8 @@ class TestTeranode:
     @pytest.mark.asyncio
     async def test_broadcast_success_response(self):
         """Test broadcast with successful response."""
-        from unittest.mock import AsyncMock, patch, MagicMock
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         tx = Transaction()
         tx.version = 1
         tx.lock_time = 0
@@ -177,7 +188,7 @@ class TestTeranode:
         broadcaster = Teranode("https://api.teranode.com")
 
         # Mock successful response
-        with patch('aiohttp.ClientSession') as mock_session_class:
+        with patch("aiohttp.ClientSession") as mock_session_class:
             mock_response = AsyncMock()
             mock_response.ok = True
             mock_response.status = 200
@@ -186,11 +197,13 @@ class TestTeranode:
             class MockPostContext:
                 def __init__(self, response):
                     self.response = response
+
                 async def __aenter__(self):
                     return self.response
+
                 async def __aexit__(self, *args):
                     return None
-            
+
             mock_session = AsyncMock()
             mock_session.post = MagicMock(return_value=MockPostContext(mock_response))
             mock_session_class.return_value.__aenter__ = AsyncMock(return_value=mock_session)
@@ -206,7 +219,8 @@ class TestTeranode:
     @pytest.mark.asyncio
     async def test_broadcast_empty_error_text(self):
         """Test broadcast with HTTP error but empty error text."""
-        from unittest.mock import AsyncMock, patch, MagicMock
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         tx = Transaction()
         tx.version = 1
         tx.lock_time = 0
@@ -214,7 +228,7 @@ class TestTeranode:
         broadcaster = Teranode("https://api.teranode.com")
 
         # Mock response with empty error text
-        with patch('aiohttp.ClientSession') as mock_session_class:
+        with patch("aiohttp.ClientSession") as mock_session_class:
             mock_response = AsyncMock()
             mock_response.ok = False
             mock_response.status = 404
@@ -224,11 +238,13 @@ class TestTeranode:
             class MockPostContext:
                 def __init__(self, response):
                     self.response = response
+
                 async def __aenter__(self):
                     return self.response
+
                 async def __aexit__(self, *args):
                     return None
-            
+
             mock_session = AsyncMock()
             mock_session.post = MagicMock(return_value=MockPostContext(mock_response))
             mock_session_class.return_value.__aenter__ = AsyncMock(return_value=mock_session)

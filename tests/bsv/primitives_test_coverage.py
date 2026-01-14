@@ -1,6 +1,7 @@
 """
 Coverage tests for primitives.py - untested branches.
 """
+
 import pytest
 
 # Constants for skip messages
@@ -11,11 +12,13 @@ SKIP_PRIMITIVES = "Primitives not available"
 # Primitives branches
 # ========================================================================
 
+
 def test_primitives_hash256():
     """Test hash256 function."""
     try:
         from bsv.primitives import hash256
-        result = hash256(b'test')
+
+        result = hash256(b"test")
         assert isinstance(result, bytes)
         assert len(result) == 32
     except ImportError:
@@ -26,7 +29,8 @@ def test_primitives_hash160():
     """Test hash160 function."""
     try:
         from bsv.primitives import hash160
-        result = hash160(b'test')
+
+        result = hash160(b"test")
         assert isinstance(result, bytes)
         assert len(result) == 20
     except ImportError:
@@ -37,7 +41,8 @@ def test_primitives_sha256():
     """Test sha256 function."""
     try:
         from bsv.primitives import sha256
-        result = sha256(b'test')
+
+        result = sha256(b"test")
         assert isinstance(result, bytes)
         assert len(result) == 32
     except ImportError:
@@ -48,7 +53,8 @@ def test_primitives_ripemd160():
     """Test ripemd160 function."""
     try:
         from bsv.primitives import ripemd160
-        result = ripemd160(b'test')
+
+        result = ripemd160(b"test")
         assert isinstance(result, bytes)
         assert len(result) == 20
     except ImportError:
@@ -59,11 +65,13 @@ def test_primitives_ripemd160():
 # Edge cases
 # ========================================================================
 
+
 def test_hash256_empty():
     """Test hash256 with empty data."""
     try:
         from bsv.primitives import hash256
-        result = hash256(b'')
+
+        result = hash256(b"")
         assert isinstance(result, bytes)
         assert len(result) == 32
     except ImportError:
@@ -74,7 +82,8 @@ def test_hash160_empty():
     """Test hash160 with empty data."""
     try:
         from bsv.primitives import hash160
-        result = hash160(b'')
+
+        result = hash160(b"")
         assert isinstance(result, bytes)
         assert len(result) == 20
     except ImportError:
@@ -85,10 +94,10 @@ def test_hash256_large_data():
     """Test hash256 with large data."""
     try:
         from bsv.primitives import hash256
-        large_data = b'x' * 10000
+
+        large_data = b"x" * 10000
         result = hash256(large_data)
         assert isinstance(result, bytes)
         assert len(result) == 32
     except ImportError:
         pytest.skip(SKIP_PRIMITIVES)
-

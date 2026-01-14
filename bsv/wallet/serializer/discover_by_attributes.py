@@ -1,15 +1,16 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from bsv.wallet.substrates.serializer import Reader, Writer
+
 from .discovery_common import (
-    serialize_discover_certificates_result,
     deserialize_discover_certificates_result,
+    serialize_discover_certificates_result,
 )
 
 
-def serialize_discover_by_attributes_args(args: Dict[str, Any]) -> bytes:
+def serialize_discover_by_attributes_args(args: dict[str, Any]) -> bytes:
     w = Writer()
-    attrs: Dict[str, str] = args.get("attributes", {})
+    attrs: dict[str, str] = args.get("attributes", {})
     keys = sorted(attrs.keys())
     w.write_varint(len(keys))
     for k in keys:
@@ -21,10 +22,10 @@ def serialize_discover_by_attributes_args(args: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_discover_by_attributes_args(data: bytes) -> Dict[str, Any]:
+def deserialize_discover_by_attributes_args(data: bytes) -> dict[str, Any]:
     r = Reader(data)
     cnt = r.read_varint()
-    attrs: Dict[str, str] = {}
+    attrs: dict[str, str] = {}
     for _ in range(int(cnt)):
         k = (r.read_int_bytes() or b"").decode()
         v = (r.read_int_bytes() or b"").decode()
@@ -39,8 +40,8 @@ def deserialize_discover_by_attributes_args(data: bytes) -> Dict[str, Any]:
 
 # Re-export common functions for backwards compatibility
 __all__ = [
-    "serialize_discover_by_attributes_args",
     "deserialize_discover_by_attributes_args",
-    "serialize_discover_certificates_result",
     "deserialize_discover_certificates_result",
+    "serialize_discover_by_attributes_args",
+    "serialize_discover_certificates_result",
 ]

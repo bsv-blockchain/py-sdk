@@ -1,6 +1,5 @@
- 
 from abc import ABC, abstractmethod
-from typing import Callable, Any, Optional
+from typing import Any, Callable, Optional
 
 
 class Transport(ABC):
@@ -18,5 +17,3 @@ class Transport(ABC):
     def on_data(self, callback: Callable[[Any], Optional[Exception]]) -> Optional[Exception]:
         """Register a data handler invoked on message receipt. Return an Exception on failure, else None."""
         raise NotImplementedError
-
-

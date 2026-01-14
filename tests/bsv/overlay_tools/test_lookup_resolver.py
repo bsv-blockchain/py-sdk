@@ -4,17 +4,19 @@ Tests for LookupResolver.
 Ported from TypeScript SDK.
 """
 
-import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from bsv.overlay_tools.lookup_resolver import (
-    LookupResolver,
-    LookupResolverConfig,
-    LookupQuestion,
+    CacheOptions,
+    HTTPSOverlayLookupFacilitator,
     LookupAnswer,
     LookupOutput,
-    HTTPSOverlayLookupFacilitator,
-    CacheOptions
+    LookupQuestion,
+    LookupResolver,
+    LookupResolverConfig,
 )
 
 
@@ -64,12 +66,13 @@ class TestLookupResolver:
     async def test_https_facilitator_lookup_invalid_url(self):
         """Test HTTPS facilitator rejects non-HTTPS URLs."""
         from bsv.overlay_tools.lookup_resolver import HTTPProtocolError
+
         facilitator = HTTPSOverlayLookupFacilitator(allow_http=False)
         question = LookupQuestion(service="test", query={})
 
         with pytest.raises(HTTPProtocolError, match="HTTPS facilitator can only use URLs"):
             # Using HTTP intentionally to test security feature that rejects insecure URLs
-            await facilitator.lookup("http://example.com", question)  # noqa: S113  # NOSONAR
+            await facilitator.lookup("http://example.com", question)  # NOSONAR
 
     def test_lookup_resolver_creation(self):
         """Test LookupResolver can be created."""
@@ -110,9 +113,9 @@ class TestLookupResolver:
         resolver = LookupResolver()
 
         # Mock host reputation to put all hosts in backoff
-        resolver.host_reputation.rank_hosts = MagicMock(return_value=[
-            MagicMock(host="https://example.com", backoff_until=float('inf'))
-        ])
+        resolver.host_reputation.rank_hosts = MagicMock(
+            return_value=[MagicMock(host="https://example.com", backoff_until=float("inf"))]
+        )
 
         with pytest.raises(Exception, match="All test context hosts are backing off"):
             resolver._prepare_hosts_for_query(["https://example.com"], "test context")

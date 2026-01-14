@@ -3,14 +3,17 @@ BeefTx implementation for representing transactions in BEEF format.
 
 Translated from ts-sdk/src/transaction/BeefTx.ts
 """
-from typing import Optional, List, Union
-from bsv.transaction import Transaction
-from bsv.utils import Writer, Reader
+
+from typing import List, Optional, Union
+
 from bsv.hash import hash256
+from bsv.transaction import Transaction
+from bsv.utils import Reader, Writer
 
 
 class TX_DATA_FORMAT:  # NOSONAR - Matches TS SDK naming
     """Transaction data format constants."""
+
     RAWTX = 0
     RAWTX_AND_BUMP_INDEX = 1
 
@@ -18,18 +21,14 @@ class TX_DATA_FORMAT:  # NOSONAR - Matches TS SDK naming
 class BeefTx:
     """
     A single bitcoin transaction associated with a BEEF validity proof set.
-    
+
     Supports transactions as raw bytes, parsed Transaction objects, or just txids.
     """
 
-    def __init__(
-        self,
-        tx: Union[Transaction, bytes, str],
-        bump_index: Optional[int] = None
-    ):
+    def __init__(self, tx: Union[Transaction, bytes, str], bump_index: Optional[int] = None):
         """
         Initialize BeefTx.
-        
+
         Args:
             tx: Transaction as Transaction object, raw bytes, or txid string
             bump_index: Optional bump index if transaction has proof
@@ -38,7 +37,7 @@ class BeefTx:
         self._tx: Optional[Transaction] = None
         self._raw_tx: Optional[bytes] = None
         self._txid: Optional[str] = None
-        self.input_txids: List[str] = []
+        self.input_txids: list[str] = []
         self.is_valid: Optional[bool] = None
 
         if isinstance(tx, str):
@@ -72,17 +71,12 @@ class BeefTx:
     @property
     def is_txid_only(self) -> bool:
         """Check if this is txid-only representation."""
-        return (
-            self._txid is not None and
-            self._txid != '' and
-            self._raw_tx is None and
-            self._tx is None
-        )
+        return self._txid is not None and self._txid != "" and self._raw_tx is None and self._tx is None
 
     @property
     def txid(self) -> str:
         """Get transaction ID."""
-        if self._txid and self._txid != '':
+        if self._txid and self._txid != "":
             return self._txid
         if self._tx:
             self._txid = self._tx.txid()
@@ -90,7 +84,7 @@ class BeefTx:
         if self._raw_tx:
             self._txid = hash256(self._raw_tx).hex()
             return self._txid
-        raise ValueError('Cannot determine txid')
+        raise ValueError("Cannot determine txid")
 
     @property
     def tx(self) -> Optional[Transaction]:
@@ -99,6 +93,7 @@ class BeefTx:
             return self._tx
         if self._raw_tx:
             from bsv.utils import Reader
+
             self._tx = Transaction.from_reader(Reader(self._raw_tx))
             return self._tx
         return None
@@ -114,17 +109,17 @@ class BeefTx:
         return None
 
     @staticmethod
-    def from_tx(tx: Transaction, bump_index: Optional[int] = None) -> 'BeefTx':
+    def from_tx(tx: Transaction, bump_index: Optional[int] = None) -> "BeefTx":
         """Create BeefTx from Transaction object."""
         return BeefTx(tx, bump_index)
 
     @staticmethod
-    def from_raw_tx(raw_tx: bytes, bump_index: Optional[int] = None) -> 'BeefTx':
+    def from_raw_tx(raw_tx: bytes, bump_index: Optional[int] = None) -> "BeefTx":
         """Create BeefTx from raw transaction bytes."""
         return BeefTx(raw_tx, bump_index)
 
     @staticmethod
-    def from_txid(txid: str, bump_index: Optional[int] = None) -> 'BeefTx':
+    def from_txid(txid: str, bump_index: Optional[int] = None) -> "BeefTx":
         """Create BeefTx from txid string."""
         return BeefTx(txid, bump_index)
 
@@ -135,21 +130,22 @@ class BeefTx:
         else:
             input_txids_set = set()
             for tx_input in self.tx.inputs:
-                if hasattr(tx_input, 'source_txid') and tx_input.source_txid:
+                if hasattr(tx_input, "source_txid") and tx_input.source_txid:
                     input_txids_set.add(tx_input.source_txid)
             self.input_txids = list(input_txids_set)
 
     def to_writer(self, writer: Writer, version: int) -> None:
         """
         Write BeefTx to writer.
-        
+
         Args:
             writer: Writer to write to
             version: BEEF version
         """
+
         def write_txid() -> None:
             if self._txid is None:
-                raise ValueError('Transaction ID (_txid) is undefined')
+                raise ValueError("Transaction ID (_txid) is undefined")
             txid_bytes = bytes.fromhex(self._txid)
             writer.write(txid_bytes[::-1])  # Reverse byte order
 
@@ -159,7 +155,7 @@ class BeefTx:
             elif self._tx:
                 writer.write(self._tx.serialize())
             else:
-                raise ValueError('a valid serialized Transaction is expected')
+                raise ValueError("a valid serialized Transaction is expected")
 
         def write_bump_index() -> None:
             if self.bump_index is None:
@@ -173,4 +169,3 @@ class BeefTx:
         else:
             write_bump_index()
             write_tx()
-

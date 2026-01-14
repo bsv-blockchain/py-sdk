@@ -1,10 +1,11 @@
 """
 BEEF / AtomicBEEF parsing utilities.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from bsv.hash import hash256
 from bsv.transaction import Transaction  # existing parser
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from bsv.merkle_path import MerklePath
 
 # ---------------------------------------------------------------------------
-# 
+#
 # ---------------------------------------------------------------------------
 # BRC-64 / BRC-96 / BRC-95
 BEEF_V1 = 4022206465
@@ -29,9 +30,9 @@ class BeefTx:
 
     txid: str
     tx_bytes: bytes = b""
-    tx_obj: Optional[Transaction] = None
+    tx_obj: Transaction | None = None
     data_format: int = 0  # 0 RawTx, 1 RawTxAndBumpIndex, 2 TxIDOnly
-    bump_index: Optional[int] = None
+    bump_index: int | None = None
 
 
 @dataclass
@@ -39,14 +40,14 @@ class Beef:
     """Container for BUMP paths and transactions."""
 
     version: int
-    txs: Dict[str, BeefTx] = field(default_factory=dict)
-    bumps: List[object] = field(default_factory=list)
+    txs: dict[str, BeefTx] = field(default_factory=dict)
+    bumps: list[object] = field(default_factory=list)
 
     # --- helpers ---
-    def find_transaction(self, txid: str) -> Optional[BeefTx]:
+    def find_transaction(self, txid: str) -> BeefTx | None:
         return self.txs.get(txid)
 
-    def find_transaction_for_signing(self, txid: str) -> Optional[BeefTx]:
+    def find_transaction_for_signing(self, txid: str) -> BeefTx | None:
         """Return a transaction suitable for signing with inputs linked when possible.
 
         Current implementation returns the BeefTx if present; linking of inputs is
@@ -56,6 +57,7 @@ class Beef:
         btx = self.txs.get(txid)
         if not btx or not btx.tx_obj:
             return btx
+
         # Recursively link input source transactions when present in this Beef
         def _link_inputs(tx: Transaction):
             for txin in getattr(tx, "inputs", []) or []:
@@ -66,91 +68,112 @@ class Beef:
                 if parent and parent.tx_obj:
                     txin.source_transaction = parent.tx_obj
                     _link_inputs(parent.tx_obj)
+
         _link_inputs(btx.tx_obj)
         return btx
 
     # --- builder: merge/edit APIs ---
     def remove_existing_txid(self, txid: str) -> None:
         from .beef_builder import remove_existing_txid as _rm
+
         _rm(self, txid)
 
-    def merge_bump(self, bump: "MerklePath") -> int:
+    def merge_bump(self, bump: MerklePath) -> int:
         from .beef_builder import merge_bump as _merge_bump
+
         return _merge_bump(self, bump)
 
-    def merge_raw_tx(self, raw_tx: bytes, bump_index: Optional[int] = None) -> BeefTx:
+    def merge_raw_tx(self, raw_tx: bytes, bump_index: int | None = None) -> BeefTx:
         from .beef_builder import merge_raw_tx as _merge_raw_tx
+
         return _merge_raw_tx(self, raw_tx, bump_index)
 
     def merge_transaction(self, tx: Transaction) -> BeefTx:
         from .beef_builder import merge_transaction as _merge_transaction
+
         return _merge_transaction(self, tx)
 
     def merge_txid_only(self, txid: str) -> BeefTx:
         from .beef_builder import merge_txid_only as _merge_txid_only
+
         return _merge_txid_only(self, txid)
 
-    def make_txid_only(self, txid: str) -> Optional[BeefTx]:
+    def make_txid_only(self, txid: str) -> BeefTx | None:
         from .beef_builder import make_txid_only as _make_txid_only
+
         return _make_txid_only(self, txid)
 
     def merge_beef_tx(self, btx: BeefTx) -> BeefTx:
         from .beef_builder import merge_beef_tx as _merge_beef_tx
+
         return _merge_beef_tx(self, btx)
 
-    def merge_beef(self, other: "Beef") -> None:
+    def merge_beef(self, other: Beef) -> None:
         from .beef_builder import merge_beef as _merge_beef
+
         _merge_beef(self, other)
 
     # --- validation APIs ---
     def is_valid(self, allow_txid_only: bool = False) -> bool:
         from .beef_validate import is_valid as _is_valid
+
         return _is_valid(self, allow_txid_only=allow_txid_only)
 
-    def verify_valid(self, allow_txid_only: bool = False) -> tuple[bool, Dict[int, str]]:
+    def verify_valid(self, allow_txid_only: bool = False) -> tuple[bool, dict[int, str]]:
         from .beef_validate import verify_valid as _verify_valid
+
         return _verify_valid(self, allow_txid_only=allow_txid_only)
 
-    def get_valid_txids(self) -> List[str]:
+    def get_valid_txids(self) -> list[str]:
         from .beef_validate import get_valid_txids as _get_valid_txids
+
         return _get_valid_txids(self)
 
     # --- serialization APIs ---
     def to_binary(self) -> bytes:
         from .beef_serialize import to_binary as _to_binary
+
         return _to_binary(self)
 
     def to_hex(self) -> str:
         from .beef_serialize import to_hex as _to_hex
+
         return _to_hex(self)
 
     def to_binary_atomic(self, txid: str) -> bytes:
         from .beef_serialize import to_binary_atomic as _to_binary_atomic
+
         return _to_binary_atomic(self, txid)
 
     # --- utilities ---
-    def find_bump(self, txid: str) -> Optional["MerklePath"]:
+    def find_bump(self, txid: str) -> MerklePath | None:
         from .beef_utils import find_bump as _find_bump
+
         return _find_bump(self, txid)
 
-    def find_atomic_transaction(self, txid: str) -> Optional[Transaction]:
+    def find_atomic_transaction(self, txid: str) -> Transaction | None:
         from .beef_utils import find_atomic_transaction as _find_atomic
+
         return _find_atomic(self, txid)
 
     def to_log_string(self) -> str:
         from .beef_utils import to_log_string as _to_log_string
+
         return _to_log_string(self)
 
     def add_computed_leaves(self) -> None:
         from .beef_utils import add_computed_leaves as _add_computed_leaves
+
         _add_computed_leaves(self)
 
-    def trim_known_txids(self, known_txids: List[str]) -> None:
+    def trim_known_txids(self, known_txids: list[str]) -> None:
         from .beef_utils import trim_known_txids as _trim_known_txids
+
         _trim_known_txids(self, known_txids)
 
-    def txid_only(self) -> "Beef":
+    def txid_only(self) -> Beef:
         from .beef_utils import txid_only_clone as _txid_only_clone
+
         return _txid_only_clone(self)
 
     async def verify(self, chaintracker, allow_txid_only: bool = False) -> bool:
@@ -158,6 +181,7 @@ class Beef:
         Confirm validity by verifying computed merkle roots using ChainTracker.
         """
         from .beef_validate import verify_valid as _verify_valid
+
         ok, roots = _verify_valid(self, allow_txid_only=allow_txid_only)
         if not ok:
             return False
@@ -173,10 +197,11 @@ class Beef:
         Merge BEEF serialized bytes into this Beef.
         """
         from .beef_builder import merge_beef as _merge_beef
+
         other = new_beef_from_bytes(data)
         _merge_beef(self, other)
 
-    def clone(self) -> "Beef":
+    def clone(self) -> Beef:
         """
         Return a shallow clone of this Beef.
         - BUMPs list is shallow-copied
@@ -184,16 +209,16 @@ class Beef:
         """
         c = Beef(version=self.version)
         c.bumps = list(getattr(self, "bumps", []) or [])
-        c.txs = {txid: entry for txid, entry in getattr(self, "txs", {}).items()}
+        c.txs = dict(getattr(self, "txs", {}).items())
         return c
 
 
 # ---------------------------------------------------------------------------
-# VarInt helpers (Bitcoin style – little-endian compact)                    
+# VarInt helpers (Bitcoin style – little-endian compact)
 # ---------------------------------------------------------------------------
 
 
-def _read_varint(buf: memoryview, offset: int) -> Tuple[int, int]:
+def _read_varint(buf: memoryview, offset: int) -> tuple[int, int]:
     """Return (value, new_offset). Raises ValueError on overflow."""
     if offset >= len(buf):
         raise ValueError(BUFFER_EXHAUSTED_MSG)
@@ -204,19 +229,19 @@ def _read_varint(buf: memoryview, offset: int) -> Tuple[int, int]:
     if first == 0xFD:
         if offset + 2 > len(buf):
             raise ValueError(BUFFER_EXHAUSTED_MSG)
-        val = int.from_bytes(buf[offset:offset+2], "little")
+        val = int.from_bytes(buf[offset : offset + 2], "little")
         offset += 2
         return val, offset
     if first == 0xFE:
         if offset + 4 > len(buf):
             raise ValueError(BUFFER_EXHAUSTED_MSG)
-        val = int.from_bytes(buf[offset:offset+4], "little")
+        val = int.from_bytes(buf[offset : offset + 4], "little")
         offset += 4
         return val, offset
     # 0xFF
     if offset + 8 > len(buf):
         raise ValueError(BUFFER_EXHAUSTED_MSG)
-    val = int.from_bytes(buf[offset:offset+8], "little")
+    val = int.from_bytes(buf[offset : offset + 8], "little")
     offset += 8
     return val, offset
 
@@ -224,6 +249,7 @@ def _read_varint(buf: memoryview, offset: int) -> Tuple[int, int]:
 # ---------------------------------------------------------------------------
 # Factory helpers – minimal but robust enough for tests and KVStore flows
 # ---------------------------------------------------------------------------
+
 
 def new_beef_from_bytes(data: bytes) -> Beef:
     """Parse BEEF bytes."""
@@ -242,11 +268,12 @@ def new_beef_from_bytes(data: bytes) -> Beef:
 
 
 def _parse_beef_v2(mv: memoryview, version: int) -> Beef:
-    from bsv.utils import Reader
     from bsv.merkle_path import MerklePath
+    from bsv.utils import Reader
+
     reader = Reader(bytes(mv[4:]))
     bump_cnt = reader.read_var_int_num()
-    bumps: List[Optional[MerklePath]] = []
+    bumps: list[MerklePath | None] = []
     for _ in range(bump_cnt):
         bumps.append(MerklePath.from_reader(reader))
     tx_cnt = reader.read_var_int_num()
@@ -261,42 +288,46 @@ def _parse_beef_v2(mv: memoryview, version: int) -> Beef:
         pass
     return beef
 
+
 def _parse_beef_v2_txs(reader, tx_cnt, beef, bumps):
     from bsv.transaction import Transaction
+
     for _ in range(tx_cnt):
         _parse_single_beef_tx(reader, beef, bumps)
+
 
 def _parse_single_beef_tx(reader, beef, bumps):
     """Parse a single transaction from BEEF v2 format."""
     from bsv.transaction import Transaction
-    
+
     data_format = reader.read_uint8()
     if data_format not in (0, 1, 2):
         raise ValueError("unsupported tx data format")
-    
+
     bump_index = _read_bump_index(reader, data_format)
-    
+
     # Handle txid-only format
     if data_format == 2:
         _handle_txid_only_format(reader, beef)
         return
-    
+
     # Parse full transaction
     tx = Transaction.from_reader(reader)
     txid = tx.txid()
-    
+
     if bump_index is not None:
         _attach_merkle_path(tx, bump_index, bumps)
-    
-    btx = BeefTx(txid=txid, tx_bytes=tx.serialize(), tx_obj=tx, 
-                 data_format=data_format, bump_index=bump_index)
+
+    btx = BeefTx(txid=txid, tx_bytes=tx.serialize(), tx_obj=tx, data_format=data_format, bump_index=bump_index)
     _update_beef_with_tx(beef, txid, btx)
+
 
 def _read_bump_index(reader, data_format):
     """Read bump index if present in format."""
     if data_format == 1:
         return reader.read_var_int_num()
     return None
+
 
 def _handle_txid_only_format(reader, beef):
     """Handle txid-only transaction format."""
@@ -306,11 +337,13 @@ def _handle_txid_only_format(reader, beef):
     if existing is None or existing.tx_obj is None:
         beef.txs[txid] = BeefTx(txid=txid, tx_bytes=b"", tx_obj=None, data_format=2)
 
+
 def _attach_merkle_path(tx, bump_index, bumps):
     """Attach merkle path from bumps to transaction."""
     if bump_index < 0 or bump_index >= len(bumps):
         raise ValueError("invalid bump index")
     tx.merkle_path = bumps[bump_index]
+
 
 def _update_beef_with_tx(beef, txid, btx):
     """Update BEEF structure with parsed transaction."""
@@ -319,6 +352,7 @@ def _update_beef_with_tx(beef, txid, btx):
         if btx.bump_index is None:
             btx.bump_index = existing.bump_index
     beef.txs[txid] = btx
+
 
 def _link_inputs_and_bumps(beef: Beef):
     changed = True
@@ -331,6 +365,7 @@ def _link_inputs_and_bumps(beef: Beef):
                 changed = True
             _normalize_bump_for_tx(btx)
 
+
 def _link_inputs_for_tx(btx, beef):
     updated = False
     for txin in btx.tx_obj.inputs:
@@ -342,12 +377,14 @@ def _link_inputs_for_tx(btx, beef):
                 updated = True
     return updated
 
+
 def _normalize_bump_for_tx(btx):  # NOSONAR - Complexity (24), requires refactoring
     if btx.bump_index is not None and btx.tx_obj and btx.tx_obj.merkle_path:
         try:
             _ = btx.tx_obj.merkle_path.compute_root()
         except Exception:
             btx.tx_obj.merkle_path = None
+
 
 def _find_transaction_in_child_inputs(beef: Beef, target_txid: str):
     """Search for a transaction in child transaction inputs."""
@@ -359,6 +396,7 @@ def _find_transaction_in_child_inputs(beef: Beef, target_txid: str):
                 return txin.source_transaction
     return None
 
+
 def _fill_txidonly_placeholders(beef: Beef):
     """Fill txid-only placeholders with actual transactions from child inputs."""
     for txid, entry in list(beef.txs.items()):
@@ -368,8 +406,10 @@ def _fill_txidonly_placeholders(beef: Beef):
                 entry.tx_obj = tx
                 entry.tx_bytes = tx.serialize()
 
+
 def _parse_beef_v1(data: bytes, version: int) -> Beef:
     from bsv.transaction import Transaction as _Tx
+
     try:
         tx = _Tx.from_beef(data)
         raw = tx.serialize()
@@ -381,7 +421,7 @@ def _parse_beef_v1(data: bytes, version: int) -> Beef:
         raise ValueError(f"failed to parse BEEF v1: {e}")
 
 
-def new_beef_from_atomic_bytes(data: bytes) -> tuple[Beef, Optional[str]]:
+def new_beef_from_atomic_bytes(data: bytes) -> tuple[Beef, str | None]:
     if len(data) < 36:
         raise ValueError("atomic beef too short")
     if int.from_bytes(data[:4], "little") != ATOMIC_BEEF:
@@ -402,11 +442,11 @@ def parse_beef(data: bytes) -> Beef:  # NOSONAR - Complexity (19), requires refa
     return new_beef_from_bytes(data)
 
 
-def _find_subject_transaction(beef: Beef, subject: str, data: bytes) -> Optional[Transaction]:
+def _find_subject_transaction(beef: Beef, subject: str, data: bytes) -> Transaction | None:
     """Find the subject transaction in the BEEF, checking nested BEEFs if needed."""
     btx = beef.find_transaction(subject)
     last_tx = getattr(btx, "tx_obj", None) if btx else None
-    
+
     # If not found, try recursively in nested AtomicBEEF
     if last_tx is None:
         try:
@@ -415,10 +455,11 @@ def _find_subject_transaction(beef: Beef, subject: str, data: bytes) -> Optional
                 last_tx = nested_last_tx
         except Exception:
             pass
-    
+
     return last_tx
 
-def _parse_atomic_beef(data: bytes) -> tuple[Beef, Optional[str], Optional[Transaction]]:
+
+def _parse_atomic_beef(data: bytes) -> tuple[Beef, str | None, Transaction | None]:
     """Parse an Atomic BEEF and find the subject transaction."""
     beef, subject = new_beef_from_atomic_bytes(data)
     last_tx = None
@@ -426,20 +467,23 @@ def _parse_atomic_beef(data: bytes) -> tuple[Beef, Optional[str], Optional[Trans
         last_tx = _find_subject_transaction(beef, subject, data)
     return beef, subject, last_tx
 
-def _parse_v1_beef(data: bytes) -> tuple[Beef, Optional[str], Optional[Transaction]]:
+
+def _parse_v1_beef(data: bytes) -> tuple[Beef, str | None, Transaction | None]:
     """Parse a V1 BEEF format."""
     from bsv.transaction import Transaction as _Tx
+
     tx = _Tx.from_beef(data)
     beef = new_beef_from_bytes(data)
     return beef, None, tx
 
-def parse_beef_ex(data: bytes) -> tuple[Beef, Optional[str], Optional[Transaction]]:
+
+def parse_beef_ex(data: bytes) -> tuple[Beef, str | None, Transaction | None]:
     """Extended parser returning (beef, subject_txid_for_atomic, last_tx_for_v1 or subject)."""
     if len(data) < 4:
         raise ValueError("invalid beef bytes")
-    
+
     version = int.from_bytes(data[:4], "little")
-    
+
     if version == ATOMIC_BEEF:
         return _parse_atomic_beef(data)
     if version == BEEF_V1:
@@ -455,28 +499,30 @@ def normalize_bumps(beef: Beef) -> None:
     """
     if not getattr(beef, "bumps", None):
         return
-    
+
     _, index_map, new_bumps = _deduplicate_bumps(beef.bumps)
     beef.bumps = new_bumps
     _remap_transaction_indices(beef, index_map)
 
-def _deduplicate_bumps(bumps: List) -> tuple[Dict[tuple, int], Dict[int, int], List]:
+
+def _deduplicate_bumps(bumps: list) -> tuple[dict[tuple, int], dict[int, int], list]:
     """Deduplicate bumps by merging those with same (height, root)."""
-    root_map: Dict[tuple, int] = {}
-    index_map: Dict[int, int] = {}
-    new_bumps: List[object] = []
-    
+    root_map: dict[tuple, int] = {}
+    index_map: dict[int, int] = {}
+    new_bumps: list[object] = []
+
     for old_index, bump in enumerate(bumps):
         key = _compute_bump_key(bump, old_index)
-        
+
         if key in root_map:
             idx = _merge_bump(new_bumps, bump, root_map[key])
             index_map[old_index] = idx
         else:
             new_index = _add_new_bump(new_bumps, bump, key, root_map)
             index_map[old_index] = new_index
-    
+
     return root_map, index_map, new_bumps
+
 
 def _compute_bump_key(bump, fallback_index: int) -> tuple:
     """Compute deduplication key for a bump (height, root)."""
@@ -487,7 +533,8 @@ def _compute_bump_key(bump, fallback_index: int) -> tuple:
     except Exception:
         return (fallback_index, None)
 
-def _merge_bump(new_bumps: List, bump, target_idx: int) -> int:
+
+def _merge_bump(new_bumps: list, bump, target_idx: int) -> int:
     """Merge a bump into an existing bump at target_idx."""
     try:
         new_bumps[target_idx].combine(bump)
@@ -496,14 +543,16 @@ def _merge_bump(new_bumps: List, bump, target_idx: int) -> int:
         pass  # Best-effort merge
     return target_idx
 
-def _add_new_bump(new_bumps: List, bump, key: tuple, root_map: Dict[tuple, int]) -> int:
+
+def _add_new_bump(new_bumps: list, bump, key: tuple, root_map: dict[tuple, int]) -> int:
     """Add a new bump to the collection."""
     new_index = len(new_bumps)
     root_map[key] = new_index
     new_bumps.append(bump)
     return new_index
 
-def _remap_transaction_indices(beef: Beef, index_map: Dict[int, int]):
+
+def _remap_transaction_indices(beef: Beef, index_map: dict[int, int]):
     """Remap transaction bump indices to use new deduplicated indices."""
     for btx in beef.txs.values():
         if btx.bump_index is not None and btx.bump_index in index_map:

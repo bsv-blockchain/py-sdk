@@ -1,11 +1,11 @@
+import os
 import time
 import uuid
-import os
 
 from bsv.keys import PrivateKey
-from bsv.wallet import ProtoWallet
 from bsv.keystore.interfaces import KVStoreConfig
 from bsv.keystore.local_kv_store import LocalKVStore
+from bsv.wallet import ProtoWallet
 
 
 def test_list_outputs_retention_filter_excludes_expired():
@@ -16,7 +16,7 @@ def test_list_outputs_retention_filter_excludes_expired():
     wallet = ProtoWallet(priv, permission_callback=lambda a: True)
     cfg = KVStoreConfig(wallet=wallet, context=context, originator="org", encrypt=False)
     # Inject retention period (seconds)
-    setattr(cfg, "retention_period", 1)
+    cfg.retention_period = 1
     kv = LocalKVStore(cfg)
 
     # Create one output with retentionSeconds set via kv.set()
@@ -49,5 +49,3 @@ def test_list_outputs_retention_filter_keeps_unbounded():
     res = wallet.list_outputs({"basket": context, "excludeExpired": True, "nowEpoch": future, "use_woc": False}, "org")
     outs = res.get("outputs") or []
     assert len(outs) >= 1
-
-

@@ -1,5 +1,5 @@
-import json
 import base64
+import json
 from pathlib import Path
 
 from bsv.auth.peer import Peer, PeerOptions
@@ -10,9 +10,8 @@ from bsv.keys import PrivateKey
 class _CaptureTransport:
     def on_data(self, cb):
         self._cb = cb
-        return None
 
-    def send(self, _, _):
+    def send(self, _1, _2):
         return None
 
 
@@ -21,7 +20,7 @@ class _WalletOK:
         self._priv = priv
         self._pub = priv.public_key()
 
-    def get_public_key(self, _, _, _: str):
+    def get_public_key(self, _1, _2, _3: str):
         class R:
             pass
 
@@ -113,5 +112,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

@@ -5,10 +5,11 @@ Ported from TypeScript SDK.
 """
 
 import math
+
 from bsv.overlay_tools.host_reputation_tracker import (
     HostReputationTracker,
     RankedHost,
-    get_overlay_host_reputation_tracker
+    get_overlay_host_reputation_tracker,
 )
 
 

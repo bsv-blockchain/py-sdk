@@ -6,10 +6,11 @@ that should be thoroughly tested for script interpreter reliability.
 """
 
 import pytest
-from bsv.script.script import Script
-from bsv.script.interpreter import Engine, with_scripts, with_flags, with_after_genesis, with_fork_id, with_tx
+
+from bsv.script.interpreter import Engine, with_after_genesis, with_flags, with_fork_id, with_scripts, with_tx
 from bsv.script.interpreter.errs import ErrorCode, is_error_code
 from bsv.script.interpreter.scriptflag import Flag
+from bsv.script.script import Script
 from bsv.transaction import Transaction, TransactionInput, TransactionOutput
 
 
@@ -146,13 +147,10 @@ class TestScriptInterpreterEdgeCases:
             ("OP_TRUE OP_IF OP_TRUE OP_IF OP_TRUE OP_ENDIF OP_ENDIF", "Nested IF true/true"),
             ("OP_TRUE OP_IF OP_FALSE OP_IF OP_TRUE OP_ENDIF OP_ENDIF", "Nested IF true/false"),
             ("OP_FALSE OP_IF OP_TRUE OP_IF OP_TRUE OP_ENDIF OP_ENDIF", "Nested IF false/ignored"),
-
             # IF without ENDIF
             ("OP_TRUE OP_IF OP_TRUE", "IF without ENDIF - should fail"),
-
             # ELSE without IF
             ("OP_TRUE OP_ELSE OP_TRUE OP_ENDIF", "ELSE without matching IF"),
-
             # Multiple ELSE statements
             ("OP_TRUE OP_IF OP_TRUE OP_ELSE OP_2 OP_ELSE OP_3 OP_ENDIF", "Multiple ELSE statements"),
         ]
@@ -174,10 +172,8 @@ class TestScriptInterpreterEdgeCases:
             # Empty strings
             ("OP_0 OP_0 OP_CAT", "Concatenate empty strings"),
             ("OP_0 OP_SIZE", "Size of empty string"),
-
             # Large strings
             (f"{'00'*500} {'ff'*500} OP_CAT", "Concatenate large strings"),
-
             # Split operations
             ("0102030405 02 OP_SPLIT", "Split with valid position"),
             ("0102030405 ff OP_SPLIT", "Split with invalid position"),
@@ -201,7 +197,6 @@ class TestScriptInterpreterEdgeCases:
             ("ffffffffffffffff ffffffffffffffff OP_AND", "AND with max values"),
             ("ffffffffffffffff 0000000000000000 OP_OR", "OR with zero"),
             ("aaaaaaaaaaaaaaaa 5555555555555555 OP_XOR", "XOR alternating bits"),
-
             # Shift operations
             ("80000000 01 OP_LSHIFT", "Left shift"),
             ("00000001 20 OP_RSHIFT", "Right shift"),
@@ -257,10 +252,7 @@ class TestScriptInterpreterEdgeCases:
         ]
 
         for flags in flag_combinations:
-            err = engine.execute(
-                with_scripts(locking_script, unlocking_script),
-                with_flags(flags)
-            )
+            err = engine.execute(with_scripts(locking_script, unlocking_script), with_flags(flags))
 
             # Should succeed with valid flags
             assert err is None, f"Failed with flags {flags}"
@@ -274,7 +266,9 @@ class TestScriptInterpreterEdgeCases:
 
         # Add many inputs/outputs
         for i in range(10):
-            tx.add_input(TransactionInput(source_txid="00"*32, source_output_index=i, unlocking_script=Script.from_bytes(b"")))
+            tx.add_input(
+                TransactionInput(source_txid="00" * 32, source_output_index=i, unlocking_script=Script.from_bytes(b""))
+            )
 
         for i in range(10):
             tx.add_output(TransactionOutput(Script.from_bytes(b""), 1000 + i))
@@ -288,10 +282,7 @@ class TestScriptInterpreterEdgeCases:
 
         # Test with different input indices
         for vin in range(len(tx.inputs)):
-            err = engine.execute(
-                with_scripts(locking_script, unlocking_script),
-                with_tx(tx, vin, prev_output)
-            )
+            err = engine.execute(with_scripts(locking_script, unlocking_script), with_tx(tx, vin, prev_output))
 
             # Should succeed
             assert err is None, f"Failed with input index {vin}"

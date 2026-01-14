@@ -8,10 +8,10 @@ from .utils import Reader
 class TransactionOutput:
 
     def __init__(
-            self,
-            locking_script: Script,
-            satoshis: int = None,
-            change: bool = False,
+        self,
+        locking_script: Script,
+        satoshis: int = None,
+        change: bool = False,
     ):
         self.satoshis = satoshis
         self.locking_script = locking_script
@@ -27,9 +27,7 @@ class TransactionOutput:
         )
 
     def __str__(self) -> str:  # pragma: no cover
-        return (
-            f"<TxOutput value={self.satoshis} locking_script={self.locking_script.hex()}>"
-        )
+        return f"<TxOutput value={self.satoshis} locking_script={self.locking_script.hex()}>"
 
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
@@ -44,9 +42,7 @@ class TransactionOutput:
             stream = (
                 stream
                 if isinstance(stream, Reader)
-                else Reader(
-                    stream if isinstance(stream, bytes) else bytes.fromhex(stream)
-                )
+                else Reader(stream if isinstance(stream, bytes) else bytes.fromhex(stream))
             )
         except ValueError:
             return None

@@ -1,8 +1,9 @@
 import base64
+
 import pytest
 
-from bsv.auth.master_certificate import MasterCertificate
 from bsv.auth.certificate import Outpoint
+from bsv.auth.master_certificate import MasterCertificate
 from bsv.keys import PrivateKey
 
 
@@ -89,7 +90,6 @@ def test_create_keyring_for_verifier_reencrypts_with_serial_number_in_key_id():
     # Our EchoWallet returns ENC: + plaintext; base64-encoded string should decode to a value starting with b'ENC:'
     decoded = base64.b64decode(out_keyring["memberId"])
     assert decoded.startswith(b"ENC:") and len(decoded) > 4
-
 
 
 class WalletWithWireOK:
@@ -225,5 +225,3 @@ def test_issue_wallet_signature_fallback_to_private_key_and_verify():
     # Fallback signer sets certifier from private key used to sign
     assert cert.certifier.hex() == priv.public_key().hex()
     assert cert.verify() is True
-
-

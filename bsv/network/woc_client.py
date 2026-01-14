@@ -14,11 +14,11 @@ class WOCClient:
     - Simple, blocking HTTP calls appropriate for tooling and examples
     """
 
-    def __init__(self, api_key: Optional[str] = None, network: str = "main") -> None:
+    def __init__(self, api_key: str | None = None, network: str = "main") -> None:
         self.network = network
         self.api_key = api_key or os.environ.get("WOC_API_KEY") or ""
 
-    def get_tx_hex(self, txid: str, timeout: int = 10) -> Optional[str]:
+    def get_tx_hex(self, txid: str, timeout: int = 10) -> str | None:
         url = f"https://api.whatsonchain.com/v1/bsv/{self.network}/tx/raw/{txid}"
         headers: dict[str, str] = {}
         if self.api_key:
@@ -29,5 +29,3 @@ class WOCClient:
         data = r.json()
         rawtx = data.get("rawtx") or data.get("hex")
         return rawtx if isinstance(rawtx, str) else None
-
-

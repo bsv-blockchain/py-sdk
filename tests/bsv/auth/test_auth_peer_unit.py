@@ -24,6 +24,7 @@ class MockWallet:
     def get_public_key(self, ctx, args, originator: str):
         class R:
             pass
+
         r = R()
         r.public_key = self._pub
         return r
@@ -32,6 +33,7 @@ class MockWallet:
     def create_signature(self, ctx, args, originator: str):  # pragma: no cover
         class R:
             pass
+
         r = R()
         r.signature = self._priv.sign(args.get("data", b""))
         return r
@@ -39,6 +41,7 @@ class MockWallet:
     def verify_signature(self, ctx, args, originator: str):  # pragma: no cover
         class R:
             pass
+
         r = R()
         r.valid = self._pub.verify(args.get("signature"), args.get("data", b""))
         return r
@@ -85,12 +88,11 @@ class TestPeerUnit:
     def test_get_authenticated_session_returns_existing(self):
         peer, session_manager, _ = make_peer()
         identity = PrivateKey(778).public_key()
-        s = PeerSession(is_authenticated=True, session_nonce="s", peer_nonce="p", peer_identity_key=identity, last_update=1)
+        s = PeerSession(
+            is_authenticated=True, session_nonce="s", peer_nonce="p", peer_identity_key=identity, last_update=1
+        )
         session_manager.add_session(s)
         got = peer.get_authenticated_session(identity, 0)
         assert got is s
         # last_interacted_with_peer should be updated when auto_persist_last_session is True
         assert peer.last_interacted_with_peer == identity
-
-
-

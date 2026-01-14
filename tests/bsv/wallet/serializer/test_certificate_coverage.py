@@ -1,12 +1,13 @@
 """
 Coverage tests for certificate.py - untested branches.
 """
-import pytest
 
+import pytest
 
 # ========================================================================
 # Certificate serialization branches
 # ========================================================================
+
 
 def test_serialize_certificate_base():
     """Test serializing certificate base."""
@@ -18,14 +19,8 @@ def test_serialize_certificate_base():
             "serialNumber": b"serial" + b"\x00" * 26,
             "subject": b"subject" + b"\x00" * 26,
             "certifier": b"certifier" + b"\x00" * 24,
-            "revocationOutpoint": {
-                "txid": b"\x00" * 32,
-                "index": 0
-            },
-            "fields": {
-                "key1": "value1",
-                "key2": "value2"
-            }
+            "revocationOutpoint": {"txid": b"\x00" * 32, "index": 0},
+            "fields": {"key1": "value1", "key2": "value2"},
         }
 
         result = serialize_certificate_base(cert)
@@ -45,12 +40,9 @@ def test_serialize_certificate_with_signature():
             "serialNumber": b"serial" + b"\x00" * 26,
             "subject": b"subject" + b"\x00" * 26,
             "certifier": b"certifier" + b"\x00" * 24,
-            "revocationOutpoint": {
-                "txid": b"\x00" * 32,
-                "index": 0
-            },
+            "revocationOutpoint": {"txid": b"\x00" * 32, "index": 0},
             "fields": {},
-            "signature": b"signature_data"
+            "signature": b"signature_data",
         }
 
         result = serialize_certificate(cert)
@@ -72,11 +64,8 @@ def test_serialize_certificate_without_signature():
             "serialNumber": b"serial" + b"\x00" * 26,
             "subject": b"subject" + b"\x00" * 26,
             "certifier": b"certifier" + b"\x00" * 24,
-            "revocationOutpoint": {
-                "txid": b"\x00" * 32,
-                "index": 0
-            },
-            "fields": {}
+            "revocationOutpoint": {"txid": b"\x00" * 32, "index": 0},
+            "fields": {},
             # No signature field
         }
 
@@ -91,10 +80,11 @@ def test_serialize_certificate_without_signature():
 # Certificate deserialization branches
 # ========================================================================
 
+
 def test_deserialize_certificate():
     """Test deserializing certificate."""
     try:
-        from bsv.wallet.serializer.certificate import serialize_certificate, deserialize_certificate
+        from bsv.wallet.serializer.certificate import deserialize_certificate, serialize_certificate
 
         # Create a test certificate
         cert = {
@@ -102,15 +92,9 @@ def test_deserialize_certificate():
             "serialNumber": b"serial" + b"\x00" * 26,
             "subject": b"subject" + b"\x00" * 26,
             "certifier": b"certifier" + b"\x00" * 24,
-            "revocationOutpoint": {
-                "txid": b"\x00" * 32,
-                "index": 0
-            },
-            "fields": {
-                "key1": "value1",
-                "key2": "value2"
-            },
-            "signature": b"signature_data"
+            "revocationOutpoint": {"txid": b"\x00" * 32, "index": 0},
+            "fields": {"key1": "value1", "key2": "value2"},
+            "signature": b"signature_data",
         }
 
         # Serialize it
@@ -136,7 +120,7 @@ def test_deserialize_certificate():
 def test_deserialize_certificate_no_signature():
     """Test deserializing certificate without signature."""
     try:
-        from bsv.wallet.serializer.certificate import serialize_certificate, deserialize_certificate
+        from bsv.wallet.serializer.certificate import deserialize_certificate, serialize_certificate
 
         # Create a test certificate without signature
         cert = {
@@ -144,11 +128,8 @@ def test_deserialize_certificate_no_signature():
             "serialNumber": b"serial" + b"\x00" * 26,
             "subject": b"subject" + b"\x00" * 26,
             "certifier": b"certifier" + b"\x00" * 24,
-            "revocationOutpoint": {
-                "txid": b"\x00" * 32,
-                "index": 0
-            },
-            "fields": {}
+            "revocationOutpoint": {"txid": b"\x00" * 32, "index": 0},
+            "fields": {},
             # No signature
         }
 
@@ -168,7 +149,7 @@ def test_deserialize_certificate_no_signature():
 def test_deserialize_certificate_empty_fields():
     """Test deserializing certificate with empty fields."""
     try:
-        from bsv.wallet.serializer.certificate import serialize_certificate, deserialize_certificate
+        from bsv.wallet.serializer.certificate import deserialize_certificate, serialize_certificate
 
         # Create a test certificate with empty fields
         cert = {
@@ -176,12 +157,9 @@ def test_deserialize_certificate_empty_fields():
             "serialNumber": b"serial" + b"\x00" * 26,
             "subject": b"subject" + b"\x00" * 26,
             "certifier": b"certifier" + b"\x00" * 24,
-            "revocationOutpoint": {
-                "txid": b"\x00" * 32,
-                "index": 0
-            },
+            "revocationOutpoint": {"txid": b"\x00" * 32, "index": 0},
             "fields": {},  # Empty fields
-            "signature": b"signature_data"
+            "signature": b"signature_data",
         }
 
         # Serialize it
@@ -200,6 +178,7 @@ def test_deserialize_certificate_empty_fields():
 # ========================================================================
 # Edge cases
 # ========================================================================
+
 
 def test_serialize_certificate_minimal():
     """Test serializing minimal certificate."""

@@ -1,4 +1,5 @@
 import base64
+
 import pytest
 
 from bsv.auth.certificate import Certificate, Outpoint
@@ -63,6 +64,3 @@ class TestVerifiableCertificate:
         vc = VerifiableCertificate(cert, wrong_keyring)
         with pytest.raises(ValueError):
             vc.decrypt_fields(None, wallet)
-
-
-

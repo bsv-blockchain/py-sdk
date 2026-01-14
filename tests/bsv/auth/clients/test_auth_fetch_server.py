@@ -2,9 +2,10 @@ import pytest
 
 pytestmark = pytest.mark.skip(reason="Deprecated integration; covered by full E2E tests")
 import asyncio
-from aiohttp import web
 import base64
 import json
+
+from aiohttp import web
 
 # [Server]
 # cd py-sdk && PYTHONPATH=/mnt/extra/bsv-blockchain/py-sdk python3 tests/test_authfetch_server.py &
@@ -13,6 +14,7 @@ import json
 
 # 簡易セッション管理
 db_sessions = {}
+
 
 async def handle_authfetch(request):
     data = await request.read()
@@ -39,7 +41,7 @@ async def handle_authfetch(request):
             "initialNonce": server_nonce,
             "yourNonce": client_nonce,
             "certificates": [],
-            "signature": [100, 117, 109, 109, 121, 95, 115, 105, 103, 110, 97, 116, 117, 114, 101]  # list of ints
+            "signature": [100, 117, 109, 109, 121, 95, 115, 105, 103, 110, 97, 116, 117, 114, 101],  # list of ints
         }
         return web.Response(body=json.dumps(response).encode(), content_type="application/json")
     elif msg_type == "general":
@@ -52,11 +54,12 @@ async def handle_authfetch(request):
             "messageType": "general",
             "identityKey": "server_identity_key_dummy",
             "payload": msg.get("payload"),
-            "signature": [100, 117, 109, 109, 121, 95, 115, 105, 103, 110, 97, 116, 117, 114, 101]  # list of ints
+            "signature": [100, 117, 109, 109, 121, 95, 115, 105, 103, 110, 97, 116, 117, 114, 101],  # list of ints
         }
         return web.Response(body=json.dumps(response).encode(), content_type="application/json")
     else:
         return web.Response(status=400, text="Unknown message_type")
+
 
 app = web.Application()
 app.router.add_post("/authfetch", handle_authfetch)

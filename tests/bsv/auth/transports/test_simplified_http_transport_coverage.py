@@ -1,11 +1,14 @@
 """
 Coverage tests for simplified_http_transport.py - error paths and edge cases.
 """
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+
+from unittest.mock import MagicMock, Mock, patch
 from urllib.parse import urlparse
-from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
+
+import pytest
+
 from bsv.auth.auth_message import AuthMessage
+from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
 from bsv.keys import PrivateKey
 
 
@@ -21,20 +24,21 @@ def mock_message():
     msg = Mock(spec=AuthMessage)
     msg.version = "1.0"
     msg.message_type = "general"
-    msg.identity_key = b'\x00' * 33
+    msg.identity_key = b"\x00" * 33
     msg.nonce = "test_nonce"
     msg.initial_nonce = "init_nonce"
     msg.your_nonce = "your_nonce"
     msg.certificates = []
     msg.requested_certificates = {}
-    msg.payload = b'test_payload'
-    msg.signature = b'test_sig'
+    msg.payload = b"test_payload"
+    msg.signature = b"test_sig"
     return msg
 
 
 # ========================================================================
 # Initialization Edge Cases
 # ========================================================================
+
 
 def test_transport_init_with_http_url():
     """Test initialization with http URL."""
@@ -73,6 +77,7 @@ def test_transport_init_with_path():
 # Send Method Error Paths
 # ========================================================================
 
+
 def test_send_without_handler_registered(transport, mock_message):
     """Test send without handler registered returns error."""
     result = transport.send(mock_message)
@@ -86,15 +91,15 @@ def test_send_with_general_message(transport, mock_message):
     # Register handler first
     handler = Mock(return_value=None)
     transport.on_data(handler)
-    
+
     mock_message.message_type = "general"
-    
-    with patch.object(transport.client, 'post') as mock_post:
+
+    with patch.object(transport.client, "post") as mock_post:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.content = b'{"status": "ok"}'
         mock_post.return_value = mock_response
-        
+
         result = transport.send(mock_message)
         # Should succeed or return None
         assert result is None or isinstance(result, Exception)
@@ -105,15 +110,15 @@ def test_send_with_non_general_message(transport, mock_message):
     # Register handler first
     handler = Mock(return_value=None)
     transport.on_data(handler)
-    
+
     mock_message.message_type = "initialRequest"
-    
-    with patch.object(transport.client, 'post') as mock_post:
+
+    with patch.object(transport.client, "post") as mock_post:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"status": "ok"}
         mock_post.return_value = mock_response
-        
+
         result = transport.send(mock_message)
         # Should succeed or return None
         assert result is None or isinstance(result, Exception)
@@ -124,13 +129,13 @@ def test_send_with_http_error_status(transport, mock_message):
     # Register handler first
     handler = Mock(return_value=None)
     transport.on_data(handler)
-    
-    with patch.object(transport.client, 'post') as mock_post:
+
+    with patch.object(transport.client, "post") as mock_post:
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.text = "Internal Server Error"
         mock_post.return_value = mock_response
-        
+
         result = transport.send(mock_message)
         # Should return error
         assert isinstance(result, Exception)
@@ -141,10 +146,10 @@ def test_send_with_connection_error(transport, mock_message):
     # Register handler first
     handler = Mock(return_value=None)
     transport.on_data(handler)
-    
-    with patch.object(transport.client, 'post') as mock_post:
+
+    with patch.object(transport.client, "post") as mock_post:
         mock_post.side_effect = Exception("Connection failed")
-        
+
         result = transport.send(mock_message)
         assert isinstance(result, Exception)
         assert "Connection failed" in str(result) or "Failed to send" in str(result)
@@ -155,15 +160,15 @@ def test_send_with_empty_payload(transport, mock_message):
     # Register handler first
     handler = Mock(return_value=None)
     transport.on_data(handler)
-    
-    mock_message.payload = b''
-    
-    with patch.object(transport.client, 'post') as mock_post:
+
+    mock_message.payload = b""
+
+    with patch.object(transport.client, "post") as mock_post:
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.content = b'ok'
+        mock_response.content = b"ok"
         mock_post.return_value = mock_response
-        
+
         result = transport.send(mock_message)
         assert result is None or isinstance(result, Exception)
 
@@ -173,15 +178,15 @@ def test_send_with_none_payload(transport, mock_message):
     # Register handler first
     handler = Mock(return_value=None)
     transport.on_data(handler)
-    
+
     mock_message.payload = None
-    
-    with patch.object(transport.client, 'post') as mock_post:
+
+    with patch.object(transport.client, "post") as mock_post:
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.content = b'ok'
+        mock_response.content = b"ok"
         mock_post.return_value = mock_response
-        
+
         result = transport.send(mock_message)
         assert result is None or isinstance(result, Exception)
 
@@ -189,6 +194,7 @@ def test_send_with_none_payload(transport, mock_message):
 # ========================================================================
 # Event Handler Registration
 # ========================================================================
+
 
 def test_on_data_registration(transport):
     """Test registering on_data handler."""
@@ -226,7 +232,7 @@ def test_get_registered_on_data_with_handler(transport):
     """Test get_registered_on_data returns first handler."""
     handler = Mock()
     transport.on_data(handler)
-    
+
     returned_handler, err = transport.get_registered_on_data()
     assert returned_handler == handler
     assert err is None
@@ -235,6 +241,7 @@ def test_get_registered_on_data_with_handler(transport):
 # ========================================================================
 # Edge Cases
 # ========================================================================
+
 
 def test_transport_str_representation(transport):
     """Test string representation."""
@@ -253,6 +260,7 @@ def test_transport_with_special_chars_in_url():
 def test_transport_with_custom_client():
     """Test transport with custom client."""
     import requests
+
     custom_client = requests.Session()
     t = SimplifiedHTTPTransport("https://example.com", client=custom_client)
     assert t.client == custom_client
@@ -268,6 +276,7 @@ def test_transport_with_none_client():
 # AuthMessage JSON validation tests
 # ========================================================================
 
+
 def test_auth_message_from_dict_rejects_snake_case_keys():
     """Test that _auth_message_from_dict rejects snake_case keys."""
     transport = SimplifiedHTTPTransport("https://example.com")
@@ -277,7 +286,7 @@ def test_auth_message_from_dict_rejects_snake_case_keys():
         "version": "1.0",
         "messageType": "initialRequest",
         "identity_key": "02abc123",  # snake_case
-        "nonce": "test"
+        "nonce": "test",
     }
     with pytest.raises(ValueError, match="AuthMessage key 'identity_key' is not supported"):
         transport._auth_message_from_dict(data)
@@ -287,7 +296,7 @@ def test_auth_message_from_dict_rejects_snake_case_keys():
         "version": "1.0",
         "message_type": "initialRequest",  # snake_case
         "identityKey": "02abc123",
-        "nonce": "test"
+        "nonce": "test",
     }
     with pytest.raises(ValueError, match="AuthMessage key 'message_type' is not supported"):
         transport._auth_message_from_dict(data)
@@ -301,7 +310,7 @@ def test_auth_message_from_dict_rejects_string_payload():
         "version": "1.0",
         "messageType": "general",
         "identityKey": "02abc123",
-        "payload": "string_payload"  # string instead of list
+        "payload": "string_payload",  # string instead of list
     }
     with pytest.raises(ValueError, match="AuthMessage payload must be a list of integers or null"):
         transport._auth_message_from_dict(data)
@@ -315,7 +324,7 @@ def test_auth_message_from_dict_rejects_string_signature():
         "version": "1.0",
         "messageType": "general",
         "identityKey": "02abc123",
-        "signature": "hex_signature"  # string instead of list
+        "signature": "hex_signature",  # string instead of list
     }
     with pytest.raises(ValueError, match="AuthMessage signature must be a list of integers or null"):
         transport._auth_message_from_dict(data)
@@ -331,7 +340,7 @@ def test_auth_message_from_dict_accepts_list_payload_signature():
         "identityKey": "02abc123",
         "nonce": "test",
         "payload": [72, 101, 108, 108, 111],  # "Hello" as bytes
-        "signature": [1, 2, 3, 4, 5]
+        "signature": [1, 2, 3, 4, 5],
     }
     msg = transport._auth_message_from_dict(data)
     assert msg.payload == b"Hello"
@@ -347,7 +356,7 @@ def test_auth_message_from_dict_rejects_invalid_list_values():
         "version": "1.0",
         "messageType": "general",
         "identityKey": "02abc123",
-        "payload": [255, 256]  # 256 is out of range 0-255
+        "payload": [255, 256],  # 256 is out of range 0-255
     }
     with pytest.raises(ValueError, match="AuthMessage payload must contain integers in range 0-255"):
         transport._auth_message_from_dict(data)
@@ -357,7 +366,7 @@ def test_auth_message_from_dict_rejects_invalid_list_values():
         "version": "1.0",
         "messageType": "general",
         "identityKey": "02abc123",
-        "signature": [1, -1]  # -1 is out of range
+        "signature": [1, -1],  # -1 is out of range
     }
     with pytest.raises(ValueError, match="AuthMessage signature must contain integers in range 0-255"):
         transport._auth_message_from_dict(data)
@@ -367,8 +376,7 @@ def test_auth_message_from_dict_rejects_invalid_list_values():
         "version": "1.0",
         "messageType": "general",
         "identityKey": "02abc123",
-        "payload": [1, "not_int"]  # string in list
+        "payload": [1, "not_int"],  # string in list
     }
     with pytest.raises(ValueError, match="AuthMessage payload must contain integers in range 0-255"):
         transport._auth_message_from_dict(data)
-

@@ -192,7 +192,7 @@ def test_combine_paths():
     assert path_b.compute_root(BRC74TXID3) == BRC74Root
 
     path_a.combine(path_b)
-    assert path_a.path == BRC74JSONTrimmed['path']
+    assert path_a.path == BRC74JSONTrimmed["path"]
     print(path_a.path)
     assert path_a.compute_root(BRC74TXID2) == BRC74Root
     assert path_a.compute_root(BRC74TXID3) == BRC74Root

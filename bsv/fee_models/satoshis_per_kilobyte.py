@@ -1,17 +1,19 @@
-from ..fee_model import FeeModel
-from abc import ABC
-import math
 import asyncio
+import math
+from abc import ABC
+
+from ..fee_model import FeeModel
+
 
 class SatoshisPerKilobyte(FeeModel):
     """
     Represents the "satoshis per kilobyte" transaction fee model.
     """
-    
+
     def __init__(self, value: int):
         """
         Constructs an instance of the sat/kb fee model.
-        
+
         :param value: The number of satoshis per kilobyte to charge as a fee.
         """
         self.value = value
@@ -19,14 +21,15 @@ class SatoshisPerKilobyte(FeeModel):
     def compute_fee(self, tx) -> int:
         """
         Computes the fee for a given transaction.
-        
+
         :param tx: The transaction for which a fee is to be computed.
         :returns: The fee in satoshis for the transaction.
         """
+
         def get_varint_size(i: int) -> int:
-            if i > 2 ** 32:
+            if i > 2**32:
                 return 9
-            elif i > 2 ** 16:
+            elif i > 2**16:
                 return 5
             elif i > 253:
                 return 3
@@ -44,7 +47,9 @@ class SatoshisPerKilobyte(FeeModel):
             elif tx_input.unlocking_script_template:
                 script_length = tx_input.unlocking_script_template.estimated_unlocking_byte_length()
             else:
-                raise ValueError('All inputs must have an unlocking script or an unlocking script template for sat/kb fee computation.')
+                raise ValueError(
+                    "All inputs must have an unlocking script or an unlocking script template for sat/kb fee computation."
+                )
             size += get_varint_size(script_length)  # unlocking script length
             size += script_length  # unlocking script
 

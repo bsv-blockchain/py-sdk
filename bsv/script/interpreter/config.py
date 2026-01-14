@@ -97,4 +97,3 @@ class AfterGenesisConfig:
 
     def max_pub_keys_per_multisig(self) -> int:
         return sys.maxsize
-

@@ -1,13 +1,16 @@
 """
 Coverage tests for wallet wire transceiver error-handling branches.
 """
-import pytest
+
 from unittest.mock import Mock, patch
 
+import pytest
+
 try:
-    from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
     from bsv.wallet.substrates.wallet_wire import WalletWire
     from bsv.wallet.substrates.wallet_wire_calls import WalletWireCall
+    from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
+
     HAS_TRANSCEIVER = True
 except ImportError:
     HAS_TRANSCEIVER = False
@@ -21,7 +24,7 @@ def mock_transceiver():
 
     mock_wire = Mock(spec=WalletWire)
     # Mock transmit_to_wallet to return a valid frame response
-    mock_wire.transmit_to_wallet.return_value = b'\x00\x00\x00\x00'  # Minimal valid response frame
+    mock_wire.transmit_to_wallet.return_value = b"\x00\x00\x00\x00"  # Minimal valid response frame
     return WalletWireTransceiver(mock_wire)
 
 
@@ -38,7 +41,10 @@ class TestWalletWireTransceiverErrorHandling:
 
     def test_create_action_serialization_error(self, mock_transceiver):
         """Test create_action with serialization error."""
-        with patch('bsv.wallet.serializer.create_action_args.serialize_create_action_args', side_effect=Exception("Serialization failed")):
+        with patch(
+            "bsv.wallet.serializer.create_action_args.serialize_create_action_args",
+            side_effect=Exception("Serialization failed"),
+        ):
             with pytest.raises(Exception, match="Serialization failed"):
                 mock_transceiver.create_action(None, {"invalid": "args"}, "test_originator")
 
@@ -75,12 +81,7 @@ class TestWalletWireTransceiverErrorHandling:
 
     def test_list_actions_with_filters(self, mock_transceiver):
         """Test list_actions with various filter options."""
-        args = {
-            "basket": "test_basket",
-            "tags": ["tag1", "tag2"],
-            "limit": 10,
-            "offset": 5
-        }
+        args = {"basket": "test_basket", "tags": ["tag1", "tag2"], "limit": 10, "offset": 5}
 
         result = mock_transceiver.list_actions(None, args, "test_originator")
         assert isinstance(result, dict)
@@ -125,10 +126,7 @@ class TestWalletWireTransceiverErrorHandling:
 
     def test_verify_signature_invalid_signature(self, mock_transceiver):
         """Test verify_signature with invalid signature."""
-        args = {
-            "data": b"test_data",
-            "signature": "invalid_signature_format"  # Not bytes
-        }
+        args = {"data": b"test_data", "signature": "invalid_signature_format"}  # Not bytes
 
         with pytest.raises(Exception):
             mock_transceiver.verify_signature(None, args, "test_originator")
@@ -199,7 +197,7 @@ class TestWalletWireTransceiverErrorHandling:
             "type": "test_type",
             "serialNumber": "test_serial",
             "limit": 50,
-            "offset": 10
+            "offset": 10,
         }
 
         result = mock_transceiver.list_certificates(None, args, "test_originator")
@@ -212,7 +210,7 @@ class TestWalletWireTransceiverErrorHandling:
             "tags": ["tag1", "tag2", "tag3"],
             "limit": 100,
             "offset": 20,
-            "include": "entire_transaction"
+            "include": "entire_transaction",
         }
 
         result = mock_transceiver.list_outputs(None, args, "test_originator")

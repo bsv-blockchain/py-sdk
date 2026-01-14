@@ -1,18 +1,21 @@
 """
 Common serialization utilities for discovery certificate results.
 """
-from typing import Dict, Any
+
+from typing import Any, Dict
+
 from bsv.wallet.substrates.serializer import Reader, Writer
-from .identity_certificate import serialize_identity_certificate, deserialize_identity_certificate_from_reader
+
+from .identity_certificate import deserialize_identity_certificate_from_reader, serialize_identity_certificate
 
 
-def serialize_discover_certificates_result(result: Dict[str, Any]) -> bytes:
+def serialize_discover_certificates_result(result: dict[str, Any]) -> bytes:
     """
     Serialize discovery certificates result.
-    
+
     Args:
         result: Dict with 'certificates' list and optional 'totalCertificates' count
-        
+
     Returns:
         Serialized bytes
     """
@@ -27,21 +30,20 @@ def serialize_discover_certificates_result(result: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_discover_certificates_result(data: bytes) -> Dict[str, Any]:
+def deserialize_discover_certificates_result(data: bytes) -> dict[str, Any]:
     """
     Deserialize discovery certificates result.
-    
+
     Args:
         data: Serialized bytes
-        
+
     Returns:
         Dict with 'totalCertificates' and 'certificates' list
     """
     r = Reader(data)
-    out: Dict[str, Any] = {"certificates": []}
+    out: dict[str, Any] = {"certificates": []}
     total = r.read_varint()
     out["totalCertificates"] = int(total)
     for _ in range(int(total)):
         out["certificates"].append(deserialize_identity_certificate_from_reader(r))
     return out
-

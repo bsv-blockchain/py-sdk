@@ -1,15 +1,16 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from bsv.wallet.substrates.serializer import Reader, Writer
+
 from .common import (
-    serialize_encryption_args,
     deserialize_encryption_args,
-    serialize_seek_permission,
     deserialize_seek_permission,
+    serialize_encryption_args,
+    serialize_seek_permission,
 )
 
 
-def serialize_create_hmac_args(args: Dict[str, Any]) -> bytes:
+def serialize_create_hmac_args(args: dict[str, Any]) -> bytes:
     w = Writer()
     # Common encryption args
     serialize_encryption_args(
@@ -29,7 +30,7 @@ def serialize_create_hmac_args(args: Dict[str, Any]) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_create_hmac_args(data: bytes) -> Dict[str, Any]:
+def deserialize_create_hmac_args(data: bytes) -> dict[str, Any]:
     r = Reader(data)
     # Common encryption args
     out = deserialize_encryption_args(r)

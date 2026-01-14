@@ -1,8 +1,9 @@
-from typing import Union, TYPE_CHECKING, Optional, Dict, Any
 import time
-from ..http_client import HttpClient, default_http_client
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+
 from ..constants import Network
-from .broadcaster import Broadcaster, BroadcastResponse, BroadcastFailure
+from ..http_client import HttpClient, default_http_client
+from .broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
 
 if TYPE_CHECKING:
     from ..transaction import Transaction
@@ -12,23 +13,22 @@ class WhatsOnChainBroadcaster(Broadcaster):
     """
     Asynchronous WhatsOnChain broadcaster using HttpClient.
     """
+
     def __init__(self, network: Union[Network, str] = Network.MAINNET, http_client: HttpClient = None):
         if isinstance(network, str):
             network_str = network.lower()
-            if network_str in ['main', 'mainnet']:
-                self.network = 'main'
-            elif network_str in ['test', 'testnet']:
-                self.network = 'test'
+            if network_str in ["main", "mainnet"]:
+                self.network = "main"
+            elif network_str in ["test", "testnet"]:
+                self.network = "test"
             else:
                 raise ValueError(f"Invalid network string: {network}. Must be 'main' or 'test'")
         else:
-            self.network = 'main' if network == Network.MAINNET else 'test'
+            self.network = "main" if network == Network.MAINNET else "test"
         self.URL = f"https://api.whatsonchain.com/v1/bsv/{self.network}/tx/raw"
         self.http_client = http_client if http_client else default_http_client()
 
-    async def broadcast(
-        self, tx: 'Transaction'
-    ) -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, tx: "Transaction") -> Union[BroadcastResponse, BroadcastFailure]:
         request_options = {
             "method": "POST",
             "headers": {"Content-Type": "application/json", "Accept": "text/plain"},
@@ -38,9 +38,7 @@ class WhatsOnChainBroadcaster(Broadcaster):
             response = await self.http_client.fetch(self.URL, request_options)
             if response.ok:
                 txid = response.json()["data"]
-                return BroadcastResponse(
-                    status="success", txid=txid, message="broadcast successful"
-                )
+                return BroadcastResponse(status="success", txid=txid, message="broadcast successful")
             else:
                 return BroadcastFailure(
                     status="error",
@@ -59,12 +57,14 @@ class WhatsOnChainBroadcasterSync:
     """
     Synchronous WhatsOnChain broadcaster using requests, with retry/backoff and error classification.
     """
+
     def __init__(self, *, api_key: Optional[str] = None, network: str = "main"):
         self.api_key = api_key or ""
         self.network = network
 
-    def broadcast(self, tx_hex: str, *, api_key: Optional[str] = None, timeout: int = 10) -> Dict[str, Any]:
+    def broadcast(self, tx_hex: str, *, api_key: Optional[str] = None, timeout: int = 10) -> dict[str, Any]:
         import requests
+
         key = api_key or self.api_key
         headers = {}
         if key:
@@ -80,10 +80,10 @@ class WhatsOnChainBroadcasterSync:
                 resp.raise_for_status()
                 data = resp.text or ""  # WOC returns plain text txid
                 return {"accepted": True, "txid": data}
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 last_err = e
                 try:
-                    time.sleep(0.25 * (2 ** attempt))
+                    time.sleep(0.25 * (2**attempt))
                 except Exception:
                     pass
         msg = str(last_err or "broadcast failed")

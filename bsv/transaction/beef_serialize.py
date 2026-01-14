@@ -1,25 +1,26 @@
 from __future__ import annotations
 
-from typing import Dict, Set, Optional, Callable
+from typing import Callable, Dict, Optional, Set
 
-from bsv.utils import Writer, to_bytes
-from bsv.transaction import Transaction
 from bsv.merkle_path import MerklePath
-from .beef import Beef, BeefTx, BEEF_V1, BEEF_V2, ATOMIC_BEEF
+from bsv.transaction import Transaction
+from bsv.utils import Writer, to_bytes
+
+from .beef import ATOMIC_BEEF, BEEF_V1, BEEF_V2, Beef, BeefTx
 
 
 def to_bytes_le_u32(v: int) -> bytes:
     return int(v).to_bytes(4, "little", signed=False)
 
 
-def _write_txid_only(writer: Writer, txid: str, written: Set[str]) -> None:
+def _write_txid_only(writer: Writer, txid: str, written: set[str]) -> None:
     """Write a TXID_ONLY transaction."""
     writer.write_uint8(2)
     writer.write(to_bytes(txid, "hex")[::-1])
     written.add(txid)
 
 
-def _write_raw_tx(writer: Writer, btx: BeefTx, written: Set[str]) -> None:
+def _write_raw_tx(writer: Writer, btx: BeefTx, written: set[str]) -> None:
     """Write a raw transaction without parsing parent dependencies."""
     writer.write_uint8(1 if btx.bump_index is not None else 0)
     if btx.bump_index is not None:
@@ -28,7 +29,7 @@ def _write_raw_tx(writer: Writer, btx: BeefTx, written: Set[str]) -> None:
     written.add(btx.txid)
 
 
-def _ensure_parents_written(writer: Writer, beef: Beef, tx: Transaction, written: Set[str]) -> None:
+def _ensure_parents_written(writer: Writer, beef: Beef, tx: Transaction, written: set[str]) -> None:
     """Recursively write parent transactions before the current one."""
     for txin in getattr(tx, "inputs", []) or []:
         parent_id = getattr(txin, "source_txid", None)
@@ -38,12 +39,12 @@ def _ensure_parents_written(writer: Writer, beef: Beef, tx: Transaction, written
                 _append_tx(writer, beef, parent, written)
 
 
-def _write_tx_with_bump(writer: Writer, btx: BeefTx, written: Set[str]) -> None:
+def _write_tx_with_bump(writer: Writer, btx: BeefTx, written: set[str]) -> None:
     """Write transaction data with optional bump index."""
     writer.write_uint8(1 if btx.bump_index is not None else 0)
     if btx.bump_index is not None:
         writer.write_var_int_num(btx.bump_index)
-    
+
     if btx.tx_obj is not None:
         writer.write(btx.tx_obj.serialize())
     else:
@@ -51,7 +52,7 @@ def _write_tx_with_bump(writer: Writer, btx: BeefTx, written: Set[str]) -> None:
     written.add(btx.txid)
 
 
-def _append_tx(writer: Writer, beef: Beef, btx: BeefTx, written: Set[str]) -> None:
+def _append_tx(writer: Writer, beef: Beef, btx: BeefTx, written: set[str]) -> None:
     """
     Append one BeefTx to writer, ensuring parents are written first.
     """
@@ -62,7 +63,7 @@ def _append_tx(writer: Writer, beef: Beef, btx: BeefTx, written: Set[str]) -> No
         _write_txid_only(writer, btx.txid, written)
         return
 
-    tx: Optional[Transaction] = btx.tx_obj
+    tx: Transaction | None = btx.tx_obj
     if tx is None and btx.tx_bytes:
         _write_raw_tx(writer, btx, written)
         return
@@ -89,7 +90,7 @@ def to_binary(beef: Beef) -> bytes:
 
     # transactions
     writer.write_var_int_num(len(beef.txs))
-    written: Set[str] = set()
+    written: set[str] = set()
     for btx in list(beef.txs.values()):
         _append_tx(writer, beef, btx, written)
 
@@ -107,5 +108,3 @@ def to_binary_atomic(beef: Beef, txid: str) -> bytes:
 
 def to_hex(beef: Beef) -> str:
     return to_binary(beef).hex()
-
-

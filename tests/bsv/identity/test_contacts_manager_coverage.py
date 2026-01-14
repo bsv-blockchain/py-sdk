@@ -1,17 +1,20 @@
 """
 Coverage tests for contacts_manager.py - error paths and edge cases.
 """
+
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch
-from bsv.identity.contacts_manager import ContactsManager, Contact
+
+from bsv.identity.contacts_manager import Contact, ContactsManager
 
 
 @pytest.fixture
 def mock_wallet():
     """Create mock wallet."""
     wallet = Mock()
-    wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
-    wallet.create_action.return_value = {'txid': 'abc123'}
+    wallet.list_outputs.return_value = {"outputs": [], "BEEF": b""}
+    wallet.create_action.return_value = {"txid": "abc123"}
     return wallet
 
 
@@ -25,6 +28,7 @@ def manager(mock_wallet):
 # Initialization Edge Cases
 # ========================================================================
 
+
 def test_manager_init_with_wallet(mock_wallet):
     """Test initialization with provided wallet."""
     manager = ContactsManager(wallet=mock_wallet)
@@ -34,8 +38,7 @@ def test_manager_init_with_wallet(mock_wallet):
 def test_manager_init_without_wallet():
     """Test initialization without wallet creates default."""
     # Mock the modules that are imported locally in ContactsManager.__init__
-    with patch('bsv.wallet.ProtoWallet') as mock_wallet_impl, \
-         patch('bsv.keys.PrivateKey') as mock_private_key:
+    with patch("bsv.wallet.ProtoWallet") as mock_wallet_impl, patch("bsv.keys.PrivateKey") as mock_private_key:
         mock_private_key.return_value = Mock()
         mock_wallet_impl.return_value = Mock()
         manager = ContactsManager(wallet=None)
@@ -47,34 +50,35 @@ def test_manager_init_without_wallet():
 # Get Contacts Error Paths
 # ========================================================================
 
+
 def test_get_contacts_empty_list(manager, mock_wallet):
     """Test getting contacts when none exist."""
-    mock_wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
-    
+    mock_wallet.list_outputs.return_value = {"outputs": [], "BEEF": b""}
+
     result = manager.get_contacts()
     assert result == []
 
 
 def test_get_contacts_with_identity_key(manager, mock_wallet):
     """Test getting contacts filtered by identity key."""
-    mock_wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
-    
+    mock_wallet.list_outputs.return_value = {"outputs": [], "BEEF": b""}
+
     result = manager.get_contacts(identity_key="test_key")
     assert isinstance(result, list)
 
 
 def test_get_contacts_with_force_refresh(manager, mock_wallet):
     """Test getting contacts with force refresh."""
-    mock_wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
-    
+    mock_wallet.list_outputs.return_value = {"outputs": [], "BEEF": b""}
+
     result = manager.get_contacts(force_refresh=True)
     assert isinstance(result, list)
 
 
 def test_get_contacts_with_limit(manager, mock_wallet):
     """Test getting contacts with limit."""
-    mock_wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
-    
+    mock_wallet.list_outputs.return_value = {"outputs": [], "BEEF": b""}
+
     result = manager.get_contacts(limit=10)
     assert isinstance(result, list)
 
@@ -82,8 +86,8 @@ def test_get_contacts_with_limit(manager, mock_wallet):
 def test_get_contacts_uses_cache(manager, mock_wallet):
     """Test getting contacts uses cache when available."""
     # Set cache
-    manager._cache['metanet-contacts'] = '[]'
-    
+    manager._cache["metanet-contacts"] = "[]"
+
     result = manager.get_contacts(force_refresh=False)
     assert isinstance(result, list)
     # Should not call wallet when cache exists
@@ -92,18 +96,18 @@ def test_get_contacts_uses_cache(manager, mock_wallet):
 
 def test_get_contacts_cache_with_identity_key_filter(manager):
     """Test cache filters by identity key."""
-    manager._cache['metanet-contacts'] = '[{"identityKey": "key1"}, {"identityKey": "key2"}]'
-    
+    manager._cache["metanet-contacts"] = '[{"identityKey": "key1"}, {"identityKey": "key2"}]'
+
     result = manager.get_contacts(identity_key="key1", force_refresh=False)
     assert len(result) == 1
-    assert result[0]['identityKey'] == "key1"
+    assert result[0]["identityKey"] == "key1"
 
 
 def test_get_contacts_invalid_cache_json(manager, mock_wallet):
     """Test getting contacts with invalid cached JSON."""
-    manager._cache['metanet-contacts'] = 'invalid json{'
-    mock_wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
-    
+    manager._cache["metanet-contacts"] = "invalid json{"
+    mock_wallet.list_outputs.return_value = {"outputs": [], "BEEF": b""}
+
     result = manager.get_contacts()
     # Should handle invalid JSON and query wallet
     assert isinstance(result, list)
@@ -114,9 +118,10 @@ def test_get_contacts_invalid_cache_json(manager, mock_wallet):
 # Add Contact Error Paths
 # ========================================================================
 
+
 def test_save_contact_method_exists(manager):
     """Test save_contact method exists."""
-    assert hasattr(manager, 'save_contact')
+    assert hasattr(manager, "save_contact")
     assert callable(manager.save_contact)
 
 
@@ -125,7 +130,6 @@ def test_save_contact_with_none(manager):
     try:
         _ = manager.save_contact(None)
         # May handle or raise - both acceptable
-        pass
     except (TypeError, AttributeError):
         # Expected if no None handling - also acceptable
         pass
@@ -136,7 +140,6 @@ def test_save_contact_with_empty_dict(manager):
     try:
         _ = manager.save_contact({})
         # May handle or raise - both acceptable
-        pass
     except (TypeError, ValueError, KeyError):
         # Expected if validation exists - also acceptable
         pass
@@ -146,19 +149,16 @@ def test_save_contact_with_empty_dict(manager):
 # Remove Contact Error Paths
 # ========================================================================
 
+
 def test_delete_contact_existing(manager, mock_wallet):
     """Test deleting existing contact."""
     # Setup: existing contact in outputs
-    mock_wallet.list_outputs.return_value = {
-        'outputs': [{'outputIndex': 0, 'lockingScript': b'script'}],
-        'BEEF': b''
-    }
-    mock_wallet.create_action.return_value = {'txid': 'abc123'}
-    
+    mock_wallet.list_outputs.return_value = {"outputs": [{"outputIndex": 0, "lockingScript": b"script"}], "BEEF": b""}
+    mock_wallet.create_action.return_value = {"txid": "abc123"}
+
     try:
         _ = manager.delete_contact("test_key")
         # Should call wallet methods
-        pass
     except Exception:
         # May not be implemented yet
         pass
@@ -166,12 +166,11 @@ def test_delete_contact_existing(manager, mock_wallet):
 
 def test_delete_contact_not_found(manager, mock_wallet):
     """Test deleting non-existent contact."""
-    mock_wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
-    
+    mock_wallet.list_outputs.return_value = {"outputs": [], "BEEF": b""}
+
     try:
         _ = manager.delete_contact("nonexistent_key")
         # May handle gracefully
-        pass
     except (ValueError, KeyError, AttributeError):
         # Or raise
         pass
@@ -182,7 +181,6 @@ def test_delete_contact_with_none(manager):
     try:
         _ = manager.delete_contact(None)
         # May handle or raise
-        pass
     except (TypeError, AttributeError):
         # Expected if no None handling
         pass
@@ -192,26 +190,27 @@ def test_delete_contact_with_none(manager):
 # Cache Management
 # ========================================================================
 
+
 def test_cache_initialization(manager):
     """Test cache is initialized."""
-    assert hasattr(manager, '_cache')
+    assert hasattr(manager, "_cache")
     assert isinstance(manager._cache, dict)
 
 
 def test_cache_stores_contacts(manager, mock_wallet):
     """Test cache stores contacts after fetch."""
-    mock_wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
-    
+    mock_wallet.list_outputs.return_value = {"outputs": [], "BEEF": b""}
+
     manager.get_contacts()
     # Cache should be populated
-    assert 'metanet-contacts' in manager._cache
+    assert "metanet-contacts" in manager._cache
 
 
 def test_cache_invalidation_on_force_refresh(manager, mock_wallet):
     """Test force refresh bypasses cache."""
-    manager._cache['metanet-contacts'] = '[]'
-    mock_wallet.list_outputs.return_value = {'outputs': [], 'BEEF': b''}
-    
+    manager._cache["metanet-contacts"] = "[]"
+    mock_wallet.list_outputs.return_value = {"outputs": [], "BEEF": b""}
+
     manager.get_contacts(force_refresh=True)
     # Should call wallet even with cache
     assert mock_wallet.list_outputs.called
@@ -221,14 +220,14 @@ def test_cache_invalidation_on_force_refresh(manager, mock_wallet):
 # Edge Cases
 # ========================================================================
 
+
 def test_manager_with_wallet_error(manager, mock_wallet):
     """Test manager handles wallet errors."""
     mock_wallet.list_outputs.side_effect = Exception("Wallet error")
-    
+
     try:
         _ = manager.get_contacts()
         # May handle error gracefully
-        pass
     except Exception:
         # Or may propagate
         pass
@@ -243,16 +242,15 @@ def test_manager_str_representation(manager):
 def test_get_contacts_with_none_wallet_response(manager, mock_wallet):
     """Test getting contacts when wallet returns None."""
     mock_wallet.list_outputs.return_value = None
-    
+
     result = manager.get_contacts()
     assert isinstance(result, list)
 
 
 def test_get_contacts_with_none_outputs_field(manager, mock_wallet):
     """Test getting contacts when outputs field is None."""
-    mock_wallet.list_outputs.return_value = {'outputs': None, 'BEEF': b''}
-    
+    mock_wallet.list_outputs.return_value = {"outputs": None, "BEEF": b""}
+
     result = manager.get_contacts()
     assert isinstance(result, list)
     assert len(result) == 0
-

@@ -14,4 +14,3 @@ def patch_signature_validation(monkeypatch):
         return True
 
     monkeypatch.setattr(operations, "_verify_signature_with_nullfail", deterministic_verify)
-

@@ -1,8 +1,9 @@
 """
 Merkle Tree Parent utilities for computing parent hashes from child nodes.
 """
+
 from .hash import hash256
-from .utils import to_hex, to_bytes
+from .utils import to_bytes, to_hex
 
 
 def merkle_tree_parent_str(left: str, right: str) -> str:

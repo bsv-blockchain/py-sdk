@@ -1,17 +1,20 @@
 """
 Comprehensive error handling tests for LocalKVStore
 """
-import pytest
+
 from typing import cast
-from unittest.mock import Mock, patch, MagicMock
-from bsv.keystore.local_kv_store import LocalKVStore
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+
 from bsv.keystore.interfaces import (
-    KVStoreConfig,
     ErrEmptyContext,
-    ErrInvalidWallet,
     ErrInvalidKey,
     ErrInvalidValue,
+    ErrInvalidWallet,
+    KVStoreConfig,
 )
+from bsv.keystore.local_kv_store import LocalKVStore
 
 
 class TestLocalKVStoreErrorHandling:
@@ -20,11 +23,7 @@ class TestLocalKVStoreErrorHandling:
     def setup_method(self):
         """Set up test fixtures."""
         self.mock_wallet = Mock()
-        self.valid_config = KVStoreConfig(
-            wallet=self.mock_wallet,
-            context="test_context",
-            originator="test_originator"
-        )
+        self.valid_config = KVStoreConfig(wallet=self.mock_wallet, context="test_context", originator="test_originator")
 
     def test_set_invalid_key_types(self):
         """Test set with various invalid key types."""
@@ -74,23 +73,19 @@ class TestLocalKVStoreErrorHandling:
 
         # Note: whitespace-only keys are allowed by current validation
 
-
     def test_get_wallet_operation_failure(self):
         """Test get when wallet operations fail."""
         store = LocalKVStore(self.valid_config)
 
         # Mock _lookup_outputs_for_get to raise exception
-        with patch.object(store, '_lookup_outputs_for_get', side_effect=Exception("Wallet lookup failed")):
+        with patch.object(store, "_lookup_outputs_for_get", side_effect=Exception("Wallet lookup failed")):
             with pytest.raises(Exception, match="Wallet lookup failed"):
                 store.get("", "test_key")
 
     def test_encryption_config(self):
         """Test encryption configuration handling."""
         config = KVStoreConfig(
-            wallet=self.mock_wallet,
-            context="test_context",
-            originator="test_originator",
-            encrypt=True
+            wallet=self.mock_wallet, context="test_context", originator="test_originator", encrypt=True
         )
         store = LocalKVStore(config)
         assert store._encrypt is True
@@ -98,31 +93,19 @@ class TestLocalKVStoreErrorHandling:
     def test_context_validation_errors(self):
         """Test various context validation failures."""
         # Test None context
-        config = KVStoreConfig(
-            wallet=self.mock_wallet,
-            context=None,
-            originator="test_originator"
-        )
+        config = KVStoreConfig(wallet=self.mock_wallet, context=None, originator="test_originator")
         with pytest.raises(ErrEmptyContext):
             LocalKVStore(config)
 
         # Test empty context
-        config = KVStoreConfig(
-            wallet=self.mock_wallet,
-            context="",
-            originator="test_originator"
-        )
+        config = KVStoreConfig(wallet=self.mock_wallet, context="", originator="test_originator")
         with pytest.raises(ErrEmptyContext):
             LocalKVStore(config)
 
     def test_wallet_validation_errors(self):
         """Test wallet validation failures."""
         # Test None wallet
-        config = KVStoreConfig(
-            wallet=None,
-            context="test_context",
-            originator="test_originator"
-        )
+        config = KVStoreConfig(wallet=None, context="test_context", originator="test_originator")
         with pytest.raises(ErrInvalidWallet):
             LocalKVStore(config)
 
@@ -131,7 +114,7 @@ class TestLocalKVStoreErrorHandling:
         store = LocalKVStore(self.valid_config)
 
         # Mock empty outputs
-        with patch.object(store, '_lookup_outputs_for_get', return_value=([], b"")):
+        with patch.object(store, "_lookup_outputs_for_get", return_value=([], b"")):
             result = store.get("", "nonexistent_key", "default")
             assert result == "default"
 
@@ -140,6 +123,6 @@ class TestLocalKVStoreErrorHandling:
         store = LocalKVStore(self.valid_config)
 
         # Mock empty outputs for remove (needs 3-tuple: outputs, beef, total)
-        with patch.object(store, '_lookup_outputs_for_remove', return_value=([], b"", 0)):
+        with patch.object(store, "_lookup_outputs_for_remove", return_value=([], b"", 0)):
             result = store.remove("", "nonexistent_key")
             assert result == []  # Should return empty list

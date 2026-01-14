@@ -47,19 +47,15 @@ class NopDebugger:
 
     def before_stack_push(self, data: bytes) -> None:
         """No-op: intentionally empty for performance when debugging is disabled."""
-        pass
 
     def after_stack_push(self, data: bytes) -> None:
         """No-op: intentionally empty for performance when debugging is disabled."""
-        pass
 
     def before_stack_pop(self) -> None:
         """No-op: intentionally empty for performance when debugging is disabled."""
-        pass
 
     def after_stack_pop(self, data: bytes) -> None:
         """No-op: intentionally empty for performance when debugging is disabled."""
-        pass
 
 
 class NopStateHandler:
@@ -70,21 +66,21 @@ class NopStateHandler:
 
     def set_state(self, state: dict) -> None:
         """Intentionally empty: null object pattern."""
-        pass  # NOSONAR
+        # NOSONAR
 
 
 def as_bool(data: bytes) -> bool:
     """Get the boolean value of the byte array."""
     if len(data) == 0:
         return False
-    
+
     for i, byte_val in enumerate(data):
         if byte_val != 0:
             # Negative 0 is also considered false
             if i == len(data) - 1 and byte_val == 0x80:
                 return False
             return True
-    
+
     return False
 
 
@@ -104,7 +100,7 @@ class Stack:
         state_handler: Optional[StateHandler] = None,
     ):
         """Initialize a new stack."""
-        self.stk: List[bytes] = []
+        self.stk: list[bytes] = []
         self.max_num_length = cfg.max_script_number_length()
         self.after_genesis = cfg.after_genesis()
         self.verify_minimal_data = verify_minimal_data
@@ -243,24 +239,24 @@ class Stack:
         items = [self.stk.pop(-(n + i + 1)) for i in range(n)]
         for item in reversed(items):
             self.push_byte_array(item)
-    
+
     # Convenience methods for common operations
     def push(self, data: bytes) -> None:
         """Alias for push_byte_array."""
         self.push_byte_array(data)
-    
+
     def pop(self) -> bytes:
         """Alias for pop_byte_array."""
         return self.pop_byte_array()
-    
+
     def peek(self, idx: int = 0) -> bytes:
         """Alias for peek_byte_array."""
         return self.peek_byte_array(idx)
-    
+
     def dup(self) -> None:
         """Duplicate the top item on the stack."""
         self.dup_n(1)
-    
+
     def swap(self) -> None:
         """Swap the top two items on the stack."""
         if len(self.stk) < 2:
@@ -271,4 +267,3 @@ class Stack:
         # Push them back in swapped order
         self.push_byte_array(top)
         self.push_byte_array(second)
-

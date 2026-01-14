@@ -1,7 +1,9 @@
+import os
 import struct
 from typing import List, Optional, Union
-import os
+
 from ..key_deriver import CounterpartyType
+
 
 class Writer:
     def __init__(self):
@@ -19,20 +21,20 @@ class Writer:
     def write_varint(self, n: int):
         if n < 0:
             n = (1 << 64) - 1  # negative one (0xFFFFFFFFFFFFFFFF)
-        if n < 0xfd:
+        if n < 0xFD:
             self.write_byte(n)
-        elif n <= 0xffff:
-            self.write_byte(0xfd)
-            self.buf.extend(struct.pack('<H', n))
-        elif n <= 0xffffffff:
-            self.write_byte(0xfe)
-            self.buf.extend(struct.pack('<I', n))
+        elif n <= 0xFFFF:
+            self.write_byte(0xFD)
+            self.buf.extend(struct.pack("<H", n))
+        elif n <= 0xFFFFFFFF:
+            self.write_byte(0xFE)
+            self.buf.extend(struct.pack("<I", n))
         else:
-            self.write_byte(0xff)
-            self.buf.extend(struct.pack('<Q', n))
+            self.write_byte(0xFF)
+            self.buf.extend(struct.pack("<Q", n))
 
     def write_string(self, s: str):
-        b = s.encode('utf-8')
+        b = s.encode("utf-8")
         self.write_varint(len(b))
         self.write_bytes(b)
 
@@ -56,7 +58,7 @@ class Writer:
             self.write_varint(len(b))
             self.write_bytes(b)
 
-    def write_string_slice(self, slice: Optional[List[str]]):
+    def write_string_slice(self, slice: Optional[list[str]]):
         if slice is None:
             self.write_negative_one()
             return
@@ -86,6 +88,7 @@ class Writer:
     def to_bytes(self) -> bytes:
         return bytes(self.buf)
 
+
 class Reader:
     def __init__(self, data: bytes):
         self.data = data
@@ -96,15 +99,15 @@ class Reader:
 
     def read_byte(self) -> int:
         if self.is_complete():
-            raise EOFError('read past end of data')
+            raise EOFError("read past end of data")
         b = self.data[self.pos]
         self.pos += 1
         return b
 
     def read_bytes(self, n: int) -> bytes:
         if self.pos + n > len(self.data):
-            raise EOFError('read past end of data')
-        b = self.data[self.pos:self.pos + n]
+            raise EOFError("read past end of data")
+        b = self.data[self.pos : self.pos + n]
         self.pos += n
         return b
 
@@ -113,23 +116,23 @@ class Reader:
 
     def read_varint(self) -> int:
         first = self.read_byte()
-        if first < 0xfd:
+        if first < 0xFD:
             return first
-        elif first == 0xfd:
-            return struct.unpack('<H', self.read_bytes(2))[0]
-        elif first == 0xfe:
-            return struct.unpack('<I', self.read_bytes(4))[0]
-        elif first == 0xff:
-            return struct.unpack('<Q', self.read_bytes(8))[0]
+        elif first == 0xFD:
+            return struct.unpack("<H", self.read_bytes(2))[0]
+        elif first == 0xFE:
+            return struct.unpack("<I", self.read_bytes(4))[0]
+        elif first == 0xFF:
+            return struct.unpack("<Q", self.read_bytes(8))[0]
         else:
-            raise ValueError('Invalid varint prefix')
+            raise ValueError("Invalid varint prefix")
 
     def read_string(self) -> str:
         length = self.read_varint()
         if length == (1 << 64) - 1 or length == 0:
-            return ''
+            return ""
         b = self.read_bytes(length)
-        return b.decode('utf-8')
+        return b.decode("utf-8")
 
     def read_int_bytes(self) -> Optional[bytes]:
         length = self.read_varint()
@@ -148,7 +151,7 @@ class Reader:
         """Read optional bytes (alias for read_int_bytes for API compatibility)."""
         return self.read_int_bytes()
 
-    def read_string_slice(self) -> Optional[List[str]]:
+    def read_string_slice(self) -> Optional[list[str]]:
         count = self.read_varint()
         if count == (1 << 64) - 1:
             return None
@@ -160,24 +163,26 @@ class Reader:
             return None
         return bool(b)
 
+
 # ==========================================================
 # KeyRelatedParams encode / decode (ProtocolID, KeyID, Counterparty, Privileged)
 # ==========================================================
 
+
 def _encode_key_related_params(w: Writer, params: dict):
     # ProtocolID
-    proto: dict = params.get('protocolID', {})
-    w.write_byte(proto.get('securityLevel', 0))
-    w.write_string(proto.get('protocol', ''))
+    proto: dict = params.get("protocolID", {})
+    w.write_byte(proto.get("securityLevel", 0))
+    w.write_string(proto.get("protocol", ""))
     # KeyID
-    w.write_string(params.get('keyID', ''))
+    w.write_string(params.get("keyID", ""))
     # Determine counterparty type
-    cp_val = params.get('counterparty')
-    cp_bytes_param = params.get('counterparty_bytes')
+    cp_val = params.get("counterparty")
+    cp_bytes_param = params.get("counterparty_bytes")
     if cp_bytes_param or cp_val:
         cp_type = CounterpartyType.OTHER
     else:
-        cp_type = params.get('counterparty_type', CounterpartyType.UNINITIALIZED)
+        cp_type = params.get("counterparty_type", CounterpartyType.UNINITIALIZED)
 
     w.write_byte(cp_type)
     if cp_type not in (CounterpartyType.UNINITIALIZED, CounterpartyType.ANYONE, CounterpartyType.SELF):
@@ -189,88 +194,98 @@ def _encode_key_related_params(w: Writer, params: dict):
             elif isinstance(cp_val, bytes):
                 cp_pub = cp_val
             else:
-                cp_pub = b''
+                cp_pub = b""
         w.write_bytes(cp_pub)
     # Privileged bool + Reason
-    w.write_optional_bool(params.get('privileged'))
-    w.write_string(params.get('privileged_reason', ''))
+    w.write_optional_bool(params.get("privileged"))
+    w.write_string(params.get("privileged_reason", ""))
     # forSelf optional bool
-    w.write_optional_bool(params.get('forSelf'))
+    w.write_optional_bool(params.get("forSelf"))
+
 
 def _decode_key_related_params(r: Reader) -> dict:
     sec_level = r.read_byte()
-    protocol  = r.read_string()
-    key_id    = r.read_string()
-    cp_type   = r.read_byte()
-    cp_pub    = b''
+    protocol = r.read_string()
+    key_id = r.read_string()
+    cp_type = r.read_byte()
+    cp_pub = b""
     if cp_type not in (CounterpartyType.UNINITIALIZED, CounterpartyType.ANYONE, CounterpartyType.SELF):
         cp_pub = r.read_bytes(33)
     privileged = r.read_optional_bool()
     priv_reason = r.read_string()
     for_self = r.read_optional_bool()
     return {
-        'protocolID': {'securityLevel': sec_level, 'protocol': protocol},
-        'keyID': key_id,
-        'counterparty_type': cp_type,
-        'counterparty_bytes': cp_pub,
-        'counterparty': cp_pub.hex() if cp_pub else None,
-        'privileged': privileged,
-        'privilegedReason': priv_reason,
-        'forSelf': for_self,
+        "protocolID": {"securityLevel": sec_level, "protocol": protocol},
+        "keyID": key_id,
+        "counterparty_type": cp_type,
+        "counterparty_bytes": cp_pub,
+        "counterparty": cp_pub.hex() if cp_pub else None,
+        "privileged": privileged,
+        "privilegedReason": priv_reason,
+        "forSelf": for_self,
     }
+
 
 # ==========================================================
 # Encrypt / Decrypt Serialize / Deserialize
 # ==========================================================
 
+
 def serialize_encrypt_args(args: dict) -> bytes:
     w = Writer()
-    enc_args = args.get('encryption_args', args)
+    enc_args = args.get("encryption_args", args)
     if enc_args is None:
         enc_args = {}
     _encode_key_related_params(w, enc_args)
-    plaintext: bytes = args.get('plaintext', b'')
+    plaintext: bytes = args.get("plaintext", b"")
     w.write_int_bytes(plaintext)
-    w.write_optional_bool(args.get('encryption_args', {}).get('seekPermission'))
+    w.write_optional_bool(args.get("encryption_args", {}).get("seekPermission"))
     return w.to_bytes()
+
 
 def deserialize_encrypt_args(data: bytes) -> dict:
     r = Reader(data)
     enc_args = _decode_key_related_params(r)
-    plaintext = r.read_int_bytes() or b''
+    plaintext = r.read_int_bytes() or b""
     seek_perm = r.read_optional_bool()
-    enc_args['seekPermission'] = seek_perm
-    return {'encryption_args': enc_args, 'plaintext': plaintext}
+    enc_args["seekPermission"] = seek_perm
+    return {"encryption_args": enc_args, "plaintext": plaintext}
+
 
 def serialize_encrypt_result(result: dict) -> bytes:
-    return result.get('ciphertext', b'')
+    return result.get("ciphertext", b"")
+
 
 def deserialize_encrypt_result(data: bytes) -> dict:
-    return {'ciphertext': data}
+    return {"ciphertext": data}
 
 
 def serialize_decrypt_args(args: dict) -> bytes:
     w = Writer()
-    enc_args = args.get('encryption_args', args)
+    enc_args = args.get("encryption_args", args)
     _encode_key_related_params(w, enc_args)
-    ciphertext: bytes = args.get('ciphertext', b'')
+    ciphertext: bytes = args.get("ciphertext", b"")
     w.write_int_bytes(ciphertext)
-    w.write_optional_bool(args.get('encryption_args', {}).get('seekPermission'))
+    w.write_optional_bool(args.get("encryption_args", {}).get("seekPermission"))
     return w.to_bytes()
+
 
 def deserialize_decrypt_args(data: bytes) -> dict:
     r = Reader(data)
     enc_args = _decode_key_related_params(r)
-    ciphertext = r.read_int_bytes() or b''
+    ciphertext = r.read_int_bytes() or b""
     seek_perm = r.read_optional_bool()
-    enc_args['seekPermission'] = seek_perm
-    return {'encryption_args': enc_args, 'ciphertext': ciphertext}
+    enc_args["seekPermission"] = seek_perm
+    return {"encryption_args": enc_args, "ciphertext": ciphertext}
+
 
 def serialize_decrypt_result(result: dict) -> bytes:
-    return result.get('plaintext', b'')
+    return result.get("plaintext", b"")
+
 
 def deserialize_decrypt_result(data: bytes) -> dict:
-    return {'plaintext': data}
+    return {"plaintext": data}
+
 
 # ==========================================================
 # Additional helpers for Actions / Certificates / Discovery serialization
@@ -332,6 +347,7 @@ def decode_outpoint(r: Reader) -> str:
 # ==========================================================
 # Actions Serializers (Args only – Results TBD)
 # ==========================================================
+
 
 def serialize_create_action_args(args: dict) -> bytes:  # NOSONAR - Complexity (46), requires refactoring
     """Ported from Go SerializeCreateActionArgs / TS implementation."""
@@ -435,30 +451,37 @@ def deserialize_create_action_args(data: bytes) -> dict:
             seq = r.read_varint()
             if seq == (1 << 64) - 1:
                 seq = None
-            inputs.append({
-                "outpoint": outpoint,
-                "unlockingScript": unlocking,
-                "inputDescription": input_description,
-                "sequenceNumber": seq,
-            })
+            inputs.append(
+                {
+                    "outpoint": outpoint,
+                    "unlockingScript": unlocking,
+                    "inputDescription": input_description,
+                    "sequenceNumber": seq,
+                }
+            )
     # Outputs decoding and rest is deferred for now.
     # For now skip parsing remainder and return minimal dict with raw data.
-    return {"description": description, "inputBEEF": input_beef, "raw_rest": r.data[r.pos:]}  # pragma: no cover
+    return {"description": description, "inputBEEF": input_beef, "raw_rest": r.data[r.pos :]}  # pragma: no cover
 
 
 # Import implemented serializers from their respective modules
-from bsv.wallet.serializer.sign_action_args import serialize_sign_action_args, deserialize_sign_action_args
+from bsv.wallet.serializer.sign_action_args import deserialize_sign_action_args, serialize_sign_action_args
+
 
 def serialize_abort_action_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_abort_action_args not yet ported")
 
+
 def deserialize_abort_action_args(data: bytes) -> dict:
     raise NotImplementedError("deserialize_abort_action_args not yet ported")
 
-from bsv.wallet.serializer.list_actions import serialize_list_actions_args, deserialize_list_actions_args
+
+from bsv.wallet.serializer.list_actions import deserialize_list_actions_args, serialize_list_actions_args
+
 
 def serialize_internalize_action_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_internalize_action_args not yet ported")
+
 
 def deserialize_internalize_action_args(data: bytes) -> dict:
     raise NotImplementedError("deserialize_internalize_action_args not yet ported")
@@ -468,26 +491,34 @@ def deserialize_internalize_action_args(data: bytes) -> dict:
 # Certificates Serializers (placeholders)
 # ==========================================================
 
+
 def serialize_acquire_certificate_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_acquire_certificate_args not yet ported")
+
 
 def deserialize_acquire_certificate_args(data: bytes) -> dict:
     raise NotImplementedError("deserialize_acquire_certificate_args not yet ported")
 
+
 def serialize_list_certificates_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_list_certificates_args not yet ported")
+
 
 def deserialize_list_certificates_args(data: bytes) -> dict:
     raise NotImplementedError("deserialize_list_certificates_args not yet ported")
 
+
 def serialize_prove_certificate_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_prove_certificate_args not yet ported")
+
 
 def deserialize_prove_certificate_args(data: bytes) -> dict:
     raise NotImplementedError("deserialize_prove_certificate_args not yet ported")
 
+
 def serialize_relinquish_certificate_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_relinquish_certificate_args not yet ported")
+
 
 def deserialize_relinquish_certificate_args(data: bytes) -> dict:
     raise NotImplementedError("deserialize_relinquish_certificate_args not yet ported")
@@ -497,14 +528,18 @@ def deserialize_relinquish_certificate_args(data: bytes) -> dict:
 # Discovery Serializers (placeholders)
 # ==========================================================
 
+
 def serialize_discover_by_identity_key_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_discover_by_identity_key_args not yet ported")
+
 
 def deserialize_discover_by_identity_key_args(data: bytes) -> dict:
     raise NotImplementedError("deserialize_discover_by_identity_key_args not yet ported")
 
+
 def serialize_discover_by_attributes_args(args: dict) -> bytes:
     raise NotImplementedError("serialize_discover_by_attributes_args not yet ported")
+
 
 def deserialize_discover_by_attributes_args(data: bytes) -> dict:
     raise NotImplementedError("deserialize_discover_by_attributes_args not yet ported")

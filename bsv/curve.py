@@ -5,19 +5,19 @@ from coincurve import PublicKey as CcPublicKey
 
 from .constants import NUMBER_BYTE_LENGTH
 
-Point = namedtuple('Point', 'x y')
+Point = namedtuple("Point", "x y")
 
-EllipticCurve = namedtuple('EllipticCurve', 'name p a b g n h')
+EllipticCurve = namedtuple("EllipticCurve", "name p a b g n h")
 curve = EllipticCurve(
-    name='Secp256k1',
-    p=0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f,
+    name="Secp256k1",
+    p=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F,
     a=0,
     b=7,
     g=Point(
-        0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
-        0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+        0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,
+        0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8,
     ),
-    n=0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141,
+    n=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141,
     h=1,
 )
 
@@ -78,7 +78,7 @@ def curve_multiply(scalar: int, point: Optional[Point]) -> Optional[Point]:
     if scalar < 0:
         # k * point = -k * (-point)
         return curve_multiply(-scalar, curve_negative(point))
-    r = Point(*CcPublicKey.from_point(*point).multiply((scalar % curve.n).to_bytes(NUMBER_BYTE_LENGTH, 'big')).point())
+    r = Point(*CcPublicKey.from_point(*point).multiply((scalar % curve.n).to_bytes(NUMBER_BYTE_LENGTH, "big")).point())
     assert on_curve(r)
     return r
 

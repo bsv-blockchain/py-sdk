@@ -1,7 +1,7 @@
 import base64
 
-from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.auth_message import AuthMessage
+from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
 
@@ -26,8 +26,8 @@ def test_handle_certificate_request_valid_signature():
         requested_certificates={"types": {"t": ["f1"]}},
         signature=b"dummy",
     )
-    err = peer.handle_certificate_request(msg, sender_pub);
-    assert err is None;
+    err = peer.handle_certificate_request(msg, sender_pub)
+    assert err is None
 
 
 def test_handle_certificate_response_valid_signature_invokes_listener():
@@ -120,6 +120,7 @@ def test_canonicalize_certificates_payload_golden():
     # Deterministic ordering by (type, serialNumber)
     # Serialize and compare to golden canonical JSON string
     import json
+
     payload = peer._serialize_for_signature(canon)
     # Verify stable serialization (no spaces, sorted keys)
     assert payload.decode().startswith("[") and ":" in payload.decode()
@@ -155,5 +156,3 @@ def test_send_certificate_response_sends_message():
     assert err is None
     assert len(transport.sent_messages) >= 1
     assert transport.sent_messages[-1].message_type == "certificateResponse"
-
-

@@ -1,11 +1,14 @@
 """
 Coverage tests for registry/client.py - untested branches.
 """
-import pytest
+
 from unittest.mock import Mock
+
+import pytest
+
+from bsv.keys import PrivateKey
 from bsv.registry.client import RegistryClient
 from bsv.registry.types import BasketDefinitionData
-from bsv.keys import PrivateKey
 
 
 @pytest.fixture
@@ -18,6 +21,7 @@ def client():
 # ========================================================================
 # Initialization branches
 # ========================================================================
+
 
 def test_client_init_with_wallet():
     """Test client init with wallet."""
@@ -44,6 +48,7 @@ def test_client_init_default_originator():
 # Registry operation branches
 # ========================================================================
 
+
 def test_register_definition(client):
     """Test register definition."""
     # Build minimal valid BasketDefinitionData
@@ -61,9 +66,7 @@ def test_register_definition(client):
     client.wallet.get_public_key.return_value = {"publicKey": operator_hex}
 
     # Mock wallet.create_action to return create-action-like payload
-    client.wallet.create_action.return_value = {
-        "signableTransaction": {"tx": b"mock_tx", "reference": b"mock_ref"}
-    }
+    client.wallet.create_action.return_value = {"signableTransaction": {"tx": b"mock_tx", "reference": b"mock_ref"}}
 
     # Call register_definition
     res = client.register_definition(None, data)
@@ -92,7 +95,7 @@ def test_register_definition(client):
 
 def test_lookup_definition(client):
     """Test lookup definition."""
-    if hasattr(client, 'lookup_definition'):
+    if hasattr(client, "lookup_definition"):
         try:
             result = client.lookup_definition(Mock(), "basket", "testbasket")
             assert result is not None

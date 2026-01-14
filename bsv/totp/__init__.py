@@ -1,3 +1,3 @@
 from .totp import TOTP
 
-__all__ = ['TOTP']
+__all__ = ["TOTP"]

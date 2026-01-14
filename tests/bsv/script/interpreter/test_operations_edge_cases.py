@@ -1,25 +1,58 @@
 """
 Edge case tests for script interpreter operations
 """
-from bsv.script.interpreter.operations import (
-    op_dup, op_drop, op_swap, op_over, op_pick, op_roll, op_rot,
-    op_add, op_sub, op_mul, op_div, op_mod,
-    op_equal, op_equal_verify,
-    op_hash160, op_hash256, op_sha256,
-    op_checksig, op_checkmultisig,
-    op_if, op_notif, op_else, op_endif,
-    op_depth, op_size,
-    op_1add, op_1sub, op_negate, op_abs,
-    op_numequal, op_lessthan, op_greaterthan,
-    op_min, op_max, op_within,
-    op_cat, op_split, op_num2bin, op_bin2num,
-    op_invert, op_and, op_or, op_xor,
-    op_lshift, op_rshift
-)
-from bsv.script.interpreter.errs import Error, ErrorCode
-from bsv.script.interpreter.stack import Stack
+
 from bsv.script.interpreter.config import BeforeGenesisConfig
+from bsv.script.interpreter.errs import Error, ErrorCode
 from bsv.script.interpreter.op_parser import ParsedOpcode
+from bsv.script.interpreter.operations import (
+    op_1add,
+    op_1sub,
+    op_abs,
+    op_add,
+    op_and,
+    op_bin2num,
+    op_cat,
+    op_checkmultisig,
+    op_checksig,
+    op_depth,
+    op_div,
+    op_drop,
+    op_dup,
+    op_else,
+    op_endif,
+    op_equal,
+    op_equal_verify,
+    op_greaterthan,
+    op_hash160,
+    op_hash256,
+    op_if,
+    op_invert,
+    op_lessthan,
+    op_lshift,
+    op_max,
+    op_min,
+    op_mod,
+    op_mul,
+    op_negate,
+    op_notif,
+    op_num2bin,
+    op_numequal,
+    op_or,
+    op_over,
+    op_pick,
+    op_roll,
+    op_rot,
+    op_rshift,
+    op_sha256,
+    op_size,
+    op_split,
+    op_sub,
+    op_swap,
+    op_within,
+    op_xor,
+)
+from bsv.script.interpreter.stack import Stack
 
 
 class MockThread:
@@ -68,7 +101,7 @@ class TestOperationsEdgeCases:
     def test_op_swap_stack_underflow(self):
         """Test OP_SWAP with insufficient stack items."""
         # Test with 0 items
-        pop = self.create_parsed_opcode(0x7c)  # OP_SWAP
+        pop = self.create_parsed_opcode(0x7C)  # OP_SWAP
         error = op_swap(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
@@ -112,7 +145,7 @@ class TestOperationsEdgeCases:
 
     def test_op_roll_stack_underflow(self):
         """Test OP_ROLL with insufficient stack items."""
-        pop = self.create_parsed_opcode(0x7a)  # OP_ROLL
+        pop = self.create_parsed_opcode(0x7A)  # OP_ROLL
         error = op_roll(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
@@ -122,14 +155,14 @@ class TestOperationsEdgeCases:
         self.thread.dstack.push(b"item1")
         self.thread.dstack.push(b"\x05")  # Index 5, but only 1 item available
 
-        pop = self.create_parsed_opcode(0x7a)  # OP_ROLL
+        pop = self.create_parsed_opcode(0x7A)  # OP_ROLL
         error = op_roll(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_rot_stack_underflow(self):
         """Test OP_ROT with insufficient stack items."""
-        pop = self.create_parsed_opcode(0x7b)  # OP_ROT
+        pop = self.create_parsed_opcode(0x7B)  # OP_ROT
         error = op_rot(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
@@ -149,7 +182,7 @@ class TestOperationsEdgeCases:
         self.thread.dstack.push(b"also_not_a_number")
 
         pop = self.create_parsed_opcode(0x93)  # OP_ADD
-        error = op_add(pop, self.thread)
+        op_add(pop, self.thread)
         # Should handle gracefully or raise appropriate error
 
     def test_op_sub_stack_underflow(self):
@@ -176,7 +209,7 @@ class TestOperationsEdgeCases:
     def test_op_div_by_zero(self):
         """Test OP_DIV with division by zero."""
         self.thread.dstack.push(b"\x05")  # dividend
-        self.thread.dstack.push(b"")      # divisor (top, empty = 0) - this gets checked for zero
+        self.thread.dstack.push(b"")  # divisor (top, empty = 0) - this gets checked for zero
 
         pop = self.create_parsed_opcode(0x96)  # OP_DIV
         error = op_div(pop, self.thread)
@@ -193,7 +226,7 @@ class TestOperationsEdgeCases:
     def test_op_mod_by_zero(self):
         """Test OP_MOD with modulus by zero."""
         self.thread.dstack.push(b"\x05")  # dividend
-        self.thread.dstack.push(b"")      # modulus (top, empty = 0) - this gets checked for zero
+        self.thread.dstack.push(b"")  # modulus (top, empty = 0) - this gets checked for zero
 
         pop = self.create_parsed_opcode(0x97)  # OP_MOD
         error = op_mod(pop, self.thread)
@@ -223,21 +256,21 @@ class TestOperationsEdgeCases:
 
     def test_op_1add_stack_underflow(self):
         """Test OP_1ADD with empty stack."""
-        pop = self.create_parsed_opcode(0x8b)  # OP_1ADD
+        pop = self.create_parsed_opcode(0x8B)  # OP_1ADD
         error = op_1add(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_1sub_stack_underflow(self):
         """Test OP_1SUB with empty stack."""
-        pop = self.create_parsed_opcode(0x8c)  # OP_1SUB
+        pop = self.create_parsed_opcode(0x8C)  # OP_1SUB
         error = op_1sub(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_negate_stack_underflow(self):
         """Test OP_NEGATE with empty stack."""
-        pop = self.create_parsed_opcode(0x8f)  # OP_NEGATE
+        pop = self.create_parsed_opcode(0x8F)  # OP_NEGATE
         error = op_negate(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
@@ -253,21 +286,21 @@ class TestOperationsEdgeCases:
 
     def test_op_hash160_stack_underflow(self):
         """Test OP_HASH160 with empty stack."""
-        pop = self.create_parsed_opcode(0xa9)  # OP_HASH160
+        pop = self.create_parsed_opcode(0xA9)  # OP_HASH160
         error = op_hash160(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_hash256_stack_underflow(self):
         """Test OP_HASH256 with empty stack."""
-        pop = self.create_parsed_opcode(0xaa)  # OP_HASH256
+        pop = self.create_parsed_opcode(0xAA)  # OP_HASH256
         error = op_hash256(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_sha256_stack_underflow(self):
         """Test OP_SHA256 with empty stack."""
-        pop = self.create_parsed_opcode(0xa8)  # OP_SHA256
+        pop = self.create_parsed_opcode(0xA8)  # OP_SHA256
         error = op_sha256(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
@@ -276,21 +309,21 @@ class TestOperationsEdgeCases:
 
     def test_op_numequal_stack_underflow(self):
         """Test OP_NUMEQUAL with insufficient stack items."""
-        pop = self.create_parsed_opcode(0x9c)  # OP_NUMEQUAL
+        pop = self.create_parsed_opcode(0x9C)  # OP_NUMEQUAL
         error = op_numequal(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_lessthan_stack_underflow(self):
         """Test OP_LESSTHAN with insufficient stack items."""
-        pop = self.create_parsed_opcode(0x9f)  # OP_LESSTHAN
+        pop = self.create_parsed_opcode(0x9F)  # OP_LESSTHAN
         error = op_lessthan(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_greaterthan_stack_underflow(self):
         """Test OP_GREATERTHAN with insufficient stack items."""
-        pop = self.create_parsed_opcode(0xa0)  # OP_GREATERTHAN
+        pop = self.create_parsed_opcode(0xA0)  # OP_GREATERTHAN
         error = op_greaterthan(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
@@ -299,21 +332,21 @@ class TestOperationsEdgeCases:
 
     def test_op_min_stack_underflow(self):
         """Test OP_MIN with insufficient stack items."""
-        pop = self.create_parsed_opcode(0xa3)  # OP_MIN
+        pop = self.create_parsed_opcode(0xA3)  # OP_MIN
         error = op_min(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_max_stack_underflow(self):
         """Test OP_MAX with insufficient stack items."""
-        pop = self.create_parsed_opcode(0xa4)  # OP_MAX
+        pop = self.create_parsed_opcode(0xA4)  # OP_MAX
         error = op_max(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_within_stack_underflow(self):
         """Test OP_WITHIN with insufficient stack items."""
-        pop = self.create_parsed_opcode(0xa5)  # OP_WITHIN
+        pop = self.create_parsed_opcode(0xA5)  # OP_WITHIN
         error = op_within(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
@@ -322,14 +355,14 @@ class TestOperationsEdgeCases:
 
     def test_op_checksig_stack_underflow(self):
         """Test OP_CHECKSIG with insufficient stack items."""
-        pop = self.create_parsed_opcode(0xac)  # OP_CHECKSIG
+        pop = self.create_parsed_opcode(0xAC)  # OP_CHECKSIG
         error = op_checksig(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_checkmultisig_stack_underflow(self):
         """Test OP_CHECKMULTISIG with insufficient stack items."""
-        pop = self.create_parsed_opcode(0xae)  # OP_CHECKMULTISIG
+        pop = self.create_parsed_opcode(0xAE)  # OP_CHECKMULTISIG
         error = op_checkmultisig(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
@@ -391,14 +424,14 @@ class TestOperationsEdgeCases:
 
     def test_op_cat_stack_underflow(self):
         """Test OP_CAT with insufficient stack items."""
-        pop = self.create_parsed_opcode(0x7e)  # OP_CAT
+        pop = self.create_parsed_opcode(0x7E)  # OP_CAT
         error = op_cat(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
 
     def test_op_split_stack_underflow(self):
         """Test OP_SPLIT with insufficient stack items."""
-        pop = self.create_parsed_opcode(0x7f)  # OP_SPLIT
+        pop = self.create_parsed_opcode(0x7F)  # OP_SPLIT
         error = op_split(pop, self.thread)
         assert error is not None
         assert error.code == ErrorCode.ERR_INVALID_STACK_OPERATION
@@ -470,7 +503,7 @@ class TestOperationsEdgeCases:
         self.thread.dstack.push(b"\xff\xff\xff\x7f")  # Large positive
 
         pop = self.create_parsed_opcode(0x93)  # OP_ADD
-        error = op_add(pop, self.thread)
+        op_add(pop, self.thread)
         # Should handle large numbers appropriately
 
     def test_op_mul_large_numbers(self):
@@ -479,7 +512,7 @@ class TestOperationsEdgeCases:
         self.thread.dstack.push(b"\xff\xff")  # Large number
 
         pop = self.create_parsed_opcode(0x95)  # OP_MUL
-        error = op_mul(pop, self.thread)
+        op_mul(pop, self.thread)
         # Should handle multiplication appropriately
 
     # Edge cases with specific number encodings
@@ -491,14 +524,14 @@ class TestOperationsEdgeCases:
         self.thread.dstack.push(b"\x01")  # Positive one
 
         pop = self.create_parsed_opcode(0x93)  # OP_ADD
-        error = op_add(pop, self.thread)
+        op_add(pop, self.thread)
         # Should handle negative zero correctly
 
     def test_operations_with_minimal_encoding(self):
         """Test operations with minimally encoded numbers."""
         # Test various minimal encodings
         test_cases = [
-            b"",      # 0
+            b"",  # 0
             b"\x01",  # 1
             b"\x7f",  # 127
             b"\x80",  # -0 (negative zero)
@@ -515,5 +548,5 @@ class TestOperationsEdgeCases:
             self.thread.dstack.push(b"\x01")
 
             pop = self.create_parsed_opcode(0x93)  # OP_ADD
-            error = op_add(pop, self.thread)
+            op_add(pop, self.thread)
             # Should handle various encodings

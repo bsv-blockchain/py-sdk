@@ -4,7 +4,8 @@ OverlayAdminTokenTemplate implementation.
 Ported from TypeScript SDK.
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
+
 from bsv.script.script import Script
 from bsv.transaction.pushdrop import PushDrop
 
@@ -19,7 +20,7 @@ class OverlayAdminTokenTemplate:
     Ported from TypeScript SDK.
     """
 
-    def __init__(self, wallet: 'WalletInterface'):
+    def __init__(self, wallet: "WalletInterface"):
         """
         Constructs a new Overlay Admin template instance.
 
@@ -54,9 +55,9 @@ class OverlayAdminTokenTemplate:
         if isinstance(protocol_bytes, str):
             protocol = protocol_bytes
         else:
-            protocol = protocol_bytes.decode('utf-8')
+            protocol = protocol_bytes.decode("utf-8")
 
-        if protocol not in ['SHIP', 'SLAP']:
+        if protocol not in ["SHIP", "SLAP"]:
             raise ValueError("Invalid protocol type!")
 
         # Extract identity key
@@ -71,21 +72,16 @@ class OverlayAdminTokenTemplate:
         if isinstance(domain_bytes, str):
             domain = domain_bytes
         else:
-            domain = domain_bytes.decode('utf-8')
+            domain = domain_bytes.decode("utf-8")
 
         # Extract topic or service
         topic_or_service_bytes = fields[3]
         if isinstance(topic_or_service_bytes, str):
             topic_or_service = topic_or_service_bytes
         else:
-            topic_or_service = topic_or_service_bytes.decode('utf-8')
+            topic_or_service = topic_or_service_bytes.decode("utf-8")
 
-        return {
-            "protocol": protocol,
-            "identityKey": identity_key,
-            "domain": domain,
-            "topicOrService": topic_or_service
-        }
+        return {"protocol": protocol, "identityKey": identity_key, "domain": domain, "topicOrService": topic_or_service}
 
     async def lock(self, protocol: str, domain: str, topic_or_service: str) -> Script:
         """
@@ -96,37 +92,29 @@ class OverlayAdminTokenTemplate:
         :param topic_or_service: Topic or service to advertise
         :returns: Locking script comprising the advertisement token
         """
-        if protocol not in ['SHIP', 'SLAP']:
+        if protocol not in ["SHIP", "SLAP"]:
             raise ValueError("Protocol must be either 'SHIP' or 'SLAP'")
 
         # Get identity key from wallet
-        identity_key_result = await self.wallet.get_public_key({
-            "identityKey": True
-        })
+        identity_key_result = await self.wallet.get_public_key({"identityKey": True})
         identity_key = identity_key_result.publicKey
 
         # Create PushDrop fields
         fields = [
-            protocol.encode('utf-8'),
+            protocol.encode("utf-8"),
             bytes.fromhex(identity_key),
-            domain.encode('utf-8'),
-            topic_or_service.encode('utf-8')
+            domain.encode("utf-8"),
+            topic_or_service.encode("utf-8"),
         ]
 
         # Create PushDrop script
         pushdrop = PushDrop(self.wallet, None)
 
         # Get appropriate protocol info based on protocol type
-        if protocol == 'SHIP':
-            protocol_info = {
-                "securityLevel": 0,
-                "protocol": "Service Host Interconnect"
-            }
+        if protocol == "SHIP":
+            protocol_info = {"securityLevel": 0, "protocol": "Service Host Interconnect"}
         else:  # SLAP
-            protocol_info = {
-                "securityLevel": 0,
-                "protocol": "Service Lookup Availability"
-            }
+            protocol_info = {"securityLevel": 0, "protocol": "Service Lookup Availability"}
 
         # Create locking script using PushDrop
         locking_script_hex = pushdrop.lock(
@@ -134,7 +122,7 @@ class OverlayAdminTokenTemplate:
             protocol_info,
             "1",  # key_id
             "self",  # counterparty
-            include_signature=False  # For advertisements, we don't need signatures
+            include_signature=False,  # For advertisements, we don't need signatures
         )
 
         return Script.from_hex(locking_script_hex)
@@ -146,29 +134,19 @@ class OverlayAdminTokenTemplate:
         :param protocol: SHIP or SLAP, depending on the token to unlock
         :returns: Script unlocker capable of unlocking the advertisement token
         """
-        if protocol not in ['SHIP', 'SLAP']:
+        if protocol not in ["SHIP", "SLAP"]:
             raise ValueError("Protocol must be either 'SHIP' or 'SLAP'")
 
         # Create PushDrop unlocker
         pushdrop = PushDrop(self.wallet, None)
 
         # Get appropriate protocol info based on protocol type
-        if protocol == 'SHIP':
-            protocol_info = {
-                "securityLevel": 0,
-                "protocol": "Service Host Interconnect"
-            }
+        if protocol == "SHIP":
+            protocol_info = {"securityLevel": 0, "protocol": "Service Host Interconnect"}
         else:  # SLAP
-            protocol_info = {
-                "securityLevel": 0,
-                "protocol": "Service Lookup Availability"
-            }
+            protocol_info = {"securityLevel": 0, "protocol": "Service Lookup Availability"}
 
         # Get unlocker
-        unlocker = pushdrop.unlock(
-            protocol_info,
-            "1",  # key_id
-            "self"  # counterparty
-        )
+        unlocker = pushdrop.unlock(protocol_info, "1", "self")  # key_id  # counterparty
 
         return unlocker

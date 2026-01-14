@@ -1,8 +1,9 @@
 import base64
+
 import pytest
 
-from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.auth_message import AuthMessage
+from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.peer_session import PeerSession
 from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
@@ -14,7 +15,6 @@ class LocalTransport:
 
     def on_data(self, callback):
         self._on_data_callback = callback
-        return None
 
     def send(self, message):
         if self._on_data_callback is None:
@@ -36,18 +36,20 @@ class MockWallet:
     def get_public_key(self, args=None, originator=None):
         class R:
             pass
+
         r = R()
         r.public_key = self._pub
         return r
 
     def verify_signature(self, args=None, originator=None):
         return MockSigResult(self._valid_verify)
-    
+
     def verify_hmac(self, args=None, originator=None):
         # Always return valid for nonce verification to pass
         class HmacResult:
             def __init__(self):
                 self.valid = True
+
         return HmacResult()
 
 
@@ -87,7 +89,13 @@ def test_general_message_invalid_signature_returns_error():
     sender_pub = PrivateKey(9012).public_key()
     session_nonce = base64.b64encode(b"A" * 32).decode()
     peer_nonce = base64.b64encode(b"B" * 32).decode()
-    s = PeerSession(is_authenticated=True, session_nonce=session_nonce, peer_nonce=peer_nonce, peer_identity_key=sender_pub, last_update=1)
+    s = PeerSession(
+        is_authenticated=True,
+        session_nonce=session_nonce,
+        peer_nonce=peer_nonce,
+        peer_identity_key=sender_pub,
+        last_update=1,
+    )
     session_manager.add_session(s)
 
     msg = AuthMessage(
@@ -102,8 +110,3 @@ def test_general_message_invalid_signature_returns_error():
     err = peer.handle_general_message(msg, sender_pub)
     assert isinstance(err, Exception)
     assert "general message - invalid signature" in str(err)
-
-
-
-
-

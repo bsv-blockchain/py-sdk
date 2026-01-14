@@ -1,5 +1,6 @@
 def test_to_binary_writes_header_and_zero_counts():
-    from bsv.transaction.beef import Beef, BEEF_V2
+    from bsv.transaction.beef import BEEF_V2, Beef
+
     beef = Beef(version=BEEF_V2)
     data = beef.to_binary()
     # version (4) + bumps=0 (varint 0x00) + txs=0 (varint 0x00)
@@ -9,7 +10,8 @@ def test_to_binary_writes_header_and_zero_counts():
 
 
 def test_to_binary_atomic_prefix_and_subject():
-    from bsv.transaction.beef import Beef, BEEF_V2, ATOMIC_BEEF
+    from bsv.transaction.beef import ATOMIC_BEEF, BEEF_V2, Beef
+
     beef = Beef(version=BEEF_V2)
     subject = "aa" * 32
     atomic = beef.to_binary_atomic(subject)
@@ -20,9 +22,9 @@ def test_to_binary_atomic_prefix_and_subject():
 
 
 def test_to_binary_parents_before_children():
-    from bsv.transaction.beef import Beef, BEEF_V2
-    from bsv.transaction import Transaction, TransactionInput, TransactionOutput
     from bsv.script.script import Script
+    from bsv.transaction import Transaction, TransactionInput, TransactionOutput
+    from bsv.transaction.beef import BEEF_V2, Beef
 
     beef = Beef(version=BEEF_V2)
     # Build parent tx
@@ -47,5 +49,3 @@ def test_to_binary_parents_before_children():
     p_idx = blob.find(p_bytes)
     c_idx = blob.find(c_bytes)
     assert p_idx != -1 and c_idx != -1 and p_idx < c_idx
-
-

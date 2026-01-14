@@ -1,15 +1,15 @@
 import pytest
 
+from bsv.hash import hash256
+from bsv.keys import PrivateKey
 from bsv.utils.ecdsa import (
-    serialize_ecdsa_der,
     deserialize_ecdsa_der,
-    serialize_ecdsa_recoverable,
     deserialize_ecdsa_recoverable,
+    serialize_ecdsa_der,
+    serialize_ecdsa_recoverable,
     stringify_ecdsa_recoverable,
     unstringify_ecdsa_recoverable,
 )
-from bsv.keys import PrivateKey
-from bsv.hash import hash256
 
 
 class TestECDSAUtils:
@@ -37,5 +37,3 @@ class TestECDSAUtils:
     def test_invalid_der_raises(self):
         with pytest.raises(ValueError, match=r"invalid DER encoded 0001"):
             deserialize_ecdsa_der(b"\x00\x01")
-
-

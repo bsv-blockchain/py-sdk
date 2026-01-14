@@ -1,12 +1,13 @@
 import json
 import random
-from typing import Optional, Dict, Union, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
 if TYPE_CHECKING:
     from ..transaction import Transaction
 
-from ..broadcaster import BroadcastResponse, BroadcastFailure, Broadcaster
-from ..http_client import HttpClient, default_http_client, SyncHttpClient, default_sync_http_client
+from ..broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
+from ..http_client import HttpClient, SyncHttpClient, default_http_client, default_sync_http_client
+
 
 def to_hex(bytes_data):
     return "".join(f"{x:02x}" for x in bytes_data)
@@ -18,14 +19,14 @@ def random_hex(length: int) -> str:
 
 class ARCConfig:
     def __init__(
-            self,
-            api_key: Optional[str] = None,
-            http_client: Optional[HttpClient] = None,
-            sync_http_client: Optional[SyncHttpClient] = None,
-            deployment_id: Optional[str] = None,
-            callback_url: Optional[str] = None,
-            callback_token: Optional[str] = None,
-            headers: Optional[Dict[str, str]] = None,
+        self,
+        api_key: Optional[str] = None,
+        http_client: Optional[HttpClient] = None,
+        sync_http_client: Optional[SyncHttpClient] = None,
+        deployment_id: Optional[str] = None,
+        callback_url: Optional[str] = None,
+        callback_token: Optional[str] = None,
+        headers: Optional[dict[str, str]] = None,
     ):
         self.api_key = api_key
         self.http_client = http_client
@@ -61,23 +62,16 @@ class ARC(Broadcaster):
             self.callback_token = config.callback_token
             self.headers = config.headers
 
-    async def broadcast(
-            self, tx: 'Transaction'
-    ) -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, tx: "Transaction") -> Union[BroadcastResponse, BroadcastFailure]:
         # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
         request_options = {
             "method": "POST",
             "headers": self.request_headers(),
-            "data": {
-                "rawTx":
-                    tx.to_ef().hex() if has_all_source_txs else tx.hex()
-            }
+            "data": {"rawTx": tx.to_ef().hex() if has_all_source_txs else tx.hex()},
         }
         try:
-            response = await self.http_client.fetch(
-                f"{self.URL}/v1/tx", request_options
-            )
+            response = await self.http_client.fetch(f"{self.URL}/v1/tx", request_options)
 
             response_json = response.json()
 
@@ -107,14 +101,10 @@ class ARC(Broadcaster):
             return BroadcastFailure(
                 status="failure",
                 code="500",
-                description=(
-                    str(error)
-                    if isinstance(error, Exception)
-                    else "Internal Server Error"
-                ),
+                description=(str(error) if isinstance(error, Exception) else "Internal Server Error"),
             )
 
-    def request_headers(self) -> Dict[str, str]:
+    def request_headers(self) -> dict[str, str]:
         headers = {
             "Content-Type": "application/json",
             "XDeployment-ID": self.deployment_id,
@@ -134,9 +124,7 @@ class ARC(Broadcaster):
 
         return headers
 
-    def sync_broadcast(
-            self, tx: 'Transaction', timeout: int = 30
-    ) -> Union[BroadcastResponse, BroadcastFailure]:
+    def sync_broadcast(self, tx: "Transaction", timeout: int = 30) -> Union[BroadcastResponse, BroadcastFailure]:
         """
         Synchronously broadcast a transaction
 
@@ -152,7 +140,7 @@ class ARC(Broadcaster):
                 f"{self.URL}/v1/tx",
                 data={"rawTx": tx.to_ef().hex() if has_all_source_txs else tx.hex()},
                 headers=self.request_headers(),
-                timeout=timeout
+                timeout=timeout,
             )
 
             response_json = response.json()
@@ -200,7 +188,7 @@ class ARC(Broadcaster):
                 description=str(error),
             )
 
-    def check_transaction_status(self, txid: str, timeout: int = 5) -> Dict[str, Any]:
+    def check_transaction_status(self, txid: str, timeout: int = 5) -> dict[str, Any]:
         """
         Check transaction status synchronously
 
@@ -211,9 +199,7 @@ class ARC(Broadcaster):
 
         try:
             response = self.sync_http_client.get(
-                f"{self.URL}/v1/tx/{txid}",
-                headers=self.request_headers(),
-                timeout=timeout
+                f"{self.URL}/v1/tx/{txid}", headers=self.request_headers(), timeout=timeout
             )
             response_data = response.json()
             data = response_data.get("data", {})
@@ -227,7 +213,7 @@ class ARC(Broadcaster):
                     "merklePath": data.get("merklePath"),
                     "extraInfo": data.get("extraInfo"),
                     "competingTxs": data.get("competingTxs"),
-                    "timestamp": data.get("timestamp")
+                    "timestamp": data.get("timestamp"),
                 }
             else:
                 # Handle special error cases
@@ -238,7 +224,7 @@ class ARC(Broadcaster):
                         "title": "Request Timeout",
                         "detail": f"Transaction status check timed out after {timeout} seconds",
                         "txid": txid,
-                        "extra_info": "Consider retrying or increasing timeout value"
+                        "extra_info": "Consider retrying or increasing timeout value",
                     }
 
                 if response.status_code == 503:
@@ -247,7 +233,7 @@ class ARC(Broadcaster):
                         "code": 503,
                         "title": "Connection Error",
                         "detail": "Failed to connect to ARC service",
-                        "txid": txid
+                        "txid": txid,
                     }
 
                 # Handle general error cases
@@ -257,20 +243,14 @@ class ARC(Broadcaster):
                     "title": data.get("title", "Error"),
                     "detail": data.get("detail", "Unknown error"),
                     "txid": data.get("txid", txid),
-                    "extra_info": data.get("extraInfo", "")
+                    "extra_info": data.get("extraInfo", ""),
                 }
 
         except Exception as error:
-            return {
-                "status": "failure",
-                "code": "500",
-                "title": "Internal Error",
-                "detail": str(error),
-                "txid": txid
-            }
+            return {"status": "failure", "code": "500", "title": "Internal Error", "detail": str(error), "txid": txid}
 
     @staticmethod
-    def categorize_transaction_status(response: Dict[str, Any]) -> Dict[str, Any]:
+    def categorize_transaction_status(response: dict[str, Any]) -> dict[str, Any]:
         """
         Categorize transaction status based on the ARC response
 
@@ -283,9 +263,14 @@ class ARC(Broadcaster):
             if tx_status:
                 # Processing transactions - still being handled by the network
                 if tx_status in [
-                    "UNKNOWN", "QUEUED", "RECEIVED", "STORED",
-                    "ANNOUNCED_TO_NETWORK", "REQUESTED_BY_NETWORK",
-                    "SENT_TO_NETWORK", "ACCEPTED_BY_NETWORK"
+                    "UNKNOWN",
+                    "QUEUED",
+                    "RECEIVED",
+                    "STORED",
+                    "ANNOUNCED_TO_NETWORK",
+                    "REQUESTED_BY_NETWORK",
+                    "SENT_TO_NETWORK",
+                    "ACCEPTED_BY_NETWORK",
                 ]:
                     status_category = "progressing"
 
@@ -320,14 +305,7 @@ class ARC(Broadcaster):
                 status_category = "error"
                 tx_status = "No txStatus"
 
-            return {
-                "status_category": status_category,
-                "tx_status": tx_status
-            }
+            return {"status_category": status_category, "tx_status": tx_status}
 
         except Exception as e:
-            return {
-                "status_category": "error",
-                "error": str(e),
-                "response": response
-            }
+            return {"status_category": "error", "error": str(e), "response": response}

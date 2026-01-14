@@ -11,6 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 PYSRC_DIR = PROJECT_ROOT / "py-sdk"
 PYTHON_EXECUTABLE = PROJECT_ROOT / "venv" / "bin" / "python3"
 
+
 @pytest.mark.skipif(not PYTHON_EXECUTABLE.exists(), reason="Project venv not found")
 def test_build_and_import_package():
     """Builds the py-sdk package into an isolated directory and ensures it can be imported."""
@@ -33,7 +34,7 @@ def test_build_and_import_package():
         # Prepend site_dir to sys.path to import the freshly installed package
         sys.path.insert(0, site_dir)
         try:
-            import bsv  # noqa: F401  # pylint: disable=import-error
+            import bsv  # pylint: disable=import-error
             from bsv.utils import to_hex  # type: ignore
 
             # Simple runtime assertion
@@ -42,4 +43,3 @@ def test_build_and_import_package():
             # Clean sys.path regardless of assertion outcomes
             if site_dir in sys.path:
                 sys.path.remove(site_dir)
-

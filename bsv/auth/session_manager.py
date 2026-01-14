@@ -1,28 +1,35 @@
 import threading
 from typing import Dict, Optional
+
 from bsv.auth.peer import PeerSession
+
 
 class SessionManager:
     def add_session(self, session: PeerSession) -> None:
         raise NotImplementedError
+
     def update_session(self, session: PeerSession) -> None:
         raise NotImplementedError
+
     def get_session(self, identifier: str) -> Optional[PeerSession]:
         raise NotImplementedError
+
     def remove_session(self, session: PeerSession) -> None:
         raise NotImplementedError
+
     def has_session(self, identifier: str) -> bool:
         raise NotImplementedError
 
+
 class DefaultSessionManager(SessionManager):
     def __init__(self):
-        self.session_nonce_to_session: Dict[str, PeerSession] = {}
-        self.identity_key_to_nonces: Dict[str, set] = {}
+        self.session_nonce_to_session: dict[str, PeerSession] = {}
+        self.identity_key_to_nonces: dict[str, set] = {}
         self._lock = threading.RLock()  # Reentrant lock for thread safety
 
     def add_session(self, session: PeerSession) -> None:
         if not session.session_nonce:
-            raise ValueError('invalid session: session_nonce is required to add a session')
+            raise ValueError("invalid session: session_nonce is required to add a session")
         with self._lock:
             self.session_nonce_to_session[session.session_nonce] = session
             if session.peer_identity_key is not None:
@@ -63,16 +70,16 @@ class DefaultSessionManager(SessionManager):
         """Compare two sessions and return the better one."""
         if current_best is None:
             return candidate
-        
+
         # Prefer more recent sessions if both have same auth status
         if candidate.last_update > current_best.last_update:
             if candidate.is_authenticated or not current_best.is_authenticated:
                 return candidate
-        
+
         # Prefer authenticated sessions over non-authenticated even if older
         if candidate.is_authenticated and not current_best.is_authenticated:
             return candidate
-        
+
         return current_best
 
     def remove_session(self, session: PeerSession) -> None:
@@ -101,11 +108,12 @@ class DefaultSessionManager(SessionManager):
 
     def expire_older_than(self, max_age_sec: int) -> None:
         import time
+
         now = int(time.time() * 1000)
         with self._lock:
             sessions_to_remove = []
             for s in self.session_nonce_to_session.values():
-                if hasattr(s, 'last_update') and now - s.last_update > max_age_sec * 1000:
+                if hasattr(s, "last_update") and now - s.last_update > max_age_sec * 1000:
                     sessions_to_remove.append(s)
             for s in sessions_to_remove:
                 self.remove_session(s)

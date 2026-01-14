@@ -3,7 +3,7 @@ from typing import Dict
 from bsv.wallet.substrates.serializer import Reader, Writer
 
 
-def serialize_create_action_result(result: Dict) -> bytes:
+def serialize_create_action_result(result: dict) -> bytes:
     """Serialize CreateActionResult with optional metadata.
     Expected shape:
       {
@@ -26,7 +26,7 @@ def serialize_create_action_result(result: Dict) -> bytes:
     return w.to_bytes()
 
 
-def deserialize_create_action_result(data: bytes) -> Dict:
+def deserialize_create_action_result(data: bytes) -> dict:
     r = Reader(data)
     tx = r.read_int_bytes() or b""
     ref = r.read_int_bytes() or b""

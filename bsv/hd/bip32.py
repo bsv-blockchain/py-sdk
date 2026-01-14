@@ -1,15 +1,23 @@
 import hmac
 from hashlib import sha512
-from typing import Union, List
+from typing import List, Union
 
-from .bip39 import seed_from_mnemonic
 from ..base58 import base58check_decode, base58check_encode
-from ..constants import BIP32_SEED_BYTE_LENGTH
-from ..constants import NETWORK_XPUB_PREFIX_DICT, NETWORK_XPRV_PREFIX_DICT
-from ..constants import Network, XKEY_BYTE_LENGTH, XKEY_PREFIX_LIST, PUBLIC_KEY_COMPRESSED_PREFIX_LIST
-from ..constants import XPUB_PREFIX_NETWORK_DICT, XPRV_PREFIX_NETWORK_DICT, BIP32_DERIVATION_PATH
+from ..constants import (
+    BIP32_DERIVATION_PATH,
+    BIP32_SEED_BYTE_LENGTH,
+    NETWORK_XPRV_PREFIX_DICT,
+    NETWORK_XPUB_PREFIX_DICT,
+    PUBLIC_KEY_COMPRESSED_PREFIX_LIST,
+    XKEY_BYTE_LENGTH,
+    XKEY_PREFIX_LIST,
+    XPRV_PREFIX_NETWORK_DICT,
+    XPUB_PREFIX_NETWORK_DICT,
+    Network,
+)
 from ..curve import curve, curve_add, curve_multiply
-from ..keys import PublicKey, PrivateKey
+from ..keys import PrivateKey, PublicKey
+from .bip39 import seed_from_mnemonic
 
 
 class Xkey:
@@ -28,16 +36,16 @@ class Xkey:
         elif isinstance(xkey, bytes):
             self.payload: bytes = xkey
         else:
-            raise TypeError('unsupported extended key type')
+            raise TypeError("unsupported extended key type")
 
-        assert len(self.payload) == XKEY_BYTE_LENGTH, 'invalid extended key length'
+        assert len(self.payload) == XKEY_BYTE_LENGTH, "invalid extended key length"
         self.prefix: bytes = self.payload[:4]
         self.depth: int = self.payload[4]
         self.fingerprint: bytes = self.payload[5:9]
-        self.index: int = int.from_bytes(self.payload[9:13], 'big')
+        self.index: int = int.from_bytes(self.payload[9:13], "big")
         self.chain_code: bytes = self.payload[13:45]
         self.key_bytes: bytes = self.payload[45:]
-        assert self.prefix in XKEY_PREFIX_LIST, 'invalid extended key prefix'
+        assert self.prefix in XKEY_PREFIX_LIST, "invalid extended key prefix"
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, Xkey):
@@ -56,29 +64,31 @@ class Xpub(Xkey):
     def __init__(self, xpub: Union[str, bytes]):
         super().__init__(xpub)
         self.network: Network = XPUB_PREFIX_NETWORK_DICT.get(self.prefix)
-        assert self.network, 'unknown xpub prefix'
-        assert self.payload[45:46] in PUBLIC_KEY_COMPRESSED_PREFIX_LIST, 'invalid public key in xpub'
+        assert self.network, "unknown xpub prefix"
+        assert self.payload[45:46] in PUBLIC_KEY_COMPRESSED_PREFIX_LIST, "invalid public key in xpub"
         self.key: PublicKey = PublicKey(self.key_bytes)
 
-    def ckd(self, index: Union[int, str, bytes]) -> 'Xpub':
+    def ckd(self, index: Union[int, str, bytes]) -> "Xpub":
         if isinstance(index, int):
-            index = index.to_bytes(4, 'big')
+            index = index.to_bytes(4, "big")
         elif isinstance(index, str):
             index = bytes.fromhex(index)
-        assert len(index) == 4, 'index should be a 4 bytes integer'
-        assert index[0] < 0x80, ("can't make hardened derivation from xpub. "
-                                 "If you use hardened key, please set xpub with path from xpriv first. Example:\n"
-                                 "  master_xprv = master_xprv_from_seed(seed)\n"
-                                 "  account_xprv = ckd(master_xprv, \"m/44'/0'/0'\")\n"
-                                 "  account_xpub = account_xprv.xpub()")
+        assert len(index) == 4, "index should be a 4 bytes integer"
+        assert index[0] < 0x80, (
+            "can't make hardened derivation from xpub. "
+            "If you use hardened key, please set xpub with path from xpriv first. Example:\n"
+            "  master_xprv = master_xprv_from_seed(seed)\n"
+            "  account_xprv = ckd(master_xprv, \"m/44'/0'/0'\")\n"
+            "  account_xpub = account_xprv.xpub()"
+        )
 
         payload: bytes = self.prefix
-        payload += (self.depth + 1).to_bytes(1, 'big')
+        payload += (self.depth + 1).to_bytes(1, "big")
         payload += self.key.hash160()[:4]
         payload += index
 
         h: bytes = hmac.new(self.chain_code, self.key.serialize() + index, sha512).digest()
-        offset: int = int.from_bytes(h[:32], 'big')
+        offset: int = int.from_bytes(h[:32], "big")
         child: PublicKey = PublicKey(curve_add(self.key.point(), curve_multiply(offset, curve.g)))
 
         payload += h[32:]
@@ -93,13 +103,13 @@ class Xpub(Xkey):
         return self.key.address(network=self.network)
 
     @classmethod
-    def from_xprv(cls, xprv: Union[str, bytes, 'Xprv']) -> 'Xpub':
+    def from_xprv(cls, xprv: Union[str, bytes, "Xprv"]) -> "Xpub":
         if not isinstance(xprv, Xprv):
             xprv = Xprv(xprv)
         payload: bytes = NETWORK_XPUB_PREFIX_DICT.get(xprv.network)
-        payload += xprv.depth.to_bytes(1, 'big')
+        payload += xprv.depth.to_bytes(1, "big")
         payload += xprv.fingerprint
-        payload += xprv.index.to_bytes(4, 'big')
+        payload += xprv.index.to_bytes(4, "big")
         payload += xprv.chain_code
         payload += xprv.key.public_key().serialize()
         return Xpub(payload)
@@ -110,29 +120,29 @@ class Xprv(Xkey):
     def __init__(self, xprv: Union[str, bytes]):
         super().__init__(xprv)
         self.network: Network = XPRV_PREFIX_NETWORK_DICT.get(self.prefix)
-        assert self.network, 'unknown xprv prefix'
-        assert self.payload[45] == 0, 'invalid private key in xprv'
+        assert self.network, "unknown xprv prefix"
+        assert self.payload[45] == 0, "invalid private key in xprv"
         self.key: PrivateKey = PrivateKey(self.key_bytes[1:], network=self.network)
 
-    def ckd(self, index: Union[int, str, bytes]) -> 'Xprv':
+    def ckd(self, index: Union[int, str, bytes]) -> "Xprv":
         if isinstance(index, int):
-            index = index.to_bytes(4, 'big')
+            index = index.to_bytes(4, "big")
         elif isinstance(index, str):
             index = bytes.fromhex(index)
-        assert len(index) == 4, 'index should be a 4 bytes integer'
+        assert len(index) == 4, "index should be a 4 bytes integer"
 
         payload: bytes = self.prefix
-        payload += (self.depth + 1).to_bytes(1, 'big')
+        payload += (self.depth + 1).to_bytes(1, "big")
         payload += self.key.public_key().hash160()[:4]
         payload += index
 
         message: bytes = (self.key.public_key().serialize() if index[0] < 0x80 else self.key_bytes) + index
         h: bytes = hmac.new(self.chain_code, message, sha512).digest()
-        offset: int = int.from_bytes(h[:32], 'big')
+        offset: int = int.from_bytes(h[:32], "big")
         child: PrivateKey = PrivateKey((self.key.int() + offset) % curve.n)
 
         payload += h[32:]
-        payload += b'\x00' + child.serialize()
+        payload += b"\x00" + child.serialize()
 
         return Xprv(payload)
 
@@ -155,16 +165,16 @@ class Xprv(Xkey):
         """
         if isinstance(seed, str):
             seed = bytes.fromhex(seed)
-        assert len(seed) == BIP32_SEED_BYTE_LENGTH, 'invalid seed byte length'
+        assert len(seed) == BIP32_SEED_BYTE_LENGTH, "invalid seed byte length"
 
         payload: bytes = NETWORK_XPRV_PREFIX_DICT.get(network)
-        payload += b'\x00'
-        payload += b'\x00\x00\x00\x00'
-        payload += b'\x00\x00\x00\x00'
+        payload += b"\x00"
+        payload += b"\x00\x00\x00\x00"
+        payload += b"\x00\x00\x00\x00"
 
-        h: bytes = hmac.new(b'Bitcoin seed', seed, sha512).digest()
+        h: bytes = hmac.new(b"Bitcoin seed", seed, sha512).digest()
         payload += h[32:]
-        payload += b'\x00' + h[:32]
+        payload += b"\x00" + h[:32]
 
         return Xprv(payload)
 
@@ -173,14 +183,14 @@ def step_to_index(step: Union[str, int]) -> int:
     """
     convert step (sub path) normal derivation or hardened derivation into child index
     """
-    assert type(step).__name__ in ['str', 'int'], 'unsupported step type'
+    assert type(step).__name__ in ["str", "int"], "unsupported step type"
     if isinstance(step, str):
-        assert len(step), 'invalid step'
+        assert len(step), "invalid step"
         hardened: bool = step[-1] == "'"
         index: int = (0x80000000 if hardened else 0) + int(step[:-1] if hardened else step)
     else:
         index: int = step
-    assert 0 <= index < 0xffffffff, 'step out of range'
+    assert 0 <= index < 0xFFFFFFFF, "step out of range"
     return index
 
 
@@ -189,14 +199,14 @@ def ckd(xkey: Union[Xprv, Xpub], path: str) -> Union[Xprv, Xpub]:
     ckd = "Child Key Derivation"
     derive an extended key according to path like "m/44'/0'/1'/0/10" (absolute) or "./0/10" (relative)
     """
-    steps = path.strip(' ').strip('/').split('/')
-    assert steps and steps[0] in ['m', '.']
+    steps = path.strip(" ").strip("/").split("/")
+    assert steps and steps[0] in ["m", "."]
 
-    if steps[0] == 'm':
+    if steps[0] == "m":
         # should be master key
         assert (
-                xkey.depth == 0 and xkey.fingerprint == b'\x00\x00\x00\x00' and xkey.index == 0
-        ), 'absolute path for non-master key'
+            xkey.depth == 0 and xkey.fingerprint == b"\x00\x00\x00\x00" and xkey.index == 0
+        ), "absolute path for non-master key"
 
     child = xkey
     for step in steps[1:]:
@@ -208,10 +218,9 @@ def master_xprv_from_seed(seed: Union[str, bytes], network: Network = Network.MA
     return Xprv.from_seed(seed, network)
 
 
-def _derive_xkeys_from_xkey(xkey: Union[Xprv, Xpub],
-                            index_start: Union[str, int],
-                            index_end: Union[str, int],
-                            change: Union[str, int] = 0) -> List[Union[Xprv, Xpub]]:
+def _derive_xkeys_from_xkey(
+    xkey: Union[Xprv, Xpub], index_start: Union[str, int], index_end: Union[str, int], change: Union[str, int] = 0
+) -> list[Union[Xprv, Xpub]]:
     """
     this function is internal use only within bip32 module
     Use bip32_derive_xkeys_from_xkey instead.
@@ -220,12 +229,14 @@ def _derive_xkeys_from_xkey(xkey: Union[Xprv, Xpub],
     return [change_xkey.ckd(i) for i in range(step_to_index(index_start), step_to_index(index_end))]
 
 
-def bip32_derive_xprv_from_mnemonic(mnemonic: str,
-                                    lang: str = 'en',
-                                    passphrase: str = '',
-                                    prefix: str = 'mnemonic',
-                                    path: str = BIP32_DERIVATION_PATH,
-                                    network: Network = Network.MAINNET) -> Xprv:
+def bip32_derive_xprv_from_mnemonic(
+    mnemonic: str,
+    lang: str = "en",
+    passphrase: str = "",
+    prefix: str = "mnemonic",
+    path: str = BIP32_DERIVATION_PATH,
+    network: Network = Network.MAINNET,
+) -> Xprv:
     """
     Derive the subtree root extended private key from mnemonic and path.
     """
@@ -234,15 +245,17 @@ def bip32_derive_xprv_from_mnemonic(mnemonic: str,
     return ckd(master_xprv, path)
 
 
-def bip32_derive_xprvs_from_mnemonic(mnemonic: str,
-                                     index_start: Union[str, int],
-                                     index_end: Union[str, int],
-                                     lang: str = 'en',
-                                     passphrase: str = '',
-                                     prefix: str = 'mnemonic',
-                                     path: str = BIP32_DERIVATION_PATH,
-                                     change: Union[str, int] = 0,
-                                     network: Network = Network.MAINNET) -> List[Xprv]:
+def bip32_derive_xprvs_from_mnemonic(
+    mnemonic: str,
+    index_start: Union[str, int],
+    index_end: Union[str, int],
+    lang: str = "en",
+    passphrase: str = "",
+    prefix: str = "mnemonic",
+    path: str = BIP32_DERIVATION_PATH,
+    change: Union[str, int] = 0,
+    network: Network = Network.MAINNET,
+) -> list[Xprv]:
     """
     Derive a range of extended keys from a nmemonic using BIP32 format
     """
@@ -250,11 +263,13 @@ def bip32_derive_xprvs_from_mnemonic(mnemonic: str,
     return _derive_xkeys_from_xkey(xprv, index_start, index_end, change)
 
 
-def bip32_derive_xkeys_from_xkey(xkey: Union[Xprv, Xpub],
-                                 index_start: Union[str, int],
-                                 index_end: Union[str, int],
-                                 path: str = BIP32_DERIVATION_PATH,
-                                 change: Union[str, int] = 0) -> List[Union[Xprv, Xpub]]:
+def bip32_derive_xkeys_from_xkey(
+    xkey: Union[Xprv, Xpub],
+    index_start: Union[str, int],
+    index_end: Union[str, int],
+    path: str = BIP32_DERIVATION_PATH,
+    change: Union[str, int] = 0,
+) -> list[Union[Xprv, Xpub]]:
     """
     Derive a range of extended keys from Xprv and Xpub keys using BIP32 path structure.
 
@@ -277,8 +292,8 @@ def bip32_derive_xkeys_from_xkey(xkey: Union[Xprv, Xpub],
         raise ValueError("Invalid index range: start must be non-negative and less than end")
 
     # Parse the base path and reconstruct with change value
-    base_path = path.rstrip('/')  # Remove trailing slashes if any
-    if base_path.startswith('m/'):
+    base_path = path.rstrip("/")  # Remove trailing slashes if any
+    if base_path.startswith("m/"):
         # For absolute paths
         derived_path = f"{base_path}/{change}"
     else:

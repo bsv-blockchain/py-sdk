@@ -1,12 +1,13 @@
 import asyncio
 import math
+
 from bsv import (
+    P2PKH,
+    FeeModel,
+    PrivateKey,
     Transaction,
     TransactionInput,
     TransactionOutput,
-    PrivateKey,
-    P2PKH,
-    FeeModel,
 )
 
 
@@ -51,9 +52,7 @@ class ExampleFeeModel(FeeModel):
             if tx_input.unlocking_script:
                 script_length = len(tx_input.unlocking_script.serialize())
             elif tx_input.unlocking_script_template:
-                script_length = (
-                    tx_input.unlocking_script_template.estimated_unlocking_byte_length()
-                )
+                script_length = tx_input.unlocking_script_template.estimated_unlocking_byte_length()
             else:
                 raise ValueError(
                     "All inputs must have an unlocking script or an unlocking script template for sat/kb fee computation."
@@ -95,12 +94,8 @@ async def main():
             )
         ],
         [
-            TransactionOutput(
-                locking_script=P2PKH().lock(public_key.address()), satoshis=100
-            ),
-            TransactionOutput(
-                locking_script=P2PKH().lock(public_key.address()), change=True
-            ),  # Change output...
+            TransactionOutput(locking_script=P2PKH().lock(public_key.address()), satoshis=100),
+            TransactionOutput(locking_script=P2PKH().lock(public_key.address()), change=True),  # Change output...
         ],
     )
 
@@ -115,9 +110,7 @@ async def main():
     tx.sign()
 
     print("Fee was calculated using the custom fee model.")
-    print(
-        "Fee amount:", tx.get_fee()
-    )  # Should be 0, since we set tx.version to 3301...
+    print("Fee amount:", tx.get_fee())  # Should be 0, since we set tx.version to 3301...
     print("Change amount:", tx.outputs[1].satoshis)
 
 

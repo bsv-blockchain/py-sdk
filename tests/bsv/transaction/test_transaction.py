@@ -1,14 +1,14 @@
-import pytest 
+import pytest
 
 from bsv.constants import SIGHASH
+from bsv.fee_models import SatoshisPerKilobyte
 from bsv.hash import hash256
 from bsv.keys import PrivateKey
 from bsv.script.script import Script
 from bsv.script.type import P2PKH, OpReturn
-from bsv.transaction import TransactionInput, TransactionOutput, Transaction
+from bsv.transaction import Transaction, TransactionInput, TransactionOutput
 from bsv.transaction_preimage import _preimage, tx_preimages
-from bsv.utils import encode_pushdata, Reader
-from bsv.fee_models import SatoshisPerKilobyte
+from bsv.utils import Reader, encode_pushdata
 
 digest1 = bytes.fromhex(
     "01000000"
@@ -79,7 +79,7 @@ def test_new_tx():
     assert len(tx.inputs) == 0, "New transaction should have no inputs"
     assert len(tx.outputs) == 0, "New transaction should have no outputs"
     assert tx.locktime == 0, "Default locktime should be 0"
-    
+
     # Verify new transaction is serializable
     serialized = tx.serialize()
     assert len(serialized) > 0, "Empty transaction should still be serializable"
@@ -91,7 +91,7 @@ def test_transaction_from_hex():
     tx1 = Transaction.from_hex(txhex)
     assert tx1.hex() == txhex, "Hex roundtrip failed for tx1"
     assert len(tx1.hash()) == 32, "Transaction hash should be 32 bytes"
-    
+
     # Test second transaction format
     tx2 = Transaction.from_hex(tx2hex)
     assert tx2.hex() == tx2hex, "Hex roundtrip failed for tx2"
@@ -126,11 +126,11 @@ def test_transaction_hash():
     """Test transaction hash calculation (double SHA-256)."""
     tx = Transaction.from_hex(tx2buf)
     tx_hash = tx.hash()
-    
+
     # Verify hash properties
     assert len(tx_hash) == 32, f"Transaction hash should be 32 bytes, got {len(tx_hash)}"
     assert tx_hash[::-1].hex() == tx2idhex, "Reversed hash should match expected TXID"
-    
+
     # Verify hash is deterministic
     tx2 = Transaction.from_hex(tx2buf)
     assert tx.hash() == tx2.hash(), "Same transaction should produce same hash"
@@ -140,26 +140,26 @@ def test_transaction_id():
     """Test transaction ID (TXID) generation."""
     tx = Transaction.from_hex(tx2buf)
     txid = tx.txid()
-    
+
     # Verify TXID format
     assert txid == tx2idhex, f"Expected TXID {tx2idhex}, got {txid}"
     assert len(txid) == 64, f"TXID should be 64 hex characters, got {len(txid)}"
-    assert all(c in '0123456789abcdef' for c in txid.lower()), "TXID should be valid hex string"
+    assert all(c in "0123456789abcdef" for c in txid.lower()), "TXID should be valid hex string"
 
 
 def test_transaction_add_input():
     """Test adding inputs to a transaction."""
     tx_in = TransactionInput()
     tx = Transaction()
-    
+
     # Verify initial state
     assert len(tx.inputs) == 0, "New transaction should have no inputs"
-    
+
     # Add input and verify
     tx.add_input(tx_in)
     assert len(tx.inputs) == 1, "Transaction should have 1 input after adding"
     assert tx.inputs[0] is tx_in, "Added input should be the same object"
-    
+
     # Verify multiple inputs
     tx_in2 = TransactionInput()
     tx.add_input(tx_in2)
@@ -170,16 +170,16 @@ def test_transaction_add_output():
     """Test adding outputs to a transaction."""
     tx_out = TransactionOutput(locking_script=Script("6a"), satoshis=0)
     tx = Transaction()
-    
+
     # Verify initial state
     assert len(tx.outputs) == 0, "New transaction should have no outputs"
-    
+
     # Add output and verify
     tx.add_output(tx_out)
     assert len(tx.outputs) == 1, "Transaction should have 1 output after adding"
     assert tx.outputs[0] is tx_out, "Added output should be the same object"
     assert tx.outputs[0].satoshis == 0, "Output satoshis should be preserved"
-    
+
     # Verify multiple outputs
     tx_out2 = TransactionOutput(locking_script=Script("51"), satoshis=1000)
     tx.add_output(tx_out2)
@@ -188,17 +188,11 @@ def test_transaction_add_output():
 
 
 def test_transaction_signing_hydrate_scripts():
-    private_key = PrivateKey(
-        bytes.fromhex(
-            "f97c89aaacf0cd2e47ddbacc97dae1f88bec49106ac37716c451dcdd008a4b62"
-        )
-    )
+    private_key = PrivateKey(bytes.fromhex("f97c89aaacf0cd2e47ddbacc97dae1f88bec49106ac37716c451dcdd008a4b62"))
     public_key = private_key.public_key()
     public_key_hash = public_key.address()
 
-    source_tx = Transaction(
-        [], [TransactionOutput(P2PKH().lock(public_key_hash), 4000)]
-    )
+    source_tx = Transaction([], [TransactionOutput(P2PKH().lock(public_key_hash), 4000)])
     spend_tx = Transaction(
         [
             TransactionInput(
@@ -306,9 +300,7 @@ def test_from_reader():
 
     r = Reader(bytes.fromhex(t_hex))
     t = Transaction.from_reader(r)
-    assert (
-        t.txid() == "e8c6b26f26d90e9cf035762a91479635a75eff2b3b2845663ed72a2397acdfd2"
-    )
+    assert t.txid() == "e8c6b26f26d90e9cf035762a91479635a75eff2b3b2845663ed72a2397acdfd2"
 
 
 def test_from_hex():
@@ -360,17 +352,11 @@ def test_from_hex():
         + "1976a9146a176cd51593e00542b8e1958b7da2be97452d0588ac"
         + "00000000"
     )
-    assert (
-        t.txid() == "e8c6b26f26d90e9cf035762a91479635a75eff2b3b2845663ed72a2397acdfd2"
-    )
+    assert t.txid() == "e8c6b26f26d90e9cf035762a91479635a75eff2b3b2845663ed72a2397acdfd2"
 
 
 def test_transaction_bytes_io():
-    io = Reader(
-        bytes.fromhex(
-            "0011223344556677889912fd1234fe12345678ff1234567890abcdef00112233"
-        )
-    )
+    io = Reader(bytes.fromhex("0011223344556677889912fd1234fe12345678ff1234567890abcdef00112233"))
 
     assert io.read_bytes(4) == bytes.fromhex("00112233")
     assert io.read_int(1) == int.from_bytes(bytes.fromhex("44"), "little")
@@ -379,9 +365,7 @@ def test_transaction_bytes_io():
     assert io.read_var_int_num() == int.from_bytes(bytes.fromhex("12"), "little")
     assert io.read_var_int_num() == int.from_bytes(bytes.fromhex("1234"), "little")
     assert io.read_var_int_num() == int.from_bytes(bytes.fromhex("12345678"), "little")
-    assert io.read_var_int_num() == int.from_bytes(
-        bytes.fromhex("1234567890abcdef"), "little"
-    )
+    assert io.read_var_int_num() == int.from_bytes(bytes.fromhex("1234567890abcdef"), "little")
 
     assert io.read_bytes(0) == b""
     assert io.read_bytes() == bytes.fromhex("00112233")
@@ -396,9 +380,9 @@ BRC62Hex = "0100beef01fe636d0c0007021400fe507c0c7aa754cef1f7889d5fd395cf1f785dd7
 
 
 def test_output():
-    assert TransactionOutput(
-        locking_script=OpReturn().lock(["123", "456"])
-    ).locking_script == Script("006a" + "03313233" + "03343536")
+    assert TransactionOutput(locking_script=OpReturn().lock(["123", "456"])).locking_script == Script(
+        "006a" + "03313233" + "03343536"
+    )
 
 
 def test_digest():
@@ -444,19 +428,13 @@ def test_digest():
         unlocking_script_template=P2PKH().lock(address),
     )
     t_in2 = TransactionInput(
-        source_transaction=Transaction(
-            [], [TransactionOutput(locking_script=P2PKH().lock(address), satoshis=1000)]
-        ),
+        source_transaction=Transaction([], [TransactionOutput(locking_script=P2PKH().lock(address), satoshis=1000)]),
         source_txid="fcc1a53e8bb01dbc094e86cb86f195219022c26e0c03d6f18ea17c3a3ba3c1e4",
         source_output_index=0,
         unlocking_script_template=P2PKH().unlock(PrivateKey()),
     )
     t.add_inputs([t_in1, t_in2])
-    t.add_output(
-        TransactionOutput(
-            P2PKH().lock("18CgRLx9hFZqDZv75J5kED7ANnDriwvpi1"), satoshis=1700
-        )
-    )
+    t.add_output(TransactionOutput(P2PKH().lock("18CgRLx9hFZqDZv75J5kED7ANnDriwvpi1"), satoshis=1700))
     assert t.preimage(0) == expected_digest[0]
     assert t.preimage(1) == expected_digest[1]
 
@@ -477,11 +455,7 @@ def test_transaction():
         unlocking_script_template=P2PKH().unlock(PrivateKey()),
     )
     t.add_input(t_in)
-    t.add_output(
-        TransactionOutput(
-            P2PKH().lock("1JDZRGf5fPjGTpqLNwjHFFZnagcZbwDsxw"), satoshis=800
-        )
-    )
+    t.add_output(TransactionOutput(P2PKH().lock("1JDZRGf5fPjGTpqLNwjHFFZnagcZbwDsxw"), satoshis=800))
 
     signature = bytes.fromhex(
         "3044"
@@ -489,23 +463,15 @@ def test_transaction():
         "022019ae1690e2eb4455add6ca5b86695d65d3261d914bc1d7abb40b188c7f46c9a5"
     )
     sighash = bytes.fromhex("41")
-    public_key = bytes.fromhex(
-        "02e46dcd7991e5a4bd642739249b0158312e1aee56a60fd1bf622172ffe65bd789"
-    )
-    t.inputs[0].unlocking_script = Script(
-        encode_pushdata(signature + sighash) + encode_pushdata(public_key)
-    )
+    public_key = bytes.fromhex("02e46dcd7991e5a4bd642739249b0158312e1aee56a60fd1bf622172ffe65bd789")
+    t.inputs[0].unlocking_script = Script(encode_pushdata(signature + sighash) + encode_pushdata(public_key))
 
-    assert (
-        t.txid() == "4674da699de44c9c5d182870207ba89e5ccf395e5101dab6b0900bbf2f3b16cb"
-    )
+    assert t.txid() == "4674da699de44c9c5d182870207ba89e5ccf395e5101dab6b0900bbf2f3b16cb"
     assert t.get_fee() == 200
     assert t.byte_length() == 191
 
     t.inputs[0].sighash = SIGHASH.NONE_ANYONECANPAY_FORKID
-    assert t.preimage(0) == _preimage(
-        t.inputs[0], t.version, t.locktime, b"\x00" * 32, b"\x00" * 32, b"\x00" * 32
-    )
+    assert t.preimage(0) == _preimage(t.inputs[0], t.version, t.locktime, b"\x00" * 32, b"\x00" * 32, b"\x00" * 32)
     t.inputs[0].sighash = SIGHASH.SINGLE_ANYONECANPAY_FORKID
     assert t.preimage(0) == _preimage(
         t.inputs[0],
@@ -516,9 +482,7 @@ def test_transaction():
         hash256(t.outputs[0].serialize()),
     )
 
-    t.inputs[0].private_keys = [
-        PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
-    ]
+    t.inputs[0].private_keys = [PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")]
 
     t.outputs[0].satoshis = 100
     t.add_output(TransactionOutput(P2PKH().lock(address), change=True))
@@ -532,11 +496,7 @@ def test_transaction():
 
 
 def test_transaction_bytes_io():
-    io = Reader(
-        bytes.fromhex(
-            "0011223344556677889912fd1234fe12345678ff1234567890abcdef00112233"
-        )
-    )
+    io = Reader(bytes.fromhex("0011223344556677889912fd1234fe12345678ff1234567890abcdef00112233"))
 
     assert io.read_bytes(4) == bytes.fromhex("00112233")
     assert io.read_int(1) == int.from_bytes(bytes.fromhex("44"), "little")
@@ -545,9 +505,7 @@ def test_transaction_bytes_io():
     assert io.read_var_int_num() == int.from_bytes(bytes.fromhex("12"), "little")
     assert io.read_var_int_num() == int.from_bytes(bytes.fromhex("1234"), "little")
     assert io.read_var_int_num() == int.from_bytes(bytes.fromhex("12345678"), "little")
-    assert io.read_var_int_num() == int.from_bytes(
-        bytes.fromhex("1234567890abcdef"), "little"
-    )
+    assert io.read_var_int_num() == int.from_bytes(bytes.fromhex("1234567890abcdef"), "little")
 
     assert io.read_bytes(0) == b""
     assert io.read_bytes() == bytes.fromhex("00112233")
@@ -607,9 +565,7 @@ def test_from_hex():
         + "1976a9146a176cd51593e00542b8e1958b7da2be97452d0588ac"
         + "00000000"
     )
-    assert (
-        t.txid() == "e8c6b26f26d90e9cf035762a91479635a75eff2b3b2845663ed72a2397acdfd2"
-    )
+    assert t.txid() == "e8c6b26f26d90e9cf035762a91479635a75eff2b3b2845663ed72a2397acdfd2"
 
 
 def test_from_reader():
@@ -664,9 +620,7 @@ def test_from_reader():
 
     r = Reader(bytes.fromhex(t_hex))
     t = Transaction.from_reader(r)
-    assert (
-        t.txid() == "e8c6b26f26d90e9cf035762a91479635a75eff2b3b2845663ed72a2397acdfd2"
-    )
+    assert t.txid() == "e8c6b26f26d90e9cf035762a91479635a75eff2b3b2845663ed72a2397acdfd2"
 
 
 def test_beef_serialization():
@@ -700,8 +654,10 @@ def test_ef_serialization():
 
 
 def test_input_auto_txid():
-    prev_tx = Transaction.from_hex('0100000001478a4ac0c8e4dae42db983bc720d95ed2099dec4c8c3f2d9eedfbeb74e18cdbb1b0100006b483045022100b05368f9855a28f21d3cb6f3e278752d3c5202f1de927862bbaaf5ef7d67adc50220728d4671cd4c34b1fa28d15d5cd2712b68166ea885522baa35c0b9e399fe9ed74121030d4ad284751daf629af387b1af30e02cf5794139c4e05836b43b1ca376624f7fffffffff01000000000000000070006a0963657274696861736822314c6d763150594d70387339594a556e374d3948565473446b64626155386b514e4a406164386337373536356335363935353261626463636634646362353537376164633936633866613933623332663630373865353664666232326265623766353600000000')
-    
+    prev_tx = Transaction.from_hex(
+        "0100000001478a4ac0c8e4dae42db983bc720d95ed2099dec4c8c3f2d9eedfbeb74e18cdbb1b0100006b483045022100b05368f9855a28f21d3cb6f3e278752d3c5202f1de927862bbaaf5ef7d67adc50220728d4671cd4c34b1fa28d15d5cd2712b68166ea885522baa35c0b9e399fe9ed74121030d4ad284751daf629af387b1af30e02cf5794139c4e05836b43b1ca376624f7fffffffff01000000000000000070006a0963657274696861736822314c6d763150594d70387339594a556e374d3948565473446b64626155386b514e4a406164386337373536356335363935353261626463636634646362353537376164633936633866613933623332663630373865353664666232326265623766353600000000"
+    )
+
     private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
 
     tx_in = TransactionInput(
@@ -709,9 +665,9 @@ def test_input_auto_txid():
         source_output_index=0,
         unlocking_script_template=P2PKH().unlock(private_key),
     )
-    
-    assert tx_in.source_txid == 'e6adcaf6b86fb5d690a3bade36011cd02f80dd364f1ecf2bb04902aa1b6bf455'
-    
+
+    assert tx_in.source_txid == "e6adcaf6b86fb5d690a3bade36011cd02f80dd364f1ecf2bb04902aa1b6bf455"
+
     prev_tx.outputs[0].locking_script = None
     with pytest.raises(AttributeError, match="'NoneType' object has no attribute"):
         TransactionInput(
@@ -719,5 +675,6 @@ def test_input_auto_txid():
             source_output_index=0,
             unlocking_script_template=P2PKH().unlock(private_key),
         )
+
 
 # TODO: Test tx.verify()

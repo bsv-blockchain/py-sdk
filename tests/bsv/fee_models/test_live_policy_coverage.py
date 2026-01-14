@@ -1,12 +1,13 @@
 """
 Coverage tests for fee_models/live_policy.py - untested branches.
 """
-import pytest
 
+import pytest
 
 # ========================================================================
 # Live policy fee model branches
 # ========================================================================
+
 
 def test_live_policy_fee_model_init():
     """Test live policy fee model initialization."""
@@ -14,16 +15,16 @@ def test_live_policy_fee_model_init():
 
     fee_model = LivePolicy()
     # Verify the fee model was created successfully
-    assert hasattr(fee_model, 'compute_fee') or hasattr(fee_model, 'update')
+    assert hasattr(fee_model, "compute_fee") or hasattr(fee_model, "update")
 
 
 def test_live_policy_fee_model_with_url():
     """Test live policy fee model with custom URL."""
     from bsv.fee_models.live_policy import LivePolicy
 
-    fee_model = LivePolicy(arc_policy_url='https://api.example.com/fee')
+    fee_model = LivePolicy(arc_policy_url="https://api.example.com/fee")
     # Verify the fee model was created successfully with custom URL
-    assert hasattr(fee_model, 'compute_fee') or hasattr(fee_model, 'update')
+    assert hasattr(fee_model, "compute_fee") or hasattr(fee_model, "update")
 
 
 def test_live_policy_fee_model_compute_fee():
@@ -32,7 +33,7 @@ def test_live_policy_fee_model_compute_fee():
 
     fee_model = LivePolicy()
 
-    if hasattr(fee_model, 'compute_fee'):
+    if hasattr(fee_model, "compute_fee"):
         try:
             fee = fee_model.compute_fee(250)
             assert isinstance(fee, (int, float))
@@ -47,7 +48,7 @@ def test_live_policy_fee_model_update():
 
     fee_model = LivePolicy()
 
-    if hasattr(fee_model, 'update'):
+    if hasattr(fee_model, "update"):
         try:
             fee_model.update()
         except Exception:
@@ -59,13 +60,14 @@ def test_live_policy_fee_model_update():
 # Edge cases
 # ========================================================================
 
+
 def test_live_policy_fee_model_cache():
     """Test fee policy caching."""
     from bsv.fee_models.live_policy import LivePolicy
 
     fee_model = LivePolicy()
 
-    if hasattr(fee_model, 'compute_fee'):
+    if hasattr(fee_model, "compute_fee"):
         try:
             # Multiple calls should use cache
             _ = fee_model.compute_fee(250)
@@ -74,4 +76,3 @@ def test_live_policy_fee_model_cache():
         except Exception:
             # Expected without network access
             pass
-

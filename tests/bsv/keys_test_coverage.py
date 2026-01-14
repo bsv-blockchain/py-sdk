@@ -1,19 +1,21 @@
 """
 Coverage tests for keys.py - untested branches.
 """
-import pytest
-from bsv.keys import PrivateKey, PublicKey
 
+import pytest
+
+from bsv.keys import PrivateKey, PublicKey
 
 # ========================================================================
 # PrivateKey initialization branches
 # ========================================================================
 
 # Constants for skip messages
-TEST_MESSAGE_BYTES = b'test message'
-TEST_MESSAGE_BYTES2 = b'test message'
+TEST_MESSAGE_BYTES = b"test message"
+TEST_MESSAGE_BYTES2 = b"test message"
 SKIP_SIGNATURE_OPS = "signature operations not available"
 SKIP_KEY_SHARING = "key sharing operations not available"
+
 
 def test_private_key_init_none():
     """Test PrivateKey with None (generates random)."""
@@ -24,7 +26,7 @@ def test_private_key_init_none():
 
 def test_private_key_init_with_bytes():
     """Test PrivateKey with specific bytes."""
-    key_bytes = b'\x01' * 32
+    key_bytes = b"\x01" * 32
     key = PrivateKey(key_bytes)
     assert key.serialize() == key_bytes
 
@@ -32,7 +34,7 @@ def test_private_key_init_with_bytes():
 def test_private_key_init_with_int():
     """Test PrivateKey with integer."""
     key = PrivateKey(1)
-    assert hasattr(key, 'wif')
+    assert hasattr(key, "wif")
 
 
 def test_private_key_init_with_large_int():
@@ -40,12 +42,13 @@ def test_private_key_init_with_large_int():
     # Use a value within the secp256k1 curve order
     curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
     key = PrivateKey(curve_order - 1)  # Valid value just below curve order
-    assert hasattr(key, 'wif')
+    assert hasattr(key, "wif")
 
 
 # ========================================================================
 # PrivateKey methods
 # ========================================================================
+
 
 def test_private_key_to_public_key():
     """Test converting private key to public key."""
@@ -56,7 +59,7 @@ def test_private_key_to_public_key():
 
 def test_private_key_to_wif():
     """Test private key to WIF."""
-    priv = PrivateKey(b'\x01' * 32)
+    priv = PrivateKey(b"\x01" * 32)
     wif = priv.wif()
     assert isinstance(wif, str)
     assert len(wif) > 0
@@ -64,7 +67,7 @@ def test_private_key_to_wif():
 
 def test_private_key_from_wif():
     """Test creating private key from WIF."""
-    priv1 = PrivateKey(b'\x01' * 32)
+    priv1 = PrivateKey(b"\x01" * 32)
     wif = priv1.wif()
     priv2 = PrivateKey(wif)  # Constructor accepts WIF string
     assert priv1.serialize() == priv2.serialize()
@@ -82,6 +85,7 @@ def test_private_key_sign():
 # ========================================================================
 # Comprehensive error condition testing and branch coverage
 # ========================================================================
+
 
 def test_private_key_sign_with_empty_message():
     """Test signing with empty message."""
@@ -161,13 +165,14 @@ def test_key_shares_generation_failure():
     """Test key shares generation failure after max attempts."""
     try:
         from unittest.mock import patch
+
         from bsv.keys import curve
 
         priv = PrivateKey()
 
         # Mock to always return the same x coordinate, causing collision
-        with patch('os.urandom', return_value=b'\x01' * 32):  # Same seed each time
-            with patch('bsv.keys.hmac_sha512', return_value=b'\x01' * 64):  # Same HMAC each time
+        with patch("os.urandom", return_value=b"\x01" * 32):  # Same seed each time
+            with patch("bsv.keys.hmac_sha512", return_value=b"\x01" * 64):  # Same HMAC each time
                 with pytest.raises(ValueError, match="Failed to generate unique x coordinate"):
                     priv.to_key_shares(2, 3)  # 2-of-3 shares
     except ImportError:
@@ -198,10 +203,7 @@ def test_key_shares_insufficient_points():
         from bsv.keys import KeyShares, PointInFiniteField
 
         # Create key shares with threshold 3 but only 2 points
-        points = [
-            PointInFiniteField(1, 2),
-            PointInFiniteField(3, 4)
-        ]
+        points = [PointInFiniteField(1, 2), PointInFiniteField(3, 4)]
         key_shares = KeyShares(points, 3, "integrity")
 
         with pytest.raises(ValueError, match="At least 3 shares are required"):
@@ -214,18 +216,15 @@ def test_key_shares_integrity_mismatch():
     """Test key shares with integrity hash mismatch."""
     try:
         from unittest.mock import patch
+
         from bsv.keys import KeyShares, PointInFiniteField
 
-        points = [
-            PointInFiniteField(1, 2),
-            PointInFiniteField(3, 4),
-            PointInFiniteField(5, 6)
-        ]
+        points = [PointInFiniteField(1, 2), PointInFiniteField(3, 4), PointInFiniteField(5, 6)]
         key_shares = KeyShares(points, 2, "integrity")
 
         # Mock integrity check to fail
-        with patch('bsv.keys.hash160') as mock_hash:
-            mock_hash.return_value = b'different_hash'
+        with patch("bsv.keys.hash160") as mock_hash:
+            mock_hash.return_value = b"different_hash"
             with pytest.raises(ValueError, match="Integrity hash mismatch"):
                 PrivateKey.from_key_shares(key_shares)
     except ImportError:
@@ -237,7 +236,7 @@ def test_private_key_invalid_initialization():
     try:
         # Test with zero bytes (invalid private key)
         with pytest.raises((ValueError, RuntimeError)):
-            PrivateKey(b'\x00' * 32)
+            PrivateKey(b"\x00" * 32)
 
         # Test with value >= curve order (invalid)
         large_value = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 + 1
@@ -256,7 +255,7 @@ def test_public_key_verification_invalid_signature():
 
         # Valid signature
         signature = priv.sign(message)
-        assert pub.verify(signature, message) == True
+        assert pub.verify(signature, message)
 
         # Test with invalid signature - these should raise ValueError from DER parsing
         with pytest.raises(ValueError):
@@ -280,8 +279,8 @@ def test_public_key_verification_different_message():
         signature = priv.sign(message1)
 
         # Should verify for original message but not for different message
-        assert pub.verify(signature, message1) == True
-        assert pub.verify(signature, message2) == False
+        assert pub.verify(signature, message1)
+        assert not pub.verify(signature, message2)
     except ImportError:
         pytest.skip(SKIP_SIGNATURE_OPS)
 
@@ -297,14 +296,14 @@ def test_public_key_verification_wrong_key():
         signature = priv1.sign(message)
 
         # Should not verify with wrong public key
-        assert pub2.verify(signature, message) == False
+        assert not pub2.verify(signature, message)
     except ImportError:
         pytest.skip(SKIP_SIGNATURE_OPS)
 
 
 def test_private_key_serialize():
     """Test private key serialization."""
-    key_bytes = b'\x02' * 32
+    key_bytes = b"\x02" * 32
     priv = PrivateKey(key_bytes)
     assert priv.serialize() == key_bytes
 
@@ -313,20 +312,21 @@ def test_private_key_serialize():
 # PublicKey initialization branches
 # ========================================================================
 
+
 def test_public_key_from_private():
     """Test creating public key from private key."""
     priv = PrivateKey()
     pub = priv.public_key()
-    assert hasattr(pub, 'address')
+    assert hasattr(pub, "address")
 
 
 def test_public_key_from_bytes_compressed():
     """Test creating public key from compressed bytes."""
     # Compressed public key (33 bytes starting with 02 or 03)
-    pub_bytes = b'\x02' + b'\x00' * 32
+    pub_bytes = b"\x02" + b"\x00" * 32
     try:
         pub = PublicKey(pub_bytes)
-        assert hasattr(pub, 'address')
+        assert hasattr(pub, "address")
     except Exception:
         # May fail if invalid point
         pass
@@ -335,10 +335,10 @@ def test_public_key_from_bytes_compressed():
 def test_public_key_from_bytes_uncompressed():
     """Test creating public key from uncompressed bytes."""
     # Uncompressed public key (65 bytes starting with 04)
-    pub_bytes = b'\x04' + b'\x00' * 64
+    pub_bytes = b"\x04" + b"\x00" * 64
     try:
         pub = PublicKey(pub_bytes)
-        assert hasattr(pub, 'address')
+        assert hasattr(pub, "address")
     except Exception:
         # May fail if invalid point
         pass
@@ -348,15 +348,16 @@ def test_public_key_from_bytes_uncompressed():
 # PublicKey methods
 # ========================================================================
 
+
 def test_public_key_verify_valid():
     """Test public key verify with valid signature."""
     priv = PrivateKey()
     pub = priv.public_key()
     message = TEST_MESSAGE_BYTES
     signature = priv.sign(message)
-    
+
     is_valid = pub.verify(signature, message)
-    assert is_valid == True
+    assert is_valid
 
 
 def test_public_key_verify_invalid_signature():
@@ -366,19 +367,19 @@ def test_public_key_verify_invalid_signature():
     message = TEST_MESSAGE_BYTES
 
     with pytest.raises(ValueError):
-        pub.verify(b'invalid_signature', message)
+        pub.verify(b"invalid_signature", message)
 
 
 def test_public_key_verify_wrong_message():
     """Test public key verify with wrong message."""
     priv = PrivateKey()
     pub = priv.public_key()
-    message1 = b'message 1'
-    message2 = b'message 2'
+    message1 = b"message 1"
+    message2 = b"message 2"
     signature = priv.sign(message1)
-    
+
     is_valid = pub.verify(signature, message2)
-    assert is_valid == False
+    assert not is_valid
 
 
 def test_public_key_to_address():
@@ -403,24 +404,24 @@ def test_public_key_serialize():
 # Edge cases
 # ========================================================================
 
+
 def test_private_key_deterministic_generation():
     """Test same seed produces same key."""
-    key1 = PrivateKey(b'\x01' * 32)
-    key2 = PrivateKey(b'\x01' * 32)
+    key1 = PrivateKey(b"\x01" * 32)
+    key2 = PrivateKey(b"\x01" * 32)
     assert key1.serialize() == key2.serialize()
 
 
 def test_private_key_different_seeds():
     """Test different seeds produce different keys."""
-    key1 = PrivateKey(b'\x01' * 32)
-    key2 = PrivateKey(b'\x02' * 32)
+    key1 = PrivateKey(b"\x01" * 32)
+    key2 = PrivateKey(b"\x02" * 32)
     assert key1.serialize() != key2.serialize()
 
 
 def test_public_key_from_same_private():
     """Test same private key produces same public key."""
-    priv = PrivateKey(b'\x01' * 32)
+    priv = PrivateKey(b"\x01" * 32)
     pub1 = priv.public_key()
     pub2 = priv.public_key()
     assert pub1.serialize() == pub2.serialize()
-

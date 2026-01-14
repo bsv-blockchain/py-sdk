@@ -1,9 +1,12 @@
 """
 Coverage tests for keystore/ modules - untested branches.
 """
-import pytest
-from bsv.keys import PrivateKey
+
 from unittest.mock import Mock
+
+import pytest
+
+from bsv.keys import PrivateKey
 
 # ========================================================================
 # Keystore interface branches
@@ -14,11 +17,13 @@ SKIP_MEMORY_KEYSTORE = "MemoryKeystore operations not available"
 SKIP_LOCAL_KVSTORE = "LocalKVStore not available"
 SKIP_COMPLEX_MOCKING = "Skipped due to complex mocking requirements"
 
+
 def test_keystore_module_exists():
     """Test that keystore module exists."""
     try:
         import bsv.keystore
-        assert hasattr(bsv, 'keystore')
+
+        assert hasattr(bsv, "keystore")
     except ImportError:
         pytest.skip("Keystore module not available")
 
@@ -27,9 +32,9 @@ def test_memory_keystore_init():
     """Test memory keystore initialization."""
     try:
         from bsv.keystore import MemoryKeystore
-        
+
         keystore = MemoryKeystore()
-        assert hasattr(keystore, 'reveal_counterparty_secret')
+        assert hasattr(keystore, "reveal_counterparty_secret")
     except (ImportError, AttributeError):
         pytest.skip("MemoryKeystore not available")
 
@@ -38,13 +43,12 @@ def test_memory_keystore_store_key():
     """Test storing key in memory keystore."""
     try:
         from bsv.keystore import MemoryKeystore
-        
+
         keystore = MemoryKeystore()
         priv = PrivateKey()
-        
-        if hasattr(keystore, 'store'):
-            keystore.store('test_key', priv)
-            pass
+
+        if hasattr(keystore, "store"):
+            keystore.store("test_key", priv)
     except (ImportError, AttributeError):
         pytest.skip("MemoryKeystore store not available")
 
@@ -53,13 +57,13 @@ def test_memory_keystore_retrieve_key():
     """Test retrieving key from memory keystore."""
     try:
         from bsv.keystore import MemoryKeystore
-        
+
         keystore = MemoryKeystore()
         priv = PrivateKey()
-        
-        if hasattr(keystore, 'store') and hasattr(keystore, 'retrieve'):
-            keystore.store('test_key', priv)
-            retrieved = keystore.retrieve('test_key')
+
+        if hasattr(keystore, "store") and hasattr(keystore, "retrieve"):
+            keystore.store("test_key", priv)
+            retrieved = keystore.retrieve("test_key")
             assert retrieved
     except (ImportError, AttributeError):
         pytest.skip(SKIP_MEMORY_KEYSTORE)
@@ -69,14 +73,13 @@ def test_memory_keystore_delete_key():
     """Test deleting key from memory keystore."""
     try:
         from bsv.keystore import MemoryKeystore
-        
+
         keystore = MemoryKeystore()
         priv = PrivateKey()
-        
-        if hasattr(keystore, 'store') and hasattr(keystore, 'delete'):
-            keystore.store('test_key', priv)
-            keystore.delete('test_key')
-            pass
+
+        if hasattr(keystore, "store") and hasattr(keystore, "delete"):
+            keystore.store("test_key", priv)
+            keystore.delete("test_key")
     except (ImportError, AttributeError):
         pytest.skip(SKIP_MEMORY_KEYSTORE)
 
@@ -85,15 +88,16 @@ def test_memory_keystore_delete_key():
 # File keystore branches
 # ========================================================================
 
+
 def test_file_keystore_init():
     """Test file keystore initialization."""
     try:
         from bsv.keystore import FileKeystore
-        
+
         try:
             # Using /tmp for test purposes only, not production code
-            keystore = FileKeystore(path='/tmp/test_keystore')  # noqa: S108  # NOSONAR
-            assert hasattr(keystore, 'reveal_counterparty_secret')
+            keystore = FileKeystore(path="/tmp/test_keystore")  # NOSONAR
+            assert hasattr(keystore, "reveal_counterparty_secret")
         except (TypeError, OSError):
             # May require different parameters
             pytest.skip("FileKeystore initialization different")
@@ -105,16 +109,17 @@ def test_file_keystore_init():
 # Edge cases
 # ========================================================================
 
+
 def test_keystore_retrieve_nonexistent():
     """Test retrieving non-existent key."""
     try:
         from bsv.keystore import MemoryKeystore
-        
+
         keystore = MemoryKeystore()
-        
-        if hasattr(keystore, 'retrieve'):
+
+        if hasattr(keystore, "retrieve"):
             try:
-                key = keystore.retrieve('nonexistent')
+                key = keystore.retrieve("nonexistent")
                 assert key is None
             except KeyError:
                 # Expected
@@ -127,15 +132,15 @@ def test_keystore_overwrite_key():
     """Test overwriting existing key."""
     try:
         from bsv.keystore import MemoryKeystore
-        
+
         keystore = MemoryKeystore()
         priv1 = PrivateKey()
         priv2 = PrivateKey()
-        
-        if hasattr(keystore, 'store') and hasattr(keystore, 'retrieve'):
-            keystore.store('key', priv1)
-            keystore.store('key', priv2)
-            retrieved = keystore.retrieve('key')
+
+        if hasattr(keystore, "store") and hasattr(keystore, "retrieve"):
+            keystore.store("key", priv1)
+            keystore.store("key", priv2)
+            retrieved = keystore.retrieve("key")
             # Should be the second key
             assert retrieved.key == priv2.key
     except (ImportError, AttributeError):
@@ -146,12 +151,14 @@ def test_keystore_overwrite_key():
 # Comprehensive error condition testing and branch coverage for LocalKVStore
 # ========================================================================
 
+
 def test_local_kv_store_initialization():
     """Test LocalKVStore initialization with various configurations."""
     try:
-        from bsv.keystore.local_kv_store import LocalKVStore
-        from bsv.keystore.interfaces import KVStoreConfig
         from unittest.mock import Mock
+
+        from bsv.keystore.interfaces import KVStoreConfig
+        from bsv.keystore.local_kv_store import LocalKVStore
 
         # Create a mock wallet
         mock_wallet = Mock()
@@ -166,7 +173,7 @@ def test_local_kv_store_initialization():
         config.retention_period = 0
 
         store = LocalKVStore(config)
-        assert hasattr(store, 'get')
+        assert hasattr(store, "get")
 
     except ImportError:
         pytest.skip(SKIP_LOCAL_KVSTORE)
@@ -174,13 +181,18 @@ def test_local_kv_store_initialization():
 
 def test_local_kv_store_basic_validation():
     pytest.skip(SKIP_COMPLEX_MOCKING)
+
+
 def test_local_kv_store_set_operation_errors():
     pytest.skip(SKIP_COMPLEX_MOCKING)
+
+
 def test_local_kv_store_get_operation():
     """Test LocalKVStore get operation."""
     try:
-        from bsv.keystore.local_kv_store import LocalKVStore
         from unittest.mock import Mock
+
+        from bsv.keystore.local_kv_store import LocalKVStore
 
         # Create config
         config = Mock()
@@ -205,8 +217,9 @@ def test_local_kv_store_get_operation():
 def test_local_kv_store_remove_operation():
     """Test LocalKVStore remove operation."""
     try:
-        from bsv.keystore.local_kv_store import LocalKVStore
         from unittest.mock import Mock
+
+        from bsv.keystore.local_kv_store import LocalKVStore
 
         # Create config
         config = Mock()
@@ -235,31 +248,34 @@ def test_local_kv_store_concurrent_access():
 
 def test_local_kv_store_json_serialization_errors():
     pytest.skip(SKIP_COMPLEX_MOCKING)
+
+
 def test_local_kv_store_base64_encoding_errors():
     pytest.skip(SKIP_COMPLEX_MOCKING)
     """Test LocalKVStore base64 encoding/decoding error handling."""
     try:
-        from bsv.keystore.local_kv_store import LocalKVStore
         import base64
         from unittest.mock import patch
+
+        from bsv.keystore.local_kv_store import LocalKVStore
 
         config = Mock()
         config.wallet = Mock()
         config.context = "test_context"
         config.retention_period = 0
-        
+
         store = LocalKVStore(config)
 
         # Test base64 encoding failure
-        with patch('base64.b64encode', side_effect=Exception("Encoding failed")):
+        with patch("base64.b64encode", side_effect=Exception("Encoding failed")):
             try:
                 store.store("key", "value", "wallet", "context")
-                assert False, "Should have raised an exception"
+                raise AssertionError("Should have raised an exception")
             except Exception:
                 pass  # Expected
 
         # Test base64 decoding failure
-        with patch('base64.b64decode', side_effect=Exception("Decoding failed")):
+        with patch("base64.b64decode", side_effect=Exception("Decoding failed")):
             try:
                 store.retrieve("key", "wallet", "context")
             except Exception:
@@ -271,17 +287,20 @@ def test_local_kv_store_base64_encoding_errors():
 
 def test_local_kv_store_regex_validation():
     pytest.skip(SKIP_COMPLEX_MOCKING)
+
+
 def test_local_kv_store_value_size_limits():
     """Test LocalKVStore value size limits."""
     try:
-        from bsv.keystore.local_kv_store import LocalKVStore
         from unittest.mock import Mock
+
+        from bsv.keystore.local_kv_store import LocalKVStore
 
         config = Mock()
         config.wallet = Mock()
         config.context = "test_context"
         config.retention_period = 0
-        
+
         store = LocalKVStore(config)
 
         # Test various value sizes - these may work or fail depending on implementation
@@ -306,6 +325,8 @@ def test_local_kv_store_value_size_limits():
 
 def test_local_kv_store_wallet_format_validation():
     pytest.skip(SKIP_COMPLEX_MOCKING)
+
+
 def test_local_kv_store_context_validation():
     pytest.skip(SKIP_COMPLEX_MOCKING)
     """Test LocalKVStore context validation."""
@@ -316,7 +337,7 @@ def test_local_kv_store_context_validation():
         config.wallet = Mock()
         config.context = "test_context"
         config.retention_period = 0
-        
+
         _ = LocalKVStore(config)
 
         # Valid contexts
@@ -338,6 +359,8 @@ def test_local_kv_store_context_validation():
 
 def test_local_kv_store_storage_operations():
     pytest.skip(SKIP_COMPLEX_MOCKING)
+
+
 def test_local_kv_store_unimplemented_features():
     """Test LocalKVStore unimplemented features reporting."""
     try:
@@ -357,9 +380,15 @@ def test_local_kv_store_unimplemented_features():
 
 def test_local_kv_store_thread_safety():
     pytest.skip(SKIP_COMPLEX_MOCKING)
+
+
 def test_local_kv_store_edge_cases():
     pytest.skip(SKIP_COMPLEX_MOCKING)
+
+
 def test_local_kv_store_copy_operations():
     pytest.skip(SKIP_COMPLEX_MOCKING)
+
+
 def test_local_kv_store_file_operations_placeholder():
     pytest.skip(SKIP_COMPLEX_MOCKING)

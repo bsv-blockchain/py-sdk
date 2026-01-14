@@ -1,33 +1,42 @@
 import pytest
 
-from bsv.wallet.serializer.create_action_args import serialize_create_action_args, deserialize_create_action_args
-from bsv.wallet.serializer.create_action_result import serialize_create_action_result, deserialize_create_action_result
-from bsv.wallet.serializer.sign_action_args import serialize_sign_action_args, deserialize_sign_action_args
-from bsv.wallet.serializer.sign_action_result import serialize_sign_action_result, deserialize_sign_action_result
-from bsv.wallet.serializer.list_actions import serialize_list_actions_args, deserialize_list_actions_args, serialize_list_actions_result, deserialize_list_actions_result
-from bsv.wallet.serializer.internalize_action import serialize_internalize_action_args, deserialize_internalize_action_args
-from bsv.wallet.serializer.list_certificates import (
-    serialize_list_certificates_args,
-    deserialize_list_certificates_args,
-    serialize_list_certificates_result,
-    deserialize_list_certificates_result,
-)
-from bsv.wallet.serializer.internalize_action import serialize_internalize_action_result, deserialize_internalize_action_result
-from bsv.wallet.serializer.prove_certificate import serialize_prove_certificate_args, deserialize_prove_certificate_args
-from bsv.wallet.serializer.certificate import (
-    serialize_certificate_base,
-    deserialize_certificate_base,
-)
-from bsv.wallet.serializer.relinquish_certificate import (
-    serialize_relinquish_certificate_result,
-    deserialize_relinquish_certificate_result,
-)
 from bsv.wallet.serializer.abort_action import (
-    serialize_abort_action_args,
     deserialize_abort_action_args,
-    serialize_abort_action_result,
     deserialize_abort_action_result,
+    serialize_abort_action_args,
+    serialize_abort_action_result,
 )
+from bsv.wallet.serializer.certificate import (
+    deserialize_certificate_base,
+    serialize_certificate_base,
+)
+from bsv.wallet.serializer.create_action_args import deserialize_create_action_args, serialize_create_action_args
+from bsv.wallet.serializer.create_action_result import deserialize_create_action_result, serialize_create_action_result
+from bsv.wallet.serializer.internalize_action import (
+    deserialize_internalize_action_args,
+    deserialize_internalize_action_result,
+    serialize_internalize_action_args,
+    serialize_internalize_action_result,
+)
+from bsv.wallet.serializer.list_actions import (
+    deserialize_list_actions_args,
+    deserialize_list_actions_result,
+    serialize_list_actions_args,
+    serialize_list_actions_result,
+)
+from bsv.wallet.serializer.list_certificates import (
+    deserialize_list_certificates_args,
+    deserialize_list_certificates_result,
+    serialize_list_certificates_args,
+    serialize_list_certificates_result,
+)
+from bsv.wallet.serializer.prove_certificate import deserialize_prove_certificate_args, serialize_prove_certificate_args
+from bsv.wallet.serializer.relinquish_certificate import (
+    deserialize_relinquish_certificate_result,
+    serialize_relinquish_certificate_result,
+)
+from bsv.wallet.serializer.sign_action_args import deserialize_sign_action_args, serialize_sign_action_args
+from bsv.wallet.serializer.sign_action_result import deserialize_sign_action_result, serialize_sign_action_result
 
 
 def test_create_action_args_roundtrip():
@@ -137,7 +146,14 @@ def test_internalize_action_args_roundtrip():
 
 
 def test_list_certificates_args_roundtrip():
-    src = {"certifiers": [b"\x02" * 33], "types": [b"\x00" * 32], "limit": 5, "offset": None, "privileged": None, "privilegedReason": ""}
+    src = {
+        "certifiers": [b"\x02" * 33],
+        "types": [b"\x00" * 32],
+        "limit": 5,
+        "offset": None,
+        "privileged": None,
+        "privilegedReason": "",
+    }
     data = serialize_list_certificates_args(src)
     out = deserialize_list_certificates_args(data)
     assert out["limit"] == 5

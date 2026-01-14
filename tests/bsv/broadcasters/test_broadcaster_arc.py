@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-from bsv.broadcaster import BroadcastResponse, BroadcastFailure
+from bsv.broadcaster import BroadcastFailure, BroadcastResponse
 from bsv.broadcasters.arc import ARC, ARCConfig
 from bsv.http_client import HttpClient, HttpResponse, SyncHttpClient
 from bsv.transaction import Transaction
@@ -12,13 +12,13 @@ from bsv.transaction import Transaction
 # Load environment variables from .env.local
 def load_env_file():
     """Load environment variables from .env.local file if it exists."""
-    env_file = Path(__file__).parent.parent.parent.parent / '.env.local'
+    env_file = Path(__file__).parent.parent.parent.parent / ".env.local"
     if env_file.exists():
         with open(env_file) as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
                     os.environ[key.strip()] = value.strip()
 
 
@@ -29,7 +29,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.URL = "https://api.taal.com/arc"
-        self.api_key = os.getenv('ARC_API_KEY', 'test_api_key_fallback')
+        self.api_key = os.getenv("ARC_API_KEY", "test_api_key_fallback")
         self.tx = Transaction(tx_data="Hello sCrypt")
 
         # Mocking the Transaction methods
@@ -65,9 +65,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
         mock_response = HttpResponse(
             ok=False,
             status_code=400,
-            json_data={
-                "data": {"status": "ERR_BAD_REQUEST", "detail": "Invalid transaction"}
-            },
+            json_data={"data": {"status": "ERR_BAD_REQUEST", "detail": "Invalid transaction"}},
         )
         mock_http_client = AsyncMock(HttpClient)
         mock_http_client.fetch = AsyncMock(return_value=mock_response)
@@ -122,9 +120,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
         mock_response = HttpResponse(
             ok=False,
             status_code=400,
-            json_data={
-                "data": {"status": "ERR_BAD_REQUEST", "detail": "Invalid transaction"}
-            },
+            json_data={"data": {"status": "ERR_BAD_REQUEST", "detail": "Invalid transaction"}},
         )
         mock_sync_http_client = MagicMock(SyncHttpClient)
         mock_sync_http_client.post = MagicMock(return_value=mock_response)  # fetch → post
@@ -140,9 +136,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
     def test_sync_broadcast_timeout_error(self):
         """408 time out error test"""
         mock_response = HttpResponse(
-            ok=False,
-            status_code=408,
-            json_data={"data": {"status": "ERR_TIMEOUT", "detail": "Request timed out"}}
+            ok=False, status_code=408, json_data={"data": {"status": "ERR_TIMEOUT", "detail": "Request timed out"}}
         )
         mock_sync_http_client = MagicMock(SyncHttpClient)
         mock_sync_http_client.post = MagicMock(return_value=mock_response)
@@ -159,9 +153,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
     def test_sync_broadcast_connection_error(self):
         """503 error test"""
         mock_response = HttpResponse(
-            ok=False,
-            status_code=503,
-            json_data={"data": {"status": "ERR_CONNECTION", "detail": "Service unavailable"}}
+            ok=False, status_code=503, json_data={"data": {"status": "ERR_CONNECTION", "detail": "Service unavailable"}}
         )
         mock_sync_http_client = MagicMock(SyncHttpClient)
         mock_sync_http_client.post = MagicMock(return_value=mock_response)
@@ -196,7 +188,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
                     "txid": "8e60c4143879918ed03b8fc67b5ac33b8187daa3b46022ee2a9e1eb67e2e46ec",
                     "txStatus": "MINED",
                     "blockHash": "000000000000000001234567890abcdef",
-                    "blockHeight": 800000
+                    "blockHeight": 800000,
                 }
             },
         )
@@ -212,38 +204,28 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["blockHeight"], 800000)
 
     def test_categorize_transaction_status_mined(self):
-        response = {
-            "txStatus": "MINED",
-            "blockHeight": 800000
-        }
+        response = {"txStatus": "MINED", "blockHeight": 800000}
         result = ARC.categorize_transaction_status(response)
 
         self.assertEqual(result["status_category"], "mined")
         self.assertEqual(result["tx_status"], "MINED")
 
     def test_categorize_transaction_status_progressing(self):
-        response = {
-            "txStatus": "QUEUED"
-        }
+        response = {"txStatus": "QUEUED"}
         result = ARC.categorize_transaction_status(response)
 
         self.assertEqual(result["status_category"], "progressing")
         self.assertEqual(result["tx_status"], "QUEUED")
 
     def test_categorize_transaction_status_warning(self):
-        response = {
-            "txStatus": "SEEN_ON_NETWORK",
-            "competingTxs": ["some_competing_tx"]
-        }
+        response = {"txStatus": "SEEN_ON_NETWORK", "competingTxs": ["some_competing_tx"]}
         result = ARC.categorize_transaction_status(response)
 
         self.assertEqual(result["status_category"], "warning")
         self.assertEqual(result["tx_status"], "SEEN_ON_NETWORK")
 
     def test_categorize_transaction_status_0confirmation(self):
-        response = {
-            "txStatus": "SEEN_ON_NETWORK"
-        }
+        response = {"txStatus": "SEEN_ON_NETWORK"}
         result = ARC.categorize_transaction_status(response)
 
         self.assertEqual(result["status_category"], "0confirmation")

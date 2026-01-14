@@ -14,8 +14,8 @@ def test_create_and_verify_signature_identity(wallet):
     # BRC-100 compliant flat structure (Python snake_case)
     args = {
         "protocolID": {"securityLevel": 2, "protocol": "auth message signature"},
-            "keyID": "identity",
-            "counterparty": {"type": "self"},
+        "keyID": "identity",
+        "counterparty": {"type": "self"},
         "data": data,
     }
     sig = wallet.create_signature(args, "test")
@@ -43,5 +43,3 @@ def test_create_and_verify_hmac_other_counterparty(wallet):
 
     ver = wallet.verify_hmac({**args, "hmac": h["hmac"]}, "test")
     assert ver.get("valid") is True
-
-

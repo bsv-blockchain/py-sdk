@@ -15,14 +15,17 @@ Missing functionality is enumerated at the bottom of the file and returned via
 it programmatically.
 """
 
+import base64
+import copy
+import json
+import os
+import re
 from dataclasses import dataclass, field
 from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple
-import base64
-import re
-import json
-import copy
-import os
+
+from bsv.network.woc_client import WOCClient
+from bsv.transaction.pushdrop import PushDrop
 
 from .interfaces import (
     ErrEmptyContext,
@@ -32,12 +35,11 @@ from .interfaces import (
     KVStoreConfig,
     KVStoreInterface,
 )
-from bsv.transaction.pushdrop import PushDrop
-from bsv.network.woc_client import WOCClient
 
 # ---------------------------------------------------------------------------
 # Helper types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class _StoredValue:
@@ -51,6 +53,7 @@ class _StoredValue:
 # ---------------------------------------------------------------------------
 # LocalKVStore prototype
 # ---------------------------------------------------------------------------
+
 
 class LocalKVStore(KVStoreInterface):
     """A *local* (in-memory) key–value store that mimics the Go behaviour.
@@ -67,7 +70,7 @@ class LocalKVStore(KVStoreInterface):
     tests targeting higher-level components can progress.
     """
 
-    _UNIMPLEMENTED: List[str] = [
+    _UNIMPLEMENTED: list[str] = [
         # BEEF / AtomicBEEF parsing is now implemented
         # Retention period & basket name support is now implemented
     ]
@@ -84,26 +87,25 @@ class LocalKVStore(KVStoreInterface):
         self._wallet = config.wallet
         self._context = config.context
         self._retention_period: int = int(getattr(config, "retention_period", 0) or 0)
-        self._basket_name: str = (getattr(config, "basket_name", "") or self._context)
-        self._protocol = re.sub(r'[^A-Za-z0-9 ]', '', self._context).replace(' ', '')
+        self._basket_name: str = getattr(config, "basket_name", "") or self._context
+        self._protocol = re.sub(r"[^A-Za-z0-9 ]", "", self._context).replace(" ", "")
         self._originator = config.originator
         self._encrypt = bool(config.encrypt)
         # TS/GO-style defaults
-        self._default_fee_rate: Optional[int] = getattr(config, "fee_rate", None)
-        self._default_ca: Optional[dict] = getattr(config, "default_ca", None)
+        self._default_fee_rate: int | None = getattr(config, "fee_rate", None)
+        self._default_ca: dict | None = getattr(config, "default_ca", None)
         self._lock_position: str = getattr(config, "lock_position", "before") or "before"
         # Remove _use_local_store and _store except for test hooks
         self._lock = Lock()
         # Key-level locks (per-key serialization)
-        self._key_locks: Dict[str, Lock] = {}
+        self._key_locks: dict[str, Lock] = {}
         self._key_locks_guard: Lock = Lock()
         # Options
         self._accept_delayed_broadcast: bool = bool(
-            getattr(config, "accept_delayed_broadcast", False)
-            or getattr(config, "acceptDelayedBroadcast", False)
+            getattr(config, "accept_delayed_broadcast", False) or getattr(config, "acceptDelayedBroadcast", False)
         )
         # Cache: recently created BEEF per key to avoid WOC on immediate get
-        self._recent_beef_by_key: Dict[str, Tuple[list, bytes]] = {}
+        self._recent_beef_by_key: dict[str, tuple[list, bytes]] = {}
 
     # ---------------------------------------------------------------------
     # Helper methods
@@ -111,19 +113,19 @@ class LocalKVStore(KVStoreInterface):
 
     def _get_protocol(self, key: str) -> dict:
         """Returns the wallet protocol for the given key (GO pattern).
-        
+
         This method mirrors the Go SDK's getProtocol() implementation.
         It returns only the protocol structure, as keyID is always the same
         as the key parameter and should be passed separately.
-        
+
         Args:
             key: The key string (not used in protocol generation, but kept for API consistency)
-        
+
         Returns:
             dict: Protocol dict with 'securityLevel' and 'protocol' keys.
                   securityLevel is 2 (SecurityLevelEveryAppAndCounterparty).
                   protocol is derived from the context.
-        
+
         Note:
             keyID is not included in the return value as it's always the same
             as the key parameter. This follows the Go SDK pattern.
@@ -146,7 +148,9 @@ class LocalKVStore(KVStoreInterface):
         finally:
             self._release_key_lock(key)
 
-    def _get_onchain_value(self, ctx: Any, key: str) -> Optional[str]:  # NOSONAR - Complexity (56), requires refactoring
+    def _get_onchain_value(
+        self, ctx: Any, key: str
+    ) -> str | None:  # NOSONAR - Complexity (56), requires refactoring
         """Retrieve value from on-chain outputs (BEEF/PushDrop)."""
         outputs, beef_bytes = self._lookup_outputs_for_get(ctx, key)
         if not outputs:
@@ -168,12 +172,11 @@ class LocalKVStore(KVStoreInterface):
                             return first_field
                         return "enc:" + base64.b64encode(first_field.encode("utf-8")).decode("ascii")
                 except Exception:
-                    pass
                     try:
                         # Normalize ciphertext bytes
                         if isinstance(first_field, (bytes, bytearray)):
                             first_field_bytes = bytes(first_field)
-                            if first_field_bytes.startswith(b'enc:'):
+                            if first_field_bytes.startswith(b"enc:"):
                                 ciphertext = base64.b64decode(first_field_bytes[4:])
                             else:
                                 ciphertext = first_field_bytes
@@ -181,7 +184,7 @@ class LocalKVStore(KVStoreInterface):
                             if first_field.startswith("enc:"):
                                 ciphertext = base64.b64decode(first_field[4:])
                             else:
-                                ciphertext = first_field.encode('utf-8')
+                                ciphertext = first_field.encode("utf-8")
                         else:
                             ciphertext = b""
                         # Build encryption_args from defaults
@@ -200,39 +203,46 @@ class LocalKVStore(KVStoreInterface):
                             or pd_opts.get("keyID")
                         )
                         # CounterpartyType: SELF=2, ANYONE=1, OTHER=3, UNINITIALIZED=0
-                        counterparty = ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 2}  # Default to SELF (2)
-                        dec_res = self._wallet.decrypt(
-                            ctx,
-                            {
-                                "encryption_args": {
-                                    "protocolID": protocol_id,
-                                    "keyID": key_id,
-                                    "counterparty": counterparty,
+                        counterparty = (
+                            ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 2}
+                        )  # Default to SELF (2)
+                        dec_res = (
+                            self._wallet.decrypt(
+                                ctx,
+                                {
+                                    "encryption_args": {
+                                        "protocolID": protocol_id,
+                                        "keyID": key_id,
+                                        "counterparty": counterparty,
+                                    },
+                                    "ciphertext": ciphertext,
                                 },
-                                "ciphertext": ciphertext,
-                            },
-                            self._originator,
-                        ) or {}
+                                self._originator,
+                            )
+                            or {}
+                        )
                         pt = dec_res.get("plaintext")
                         if isinstance(pt, (bytes, bytearray)):
-                            return pt.decode('utf-8')
+                            return pt.decode("utf-8")
                     except Exception:
                         pass
                 # Fallbacks (if decrypt not possible), try to decode as utf-8
                 try:
                     if isinstance(first_field, (bytes, bytearray)):
-                        return first_field.decode('utf-8')
+                        return first_field.decode("utf-8")
                 except Exception:
                     return None
                 return first_field if isinstance(first_field, str) else None
             # Non-encrypted path
             try:
-                return first_field.decode('utf-8')
+                return first_field.decode("utf-8")
             except Exception:
                 return None
         return None
 
-    def _lookup_outputs_for_get(self, ctx: Any, key: str) -> Tuple[list, bytes]:  # NOSONAR - Complexity (67), requires refactoring
+    def _lookup_outputs_for_get(
+        self, ctx: Any, key: str
+    ) -> tuple[list, bytes]:  # NOSONAR - Complexity (67), requires refactoring
         # Fast-path: return locally cached BEEF right after set
         cached = self._recent_beef_by_key.get(key)
         if cached:
@@ -249,7 +259,12 @@ class LocalKVStore(KVStoreInterface):
         try:
             ca_args = self._merge_default_ca(None)
             pd_opts = ca_args.get("pushdrop") or {}
-            prot = ca_args.get("protocol_id") or ca_args.get("protocolID") or pd_opts.get("protocol_id") or pd_opts.get("protocolID")
+            prot = (
+                ca_args.get("protocol_id")
+                or ca_args.get("protocolID")
+                or pd_opts.get("protocol_id")
+                or pd_opts.get("protocolID")
+            )
             kid = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
             cpty = ca_args.get("counterparty") or pd_opts.get("counterparty")
             if prot is not None:
@@ -277,27 +292,43 @@ class LocalKVStore(KVStoreInterface):
                 # Re-derive defaults
                 ca_args = self._merge_default_ca(None)
                 pd_opts = ca_args.get("pushdrop") or {}
-                prot = ca_args.get("protocol_id") or ca_args.get("protocolID") or pd_opts.get("protocol_id") or pd_opts.get("protocolID")
+                prot = (
+                    ca_args.get("protocol_id")
+                    or ca_args.get("protocolID")
+                    or pd_opts.get("protocol_id")
+                    or pd_opts.get("protocolID")
+                )
                 kid = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
                 cpty = ca_args.get("counterparty") or pd_opts.get("counterparty")
 
-                from bsv.wallet.key_deriver import Protocol
+                import requests
+
+                from bsv.beef import build_beef_v2_from_raw_hexes
                 from bsv.transaction import Transaction
                 from bsv.utils import Reader
-                from bsv.beef import build_beef_v2_from_raw_hexes
-                import requests
+                from bsv.wallet.key_deriver import Protocol
 
                 # Derive KV public key
                 protocol_obj = None
                 if prot is not None:
-                    protocol_obj = Protocol(prot.get("securityLevel", 0), prot.get("protocol", "")) if isinstance(prot, dict) else prot
-                cp_norm = self._wallet._normalize_counterparty(cpty) if hasattr(self._wallet, "_normalize_counterparty") else None
+                    protocol_obj = (
+                        Protocol(prot.get("securityLevel", 0), prot.get("protocol", ""))
+                        if isinstance(prot, dict)
+                        else prot
+                    )
+                cp_norm = (
+                    self._wallet._normalize_counterparty(cpty)
+                    if hasattr(self._wallet, "_normalize_counterparty")
+                    else None
+                )
                 derived_pub = None
                 derived_addr = None
                 derived_pub_hex = None
                 if protocol_obj is not None and kid is not None:
                     try:
-                        derived_pub = self._wallet.key_deriver.derive_public_key(protocol_obj, kid, cp_norm, for_self=False)
+                        derived_pub = self._wallet.key_deriver.derive_public_key(
+                            protocol_obj, kid, cp_norm, for_self=False
+                        )
                         derived_addr = derived_pub.address()
                         derived_pub_hex = derived_pub.hex()
                     except Exception:
@@ -309,7 +340,7 @@ class LocalKVStore(KVStoreInterface):
                     master_addr = None
 
                 # Scan candidates in the order: master -> context(if address) -> derived
-                candidates: List[Tuple[str, str, Optional[str]]] = []
+                candidates: list[tuple[str, str, str | None]] = []
                 if master_addr:
                     candidates.append(("master", master_addr, derived_pub_hex))
                 # Optional: if LocalKVStore.context is an address distinct from above, include it
@@ -327,8 +358,8 @@ class LocalKVStore(KVStoreInterface):
                 woc_api = os.environ.get("WOC_API_KEY") or ""
                 headers = {"Authorization": woc_api, "woc-api-key": woc_api} if woc_api else {}
                 timeout = int(os.getenv("WOC_TIMEOUT", "10"))
-                matched_outputs: List[dict] = []
-                matched_tx_hexes: List[str] = []
+                matched_outputs: list[dict] = []
+                matched_tx_hexes: list[str] = []
                 seen_txids: set = set()
 
                 for _label, addr, pub_hex in candidates:
@@ -348,41 +379,45 @@ class LocalKVStore(KVStoreInterface):
         return outputs, beef_bytes
 
     def _scan_address_for_pushdrop_outputs(
-        self, addr: str, pub_hex: str, headers: dict, timeout: int,
-        seen_txids: set, matched_outputs: list, matched_tx_hexes: list
+        self,
+        addr: str,
+        pub_hex: str,
+        headers: dict,
+        timeout: int,
+        seen_txids: set,
+        matched_outputs: list,
+        matched_tx_hexes: list,
     ) -> None:
         """Scan a WOC address for PushDrop outputs matching the given public key."""
         try:
             txs = self._fetch_address_history(addr, headers, timeout)
             if txs is None:
                 return
-            
+
             txids = self._extract_txids_from_history(txs)
             for txid in [x for x in txids if x][:50]:
                 if txid in seen_txids:
                     continue
                 seen_txids.add(txid)
-                
+
                 rawtx = self._fetch_raw_transaction(txid, headers, timeout)
                 if not rawtx:
                     continue
-                
-                self._process_transaction_for_pushdrop(
-                    txid, rawtx, pub_hex, addr, matched_outputs, matched_tx_hexes
-                )
+
+                self._process_transaction_for_pushdrop(txid, rawtx, pub_hex, addr, matched_outputs, matched_tx_hexes)
         except Exception as e_addr_loop:
             print(f"[KV WOC] address loop error for {addr}: {e_addr_loop}")
 
     def _fetch_address_history(self, addr: str, headers: dict, timeout: int):
         """Fetch transaction history for an address from WOC."""
         import requests
-        
+
         base = f"https://api.whatsonchain.com/v1/bsv/main/address/{addr}"
         hist_endpoints = [
             f"{base}/confirmed/history",
             f"{base}/history",
-        ] + [f"{base}/txs/{p}" for p in range(0, 3)]
-        
+        ] + [f"{base}/txs/{p}" for p in range(3)]
+
         for hist_url in hist_endpoints:
             try:
                 print(f"[KV WOC] try history endpoint: {hist_url}")
@@ -396,7 +431,7 @@ class LocalKVStore(KVStoreInterface):
                     return txs
             except Exception:
                 continue
-        
+
         # Fallback to UTXO endpoint
         return self._fetch_address_utxos(base, headers, timeout)
 
@@ -412,7 +447,7 @@ class LocalKVStore(KVStoreInterface):
     def _fetch_address_utxos(self, base_url: str, headers: dict, timeout: int):
         """Fetch UTXOs as a fallback for transaction history."""
         import requests
-        
+
         utxo_url = f"{base_url}/unspent"
         try:
             print(f"[KV WOC] fallback to UTXO endpoint: {utxo_url}")
@@ -436,13 +471,13 @@ class LocalKVStore(KVStoreInterface):
     def _fetch_raw_transaction(self, txid: str, headers: dict, timeout: int):
         """Fetch raw transaction hex from WOC."""
         import requests
-        
+
         raw_candidates = [
             f"https://api.whatsonchain.com/v1/bsv/main/tx/{txid}/hex",
             f"https://api.whatsonchain.com/v1/bsv/main/tx/{txid}",
             f"https://api.whatsonchain.com/v1/bsv/main/tx/raw/{txid}",
         ]
-        
+
         for raw_url in raw_candidates:
             try:
                 print(f"[KV WOC] try tx endpoint: {raw_url}")
@@ -450,51 +485,52 @@ class LocalKVStore(KVStoreInterface):
                 if rr.status_code == 404:
                     continue
                 rr.raise_for_status()
-                
+
                 ctype = rr.headers.get("Content-Type", "")
                 if "application/json" in ctype:
                     jd = rr.json() or {}
                     rawtx = jd.get("hex") or jd.get("rawtx") or jd.get("data")
                 else:
                     rawtx = rr.text.strip()
-                
+
                 if isinstance(rawtx, str) and len(rawtx) >= 2:
                     return rawtx
             except Exception:
                 continue
-        
+
         print(f"[KV WOC] raw fetch failed for {txid}")
         return None
 
     def _process_transaction_for_pushdrop(
-        self, txid: str, rawtx: str, pub_hex: str, addr: str,
-        matched_outputs: list, matched_tx_hexes: list
+        self, txid: str, rawtx: str, pub_hex: str, addr: str, matched_outputs: list, matched_tx_hexes: list
     ) -> None:
         """Process a transaction to find PushDrop outputs for the given public key."""
         from bsv.transaction import Transaction
         from bsv.utils import Reader
-        
+
         try:
             tx = Transaction.from_reader(Reader(bytes.fromhex(rawtx)))
         except Exception as e:
             print(f"[KV WOC] tx parse failed for {txid}: {e}")
             return
-        
+
         for vout_idx, out in enumerate(tx.outputs):
             try:
                 ls_bytes = out.locking_script.to_bytes()
                 if self._is_pushdrop_for_pub(ls_bytes, pub_hex):
-                    matched_outputs.append({
-                        "outputIndex": vout_idx,
-                        "satoshis": out.satoshis,
-                        "lockingScript": ls_bytes.hex(),
-                        "spendable": True,
-                        "outputDescription": "WOC scan (PushDrop)",
-                        "basket": addr,
-                        "tags": [],
-                        "customInstructions": None,
-                        "txid": tx.txid(),
-                    })
+                    matched_outputs.append(
+                        {
+                            "outputIndex": vout_idx,
+                            "satoshis": out.satoshis,
+                            "lockingScript": ls_bytes.hex(),
+                            "spendable": True,
+                            "outputDescription": "WOC scan (PushDrop)",
+                            "basket": addr,
+                            "tags": [],
+                            "customInstructions": None,
+                            "txid": tx.txid(),
+                        }
+                    )
                     matched_tx_hexes.append(rawtx)
                     break
             except Exception as e:
@@ -506,6 +542,7 @@ class LocalKVStore(KVStoreInterface):
             if not isinstance(addr, str) or len(addr) < 26 or len(addr) > 50:
                 return False
             from bsv.utils.base58_utils import from_base58_check
+
             _ = from_base58_check(addr)
             return True
         except Exception:
@@ -517,6 +554,7 @@ class LocalKVStore(KVStoreInterface):
             return locking_script
         try:
             from bsv.transaction import parse_beef_ex
+
             beef, subject, last_tx = parse_beef_ex(beef_bytes)
             txid_hint = output.get("txid")
             match_tx = self._find_tx_by_subject(beef, subject)
@@ -541,7 +579,7 @@ class LocalKVStore(KVStoreInterface):
         if not subject:
             return None
         btxs = beef.find_transaction(subject)
-        if btxs and getattr(btxs, 'tx_obj', None):
+        if btxs and getattr(btxs, "tx_obj", None):
             return btxs.tx_obj
         return None
 
@@ -549,7 +587,7 @@ class LocalKVStore(KVStoreInterface):
         if not (txid_hint and isinstance(txid_hint, str)):
             return None
         btx = beef.find_transaction(txid_hint)
-        if btx and getattr(btx, 'tx_obj', None):
+        if btx and getattr(btx, "tx_obj", None):
             return btx.tx_obj
         return None
 
@@ -558,7 +596,7 @@ class LocalKVStore(KVStoreInterface):
             raise ErrInvalidKey(KEY_EMPTY_MSG)
         if not value:
             raise ErrInvalidValue("Value cannot be empty")
-        
+
         self._acquire_key_lock(key)
         try:
             return self._execute_set_operation(ctx, key, value, ca_args)
@@ -569,31 +607,33 @@ class LocalKVStore(KVStoreInterface):
         """Execute the set operation with all required steps."""
         ca_args = self._merge_default_ca(ca_args)
         print(f"[TRACE] [set] ca_args: {ca_args}")
-        
+
         # Prepare transaction components
         outs, input_beef = self._lookup_outputs_for_set(ctx, key, ca_args)
         locking_script = self._build_locking_script(ctx, key, value, ca_args)
         inputs_meta = self._prepare_inputs_meta(key, outs, ca_args)
         print(f"[TRACE] [set] inputs_meta after _prepare_inputs_meta: {inputs_meta}")
-        
+
         # Create and sign transaction
         create_args = self._build_create_action_args_set(key, value, locking_script, inputs_meta, input_beef, ca_args)
         create_args["inputs"] = inputs_meta
         if ca_args and "use_woc" in ca_args:
             create_args["use_woc"] = ca_args["use_woc"]
-        
+
         ca = self._wallet.create_action(create_args, self._originator) or {}
         signable = (ca.get("signableTransaction") or {}) if isinstance(ca, dict) else {}
         signable_tx_bytes = signable.get("tx") or b""
-        
+
         signed_tx_bytes = None
         if inputs_meta:
-            signed_tx_bytes = self._sign_and_relinquish_set(ctx, key, outs, inputs_meta, signable, signable_tx_bytes, input_beef)
-        
+            signed_tx_bytes = self._sign_and_relinquish_set(
+                ctx, key, outs, inputs_meta, signable, signable_tx_bytes, input_beef
+            )
+
         # Cache BEEF for immediate retrieval
         tx_bytes = signed_tx_bytes or signable_tx_bytes
         self._build_and_cache_beef(key, locking_script, tx_bytes)
-        
+
         # Broadcast and return result
         self._wallet.internalize_action({"tx": tx_bytes}, self._originator)
         return self._extract_txid_from_bytes(tx_bytes, key)
@@ -602,27 +642,32 @@ class LocalKVStore(KVStoreInterface):
         """Build BEEF from transaction and cache it for immediate retrieval."""
         try:
             import binascii
+
             from bsv.beef import build_beef_v2_from_raw_hexes
-            from bsv.transaction import Transaction, TransactionOutput
             from bsv.script.script import Script
+            from bsv.transaction import Transaction, TransactionOutput
             from bsv.utils import Reader
-            
+
             tx, tx_hex = self._parse_or_create_transaction(tx_bytes, locking_script)
             beef_now = build_beef_v2_from_raw_hexes([tx_hex]) if tx_hex else b""
-            
+
             if beef_now:
-                locking_script_hex = locking_script.hex() if isinstance(locking_script, (bytes, bytearray)) else str(locking_script)
-                recent_outs = [{
-                    "outputIndex": 0,
-                    "satoshis": 1,
-                    "lockingScript": locking_script_hex,
-                    "spendable": True,
-                    "outputDescription": "KV set (local)",
-                    "basket": self._context,
-                    "tags": [key, "kv", "set"],
-                    "customInstructions": None,
-                    "txid": tx.txid() if hasattr(tx, "txid") else "",
-                }]
+                locking_script_hex = (
+                    locking_script.hex() if isinstance(locking_script, (bytes, bytearray)) else str(locking_script)
+                )
+                recent_outs = [
+                    {
+                        "outputIndex": 0,
+                        "satoshis": 1,
+                        "lockingScript": locking_script_hex,
+                        "spendable": True,
+                        "outputDescription": "KV set (local)",
+                        "basket": self._context,
+                        "tags": [key, "kv", "set"],
+                        "customInstructions": None,
+                        "txid": tx.txid() if hasattr(tx, "txid") else "",
+                    }
+                ]
                 self._recent_beef_by_key[key] = (recent_outs, beef_now)
         except Exception as e_beef:
             print(f"[KV set] build immediate BEEF failed: {e_beef}")
@@ -630,10 +675,11 @@ class LocalKVStore(KVStoreInterface):
     def _parse_or_create_transaction(self, tx_bytes: bytes, locking_script: bytes):
         """Parse transaction from bytes or create a minimal transaction."""
         import binascii
-        from bsv.transaction import Transaction, TransactionOutput
+
         from bsv.script.script import Script
+        from bsv.transaction import Transaction, TransactionOutput
         from bsv.utils import Reader
-        
+
         if tx_bytes:
             try:
                 tx = Transaction.from_reader(Reader(tx_bytes))
@@ -641,13 +687,15 @@ class LocalKVStore(KVStoreInterface):
                 return tx, tx_hex
             except Exception:
                 pass
-        
+
         # Fallback: synthesize a minimal transaction
         try:
-            ls_bytes = locking_script if isinstance(locking_script, (bytes, bytearray)) else bytes.fromhex(str(locking_script))
+            ls_bytes = (
+                locking_script if isinstance(locking_script, (bytes, bytearray)) else bytes.fromhex(str(locking_script))
+            )
         except Exception:
             ls_bytes = b""
-        
+
         tx = Transaction()
         tx.outputs = [TransactionOutput(Script(ls_bytes), 1)]
         tx_hex = tx.serialize().hex()
@@ -658,6 +706,7 @@ class LocalKVStore(KVStoreInterface):
         try:
             from bsv.transaction import Transaction
             from bsv.utils import Reader
+
             if tx_bytes:
                 tx = Transaction.from_reader(Reader(tx_bytes))
                 return f"{tx.txid()}.0"
@@ -665,22 +714,16 @@ class LocalKVStore(KVStoreInterface):
             pass
         return f"{key}.0"
 
-    def _build_locking_script(self, ctx: Any, key: str, value: str, ca_args: dict = None) -> str:  # NOSONAR - Complexity (17), requires refactoring
+    def _build_locking_script(
+        self, ctx: Any, key: str, value: str, ca_args: dict = None
+    ) -> str:  # NOSONAR - Complexity (17), requires refactoring
         ca_args = self._merge_default_ca(ca_args)
-        
+
         # Encrypt the value if encryption is enabled
         if self._encrypt:
             # Use the same encryption args as for PushDrop; default-derive if missing
-            protocol_id = (
-                ca_args.get("protocol_id")
-                or ca_args.get("protocolID")
-                or self._get_protocol(key)
-            )
-            key_id = (
-                ca_args.get("key_id")
-                or ca_args.get("keyID")
-                or key
-            )
+            protocol_id = ca_args.get("protocol_id") or ca_args.get("protocolID") or self._get_protocol(key)
+            key_id = ca_args.get("key_id") or ca_args.get("keyID") or key
             # CounterpartyType: SELF=2, ANYONE=1, OTHER=3, UNINITIALIZED=0
             counterparty = ca_args.get("counterparty") or {"type": 2}  # Default to SELF (2)
 
@@ -693,29 +736,27 @@ class LocalKVStore(KVStoreInterface):
                         "protocolID": protocol_id,
                         "keyID": key_id,
                         "counterparty": counterparty,
-                        "forSelf": is_self
+                        "forSelf": is_self,
                     },
-                    "plaintext": value.encode('utf-8')
+                    "plaintext": value.encode("utf-8"),
                 }
                 encrypt_result = self._wallet.encrypt(encrypt_args, self._originator)
                 if "ciphertext" in encrypt_result:
                     ciphertext = encrypt_result["ciphertext"]
                     # Convert list of ints to bytes if needed (wallet.encrypt returns list)
-                    if isinstance(ciphertext, list):
-                        field_bytes = bytes(ciphertext)
-                    elif isinstance(ciphertext, (bytes, bytearray)):
+                    if isinstance(ciphertext, (list, bytes, bytearray)):
                         field_bytes = bytes(ciphertext)
                     else:
-                        field_bytes = value.encode('utf-8')
+                        field_bytes = value.encode("utf-8")
                 else:
                     # Fallback to plaintext if encryption fails
-                    field_bytes = value.encode('utf-8')
+                    field_bytes = value.encode("utf-8")
             else:
                 # No encryption keys available, use plaintext
-                field_bytes = value.encode('utf-8')
+                field_bytes = value.encode("utf-8")
         else:
-            field_bytes = value.encode('utf-8')
-            
+            field_bytes = value.encode("utf-8")
+
         fields = [field_bytes]
         pd_opts = ca_args.get("pushdrop") or {}
         protocol_id = (
@@ -724,12 +765,7 @@ class LocalKVStore(KVStoreInterface):
             or pd_opts.get("protocol_id")
             or pd_opts.get("protocolID")
         )
-        key_id = (
-            ca_args.get("key_id")
-            or ca_args.get("keyID")
-            or pd_opts.get("key_id")
-            or pd_opts.get("keyID")
-        )
+        key_id = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
         counterparty = ca_args.get("counterparty", pd_opts.get("counterparty"))
         pd = PushDrop(self._wallet, self._originator)
         return pd.lock(
@@ -742,7 +778,7 @@ class LocalKVStore(KVStoreInterface):
             lock_position="before",
         )
 
-    def _lookup_outputs_for_set(self, _ctx: Any, key: str, ca_args: Optional[dict] = None) -> Tuple[list, bytes]:
+    def _lookup_outputs_for_set(self, _ctx: Any, key: str, ca_args: dict | None = None) -> tuple[list, bytes]:
         ca_args = self._merge_default_ca(ca_args)
         address = self._context
         # Preserve original behaviour (basket/tags) and pass-through ca_args for optional derived lookup
@@ -754,7 +790,12 @@ class LocalKVStore(KVStoreInterface):
         }
         # Non-intrusive: forward protocolID/keyID/counterparty only if present
         pd_opts = ca_args.get("pushdrop") or {}
-        prot = ca_args.get("protocol_id") or ca_args.get("protocolID") or pd_opts.get("protocol_id") or pd_opts.get("protocolID")
+        prot = (
+            ca_args.get("protocol_id")
+            or ca_args.get("protocolID")
+            or pd_opts.get("protocol_id")
+            or pd_opts.get("protocolID")
+        )
         kid = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
         cpty = ca_args.get("counterparty") or pd_opts.get("counterparty")
         if prot is not None:
@@ -774,14 +815,21 @@ class LocalKVStore(KVStoreInterface):
                 input_beef = b""
         return outs, input_beef
 
-    def _build_create_action_args_set(self, key: str, value: str, locking_script: bytes, inputs_meta: list, input_beef: bytes, ca_args: dict = None) -> dict:
+    def _build_create_action_args_set(
+        self, key: str, value: str, locking_script: bytes, inputs_meta: list, input_beef: bytes, ca_args: dict = None
+    ) -> dict:
         ca_args = self._merge_default_ca(ca_args)
         pd_opts = ca_args.get("pushdrop") or {}
-        protocol_id = ca_args.get("protocol_id") or ca_args.get("protocolID") or pd_opts.get("protocol_id") or pd_opts.get("protocolID")
+        protocol_id = (
+            ca_args.get("protocol_id")
+            or ca_args.get("protocolID")
+            or pd_opts.get("protocol_id")
+            or pd_opts.get("protocolID")
+        )
         key_id = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
         counterparty = ca_args.get("counterparty", pd_opts.get("counterparty"))
         fee_rate = ca_args.get("feeRate", ca_args.get("fee_rate", self._default_fee_rate))
-        fields = [value.encode('utf-8')]
+        fields = [value.encode("utf-8")]
         # locking_script: always hex string for Go/TS parity
         if isinstance(locking_script, bytes):
             locking_script_hex = locking_script.hex()
@@ -809,7 +857,9 @@ class LocalKVStore(KVStoreInterface):
                     "satoshis": 1,
                     "tags": [key, "kv", "set"],
                     "basket": self._context,
-                    "outputDescription": ({"retentionSeconds": self._retention_period} if int(self._retention_period or 0) > 0 else "")
+                    "outputDescription": (
+                        {"retentionSeconds": self._retention_period} if int(self._retention_period or 0) > 0 else ""
+                    ),
                 }
             ],
             "feeRate": fee_rate,
@@ -819,7 +869,16 @@ class LocalKVStore(KVStoreInterface):
             },
         }
 
-    def _sign_and_relinquish_set(self, _ctx: Any, key: str, outs: list, inputs_meta: list, signable: dict, signable_tx_bytes: bytes, input_beef: bytes) -> Optional[bytes]:
+    def _sign_and_relinquish_set(
+        self,
+        _ctx: Any,
+        key: str,
+        outs: list,
+        inputs_meta: list,
+        signable: dict,
+        signable_tx_bytes: bytes,
+        input_beef: bytes,
+    ) -> bytes | None:
         spends = self._prepare_spends(key, inputs_meta, signable_tx_bytes, input_beef)
         try:
             spends_str_keys = {str(int(k)): v for k, v in (spends or {}).items()}
@@ -829,28 +888,35 @@ class LocalKVStore(KVStoreInterface):
                     "reference": signable.get("reference") or b"",
                     "tx": signable_tx_bytes,
                 },
-                self._originator
+                self._originator,
             )
             return (res or {}).get("tx") if isinstance(res, dict) else None
         except Exception:
             for o in outs:
                 try:
-                    self._wallet.relinquish_output({
-                        "basket": self._context,
-                        "output": {
-                            "txid": bytes.fromhex(o.get("txid", "00" * 32)) if isinstance(o.get("txid"), str) else (o.get("txid") or b"\x00" * 32),
-                            "index": int(o.get("outputIndex", 0)),
-                        }
-                    }, self._originator)
+                    self._wallet.relinquish_output(
+                        {
+                            "basket": self._context,
+                            "output": {
+                                "txid": (
+                                    bytes.fromhex(o.get("txid", "00" * 32))
+                                    if isinstance(o.get("txid"), str)
+                                    else (o.get("txid") or b"\x00" * 32)
+                                ),
+                                "index": int(o.get("outputIndex", 0)),
+                            },
+                        },
+                        self._originator,
+                    )
                 except Exception:
                     pass
             return None
 
-    def remove(self, ctx: Any, key: str) -> List[str]:  # NOSONAR - Complexity (17), requires refactoring
+    def remove(self, ctx: Any, key: str) -> list[str]:  # NOSONAR - Complexity (17), requires refactoring
         if not key:
             raise ErrInvalidKey(KEY_EMPTY_MSG)
         self._acquire_key_lock(key)
-        removed: List[str] = []
+        removed: list[str] = []
         loop_guard = 0
         last_count = None
         try:
@@ -879,13 +945,19 @@ class LocalKVStore(KVStoreInterface):
         finally:
             self._release_key_lock(key)
 
-    def _lookup_outputs_for_remove(self, _ctx: Any, key: str) -> Tuple[list, bytes, Optional[int]]:
-        lo = self._wallet.list_outputs({
-            "basket": self._context,
-            "tags": [key],
-            "include": ENTIRE_TXS,
-            "limit": 100,
-        }, self._originator) or {}
+    def _lookup_outputs_for_remove(self, _ctx: Any, key: str) -> tuple[list, bytes, int | None]:
+        lo = (
+            self._wallet.list_outputs(
+                {
+                    "basket": self._context,
+                    "tags": [key],
+                    "include": ENTIRE_TXS,
+                    "limit": 100,
+                },
+                self._originator,
+            )
+            or {}
+        )
         outs = lo.get("outputs") or []
         input_beef = lo.get("BEEF") or b""
         total_outputs = None
@@ -903,16 +975,20 @@ class LocalKVStore(KVStoreInterface):
                 input_beef = b""
         return outs, input_beef, total_outputs
 
-    def _onchain_remove_flow(self, _ctx: Any, key: str, inputs_meta: list, input_beef: bytes) -> Optional[str]:
-        ca_res = self._wallet.create_action({
-            "labels": ["kv", "remove"],
-            "description": f"kvstore remove {key}",
-            "inputs": inputs_meta,
-            "inputBEEF": input_beef,
-            "options": {
-                "acceptDelayedBroadcast": self._accept_delayed_broadcast
-            },
-        }, self._originator) or {}
+    def _onchain_remove_flow(self, _ctx: Any, key: str, inputs_meta: list, input_beef: bytes) -> str | None:
+        ca_res = (
+            self._wallet.create_action(
+                {
+                    "labels": ["kv", "remove"],
+                    "description": f"kvstore remove {key}",
+                    "inputs": inputs_meta,
+                    "inputBEEF": input_beef,
+                    "options": {"acceptDelayedBroadcast": self._accept_delayed_broadcast},
+                },
+                self._originator,
+            )
+            or {}
+        )
         signable = (ca_res.get("signableTransaction") or {}) if isinstance(ca_res, dict) else {}
         signable_tx_bytes = signable.get("tx") or b""
         reference = signable.get("reference") or b""
@@ -920,11 +996,14 @@ class LocalKVStore(KVStoreInterface):
         spends_str = {str(int(k)): v for k, v in (spends or {}).items()}
         res = self._wallet.sign_action({"spends": spends_str, "reference": reference}, self._originator) or {}
         signed_tx_bytes = res.get("tx") if isinstance(res, dict) else None
-        internalize_result = self._wallet.internalize_action({"tx": signed_tx_bytes or signable_tx_bytes}, self._originator)
+        internalize_result = self._wallet.internalize_action(
+            {"tx": signed_tx_bytes or signable_tx_bytes}, self._originator
+        )
         parsed_txid = None
         try:
             from bsv.transaction import Transaction
             from bsv.utils import Reader
+
             tx_bytes_final = signed_tx_bytes or signable_tx_bytes
             if tx_bytes_final:
                 t = Transaction.from_reader(Reader(tx_bytes_final))
@@ -965,14 +1044,19 @@ class LocalKVStore(KVStoreInterface):
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_unimplemented_features(cls) -> List[str]:  # NOSONAR - Complexity (19), requires refactoring
+    def get_unimplemented_features(cls) -> list[str]:  # NOSONAR - Complexity (19), requires refactoring
         """Return a *copy* of the list enumerating missing capabilities."""
         return list(cls._UNIMPLEMENTED)
 
     def _extract_protocol_params(self, ca_args: dict) -> tuple:
         """Extract protocol, key_id, and counterparty from create_action args."""
         pd_opts = ca_args.get("pushdrop") or {}
-        protocol = ca_args.get("protocol_id") or ca_args.get("protocolID") or pd_opts.get("protocol_id") or pd_opts.get("protocolID")
+        protocol = (
+            ca_args.get("protocol_id")
+            or ca_args.get("protocolID")
+            or pd_opts.get("protocol_id")
+            or pd_opts.get("protocolID")
+        )
         key_id = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
         counterparty = ca_args.get("counterparty", pd_opts.get("counterparty"))
         return protocol, key_id, counterparty
@@ -993,19 +1077,19 @@ class LocalKVStore(KVStoreInterface):
             "txid": txid_hex,
             "index": int(output.get("outputIndex", 0)),
         }
-        
+
         try:
             max_len = unlocker.estimate_length()
         except Exception:
             max_len = 73 + 2
-        
+
         meta = {
             "outpoint": outpoint,
             "unlockingScriptLength": max_len,
             "inputDescription": output.get("outputDescription", "Previous key-value token"),
             "sequenceNumber": 0,
         }
-        
+
         # Add optional derived key parameters
         if protocol is not None:
             meta["protocol"] = protocol
@@ -1013,21 +1097,21 @@ class LocalKVStore(KVStoreInterface):
             meta["key_id"] = key_id
         if counterparty is not None:
             meta["counterparty"] = counterparty
-        
+
         return meta
 
     def _prepare_inputs_meta(self, key: str, outs: list, ca_args: dict = None) -> list:
         """Prepare the inputs metadata for set/remove operation (Go/TS parity)."""
         ca_args = self._merge_default_ca(ca_args)
         protocol, key_id, counterparty = self._extract_protocol_params(ca_args)
-        
+
         print(f"[TRACE] [_prepare_inputs_meta] ca_args: {ca_args}")
         print(f"[TRACE] [_prepare_inputs_meta] protocol: {protocol}, key_id: {key_id}, counterparty: {counterparty}")
-        
+
         pd = PushDrop(self._wallet, self._originator)
         unlock_protocol = protocol if protocol is not None else self._get_protocol(key)
-        unlocker = pd.unlock(unlock_protocol, key, None, sign_outputs='all')  # None = SELF counterparty
-        
+        unlocker = pd.unlock(unlock_protocol, key, None, sign_outputs="all")  # None = SELF counterparty
+
         inputs_meta = []
         for o in outs:
             meta = self._create_input_meta(o, unlocker, protocol, key_id, counterparty)
@@ -1035,13 +1119,16 @@ class LocalKVStore(KVStoreInterface):
             inputs_meta.append(meta)
         return inputs_meta
 
-    def _prepare_spends(self, key, inputs_meta, signable_tx_bytes, input_beef):  # NOSONAR - Complexity (20), requires refactoring
+    def _prepare_spends(
+        self, key, inputs_meta, signable_tx_bytes, input_beef
+    ):  # NOSONAR - Complexity (20), requires refactoring
         """
         Prepare spends dict for sign_action: {idx: {"unlockingScript": ...}}
         Go/TS parity: use PushDrop unlocker and signable transaction.
         """
         from bsv.transaction import Transaction, parse_beef_ex
         from bsv.utils import Reader
+
         spends = {}
         # Try to link the signable tx using provided BEEF to ensure SourceTransaction is available
         try:
@@ -1061,7 +1148,7 @@ class LocalKVStore(KVStoreInterface):
         pd = PushDrop(self._wallet, self._originator)
         # Use default protocol for unlocking (GO pattern: protocol and key are separate)
         unlock_protocol = self._get_protocol(key)
-        unlocker = pd.unlock(unlock_protocol, key, None, sign_outputs='all')  # None = SELF counterparty
+        unlocker = pd.unlock(unlock_protocol, key, None, sign_outputs="all")  # None = SELF counterparty
         # Only prepare spends for inputs whose outpoint matches the tx input at the same index
         for idx, meta in enumerate(inputs_meta):
             try:
@@ -1074,10 +1161,10 @@ class LocalKVStore(KVStoreInterface):
                 tin = tx.inputs[idx]
                 txid_matches = False
                 try:
-                    txid_matches = (tin.source_txid == meta_txid)
+                    txid_matches = tin.source_txid == meta_txid
                 except Exception:
                     txid_matches = False
-                index_matches = (getattr(tin, "source_output_index", -1) == meta_index)
+                index_matches = getattr(tin, "source_output_index", -1) == meta_index
                 if not (txid_matches and index_matches):
                     continue
                 unlocking_script = unlocker.sign(tx, idx)
@@ -1093,8 +1180,9 @@ class LocalKVStore(KVStoreInterface):
     def _build_beef_v2_from_woc_outputs(self, outputs: list, timeout: int = 10) -> bytes:
         from bsv.beef import build_beef_v2_from_raw_hexes
         from bsv.network.woc_client import WOCClient
+
         # Collect unique txids present in outputs
-        txids: List[str] = []
+        txids: list[str] = []
         for o in outputs:
             txid = o.get("txid")
             if isinstance(txid, str) and len(txid) == 64 and txid != ("00" * 32):
@@ -1103,7 +1191,7 @@ class LocalKVStore(KVStoreInterface):
         if not txids:
             return b""
         client = WOCClient()
-        tx_hex_list: List[str] = []
+        tx_hex_list: list[str] = []
         for txid in txids:
             try:
                 h = client.get_tx_hex(txid, timeout=timeout)
@@ -1113,7 +1201,7 @@ class LocalKVStore(KVStoreInterface):
                 continue
         return build_beef_v2_from_raw_hexes(tx_hex_list)
 
-    def _is_pushdrop_for_pub(self, locking_script_bytes: bytes, pubkey_hex: Optional[str]) -> bool:
+    def _is_pushdrop_for_pub(self, locking_script_bytes: bytes, pubkey_hex: str | None) -> bool:
         """Rudimentary PushDrop detector: OP_PUSH33 <pubkey33> OP_CHECKSIG then data pushes + DROP.
 
         This is a heuristic sufficient to filter subject txs for KV get flows.
@@ -1136,14 +1224,14 @@ class LocalKVStore(KVStoreInterface):
             if not tail:
                 return False
             # Look for OP_DROP(0x75) or OP_2DROP(0x6d)
-            return (0x75 in tail) or (0x6d in tail)
+            return (0x75 in tail) or (0x6D in tail)
         except Exception:
             return False
 
     # ------------------------------
     # Merge helpers
     # ------------------------------
-    def _merge_default_ca(self, ca_args: Optional[dict]) -> dict:
+    def _merge_default_ca(self, ca_args: dict | None) -> dict:
         """Deep-merge config.default_ca into per-call ca_args. ca_args wins.
         Supports nested 'pushdrop' bag similar to TS/GO.
         """
@@ -1170,4 +1258,3 @@ class LocalKVStore(KVStoreInterface):
 
 ENTIRE_TXS = "entire transactions"
 KEY_EMPTY_MSG = "key cannot be empty"
-

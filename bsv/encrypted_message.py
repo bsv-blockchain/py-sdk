@@ -5,8 +5,9 @@ from Cryptodome.Cipher import AES
 from .keys import PrivateKey, PublicKey
 from .utils import randbytes
 
+
 class EncryptedMessage:
-    VERSION = bytes.fromhex('42421033')
+    VERSION = bytes.fromhex("42421033")
 
     @staticmethod
     def aes_gcm_encrypt(key: bytes, message: bytes) -> bytes:
@@ -22,8 +23,8 @@ class EncryptedMessage:
     @classmethod
     def encrypt(cls, message: bytes, sender: PrivateKey, recipient: PublicKey) -> bytes:
         key_id = randbytes(32)
-        key_id_base64 = b64encode(key_id).decode('ascii')
-        invoice_number = f'2-message encryption-{key_id_base64}'
+        key_id_base64 = b64encode(key_id).decode("ascii")
+        invoice_number = f"2-message encryption-{key_id_base64}"
         sender_child = sender.derive_child(recipient, invoice_number)
         recipient_child = recipient.derive_child(sender, invoice_number)
         shared_secret = sender_child.derive_shared_secret(recipient_child)
@@ -39,13 +40,13 @@ class EncryptedMessage:
             key_id = message[70:102]
             encrypted = message[102:]
             if version != cls.VERSION:
-                raise ValueError(f'message version mismatch, expected {cls.VERSION.hex()} but got {version.hex()}')
+                raise ValueError(f"message version mismatch, expected {cls.VERSION.hex()} but got {version.hex()}")
             if recipient_pubkey != recipient.public_key().serialize():
                 _expected = recipient.public_key().hex()
                 _actual = recipient_pubkey.hex()
-                raise ValueError(f'recipient public key mismatch, expected {_expected} but got {_actual}')
-            key_id_base64 = b64encode(key_id).decode('ascii')
-            invoice_number = f'2-message encryption-{key_id_base64}'
+                raise ValueError(f"recipient public key mismatch, expected {_expected} but got {_actual}")
+            key_id_base64 = b64encode(key_id).decode("ascii")
+            invoice_number = f"2-message encryption-{key_id_base64}"
             sender = PublicKey(sender_pubkey)
             sender_child = sender.derive_child(recipient, invoice_number)
             recipient_child = recipient.derive_child(sender, invoice_number)
@@ -53,4 +54,4 @@ class EncryptedMessage:
             symmetric_key = shared_secret[1:]
             return cls.aes_gcm_decrypt(symmetric_key, encrypted)
         except Exception as e:
-            raise ValueError(f'failed to decrypt message: {e}') from e
+            raise ValueError(f"failed to decrypt message: {e}") from e

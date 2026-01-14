@@ -1,22 +1,26 @@
 """
 Coverage tests for signature.py - untested branches.
 """
+
 import time
+
 import pytest
+
 from bsv.keys import PrivateKey
 
 # Constants
-TEST_MESSAGE = b'test message for signature coverage'
+TEST_MESSAGE = b"test message for signature coverage"
 
 
 # ========================================================================
 # Signature creation branches
 # ========================================================================
 
+
 def test_signature_creation():
     """Test creating signature."""
     priv = PrivateKey()
-    message = b'test message'
+    message = b"test message"
     signature = priv.sign(message)
     assert isinstance(signature, bytes)
     assert len(signature) > 0
@@ -25,14 +29,14 @@ def test_signature_creation():
 def test_signature_empty_message():
     """Test signing empty message."""
     priv = PrivateKey()
-    signature = priv.sign(b'')
+    signature = priv.sign(b"")
     assert isinstance(signature, bytes)
 
 
 def test_signature_large_message():
     """Test signing large message."""
     priv = PrivateKey()
-    large_msg = b'x' * 10000
+    large_msg = b"x" * 10000
     signature = priv.sign(large_msg)
     assert isinstance(signature, bytes)
 
@@ -41,60 +45,62 @@ def test_signature_large_message():
 # Signature verification branches
 # ========================================================================
 
+
 def test_signature_verification_valid():
     """Test verifying valid signature."""
     priv = PrivateKey()
     pub = priv.public_key()
-    message = b'test'
-    
+    message = b"test"
+
     signature = priv.sign(message)
     is_valid = pub.verify(signature, message)
-    assert is_valid == True
+    assert is_valid
 
 
 def test_signature_verification_invalid():
     """Test verifying invalid signature."""
     priv = PrivateKey()
     pub = priv.public_key()
-    message = b'test'
-    
-    wrong_signature = b'\x00' * 64
+    message = b"test"
+
+    wrong_signature = b"\x00" * 64
     is_valid = pub.verify(message, wrong_signature)
-    assert is_valid == False
+    assert not is_valid
 
 
 def test_signature_verification_wrong_message():
     """Test verifying with wrong message."""
     priv = PrivateKey()
     pub = priv.public_key()
-    
-    signature = priv.sign(b'original')
-    is_valid = pub.verify(b'modified', signature)
-    assert is_valid == False
+
+    signature = priv.sign(b"original")
+    is_valid = pub.verify(b"modified", signature)
+    assert not is_valid
 
 
 def test_signature_verification_wrong_key():
     """Test verifying with wrong public key."""
     priv1 = PrivateKey()
     priv2 = PrivateKey()
-    message = b'test'
-    
+    message = b"test"
+
     signature = priv1.sign(message)
     is_valid = priv2.public_key().verify(message, signature)
-    assert is_valid == False
+    assert not is_valid
 
 
 # ========================================================================
 # Recoverable signature branches
 # ========================================================================
 
+
 def test_signature_recoverable():
     """Test creating recoverable signature."""
     try:
         priv = PrivateKey()
-        message = b'test'
-        
-        if hasattr(priv, 'sign_recoverable'):
+        message = b"test"
+
+        if hasattr(priv, "sign_recoverable"):
             signature = priv.sign_recoverable(message)
             assert isinstance(signature, bytes)
     except AttributeError:
@@ -105,10 +111,11 @@ def test_signature_recovery():
     """Test recovering public key from signature."""
     try:
         from bsv.keys import recover_public_key
+
         priv = PrivateKey()
-        message = b'test'
-        
-        if hasattr(priv, 'sign_recoverable'):
+        message = b"test"
+
+        if hasattr(priv, "sign_recoverable"):
             signature = priv.sign_recoverable(message)
             recovered = recover_public_key(message, signature)
             assert recovered is not None
@@ -120,13 +127,14 @@ def test_signature_recovery():
 # DER encoding branches
 # ========================================================================
 
+
 def test_signature_der_encoding():
     """Test DER encoding of signature."""
     try:
         priv = PrivateKey()
-        message = b'test'
+        message = b"test"
         signature = priv.sign(message)
-        
+
         # Signature should already be DER encoded
         assert signature[0] == 0x30  # DER sequence tag
     except (AssertionError, IndexError):
@@ -138,14 +146,15 @@ def test_signature_der_encoding():
 # Edge cases
 # ========================================================================
 
+
 def test_signature_deterministic():
     """Test same message produces same signature (if deterministic)."""
-    priv = PrivateKey(b'\x01' * 32)
-    message = b'test'
-    
+    priv = PrivateKey(b"\x01" * 32)
+    message = b"test"
+
     sig1 = priv.sign(message)
     sig2 = priv.sign(message)
-    
+
     # RFC 6979 deterministic signatures should be equal
     assert sig1 == sig2
 
@@ -154,8 +163,8 @@ def test_different_messages_different_signatures():
     """Test different messages produce different signatures."""
     priv = PrivateKey()
 
-    sig1 = priv.sign(b'message1')
-    sig2 = priv.sign(b'message2')
+    sig1 = priv.sign(b"message1")
+    sig2 = priv.sign(b"message2")
 
     assert sig1 != sig2
 
@@ -163,6 +172,7 @@ def test_different_messages_different_signatures():
 # ========================================================================
 # Comprehensive error condition testing and branch coverage
 # ========================================================================
+
 
 def test_signature_verification_invalid_signature_formats():
     """Test signature verification with various invalid signature formats."""
@@ -198,7 +208,7 @@ def test_signature_verification_wrong_message():
     signature = priv.sign(message1)
 
     # Should fail verification with different message
-    assert pub.verify(signature, message2) == False
+    assert not pub.verify(signature, message2)
 
 
 def test_signature_verification_wrong_key():
@@ -211,7 +221,7 @@ def test_signature_verification_wrong_key():
     signature = priv1.sign(message)
 
     # Should fail verification with wrong key
-    assert pub2.verify(signature, message) == False
+    assert not pub2.verify(signature, message)
 
 
 def test_signature_creation_edge_cases():
@@ -230,7 +240,7 @@ def test_signature_creation_edge_cases():
     assert len(signature) > 0
 
     # Test with binary message containing null bytes
-    binary_message = b"\x00\x01\x02\x03\xFF\xFE\xFD\xFC"
+    binary_message = b"\x00\x01\x02\x03\xff\xfe\xfd\xfc"
     signature = priv.sign(binary_message)
     assert isinstance(signature, bytes)
     assert len(signature) > 0
@@ -245,17 +255,17 @@ def test_signature_verification_edge_cases():
     signature = priv.sign(message)
 
     # Test verification with None message (should work with default hasher)
-    assert pub.verify(signature, None) == True
+    assert pub.verify(signature, None)
 
     # Test with very long message
     long_message = b"\x00" * 100000
     long_signature = priv.sign(long_message)
-    assert pub.verify(long_signature, long_message) == True
+    assert pub.verify(long_signature, long_message)
 
     # Test with binary message
-    binary_message = b"\x00\x01\x02\x03\xFF\xFE\xFD\xFC"
+    binary_message = b"\x00\x01\x02\x03\xff\xfe\xfd\xfc"
     binary_signature = priv.sign(binary_message)
-    assert pub.verify(binary_signature, binary_message) == True
+    assert pub.verify(binary_signature, binary_message)
 
 
 def test_signature_deterministic_with_different_hashers():
@@ -294,17 +304,17 @@ def test_signature_verification_with_different_hashers():
 
         # Sign with hash256, verify with hash256
         sig1 = priv.sign(message, hash256)
-        assert pub.verify(sig1, message, hash256) == True
+        assert pub.verify(sig1, message, hash256)
 
         # Sign with sha256, verify with sha256
         sig2 = priv.sign(message, sha256)
-        assert pub.verify(sig2, message, sha256) == True
+        assert pub.verify(sig2, message, sha256)
 
         # Sign with hash256, verify with sha256 (should fail)
-        assert pub.verify(sig1, message, sha256) == False
+        assert not pub.verify(sig1, message, sha256)
 
         # Sign with sha256, verify with hash256 (should fail)
-        assert pub.verify(sig2, message, hash256) == False
+        assert not pub.verify(sig2, message, hash256)
 
     except ImportError:
         pytest.skip("Hash functions not available")
@@ -334,7 +344,7 @@ def test_signature_invalid_public_key_types():
     """Test _ verification with invalid public key types."""
     priv = PrivateKey()
     message = TEST_MESSAGE
-    signature = priv.sign(message)
+    priv.sign(message)
 
     # Test with None public key
     with pytest.raises(AttributeError):
@@ -344,7 +354,7 @@ def test_signature_invalid_public_key_types():
     # Test with invalid public key
     try:
         # Create invalid public key somehow
-        invalid_pub = type('MockPub', (), {'verify': lambda self, sig, msg: False})()
+        type("MockPub", (), {"verify": lambda self, sig, msg: False})()
         # This won't work but shows the intent
     except Exception:  # NOSONAR - intentional broad catch in test
         pass
@@ -405,5 +415,5 @@ def test_signature_memory_efficiency():
         end_time = time.time()
         duration = end_time - start_time
 
-        assert is_valid == True
+        assert is_valid
         assert duration < 5.0  # Should complete within reasonable time

@@ -4,11 +4,7 @@ Tests for overlay tools constants.
 Ported from TypeScript SDK.
 """
 
-from bsv.overlay_tools.constants import (
-    DEFAULT_SLAP_TRACKERS,
-    DEFAULT_TESTNET_SLAP_TRACKERS,
-    MAX_TRACKER_WAIT_TIME
-)
+from bsv.overlay_tools.constants import DEFAULT_SLAP_TRACKERS, DEFAULT_TESTNET_SLAP_TRACKERS, MAX_TRACKER_WAIT_TIME
 
 
 class TestOverlayConstants:

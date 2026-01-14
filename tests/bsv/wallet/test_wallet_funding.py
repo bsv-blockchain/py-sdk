@@ -99,5 +99,3 @@ def test_no_change_when_dust():
     # BSV does not have dust limits, so even small change outputs should be created
     assert chg is not None, "small change output should be created in BSV"
     assert int(chg.get("satoshis", 0)) > 0, "change should be positive"
-
-

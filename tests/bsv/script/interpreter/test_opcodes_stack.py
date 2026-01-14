@@ -9,17 +9,27 @@ References:
 - TypeScript SDK: ts-sdk/src/script/Spend.ts
 """
 
-from bsv.script.interpreter.operations import (
-    op_drop, op_dup, op_nip, op_over,
-    op_pick, op_roll, op_rot, op_swap,
-    op_tuck, op_2drop, op_2dup, op_ifdup,
-    op_depth, op_size
-)
-from bsv.script.interpreter.op_parser import ParsedOpcode
-from bsv.script.interpreter.stack import Stack
+from bsv.constants import OpCode
 from bsv.script.interpreter.config import BeforeGenesisConfig
 from bsv.script.interpreter.errs import ErrorCode
-from bsv.constants import OpCode
+from bsv.script.interpreter.op_parser import ParsedOpcode
+from bsv.script.interpreter.operations import (
+    op_2drop,
+    op_2dup,
+    op_depth,
+    op_drop,
+    op_dup,
+    op_ifdup,
+    op_nip,
+    op_over,
+    op_pick,
+    op_roll,
+    op_rot,
+    op_size,
+    op_swap,
+    op_tuck,
+)
+from bsv.script.interpreter.stack import Stack
 
 
 class MockThread:
@@ -134,7 +144,7 @@ class TestStackManipulationOpcodes:
         assert err is None
         assert self.thread.dstack.depth() == 3
         assert self.thread.dstack.pop_byte_array() == b"bottom"  # copied
-        assert self.thread.dstack.pop_byte_array() == b"top"     # original top
+        assert self.thread.dstack.pop_byte_array() == b"top"  # original top
         assert self.thread.dstack.pop_byte_array() == b"bottom"  # original bottom
 
     def test_op_swap_success(self):
@@ -150,7 +160,7 @@ class TestStackManipulationOpcodes:
         # Verify: items should be swapped
         assert err is None
         assert self.thread.dstack.depth() == 2
-        assert self.thread.dstack.pop_byte_array() == b"first"   # was second
+        assert self.thread.dstack.pop_byte_array() == b"first"  # was second
         assert self.thread.dstack.pop_byte_array() == b"second"  # was first
 
     def test_op_rot_success(self):
@@ -184,9 +194,9 @@ class TestStackManipulationOpcodes:
         # Verify: should be (top, bottom, top) - top item copied before second item
         assert err is None
         assert self.thread.dstack.depth() == 3
-        assert self.thread.dstack.pop_byte_array() == b"top"     # copied top
+        assert self.thread.dstack.pop_byte_array() == b"top"  # copied top
         assert self.thread.dstack.pop_byte_array() == b"bottom"  # original bottom
-        assert self.thread.dstack.pop_byte_array() == b"top"     # original top
+        assert self.thread.dstack.pop_byte_array() == b"top"  # original top
 
     def test_op_2drop_success(self):
         """Test OP_2DROP - removes top two stack items."""

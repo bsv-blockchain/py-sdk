@@ -4,12 +4,11 @@ BlockHeadersService chaintracker implementation.
 Ported from TypeScript SDK.
 """
 
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
 
 from ..chaintracker import ChainTracker
 from ..http_client import HttpClient, default_http_client
-
 
 # Constants
 CONTENT_TYPE_JSON = "application/json"
@@ -17,22 +16,23 @@ CONTENT_TYPE_JSON = "application/json"
 
 class BlockHeadersServiceError(Exception):
     """Base exception for BlockHeadersService errors."""
-    pass
+
 
 
 class MerkleRootVerificationError(BlockHeadersServiceError):
     """Exception raised when merkle root verification fails."""
-    pass
+
 
 
 class CurrentHeightError(BlockHeadersServiceError):
     """Exception raised when current height retrieval fails."""
-    pass
+
 
 
 @dataclass
 class BlockHeadersServiceConfig:
     """Configuration options for the BlockHeadersService ChainTracker."""
+
     http_client: Optional[HttpClient] = None
     api_key: Optional[str] = None
 
@@ -68,21 +68,13 @@ class BlockHeadersService(ChainTracker):
             "headers": {
                 "Content-Type": CONTENT_TYPE_JSON,
                 "Accept": CONTENT_TYPE_JSON,
-                "Authorization": f"Bearer {self.api_key}"
+                "Authorization": f"Bearer {self.api_key}",
             },
-            "data": [
-                {
-                    "blockHeight": height,
-                    "merkleRoot": root
-                }
-            ]
+            "data": [{"blockHeight": height, "merkleRoot": root}],
         }
 
         try:
-            response = await self.http_client.fetch(
-                f"{self.base_url}/api/v1/chain/merkleroot/verify",
-                request_options
-            )
+            response = await self.http_client.fetch(f"{self.base_url}/api/v1/chain/merkleroot/verify", request_options)
 
             if response.ok:
                 response_data = response.json()
@@ -96,7 +88,7 @@ class BlockHeadersService(ChainTracker):
             raise
         except Exception as error:
             raise MerkleRootVerificationError(
-                f"Failed to verify merkleroot for height {height} because of an error: {str(error)}"
+                f"Failed to verify merkleroot for height {height} because of an error: {error!s}"
             )
 
     async def current_height(self) -> int:
@@ -107,34 +99,22 @@ class BlockHeadersService(ChainTracker):
         """
         request_options = {
             "method": "GET",
-            "headers": {
-                "Accept": CONTENT_TYPE_JSON,
-                "Authorization": f"Bearer {self.api_key}"
-            }
+            "headers": {"Accept": CONTENT_TYPE_JSON, "Authorization": f"Bearer {self.api_key}"},
         }
 
         try:
-            response = await self.http_client.fetch(
-                f"{self.base_url}/api/v1/chain/tip/longest",
-                request_options
-            )
+            response = await self.http_client.fetch(f"{self.base_url}/api/v1/chain/tip/longest", request_options)
 
             if response.ok:
                 response_data = response.json()
                 if response_data and isinstance(response_data.get("data", {}).get("height"), int):
                     return response_data["data"]["height"]
                 else:
-                    raise CurrentHeightError(
-                        f"Failed to get current height because of an error: {response_data}"
-                    )
+                    raise CurrentHeightError(f"Failed to get current height because of an error: {response_data}")
             else:
-                raise CurrentHeightError(
-                    f"Failed to get current height because of an error: {response.json()}"
-                )
+                raise CurrentHeightError(f"Failed to get current height because of an error: {response.json()}")
 
         except CurrentHeightError:
             raise
         except Exception as error:
-            raise CurrentHeightError(
-                f"Failed to get current height because of an error: {str(error)}"
-            )
+            raise CurrentHeightError(f"Failed to get current height because of an error: {error!s}")

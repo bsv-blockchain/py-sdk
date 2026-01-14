@@ -8,7 +8,6 @@ from bsv.keys import PrivateKey
 class DummyTransport:
     def on_data(self, cb):
         self._cb = cb
-        return None
 
     def send(self, msg):
         return None
@@ -29,7 +28,11 @@ class WalletOK:
 
 
 def _make_peer():
-    return Peer(PeerOptions(wallet=WalletOK(PrivateKey(7201)), transport=DummyTransport(), session_manager=DefaultSessionManager()))
+    return Peer(
+        PeerOptions(
+            wallet=WalletOK(PrivateKey(7201)), transport=DummyTransport(), session_manager=DefaultSessionManager()
+        )
+    )
 
 
 def _make_cert(cert_type_b64: str, subject_hex: str, certifier_hex: str, fields: dict):
@@ -79,5 +82,3 @@ def test_validate_certificates_unrequested_certifier():
     requested = {"types": {t_req: ["f"]}, "certifiers": [certifier]}
     ok = peer._validate_certificates(certs, requested, expected_subject=PrivateKey(7222).public_key())
     assert ok is False
-
-

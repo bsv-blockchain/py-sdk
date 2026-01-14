@@ -1,5 +1,6 @@
 from enum import IntEnum
 
+
 class WalletWireCall(IntEnum):
     CREATE_ACTION = 1
     SIGN_ACTION = 2

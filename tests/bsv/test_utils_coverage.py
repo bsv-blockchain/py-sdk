@@ -2,12 +2,14 @@
 Additional tests to improve coverage for utility modules.
 """
 
-import pytest
 import base64
-from bsv.utils import Reader, Writer
-from bsv.utils.script import get_pushdata_code, encode_pushdata, encode_int
-from bsv.utils.encoding import BytesList, BytesHex, Bytes32Base64, Bytes33Hex, StringBase64, Signature
+
+import pytest
+
 from bsv.constants import OpCode
+from bsv.utils import Reader, Writer
+from bsv.utils.encoding import Bytes32Base64, Bytes33Hex, BytesHex, BytesList, Signature, StringBase64
+from bsv.utils.script import encode_int, encode_pushdata, get_pushdata_code
 
 
 class TestUtilsCoverage:
@@ -23,7 +25,7 @@ class TestUtilsCoverage:
         assert reader.read_bytes(7) == b", World"
 
         # Test reading uints
-        reader_small = Reader(b"\x01\x00\xFF\xFE")
+        reader_small = Reader(b"\x01\x00\xff\xfe")
         assert reader_small.read_uint8() == 1
         assert reader_small.read_uint8() == 0
         assert reader_small.read_uint16_le() == 0xFEFF  # Little endian
@@ -33,7 +35,7 @@ class TestUtilsCoverage:
         assert reader_varint.read_var_int_num() == 1
 
         # Test all integer reading methods
-        test_data = b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10"
+        test_data = b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10"
         reader_all = Reader(test_data)
 
         # Test signed/unsigned variants
@@ -70,9 +72,9 @@ class TestUtilsCoverage:
 
         # Test read_int method
         reader_int_big = Reader(b"\x01\x02\x03\x04")
-        assert reader_int_big.read_int(4, 'big') == 0x01020304
+        assert reader_int_big.read_int(4, "big") == 0x01020304
         reader_int_little = Reader(b"\x01\x02\x03\x04")
-        assert reader_int_little.read_int(4, 'little') == 0x04030201
+        assert reader_int_little.read_int(4, "little") == 0x04030201
 
         # Test read_reverse
         reader_rev = Reader(b"\x01\x02\x03\x04")
@@ -154,7 +156,7 @@ class TestUtilsCoverage:
 
         varint_large = Writer.var_int_num(1000)
         assert len(varint_large) == 3  # Should be \xfd + 2 bytes
-        assert varint_large[0] == 0xfd
+        assert varint_large[0] == 0xFD
 
         # Test method chaining (fluent interface)
         chained = Writer()
@@ -188,21 +190,21 @@ class TestConstantsCoverage:
     def test_op_values(self):
         """Test that all opcodes have valid values."""
         # Test some key opcodes
-        assert OpCode.OP_0.value == b'\x00'
-        assert OpCode.OP_1.value == b'\x51'
-        assert OpCode.OP_DUP.value == b'\x76'
-        assert OpCode.OP_EQUAL.value == b'\x87'
-        assert OpCode.OP_CHECKSIG.value == b'\xac'
+        assert OpCode.OP_0.value == b"\x00"
+        assert OpCode.OP_1.value == b"\x51"
+        assert OpCode.OP_DUP.value == b"\x76"
+        assert OpCode.OP_EQUAL.value == b"\x87"
+        assert OpCode.OP_CHECKSIG.value == b"\xac"
 
         # Test that opcodes can be created from bytes
-        assert OpCode(b'\x00') == OpCode.OP_0
-        assert OpCode(b'\x51') == OpCode.OP_1
+        assert OpCode(b"\x00") == OpCode.OP_0
+        assert OpCode(b"\x51") == OpCode.OP_1
 
     def test_op_names(self):
         """Test opcode name access."""
         # Test that names are accessible
-        assert hasattr(OpCode.OP_0, 'name')
-        assert hasattr(OpCode.OP_TRUE, 'name')  # OP_1 is aliased to OP_TRUE
+        assert hasattr(OpCode.OP_0, "name")
+        assert hasattr(OpCode.OP_TRUE, "name")  # OP_1 is aliased to OP_TRUE
 
         # Test string representation
         assert str(OpCode.OP_0) == "OpCode.OP_0"
@@ -214,7 +216,7 @@ class TestConstantsCoverage:
         data = b"hello"
         bytes_list = BytesList(data)
         json_str = bytes_list.to_json()
-        assert json_str == '[104, 101, 108, 108, 111]'
+        assert json_str == "[104, 101, 108, 108, 111]"
         restored = BytesList.from_json(json_str)
         assert restored == data
 
@@ -229,7 +231,7 @@ class TestConstantsCoverage:
         data_32 = b"a" * 32
         bytes_32 = Bytes32Base64(data_32)
         json_str = bytes_32.to_json()
-        expected_b64 = base64.b64encode(data_32).decode('ascii')
+        expected_b64 = base64.b64encode(data_32).decode("ascii")
         assert json_str == f'"{expected_b64}"'
         restored = Bytes32Base64.from_json(json_str)
         assert restored == data_32
@@ -253,7 +255,7 @@ class TestConstantsCoverage:
         # Test StringBase64
         test_bytes = b"test data"
         str_b64 = StringBase64.from_array(test_bytes)
-        assert str_b64 == base64.b64encode(test_bytes).decode('ascii')
+        assert str_b64 == base64.b64encode(test_bytes).decode("ascii")
         restored_bytes = str_b64.to_array()
         assert restored_bytes == test_bytes
 
@@ -261,6 +263,6 @@ class TestConstantsCoverage:
         sig_data = b"signature_bytes"
         sig = Signature(sig_data)
         json_str = sig.to_json()
-        assert json_str == '[115, 105, 103, 110, 97, 116, 117, 114, 101, 95, 98, 121, 116, 101, 115]'
+        assert json_str == "[115, 105, 103, 110, 97, 116, 117, 114, 101, 95, 98, 121, 116, 101, 115]"
         restored = Signature.from_json(json_str)
         assert restored.sig_bytes == sig_data

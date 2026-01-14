@@ -1,5 +1,5 @@
 def test_find_bump_returns_matching_bump():
-    from bsv.transaction.beef import Beef, BEEF_V2
+    from bsv.transaction.beef import BEEF_V2, Beef
     from bsv.transaction.beef_utils import find_bump
 
     class DummyBump:
@@ -15,17 +15,20 @@ def test_find_bump_returns_matching_bump():
 
 
 def test_add_computed_leaves_adds_row_node():
-    from bsv.transaction.beef import Beef, BEEF_V2
+    from bsv.transaction.beef import BEEF_V2, Beef
     from bsv.transaction.beef_utils import add_computed_leaves
 
     class DummyBump:
         def __init__(self, height, left_hash, right_hash):
             self.block_height = height
             # row0: two leaves with even offset 0 and odd offset 1
-            self.path = [[
-                {"offset": 0, "hash_str": left_hash},
-                {"offset": 1, "hash_str": right_hash},
-            ], []]  # row1: empty initially
+            self.path = [
+                [
+                    {"offset": 0, "hash_str": left_hash},
+                    {"offset": 1, "hash_str": right_hash},
+                ],
+                [],
+            ]  # row1: empty initially
 
     beef = Beef(version=BEEF_V2)
     left = "01" * 32
@@ -38,7 +41,7 @@ def test_add_computed_leaves_adds_row_node():
 
 
 def test_trim_known_txids_removes_only_txid_only_entries():
-    from bsv.transaction.beef import Beef, BEEF_V2, BeefTx
+    from bsv.transaction.beef import BEEF_V2, Beef, BeefTx
     from bsv.transaction.beef_utils import trim_known_txids
 
     beef = Beef(version=BEEF_V2)
@@ -52,5 +55,3 @@ def test_trim_known_txids_removes_only_txid_only_entries():
     trim_known_txids(beef, [drop_tx])
     assert drop_tx not in beef.txs
     assert keep_tx in beef.txs
-
-

@@ -1,15 +1,16 @@
 import asyncio
 from typing import Union
+
 from bsv import (
+    P2PKH,
     Broadcaster,
     BroadcastFailure,
     BroadcastResponse,
+    HttpClient,
+    PrivateKey,
     Transaction,
     TransactionInput,
     TransactionOutput,
-    PrivateKey,
-    P2PKH,
-    HttpClient,
     default_http_client,
 )
 
@@ -27,9 +28,7 @@ class WOC(Broadcaster):
         self.URL = f"https://api.whatsonchain.com/v1/bsv/{network}/tx/raw"
         self.http_client = http_client if http_client else default_http_client()
 
-    async def broadcast(
-        self, tx: Transaction
-    ) -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, tx: Transaction) -> Union[BroadcastResponse, BroadcastFailure]:
         """
         Broadcasts a transaction via WOC.
 
@@ -46,9 +45,7 @@ class WOC(Broadcaster):
             response = await self.http_client.fetch(self.URL, request_options)
             if response.ok:
                 txid = response.json()["data"]
-                return BroadcastResponse(
-                    status="success", txid=txid, message="broadcast successful"
-                )
+                return BroadcastResponse(status="success", txid=txid, message="broadcast successful")
             else:
                 return BroadcastFailure(
                     status="error",
@@ -83,11 +80,7 @@ async def main():
         )
     )
 
-    tx.add_output(
-        TransactionOutput(
-            locking_script=P2PKH().lock(public_key.address()), satoshis=100
-        )
-    )
+    tx.add_output(TransactionOutput(locking_script=P2PKH().lock(public_key.address()), satoshis=100))
 
     tx.sign()
 

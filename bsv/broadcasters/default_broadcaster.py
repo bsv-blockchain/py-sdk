@@ -1,13 +1,11 @@
-from typing import Union, Optional
+from typing import Optional, Union
+
 from ..constants import Network
-from .broadcaster import Broadcaster
 from .arc import ARC, ARCConfig
+from .broadcaster import Broadcaster
 
 
-def default_broadcaster(
-    is_testnet: bool = False,
-    config: Optional[ARCConfig] = None
-) -> Broadcaster:
+def default_broadcaster(is_testnet: bool = False, config: Optional[ARCConfig] = None) -> Broadcaster:
     """
     Create a default ARC broadcaster for the specified network.
 

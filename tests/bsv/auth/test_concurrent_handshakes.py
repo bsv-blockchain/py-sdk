@@ -1,6 +1,8 @@
 """Tests for concurrent handshake handling"""
+
 import threading
 import time
+
 from bsv.auth.peer import Peer, PeerOptions
 from bsv.auth.session_manager import DefaultSessionManager
 from bsv.keys import PrivateKey
@@ -8,7 +10,7 @@ from bsv.keys import PrivateKey
 
 class DummyWallet:
     def get_public_key(self, args=None, originator=None):
-        return type('obj', (object,), {'public_key': PrivateKey(1).public_key()})()
+        return type("obj", (object,), {"public_key": PrivateKey(1).public_key()})()
 
     def create_signature(self, args=None, originator=None):
         return {"signature": b"dummy_signature"}
@@ -24,23 +26,24 @@ class DummyTransport:
 
     def on_data(self, callback):
         self.callback = callback
-        return None
 
     def send(self, message):
         self.sent_messages.append(message)
         # Simulate async response
-        if self.callback and hasattr(message, 'message_type') and message.message_type == 'initialRequest':
+        if self.callback and hasattr(message, "message_type") and message.message_type == "initialRequest":
             # Simulate receiving an initial response
             import threading
+
             def delayed_response():
                 time.sleep(0.01)  # Small delay
                 from bsv.auth.auth_message import AuthMessage
+
                 response = AuthMessage(
                     version="1.0",
                     message_type="initialResponse",
                     identity_key=PrivateKey(2).public_key(),
                     nonce="peer_nonce_response",
-                    initial_nonce=getattr(message, 'nonce', None)
+                    initial_nonce=getattr(message, "nonce", None),
                 )
                 if self.callback:
                     try:
@@ -49,8 +52,8 @@ class DummyTransport:
                         # Intentional: Callback may raise exceptions during concurrent execution
                         # We're testing that concurrent handshakes don't crash, not callback behavior
                         pass
+
             threading.Thread(target=delayed_response, daemon=True).start()
-        return None
 
 
 def test_concurrent_handshakes_same_peer():
@@ -59,11 +62,7 @@ def test_concurrent_handshakes_same_peer():
     transport = DummyTransport()
     session_manager = DefaultSessionManager()
 
-    peer = Peer(PeerOptions(
-        wallet=wallet,
-        transport=transport,
-        session_manager=session_manager
-    ))
+    peer = Peer(PeerOptions(wallet=wallet, transport=transport, session_manager=session_manager))
 
     peer_identity_key = PrivateKey(2).public_key()
     results = []
@@ -98,8 +97,8 @@ def test_concurrent_handshakes_same_peer():
     # Verify that any returned sessions have correct structure
     for _, session in results:
         if session is not None:
-            assert hasattr(session, 'session_nonce'), "Session should have session_nonce"
-            assert hasattr(session, 'peer_identity_key'), "Session should have peer_identity_key"
+            assert hasattr(session, "session_nonce"), "Session should have session_nonce"
+            assert hasattr(session, "peer_identity_key"), "Session should have peer_identity_key"
             assert session.peer_identity_key == peer_identity_key, "Session should have correct peer identity key"
 
 
@@ -109,11 +108,7 @@ def test_concurrent_handshakes_different_peers():
     transport = DummyTransport()
     session_manager = DefaultSessionManager()
 
-    peer = Peer(PeerOptions(
-        wallet=wallet,
-        transport=transport,
-        session_manager=session_manager
-    ))
+    peer = Peer(PeerOptions(wallet=wallet, transport=transport, session_manager=session_manager))
 
     results = []
     errors = []
@@ -148,7 +143,8 @@ def test_concurrent_handshakes_different_peers():
     # Verify that any returned sessions have correct structure and peer keys
     for _, session, expected_key in results:
         if session is not None:
-            assert hasattr(session, 'session_nonce'), "Session should have session_nonce"
-            assert hasattr(session, 'peer_identity_key'), "Session should have peer_identity_key"
-            assert session.peer_identity_key == expected_key, f"Session should have correct peer identity key: expected {expected_key.hex()}, got {session.peer_identity_key.hex()}"
-
+            assert hasattr(session, "session_nonce"), "Session should have session_nonce"
+            assert hasattr(session, "peer_identity_key"), "Session should have peer_identity_key"
+            assert (
+                session.peer_identity_key == expected_key
+            ), f"Session should have correct peer identity key: expected {expected_key.hex()}, got {session.peer_identity_key.hex()}"

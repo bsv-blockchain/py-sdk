@@ -6,7 +6,6 @@ Ported from go-sdk/script/interpreter/number.go
 
 from typing import Optional
 
-
 # Constants
 ERROR_NON_MINIMAL_ENCODING = "non-minimally encoded script number"
 
@@ -36,20 +35,20 @@ class ScriptNumber:
         result = 0
         for i, byte_val in enumerate(data):
             result |= byte_val << (i * 8)
-        
+
         # Handle sign bit
         if data[-1] & 0x80:
             sign_bit_mask = 0x80 << (8 * (len(data) - 1))
             result &= ~sign_bit_mask
             result = -result
-        
+
         return result
 
     @classmethod
     def from_bytes(cls, data: bytes, max_num_len: int = 4, require_minimal: bool = True) -> "ScriptNumber":
         """
         Create a ScriptNumber from bytes using Bitcoin script number encoding.
-        
+
         Args:
             data: The byte array to parse
             max_num_len: Maximum number length in bytes
@@ -58,39 +57,39 @@ class ScriptNumber:
         # Zero is encoded as empty byte slice
         if len(data) == 0:
             return cls(0)
-        
+
         if len(data) > max_num_len:
             raise ValueError(f"number exceeds max length: {len(data)} > {max_num_len}")
-        
+
         # Check for minimal encoding
         if require_minimal:
             cls._validate_minimal_encoding(data)
-        
+
         # Decode from little endian with sign handling
         result = cls._decode_little_endian(data)
-        
+
         return cls(result)
 
     def bytes(self, require_minimal: bool = True) -> bytes:
         """Convert ScriptNumber to bytes using Bitcoin script number encoding.
-        
+
         Bitcoin uses sign-magnitude representation where the high bit of the
         last byte indicates the sign.
         """
         # Zero encodes as empty byte slice
         if self.value == 0:
             return b""
-        
+
         # Take absolute value and track if negative
         is_negative = self.value < 0
         abs_value = abs(self.value)
-        
+
         # Encode absolute value in little-endian
         result = []
         while abs_value > 0:
             result.append(abs_value & 0xFF)
             abs_value >>= 8
-        
+
         # When the most significant byte already has the high bit set (0x80),
         # an additional high byte is required to indicate whether the number
         # is negative or positive. The additional byte is removed when converting
@@ -107,9 +106,9 @@ class ScriptNumber:
         elif is_negative:
             # Set the sign bit on the last byte
             result[-1] |= 0x80
-        
+
         return bytes(result)
-    
+
     def to_bytes(self, require_minimal: bool = True) -> bytes:
         """Alias for bytes() method for compatibility."""
         return self.bytes(require_minimal)
@@ -120,4 +119,3 @@ class ScriptNumber:
 
     def __repr__(self) -> str:
         return f"ScriptNumber({self.value})"
-

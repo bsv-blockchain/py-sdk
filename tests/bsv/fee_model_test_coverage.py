@@ -1,46 +1,51 @@
 """
 Coverage tests for fee_model.py - untested branches.
 """
+
 import pytest
+
 from bsv.fee_model import FeeModel
 from bsv.fee_models.satoshis_per_kilobyte import SatoshisPerKilobyte
+from bsv.script.script import Script
 from bsv.transaction import Transaction
 from bsv.transaction_input import TransactionInput
 from bsv.transaction_output import TransactionOutput
-from bsv.script.script import Script
 
 
 def create_mock_transaction(target_size: int) -> Transaction:
     """Create a mock transaction with approximately the target size in bytes."""
     tx = Transaction()
-    
+
     # Add a simple output (P2PKH output is ~34 bytes)
-    output_script = Script(b'\x76\xa9\x14' + b'\x00' * 20 + b'\x88\xac')  # OP_DUP OP_HASH160 <20 bytes> OP_EQUALVERIFY OP_CHECKSIG
+    output_script = Script(
+        b"\x76\xa9\x14" + b"\x00" * 20 + b"\x88\xac"
+    )  # OP_DUP OP_HASH160 <20 bytes> OP_EQUALVERIFY OP_CHECKSIG
     tx.add_output(TransactionOutput(output_script, 1000))
-    
+
     # Calculate remaining size needed and add inputs with appropriate unlocking scripts
     # Base transaction overhead: 4 (version) + 1 (input count varint) + 1 (output count varint) + 4 (locktime) = 10 bytes
     # Output size: 8 (satoshis) + 1 (script length varint) + ~25 (script) = ~34 bytes
     # Input base size: 32 (txid) + 4 (vout) + 1 (script length varint) + 4 (sequence) = 41 bytes
-    
+
     if target_size <= 50:
         # Minimal transaction - just add empty input
         tx_input = TransactionInput(source_txid="00" * 32, source_output_index=0)
-        tx_input.unlocking_script = Script(b'')
+        tx_input.unlocking_script = Script(b"")
         tx.add_input(tx_input)
     else:
         # Add input with script sized to reach target
         script_size = max(1, target_size - 80)  # Approximate remaining size for script
         tx_input = TransactionInput(source_txid="00" * 32, source_output_index=0)
-        tx_input.unlocking_script = Script(b'\x00' * script_size)
+        tx_input.unlocking_script = Script(b"\x00" * script_size)
         tx.add_input(tx_input)
-    
+
     return tx
 
 
 # ========================================================================
 # SatoshisPerKilobyte branches
 # ========================================================================
+
 
 def test_satoshis_per_kb_init_default():
     """Test SatoshisPerKilobyte with default rate."""
@@ -63,7 +68,7 @@ def test_satoshis_per_kb_init_zero_rate():
 def test_satoshis_per_kb_init_negative_rate():
     """Test SatoshisPerKilobyte with negative rate."""
     try:
-        fee_model = SatoshisPerKilobyte(value=-1)
+        SatoshisPerKilobyte(value=-1)
         # Fee model value is -1 or exception raised
     except ValueError:
         # May validate rate
@@ -114,6 +119,7 @@ def test_satoshis_per_kb_compute_fee_fractional():
 # Edge cases
 # ========================================================================
 
+
 def test_satoshis_per_kb_with_high_rate():
     """Test with very high rate."""
     fee_model = SatoshisPerKilobyte(value=1000000)
@@ -133,4 +139,3 @@ def test_satoshis_per_kb_compute_fee_boundary():
     fee1001 = fee_model.compute_fee(tx1001)
     # Fees should generally increase with size
     assert fee999 >= 0 and fee1000 >= 0 and fee1001 >= 0
-
