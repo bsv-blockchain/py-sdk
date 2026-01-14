@@ -11,8 +11,8 @@ class MockWallet:
     def __init__(self, expected_ciphertexts_to_plaintexts: dict[bytes, bytes]):
         self._map = expected_ciphertexts_to_plaintexts
 
-    def decrypt(self, ctx, decrypt_args: dict):
-        ciphertext = decrypt_args.get("ciphertext", b"")
+    def decrypt(self, args: dict, originator=None):
+        ciphertext = args.get("ciphertext", b"")
         # Return the mapped plaintext if known; otherwise a default value
         if ciphertext in self._map:
             return {"plaintext": self._map[ciphertext]}
