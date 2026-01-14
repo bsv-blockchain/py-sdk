@@ -64,10 +64,10 @@ def test_storage_delete():
             if hasattr(storage, 'get'):
                 try:
                     result = storage.get('key')
-                    assert result is None or True
+                    assert result is None
                 except KeyError:
                     # Expected
-                    assert True
+                    pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_MEMORY_STORAGE)
 
@@ -121,10 +121,10 @@ def test_storage_get_nonexistent():
         if hasattr(storage, 'get'):
             try:
                 result = storage.get('nonexistent')
-                assert result is None or True
+                assert result is None
             except KeyError:
                 # Expected
-                assert True
+                pass
     except (ImportError, AttributeError):
         pytest.skip("MemoryStorage not available")
 

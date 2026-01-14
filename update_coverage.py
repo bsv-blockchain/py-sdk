@@ -37,7 +37,7 @@ def update_readme_coverage(coverage_percentage: str):
 
     new_content = re.sub(badge_pattern, new_badge, content)
     if new_content == content:
-        print(f"Warning: Coverage badge pattern not found in README")
+        print("Warning: Coverage badge pattern not found in README")
         return False
     content = new_content
 
@@ -47,7 +47,7 @@ def update_readme_coverage(coverage_percentage: str):
 
     new_content = re.sub(coverage_text_pattern, new_coverage_text, content)
     if new_content == content:
-        print(f"Warning: Coverage text pattern not found in README")
+        print("Warning: Coverage text pattern not found in README")
         return False
     content = new_content
 

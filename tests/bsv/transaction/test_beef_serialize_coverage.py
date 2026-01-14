@@ -41,10 +41,9 @@ def test_beef_deserialize_beef():
     # Deserialization is handled by Beef.deserialize class method
     try:
         _ = Beef.deserialize(b'')
-        assert True
     except Exception:
         # Expected with empty data
-        assert True
+        pass
 
 
 # ========================================================================
@@ -64,5 +63,5 @@ def test_beef_serialize_empty_list():
         assert isinstance(serialized, bytes)
     except (ValueError, IndexError):
         # May require at least one transaction
-        assert True
+        pass
 

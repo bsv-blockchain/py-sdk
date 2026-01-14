@@ -26,7 +26,7 @@ class Protocol:  # NOSONAR - Field names match protocol specification
         if not isinstance(protocol, str) or len(protocol) < 3 or len(protocol) > 400:
             raise ValueError("protocol names must be 3-400 characters")
         self.security_level = security_level
-        self.protocol = protocol
+        self.protocol = protocol  # NOSONAR - Field name matches protocol specification
 
 
 class CounterpartyType:
@@ -56,7 +56,7 @@ class Counterparty:  # NOSONAR - Field names match protocol specification
         if self.type == CounterpartyType.ANYONE:
             # Anyone is represented by the constant PublicKey derived from PrivateKey(1)
             return PrivateKey(1).public_key()
-        if self.type == CounterpartyType.OTHER and self.counterparty:
+        if self.type == CounterpartyType.OTHER and self.counterparty:  # NOSONAR - Field name matches protocol specification
             return self.counterparty
         raise ValueError("Invalid counterparty configuration")
 

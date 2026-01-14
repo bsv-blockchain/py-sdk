@@ -72,11 +72,8 @@ def test_hex_decode_invalid():
     """Test hex decoding invalid input."""
     try:
         from bsv.utils.binary import from_hex
-        try:
+        with pytest.raises(ValueError):
             _ = from_hex("gg")
-            assert False, "Should raise error"
-        except ValueError:
-            assert True
     except ImportError:
         pytest.skip("Binary functions not available")
 

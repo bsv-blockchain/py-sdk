@@ -95,7 +95,6 @@ def test_chunk_op_detection():
         if len(chunks) > 0:
             _ = chunks[0]
             # Chunk should have some indicator of being an opcode
-            assert True
     except ImportError:
         pytest.skip("read_script_chunks not available")
 
@@ -111,7 +110,6 @@ def test_chunk_data_detection():
         if len(chunks) > 0:
             _ = chunks[0]
             # Chunk should contain the pushed data
-            assert True
     except ImportError:
         pytest.skip("read_script_chunks not available")
 
@@ -130,10 +128,10 @@ def test_read_script_chunks_truncated():
 
         try:
             _ = read_script_chunks(script)
-            assert True  # May handle gracefully
+            # May handle gracefully
         except Exception:
             # Expected
-            assert True
+            pass
     except ImportError:
         pytest.skip("read_script_chunks not available")
 

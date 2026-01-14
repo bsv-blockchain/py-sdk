@@ -49,10 +49,9 @@ def test_beef_deserialize():
     if hasattr(Beef, 'deserialize'):
         try:
             _ = Beef.deserialize(b'')
-            assert True
         except Exception:
             # Expected with empty data
-            assert True
+            pass
 
 
 # ========================================================================

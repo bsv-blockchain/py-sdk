@@ -124,22 +124,22 @@ def test_save_contact_with_none(manager):
     """Test saving contact with None."""
     try:
         _ = manager.save_contact(None)
-        # May handle or raise
-        assert True
+        # May handle or raise - both acceptable
+        pass
     except (TypeError, AttributeError):
-        # Expected if no None handling
-        assert True
+        # Expected if no None handling - also acceptable
+        pass
 
 
 def test_save_contact_with_empty_dict(manager):
     """Test saving contact with empty dict."""
     try:
         _ = manager.save_contact({})
-        # May handle or raise
-        assert True
+        # May handle or raise - both acceptable
+        pass
     except (TypeError, ValueError, KeyError):
-        # Expected if validation exists
-        assert True
+        # Expected if validation exists - also acceptable
+        pass
 
 
 # ========================================================================

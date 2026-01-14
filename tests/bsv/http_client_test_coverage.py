@@ -56,10 +56,11 @@ def test_http_client_get():
         if hasattr(client, 'get'):
             try:
                 _ = client.get(TEST_PATH)
-                assert True
+                # Success case - acceptable
+                pass
             except Exception:
-                # Expected without real server
-                assert True
+                # Expected without real server - acceptable
+                pass
     except ImportError:
         pytest.skip(SKIP_HTTP_CLIENT)
 
@@ -73,10 +74,11 @@ def test_http_client_post():
         if hasattr(client, 'post'):
             try:
                 _ = client.post(TEST_PATH, data={'key': 'value'})
-                assert True
+                # Success case - acceptable
+                pass
             except Exception:
-                # Expected without real server
-                assert True
+                # Expected without real server - acceptable
+                pass
     except ImportError:
         pytest.skip(SKIP_HTTP_CLIENT)
 
@@ -90,10 +92,11 @@ def test_http_client_put():
         if hasattr(client, 'put'):
             try:
                 _ = client.put(TEST_PATH, data={'key': 'value'})
-                assert True
+                # Success case - acceptable
+                pass
             except Exception:
-                # Expected without real server
-                assert True
+                # Expected without real server - acceptable
+                pass
     except ImportError:
         pytest.skip(SKIP_HTTP_CLIENT)
 
@@ -107,10 +110,11 @@ def test_http_client_delete():
         if hasattr(client, 'delete'):
             try:
                 _ = client.delete(TEST_PATH)
-                assert True
+                # Success case - acceptable
+                pass
             except Exception:
-                # Expected without real server
-                assert True
+                # Expected without real server - acceptable
+                pass
     except ImportError:
         pytest.skip(SKIP_HTTP_CLIENT)
 
@@ -138,7 +142,8 @@ def test_sync_http_client_request():
         if hasattr(client, 'get'):
             try:
                 _ = client.get('https://httpbin.org/status/200')
-                assert True
+                # Success case - test passes
+                pass
             except Exception:
                 # May fail without network
                 pytest.skip("Requires network access")
@@ -159,10 +164,11 @@ def test_http_client_timeout():
         if hasattr(client, 'get'):
             try:
                 _ = client.get('https://httpbin.org/delay/10')
-                assert True
+                # Success case (unexpected but acceptable)
+                pass
             except Exception:
-                # Expected to timeout
-                assert True
+                # Expected to timeout - acceptable
+                pass
     except ImportError:
         pytest.skip(SKIP_HTTP_CLIENT)
 
@@ -178,8 +184,8 @@ def test_http_client_connection_error():
                 _ = client.get(TEST_PATH)
                 assert False, "Should raise error"
             except Exception:
-                # Expected
-                assert True
+                # Expected exception - test passes
+                pass
     except ImportError:
         pytest.skip(SKIP_HTTP_CLIENT)
 
@@ -197,10 +203,11 @@ def test_http_client_empty_url():
         if hasattr(client, 'get'):
             try:
                 _ = client.get('')
-                assert True
+                # Success case - acceptable
+                pass
             except (ValueError, Exception):
-                # Expected
-                assert True
+                # Expected exception - also acceptable
+                pass
     except ImportError:
         pytest.skip(SKIP_HTTP_CLIENT)
 

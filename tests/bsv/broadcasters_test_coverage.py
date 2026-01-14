@@ -134,10 +134,11 @@ def test_broadcaster_with_none_transaction():
         if hasattr(broadcaster, 'broadcast'):
             try:
                 result = broadcaster.broadcast(None)
-                assert True
+                # Success case - acceptable
+                pass
             except (TypeError, AttributeError):
-                # Expected
-                assert True
+                # Expected exception case - also acceptable
+                pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_WOC_BROADCASTER)
 

@@ -20,7 +20,8 @@ def downloader():
 
 def test_publish_file_network_error(uploader, monkeypatch):
     def fail_post(*a, **kw):
-        raise Exception('network fail')
+        import requests
+        raise requests.RequestException('network fail')
     monkeypatch.setattr('requests.post', fail_post)
     with pytest.raises(NetworkError):
         uploader.publish_file(b'data', 'application/octet-stream', 60)
@@ -145,7 +146,7 @@ def test_publish_file_402_payment(uploader, monkeypatch):
 def test_publish_file_auth_error(monkeypatch):
     class BadWallet:
         def get_public_key(self, *a, **kw):
-            raise Exception('fail')
+            raise ValueError('fail')
     uploader = Uploader(storage_url='https://dummy-storage', wallet=BadWallet())
     
     # Force AuthFetch to use HTTP fallback by patching the fetch method

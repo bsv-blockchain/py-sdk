@@ -136,7 +136,6 @@ def test_beef_merge_beef():
     beef1.merge_beef(beef2)
     
     # Should not raise exception
-    assert True
 
 
 def test_beef_to_binary_atomic():
@@ -199,7 +198,6 @@ def test_beef_add_computed_leaves():
     beef.add_computed_leaves()
     
     # Should not raise exception
-    assert True
 
 
 def test_beef_trim_known_txids():
@@ -212,7 +210,6 @@ def test_beef_trim_known_txids():
     beef.trim_known_txids(known_txids)
     
     # Should not raise exception
-    assert True
 
 
 def test_beef_txid_only():
@@ -236,7 +233,6 @@ def test_beef_merge_beef_bytes():
     # Test the REAL merge_beef_bytes() method
     try:
         beef.merge_beef_bytes(beef_bytes)
-        assert True
     except Exception as e:
         # May have requirements for valid BEEF structure
         pytest.skip(f"merge_beef_bytes requires valid BEEF structure: {e}")
@@ -266,7 +262,6 @@ def test_beef_remove_existing_txid():
     beef.remove_existing_txid(txid)
     
     # Should not raise exception even if txid doesn't exist
-    assert True
 
 
 def test_beef_merge_txid_only():

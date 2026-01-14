@@ -7,6 +7,7 @@ Ported from TypeScript SDK.
 import asyncio
 import time
 from typing import Dict, List, Optional, Any, Union, Protocol
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 
 from bsv.transaction import Transaction
@@ -33,6 +34,25 @@ class LookupResponseError(LookupError):
 class HTTPProtocolError(LookupError):
     """Exception raised when HTTP protocol requirement is violated."""
     pass
+
+
+class TimeoutContext:
+    """Context manager for timeout handling using asyncio.wait_for."""
+
+    def __init__(self, timeout_seconds: Optional[float]):
+        self.timeout_seconds = timeout_seconds
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return None
+
+    async def run(self, coro):
+        """Run coroutine with timeout if specified."""
+        if self.timeout_seconds is None:
+            return await coro
+        return await asyncio.wait_for(coro, timeout=self.timeout_seconds)
 
 
 @dataclass
@@ -147,9 +167,9 @@ class HTTPSOverlayLookupFacilitator:
                             outputs=[]  # Custom responses don't have outputs
                         )
 
+        timeout_ctx = TimeoutContext(timeout / 1000)
         try:
-            # Use asyncio.wait_for() to apply timeout context manager pattern
-            return await asyncio.wait_for(_perform_lookup(), timeout=timeout/1000)
+            return await timeout_ctx.run(_perform_lookup())
         except asyncio.TimeoutError:
             raise LookupTimeoutError('Request timed out')
         except (LookupError, HTTPProtocolError):
@@ -228,60 +248,75 @@ class LookupResolver:
         """Lookup outputs for a given question. Delegates to query method."""
         async def _perform_lookup():
             return await self.query(question, timeout)
-        
-        if timeout is not None:
-            answer = await asyncio.wait_for(_perform_lookup(), timeout=timeout/1000)
-        else:
-            answer = await _perform_lookup()
+
+        timeout_ctx = TimeoutContext(timeout / 1000 if timeout is not None else None)
+        answer = await timeout_ctx.run(_perform_lookup())
         return answer.outputs
 
     async def query(self, question: LookupQuestion, timeout: Optional[int] = None) -> LookupAnswer:
         """Given a LookupQuestion, returns a LookupAnswer with aggregated results."""
         async def _perform_query():
-            competent_hosts = await self._get_competent_hosts(question.service)
+            ranked_hosts = await self._prepare_ranked_hosts(question.service)
+            host_responses = await self._query_all_hosts(ranked_hosts, question, timeout)
+            return self._aggregate_host_responses(host_responses)
 
-            if not competent_hosts:
-                raise LookupError(f"No competent {self.network_preset} hosts found for lookup service: {question.service}")
+        timeout_ctx = TimeoutContext(timeout / 1000 if timeout is not None else None)
+        return await timeout_ctx.run(_perform_query())
 
-            # Prepare hosts for query with reputation ranking
-            ranked_hosts = self._prepare_hosts_for_query(competent_hosts, f"lookup service {question.service}")
+    async def _prepare_ranked_hosts(self, service: str) -> List[str]:
+        """Prepare and validate ranked hosts for a service."""
+        competent_hosts = await self._get_competent_hosts(service)
 
-            if not ranked_hosts:
-                raise LookupError(f"All competent hosts for {question.service} are temporarily unavailable")
+        if not competent_hosts:
+            raise LookupError(f"No competent {self.network_preset} hosts found for lookup service: {service}")
 
-            # Query all ranked hosts in parallel
-            host_responses = await asyncio.gather(
-                *[self._lookup_host_with_tracking(host, question, timeout) for host in ranked_hosts],
-                return_exceptions=True
-            )
+        ranked_hosts = self._prepare_hosts_for_query(competent_hosts, f"lookup service {service}")
 
-            # Aggregate results from successful responses
-            outputs_map: Dict[str, LookupOutput] = {}
+        if not ranked_hosts:
+            raise LookupError(f"All competent hosts for {service} are temporarily unavailable")
 
-            for result in host_responses:
-                if isinstance(result, Exception):
-                    continue
+        return ranked_hosts
 
-                response = result
-                if response.type != 'output-list' or not response.outputs:
-                    continue
+    async def _query_all_hosts(
+        self,
+        ranked_hosts: List[str],
+        question: LookupQuestion,
+        timeout: Optional[int]
+    ) -> List[Union[LookupAnswer, Exception]]:
+        """Query all ranked hosts in parallel."""
+        return await asyncio.gather(
+            *[self._lookup_host_with_tracking(host, question, timeout) for host in ranked_hosts],
+            return_exceptions=True
+        )
 
-                for output in response.outputs:
-                    # Create unique key for deduplication
-                    key = f"{output.beef.hex() if output.beef else 'empty'}.{output.output_index}"
+    def _aggregate_host_responses(
+        self,
+        host_responses: List[Union[LookupAnswer, Exception]]
+    ) -> LookupAnswer:
+        """Aggregate results from successful host responses."""
+        outputs_map: Dict[str, LookupOutput] = {}
 
-                    # Last-writer wins for identical outputs
-                    outputs_map[key] = output
+        for result in host_responses:
+            if isinstance(result, Exception):
+                continue
 
-            return LookupAnswer(
-                type="output-list",
-                outputs=list(outputs_map.values())
-            )
-        
-        if timeout is not None:
-            return await asyncio.wait_for(_perform_query(), timeout=timeout/1000)
-        else:
-            return await _perform_query()
+            response = result
+            if response.type != 'output-list' or not response.outputs:
+                continue
+
+            for output in response.outputs:
+                key = self._create_output_key(output)
+                outputs_map[key] = output
+
+        return LookupAnswer(
+            type="output-list",
+            outputs=list(outputs_map.values())
+        )
+
+    def _create_output_key(self, output: LookupOutput) -> str:
+        """Create unique key for output deduplication."""
+        beef_hex = output.beef.hex() if output.beef else 'empty'
+        return f"{beef_hex}.{output.output_index}"
 
     async def _get_competent_hosts(self, service: str) -> List[str]:
         """Get competent hosts for a service, with caching."""

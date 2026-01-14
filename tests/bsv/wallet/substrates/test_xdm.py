@@ -59,7 +59,7 @@ def test_xdm_constructor_success():
     xdm = XDMSubstrate(window=win)
     assert xdm.window is win
 
-def test_xdm_invoke_calls_postMessage():
+def test_xdm_invoke_calls_post_message():
     win = DummyWindow()
     xdm = XDMSubstrate(window=win)
     result = xdm.invoke('testCall', {'foo': 'bar'})

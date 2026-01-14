@@ -24,7 +24,6 @@ def test_beef_calculate_bump():
     # find_bump searches for bump in beef, not calculates
     result = find_bump(beef, '0' * 64)
     # May return None if not found, which is expected
-    assert True
 
 
 def test_beef_verify_bump():
@@ -36,7 +35,6 @@ def test_beef_verify_bump():
     beef = Beef(version=4)
     result = find_bump(beef, '0' * 64)
     # May return None if not found
-    assert True
 
 
 # ========================================================================
@@ -52,5 +50,4 @@ def test_beef_utils_empty_txids():
     beef = Beef(version=4)
     result = find_bump(beef, '0' * 64)
     # May return None if not found
-    assert True
 

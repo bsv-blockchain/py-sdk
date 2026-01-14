@@ -117,8 +117,8 @@ async def test_broadcast_with_connection_error(arc, simple_tx):
             # Should return BroadcastFailure
             assert hasattr(result, 'description') or 'error' in str(result)
         except Exception:
-            # Or may raise
-            assert True
+            # Or may raise - both outcomes are acceptable
+            pass
 
 
 @pytest.mark.asyncio

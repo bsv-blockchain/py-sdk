@@ -44,7 +44,6 @@ async def test_transceiver_connect_success():
             mock_connect.return_value = AsyncMock()
             try:
                 await t.connect()
-                assert True
             except Exception:
                 pass
     except ImportError:

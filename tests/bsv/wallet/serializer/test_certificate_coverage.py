@@ -232,6 +232,6 @@ def test_deserialize_certificate_invalid_data():
             assert result is not None
         except Exception:
             # Expected for invalid data
-            assert True
+            pass
     except ImportError:
         pytest.skip("certificate functions not available")

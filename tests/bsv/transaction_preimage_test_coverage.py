@@ -121,11 +121,8 @@ def test_transaction_preimage_index_bounds():
     )
     
     if hasattr(tx, 'preimage'):
-        try:
+        with pytest.raises(IndexError):
             _ = tx._(99)  # Out of bounds
-            assert False, "Should raise error"
-        except IndexError:
-            assert True
 
 
 def test_transaction_preimage_deterministic():

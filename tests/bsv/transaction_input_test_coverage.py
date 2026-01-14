@@ -47,10 +47,10 @@ def test_transaction_input_init_with_none_source():
             unlocking_script=Script(b''),
             sequence=0xFFFFFFFF
         )
-        assert inp.source_txid is None or True
+        assert inp.source_txid is None
     except Exception:
         # May require source
-        assert True
+        pass
 
 
 def test_transaction_input_init_with_template():
@@ -204,8 +204,8 @@ def test_transaction_input_with_short_txid():
             unlocking_script=Script(b''),
             sequence=0xFFFFFFFF
         )
-        assert inp.source_txid == "abc" or True
+        assert inp.source_txid == "abc"
     except ValueError:
         # May validate txid length
-        assert True
+        pass
 

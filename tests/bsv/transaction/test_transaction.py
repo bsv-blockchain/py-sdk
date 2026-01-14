@@ -89,12 +89,12 @@ def test_transaction_from_hex():
     """Test Transaction.from_hex with multiple transaction formats."""
     # Test first transaction format
     tx1 = Transaction.from_hex(txhex)
-    assert tx1.hex() == txhex, f"Hex roundtrip failed for tx1"
+    assert tx1.hex() == txhex, "Hex roundtrip failed for tx1"
     assert len(tx1.hash()) == 32, "Transaction hash should be 32 bytes"
     
     # Test second transaction format
     tx2 = Transaction.from_hex(tx2hex)
-    assert tx2.hex() == tx2hex, f"Hex roundtrip failed for tx2"
+    assert tx2.hex() == tx2hex, "Hex roundtrip failed for tx2"
     assert len(tx2.inputs) > 0 or len(tx2.outputs) > 0, "Parsed transaction should have inputs or outputs"
 
 
@@ -714,7 +714,7 @@ def test_input_auto_txid():
     
     prev_tx.outputs[0].locking_script = None
     with pytest.raises(AttributeError, match="'NoneType' object has no attribute"):
-        tx_in = TransactionInput(
+        TransactionInput(
             source_transaction=prev_tx,
             source_output_index=0,
             unlocking_script_template=P2PKH().unlock(private_key),

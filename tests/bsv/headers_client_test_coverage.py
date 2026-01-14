@@ -112,10 +112,11 @@ def test_headers_client_invalid_height():
         if hasattr(client, 'get_header'):
             try:
                 header = client.get_header(-1)
-                assert True
+                # Success case - acceptable
+                pass
             except (ValueError, IndexError):
-                # Expected
-                assert True
+                # Expected exception - also acceptable
+                pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_GULLIBLE_HEADERS_CLIENT)
 

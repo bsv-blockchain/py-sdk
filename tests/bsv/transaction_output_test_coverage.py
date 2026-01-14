@@ -45,10 +45,10 @@ def test_transaction_output_init_negative_amount():
             satoshis=-1,
             locking_script=Script(b'')
         )
-        assert out.satoshis == -1 or True
+        assert out.satoshis == -1
     except ValueError:
         # May validate positive amounts
-        assert True
+        pass
 
 
 def test_transaction_output_init_empty_script():

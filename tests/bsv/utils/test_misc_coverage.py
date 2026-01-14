@@ -139,10 +139,10 @@ def test_ensure_bytes_none():
         
         try:
             result = ensure_bytes(None)
-            assert result is not None or True
+            assert result is not None
         except (TypeError, AttributeError):
             # Expected
-            assert True
+            pass
     except ImportError:
         pytest.skip("ensure_bytes not available")
 

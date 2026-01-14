@@ -90,7 +90,6 @@ def test_writer_write_bytes():
         
         if hasattr(writer, 'write'):
             writer.write(b'\x01\x02\x03')
-            assert True
     except ImportError:
         pytest.skip("Writer not available")
 
@@ -104,7 +103,6 @@ def test_writer_write_varint():
         
         if hasattr(writer, 'write_varint'):
             writer.write_varint(256)
-            assert True
     except ImportError:
         pytest.skip("Writer not available")
 
@@ -118,7 +116,6 @@ def test_writer_write_uint32():
         
         if hasattr(writer, 'write_uint32'):
             writer.write_uint32(12345)
-            assert True
     except ImportError:
         pytest.skip("Writer not available")
 
@@ -156,7 +153,7 @@ def test_reader_eof():
                 assert len(result) <= 2
             except Exception:
                 # Expected
-                assert True
+                pass
     except ImportError:
         pytest.skip("Reader not available")
 
@@ -171,10 +168,10 @@ def test_reader_empty():
         if hasattr(reader, 'read'):
             try:
                 result = reader.read(1)
-                assert result == b'' or True
+                assert result == b''
             except Exception:
                 # Expected
-                assert True
+                pass
     except ImportError:
         pytest.skip("Reader not available")
 

@@ -90,8 +90,8 @@ def test_decrypt_message_wrong_key():
             # Should fail or return garbage
             # Decryption failed or produced different result
         except Exception:
-            # Expected to fail
-            assert True
+            # Expected to fail - acceptable
+            pass
     except ImportError:
         pytest.skip(SKIP_ENCRYPTION)
 

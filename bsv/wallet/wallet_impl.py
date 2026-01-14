@@ -2217,9 +2217,7 @@ class ProtoWallet(WalletInterface):
         for i in range(len(limited)):
             vi = int(limited[i].get("satoshis", 0))
             if vi >= need:
-                if vi < best_sum:
-                    best_sum = vi
-                    pair = (limited[i],)
+                pair = (limited[i],)
                 break
             for j in range(i + 1, len(limited)):
                 vj = int(limited[j].get("satoshis", 0))

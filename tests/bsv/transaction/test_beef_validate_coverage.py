@@ -41,7 +41,7 @@ def test_validate_transactions_with_missing_bumps_attr():
         assert isinstance(result, ValidationResult)
     except AttributeError:
         # Expected if code doesn't handle missing attribute
-        assert True
+        pass
 
 
 # ========================================================================

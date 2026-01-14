@@ -124,10 +124,10 @@ def test_chaintracker_get_header_future():
         if hasattr(tracker, 'get_header'):
             try:
                 header = tracker.get_header(99999999)
-                # Header is None or exception raised
+                # Header is None or exception raised - both acceptable
             except Exception:
-                # Expected
-                assert True
+                # Expected exception - acceptable
+                pass
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 

@@ -72,7 +72,6 @@ def test_cached_key_deriver_clear_cache():
         if hasattr(deriver, 'derive_child') and hasattr(deriver, 'clear_cache'):
             deriver.derive_child(0)
             deriver.clear_cache()
-            assert True
     except ImportError:
         pytest.skip("CachedKeyDeriver not available")
 
@@ -88,7 +87,6 @@ def test_cached_key_deriver_cache_size():
             # Derive many keys to test cache limits
             for i in range(100):
                 deriver.derive_child(i)
-            assert True
     except ImportError:
         pytest.skip("CachedKeyDeriver not available")
 
