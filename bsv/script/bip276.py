@@ -50,10 +50,10 @@ class BIP276:
 
 
 # Regex pattern for validating BIP276 format
-# Format: prefix:VVNN<data><checksum>
-# VV = version (2 hex digits), NN = network (2 hex digits)
+# Format: prefix:NNVV<data><checksum>
+# NN = network (2 hex digits), VV = version (2 hex digits)
 # data = hex encoded data (can be empty), checksum = 8 hex digits (4 bytes)
-VALID_BIP276_PATTERN = re.compile(r"^(.+?):(\d{2})(\d{2})([0-9A-Fa-f]*)([0-9A-Fa-f]{8})$")
+VALID_BIP276_PATTERN = re.compile(r"^(.+?):([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]*)([0-9A-Fa-f]{8})$")
 
 
 def encode_bip276(script: BIP276) -> str:
@@ -129,8 +129,8 @@ def decode_bip276(text: str) -> BIP276:
 
     # Parse version and network
     try:
-        network = int(network_str)
-        version = int(version_str)
+        network = int(network_str, 16)
+        version = int(version_str, 16)
     except ValueError as e:
         raise InvalidBIP276Format(f"Invalid version or network format: {e}")
 

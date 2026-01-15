@@ -243,7 +243,7 @@ class TopicBroadcaster:
         return BroadcastResponse(
             status="success",
             txid=tx.txid(),
-            message=f"Sent to {len(successful_hosts)} Overlay Services {(len(successful_hosts) == 1 and 'host') or 'hosts'}.",
+            message=f"Sent to {len(successful_hosts)} Overlay Services {'host' if len(successful_hosts) == 1 else 'hosts'}.",
         )
 
     def _has_meaningful_instructions(self, instructions: AdmittanceInstructions) -> bool:
