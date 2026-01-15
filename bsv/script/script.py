@@ -212,7 +212,7 @@ class Script:
         elif data_length < pow(2, 32):
             return OpCode.OP_PUSHDATA4
         else:
-            raise ValueError(f"data too large: {data_length} bytes (maximum allowed: {pow(2, 32)} bytes)")
+            raise ValueError(f"data too large: {data_length} bytes (maximum allowed: {pow(2, 32) - 1} bytes)")
 
     def to_asm(self) -> str:
         return " ".join(str(chunk) for chunk in self.chunks)

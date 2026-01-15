@@ -294,7 +294,7 @@ class TopicBroadcaster:
         """Send tagged BEEF to a host with error tracking."""
         try:
             return await self.facilitator.send(host, tagged_beef)
-        except Exception:  # NOSONAR - Reserved for host failure tracking
+        except Exception:
             # Basic host failure tracking: record the failing host on this instance.
             failed_hosts = getattr(self, "_failed_hosts", None)
             if failed_hosts is None:

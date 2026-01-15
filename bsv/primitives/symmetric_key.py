@@ -200,7 +200,7 @@ class SymmetricKey:
             plaintext = cipher.decrypt_and_verify(encrypted_data, auth_tag)
             return plaintext
         except ValueError as e:
-            raise ValueError(f"Decryption failed: {e}") from e
+            raise ValueError("Decryption failed - invalid ciphertext or key") from e
 
     def __eq__(self, other: object) -> bool:
         """Check equality with another SymmetricKey."""

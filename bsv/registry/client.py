@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
@@ -354,8 +355,8 @@ class RegistryClient:
             network_preset = self._get_network_preset(ctx)
             tb = TopicBroadcaster([topic], BroadcasterConfig(network_preset))
             tb.sync_broadcast(tx)
-        except Exception:
-            pass  # Broadcast failure is not critical
+        except Exception as e:
+            logging.warning(f"Broadcast failed for registry record: {e}")
 
     def _get_broadcast_topic(self, record: dict[str, Any]) -> str:
         """Get the broadcast topic for the registry type."""

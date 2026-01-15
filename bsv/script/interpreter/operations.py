@@ -486,7 +486,7 @@ def op_nop(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSONAR - Comp
         return None
 
     # Discourage upgradable nops (NOP1..NOP10) when flagged (pre-genesis behavior).
-    if t.flags.has_flag(t.flags.DISCOURAGE_UPGRADABLE_NOPS) and pop.opcode != OpCode.OP_NOP:
+    if t.flags.has_flag(Flag.DISCOURAGE_UPGRADABLE_NOPS) and pop.opcode != OpCode.OP_NOP:
         return Error(ErrorCode.ERR_DISCOURAGE_UPGRADABLE_NOPS, "script.OpNOP reserved for soft-fork upgrades")
 
     return None
