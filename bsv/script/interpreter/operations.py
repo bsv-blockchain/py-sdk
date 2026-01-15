@@ -401,27 +401,21 @@ def _check_hash_type_encoding(t: "Thread", shf_val: int) -> Optional[Error]:
 
 def check_public_key_encoding(octets: bytes) -> Optional[Error]:
     """
-    Check public key encoding with detailed validation matching TypeScript SDK.
+    Check public key encoding with validation matching Go SDK behavior.
 
     Returns None if valid, Error if invalid.
     """
-    if len(octets) == 0:
-        return Error(ErrorCode.ERR_PUBKEY_TYPE, "Public key is empty")
+    # Match Go SDK: only check that the key has the correct format and length
+    # for supported types. Empty or too-short keys are considered invalid format.
+    if len(octets) == 33 and (octets[0] == 0x02 or octets[0] == 0x03):
+        # Compressed format - valid
+        return None
+    if len(octets) == 65 and octets[0] == 0x04:
+        # Uncompressed format - valid
+        return None
 
-    if len(octets) < 33:
-        return Error(ErrorCode.ERR_PUBKEY_TYPE, "The public key is too short, it must be at least 33 bytes")
-
-    # Check format based on first byte
-    if octets[0] == 0x04:  # Uncompressed
-        if len(octets) != 65:
-            return Error(ErrorCode.ERR_PUBKEY_TYPE, "The non-compressed public key must be 65 bytes")
-    elif octets[0] == 0x02 or octets[0] == 0x03:  # Compressed
-        if len(octets) != 33:
-            return Error(ErrorCode.ERR_PUBKEY_TYPE, "The compressed public key must be 33 bytes")
-    else:
-        return Error(ErrorCode.ERR_PUBKEY_TYPE, "The public key is in an unknown format")
-
-    return None
+    # Any other format/length is invalid
+    return Error(ErrorCode.ERR_PUBKEY_TYPE, "unsupported public key type")
 
 
 # Reserved/invalid opcode handlers (match go-sdk behavior)
@@ -1564,15 +1558,17 @@ def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     script_bytes = _prepare_multisig_script(t, sigs)
 
     # Perform signature verification
-    success = _verify_multisig_signatures(t, script_bytes, pubkeys, sigs, num_signatures, num_pubkeys)
+    result = _verify_multisig_signatures(t, script_bytes, pubkeys, sigs, num_signatures, num_pubkeys)
+    if isinstance(result, Error):
+        return result
 
     # Check for VERIFY_NULL_FAIL
-    if not success and t.flags.has_flag(t.flags.VERIFY_NULL_FAIL):
+    if not result and t.flags.has_flag(t.flags.VERIFY_NULL_FAIL):
         if any(len(s) > 0 for s in sigs):
             return Error(ErrorCode.ERR_SIG_NULLFAIL, "not all signatures empty on failed checkmultisig")
 
     # Push result to stack
-    t.dstack.push(encode_bool(success))
+    t.dstack.push(encode_bool(result))
     return None
 
 
@@ -1603,8 +1599,10 @@ def _extract_multisig_params(t: "Thread") -> Union[tuple[int, list[bytes], int, 
         return err
 
     num_signatures = num_sigs.value
-    if num_signatures < 0 or num_signatures > num_pubkeys:
+    if num_signatures < 0:
         return Error(ErrorCode.ERR_SIG_COUNT, f"invalid signature count: {num_signatures}")
+    if num_signatures > num_pubkeys:
+        return Error(ErrorCode.ERR_SIG_COUNT, f"more signatures than pubkeys: {num_signatures} > {num_pubkeys}")
 
     # Extract signatures
     sigs = _extract_signatures(t, num_signatures)
@@ -1617,15 +1615,9 @@ def _extract_multisig_params(t: "Thread") -> Union[tuple[int, list[bytes], int, 
 def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> Union[list[bytes], Error]:
     """Extract public keys from stack."""
     pubkeys = []
-    require_strict = t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
     for _ in range(num_pubkeys):
         try:
             pubkey = t.dstack.pop_byte_array()
-            # Validate pubkey encoding if STRICTENC is enabled
-            if require_strict:
-                err = check_public_key_encoding(pubkey)
-                if err:
-                    return err
             pubkeys.append(pubkey)
         except Exception:
             return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CHECKMULTISIG missing pubkey")
@@ -1671,12 +1663,16 @@ def _prepare_multisig_script(t: "Thread", sigs: list[bytes]) -> bytes:
 
 def _verify_multisig_signatures(
     t: "Thread", script_bytes: bytes, pubkeys: list[bytes], sigs: list[bytes], num_signatures: int, num_pubkeys: int
-) -> bool:
+) -> Union[bool, Error]:
     """Verify multisig signatures and return success status."""
 
     def _calc_sighash(flag: SIGHASH) -> Optional[bytes]:
         """Return signature hash digest for multisig evaluation."""
         return _compute_sighash_internal(t, script_bytes, flag)
+
+    # Special case: no pubkeys means multisig succeeds (no signatures to verify)
+    if num_pubkeys == 0:
+        return True
 
     # Go-sdk semantics: verify signatures against public keys
     success = True
@@ -1696,13 +1692,13 @@ def _verify_multisig_signatures(
         pub_key = pubkeys[pubkey_idx]
 
         if len(raw_sig) == 0:
-            # Skip to the next pubkey if signature is empty
+            # Skip to the next pubkey if signature is empty (doesn't count as used signature)
             continue
 
         # Process signature verification
         verification_result = _verify_single_signature(t, raw_sig, pub_key, _calc_sighash)
         if isinstance(verification_result, Error):
-            return False  # Hard error on encoding issues
+            return verification_result  # Hard error on encoding issues
         elif verification_result is False:
             # Verification failed, try next pubkey
             continue
@@ -1733,6 +1729,7 @@ def _verify_single_signature(t: "Thread", raw_sig: bytes, pub_key: bytes, calc_s
 
     err = check_signature_encoding(sig_bytes, require_low_s, require_der, require_strict)
     if err:
+        # Return encoding errors directly when DER/strict encoding is required
         return err
 
     # Pubkey encoding checks (STRICTENC)
