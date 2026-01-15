@@ -7,33 +7,55 @@ from typing import Optional
 from bsv.http_client import default_sync_http_client
 
 
-def fetch_woc_tx_and_header(
-    txid: str, network: str = "main", _: Optional[str] = None, height: Optional[int] = None
-):  # NOSONAR - Complexity (19), requires refactoring
+def fetch_woc_tx_and_header(txid: str, network: str = "main", _: Optional[str] = None, height: Optional[int] = None):
     base = f"https://api.whatsonchain.com/v1/bsv/{network}"
     client = default_sync_http_client()
-    # tx raw
+
+    tx_hex = _fetch_tx_raw(client, base, txid)
+    height, header = _fetch_block_header(client, base, txid, height)
+
+    return tx_hex, height, header
+
+
+def _fetch_tx_raw(client, base: str, txid: str) -> str:
+    """Fetch raw transaction hex from WOC."""
     tx_resp = client.get(f"{base}/tx/{txid}/raw")
     if not tx_resp.ok:
         raise SystemExit(f"Failed to fetch tx raw from WOC: {tx_resp.status_code}")
-    tx_hex = tx_resp.json().get("data") if isinstance(tx_resp.json(), dict) else None
-    # header
-    hdr = None
+    tx_data = tx_resp.json()
+    return tx_data.get("data") if isinstance(tx_data, dict) else None
+
+
+def _fetch_block_header(client, base: str, txid: str, height: Optional[int]) -> tuple[Optional[int], dict]:
+    """Fetch block header and height from WOC."""
     if height is not None:
-        hdr_resp = client.get(f"{base}/block/{height}/header")
-        if hdr_resp.ok and isinstance(hdr_resp.json(), dict):
-            hdr = hdr_resp.json().get("data", {})
-    else:
-        # attempt to query tx data to get block hash/height
-        info_resp = client.get(f"{base}/tx/hash/{txid}")
-        if info_resp.ok and isinstance(info_resp.json(), dict):
-            h = info_resp.json().get("data", {}).get("blockheight")
-            if h:
-                height = int(h)
-                hdr_resp = client.get(f"{base}/block/{height}/header")
-                if hdr_resp.ok and isinstance(hdr_resp.json(), dict):
-                    hdr = hdr_resp.json().get("data", {})
-    return tx_hex, height, (hdr or {})
+        return height, _fetch_header_by_height(client, base, height)
+
+    # Get height from tx info
+    height = _get_tx_height(client, base, txid)
+    if height is None:
+        return None, {}
+
+    header = _fetch_header_by_height(client, base, height)
+    return height, header
+
+
+def _get_tx_height(client, base: str, txid: str) -> Optional[int]:
+    """Get transaction block height from WOC."""
+    info_resp = client.get(f"{base}/tx/hash/{txid}")
+    if not info_resp.ok or not isinstance(info_resp.json(), dict):
+        return None
+
+    height_data = info_resp.json().get("data", {}).get("blockheight")
+    return int(height_data) if height_data else None
+
+
+def _fetch_header_by_height(client, base: str, height: int) -> dict:
+    """Fetch block header by height from WOC."""
+    hdr_resp = client.get(f"{base}/block/{height}/header")
+    if hdr_resp.ok and isinstance(hdr_resp.json(), dict):
+        return hdr_resp.json().get("data", {})
+    return {}
 
 
 def main():

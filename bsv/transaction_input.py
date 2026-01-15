@@ -65,11 +65,12 @@ class TransactionInput:
         Returns None if data is invalid or incomplete.
         """
         try:
-            stream = (
-                stream
-                if isinstance(stream, Reader)
-                else Reader(stream if isinstance(stream, bytes) else bytes.fromhex(stream))
-            )
+            if isinstance(stream, Reader):
+                reader = stream
+            else:
+                data = stream if isinstance(stream, bytes) else bytes.fromhex(stream)
+                reader = Reader(data)
+            stream = reader
         except ValueError:
             return None
 

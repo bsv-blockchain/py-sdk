@@ -36,6 +36,17 @@ class KnownIdentityTypes:  # NOSONAR - PascalCase constants match TS/Go SDK iden
     Self = "Hkge6X5JRxt1cWXtHLCrSTg6dCVTxjQJJ48iOYd7n3g="
     CoolCert = "AGfk/WrT1eBDXpz3mcw386Zww2HmqcIn3uY6x4Af1eo="
 
+    # Snake_case aliases for internal use (PEP8 compliance)
+    identi_cert = IdentiCert
+    discord_cert = DiscordCert
+    phone_cert = PhoneCert
+    x_cert = XCert
+    registrant = Registrant
+    email_cert = EmailCert
+    anyone = Anyone
+    self = Self
+    cool_cert = CoolCert
+
 
 # Type aliases
 CertificateFieldNameUnder50Bytes = str

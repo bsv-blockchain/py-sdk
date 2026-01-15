@@ -27,13 +27,19 @@ class WordList:
         "en": os.path.join(path, "english.txt"),
         "zh-cn": os.path.join(path, "chinese_simplified.txt"),
     }
-    wordlist: dict[str, list[str]] = {}
+    wordlists: dict[str, list[str]] = {}
+
+    @property
+    @classmethod
+    def wordlist(cls) -> dict[str, list[str]]:
+        """Backward compatibility property for wordlist field."""
+        return cls.wordlists
 
     @classmethod
     def load(cls) -> None:
         for lang in WordList.files:
-            if not WordList.wordlist.get(lang):
-                WordList.wordlist[lang] = WordList.load_wordlist(lang)
+            if not WordList.wordlists.get(lang):
+                WordList.wordlists[lang] = WordList.load_wordlist(lang)
 
     @classmethod
     def load_wordlist(cls, lang: str = "en") -> list[str]:
@@ -46,18 +52,18 @@ class WordList:
     @classmethod
     def get_word(cls, index: Union[int, bytes], lang: str = "en") -> str:
         WordList.load()
-        assert lang in WordList.wordlist, f"{lang} wordlist not supported"
+        assert lang in WordList.wordlists, f"{lang} wordlist not supported"
         if isinstance(index, bytes):
             index = int.from_bytes(index, "big")
         assert 0 <= index < WordList.LIST_WORDS_COUNT, "index out of range"
-        return WordList.wordlist[lang][index]
+        return WordList.wordlists[lang][index]
 
     @classmethod
     def index_word(cls, word: str, lang: str = "en") -> int:
         WordList.load()
-        assert lang in WordList.wordlist, f"{lang} wordlist not supported"
+        assert lang in WordList.wordlists, f"{lang} wordlist not supported"
         with suppress(Exception):
-            return WordList.wordlist[lang].index(word)
+            return WordList.wordlists[lang].index(word)
         raise ValueError("invalid word")
 
 

@@ -296,6 +296,7 @@ class TopicBroadcaster:
             return await self.facilitator.send(host, tagged_beef)
         except Exception:  # NOSONAR - Reserved for future host failure tracking
             # In a full implementation, we'd track host failures
+            # For now, re-raise the exception
             raise
 
     def _check_all_hosts_acknowledgment(self, host_acknowledgments: dict[str, set]) -> bool:

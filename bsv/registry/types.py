@@ -23,6 +23,26 @@ class BasketDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     documentationURL: str
     registryOperator: str | None = None
 
+    @property
+    def definition_type(self) -> Literal["basket"]:
+        return self.definitionType
+
+    @property
+    def basket_id(self) -> str:
+        return self.basketID
+
+    @property
+    def icon_url(self) -> str:
+        return self.iconURL
+
+    @property
+    def documentation_url(self) -> str:
+        return self.documentationURL
+
+    @property
+    def registry_operator(self) -> str | None:
+        return self.registryOperator
+
 
 @dataclass
 class ProtocolDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
@@ -33,6 +53,26 @@ class ProtocolDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     description: str
     documentationURL: str
     registryOperator: str | None = None
+
+    @property
+    def definition_type(self) -> Literal["protocol"]:
+        return self.definitionType
+
+    @property
+    def protocol_id(self) -> dict[str, Any]:
+        return self.protocolID
+
+    @property
+    def icon_url(self) -> str:
+        return self.iconURL
+
+    @property
+    def documentation_url(self) -> str:
+        return self.documentationURL
+
+    @property
+    def registry_operator(self) -> str | None:
+        return self.registryOperator
 
 
 @dataclass
@@ -45,6 +85,22 @@ class CertificateDefinitionData:  # NOSONAR - camelCase matches TS/Go registry A
     documentationURL: str
     fields: dict[str, CertificateFieldDescriptor]
     registryOperator: str | None = None
+
+    @property
+    def definition_type(self) -> Literal["certificate"]:
+        return self.definitionType
+
+    @property
+    def icon_url(self) -> str:
+        return self.iconURL
+
+    @property
+    def documentation_url(self) -> str:
+        return self.documentationURL
+
+    @property
+    def registry_operator(self) -> str | None:
+        return self.registryOperator
 
 
 DefinitionData = Union[
@@ -61,6 +117,14 @@ class TokenData:  # NOSONAR - camelCase matches TS/Go registry API
     satoshis: int
     lockingScript: str
     beef: bytes
+
+    @property
+    def output_index(self) -> int:
+        return self.outputIndex
+
+    @property
+    def locking_script(self) -> str:
+        return self.lockingScript
 
 
 RegistryRecord = Union[

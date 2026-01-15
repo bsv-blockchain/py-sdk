@@ -2,6 +2,8 @@
 Pushdata encoding utilities from main utils.py
 """
 
+from __future__ import annotations
+
 import os
 import sys
 

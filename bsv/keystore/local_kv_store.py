@@ -239,7 +239,7 @@ class LocalKVStore(KVStoreInterface):
         return None
 
     def _lookup_outputs_for_get(
-        self, ctx: Any, key: str
+        self, _ctx: Any, key: str
     ) -> tuple[list, bytes]:  # NOSONAR - Complexity (67), requires refactoring
         # Fast-path: return locally cached BEEF right after set
         cached = self._recent_beef_by_key.get(key)
@@ -713,7 +713,7 @@ class LocalKVStore(KVStoreInterface):
         return f"{key}.0"
 
     def _build_locking_script(
-        self, ctx: Any, key: str, value: str, ca_args: dict = None
+        self, _ctx: Any, key: str, value: str, ca_args: dict = None
     ) -> str:  # NOSONAR - Complexity (17), requires refactoring
         ca_args = self._merge_default_ca(ca_args)
 

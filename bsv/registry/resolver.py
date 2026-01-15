@@ -44,10 +44,10 @@ class WalletWireResolver:
         definition_type = cast(DefinitionType, service_to_type.get(service_name))
         if not definition_type:
             return []
-        return self.query(ctx, definition_type, query)
+        return self.query(_ctx=ctx, definition_type=definition_type, query=query)
 
     def query(
-        self, ctx: Any, definition_type: DefinitionType, query: dict[str, Any] = None
+        self, _ctx: Any, definition_type: DefinitionType, query: dict[str, Any] = None
     ) -> list[dict[str, Any]]:  # NOSONAR - query parameter reserved for future filtering capability
         lo = (
             self.wallet.list_outputs(

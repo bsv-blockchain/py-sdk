@@ -91,7 +91,7 @@ def to_binary(beef: Beef) -> bytes:
     # transactions
     writer.write_var_int_num(len(beef.txs))
     written: set[str] = set()
-    for btx in list(beef.txs.values()):
+    for btx in beef.txs.values():
         _append_tx(writer, beef, btx, written)
 
     return writer.to_bytes()

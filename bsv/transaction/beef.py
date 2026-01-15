@@ -399,7 +399,7 @@ def _find_transaction_in_child_inputs(beef: Beef, target_txid: str):
 
 def _fill_txidonly_placeholders(beef: Beef):
     """Fill txid-only placeholders with actual transactions from child inputs."""
-    for txid, entry in list(beef.txs.items()):
+    for txid, entry in beef.txs.items():
         if entry.tx_obj is None:
             tx = _find_transaction_in_child_inputs(beef, txid)
             if tx is not None:

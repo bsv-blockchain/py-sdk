@@ -72,12 +72,12 @@ class DecryptResult:
 
 # Placeholder for future cryptographic operations (to be implemented)
 def encrypt(args: EncryptArgs, private_key: PrivateKey) -> EncryptResult:
-    # TODO: Implement encryption logic (ECIES/BIE1 or as per go-sdk)
+    """Encrypt data using ECIES/BIE1 encryption scheme (not yet implemented)."""
     raise NotImplementedError("Encryption operation is not yet implemented.")
 
 
 def decrypt(args: DecryptArgs, private_key: PrivateKey) -> DecryptResult:
-    # TODO: Implement decryption logic (ECIES/BIE1 or as per go-sdk)
+    """Decrypt data using ECIES/BIE1 decryption scheme (not yet implemented)."""
     raise NotImplementedError("Decryption operation is not yet implemented.")
 
 

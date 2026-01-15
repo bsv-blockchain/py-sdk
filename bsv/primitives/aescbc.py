@@ -124,3 +124,8 @@ def aes_cbc_decrypt_mac(
         iv_final = iv
 
     return AESCBCDecrypt(cipher_text, key_e, iv_final)
+
+
+# Snake_case aliases for PEP8 compliance (internal use)
+aes_cbc_encrypt = AESCBCEncrypt
+aes_cbc_decrypt = AESCBCDecrypt

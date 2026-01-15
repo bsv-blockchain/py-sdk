@@ -664,13 +664,6 @@ class Spend:
 
                 # Clean up stack of actual arguments
                 while i > 1:
-                    if False:
-                        _m = (
-                            f"{_codename} failed to verify a signature, "
-                            "and requires an empty signature when verification fails."
-                        )
-                        self.script_evaluation_error(_m)
-
                     if i_key2 > 0:
                         i_key2 -= 1
 

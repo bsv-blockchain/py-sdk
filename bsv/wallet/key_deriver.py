@@ -49,7 +49,17 @@ class CounterpartyType:
 @dataclass
 class Counterparty:  # NOSONAR - Field names match protocol specification
     type: int
-    counterparty: PublicKey | None = None  # NOSONAR - Field names match protocol specification
+    counterparty_key: PublicKey | None = None  # NOSONAR - Field names match protocol specification
+
+    @property
+    def counterparty(self) -> PublicKey | None:
+        """Backward compatibility property for counterparty field."""
+        return self.counterparty_key
+
+    @counterparty.setter
+    def counterparty(self, value: PublicKey | None) -> None:
+        """Backward compatibility setter for counterparty field."""
+        self.counterparty_key = value
 
     def to_public_key(self, self_pub: PublicKey) -> PublicKey:
         if self.type == CounterpartyType.SELF:
@@ -58,9 +68,9 @@ class Counterparty:  # NOSONAR - Field names match protocol specification
             # Anyone is represented by the constant PublicKey derived from PrivateKey(1)
             return PrivateKey(1).public_key()
         if (
-            self.type == CounterpartyType.OTHER and self.counterparty
+            self.type == CounterpartyType.OTHER and self.counterparty_key
         ):  # NOSONAR - Field name matches protocol specification
-            return self.counterparty
+            return self.counterparty_key
         raise ValueError("Invalid counterparty configuration")
 
 

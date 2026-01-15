@@ -1,2 +1,2 @@
 # Placeholder for registry overlay tests
-# TODO: Re-enable when registry overlay integration is complete
+# NOTE: Tests to be added when registry overlay integration is implemented

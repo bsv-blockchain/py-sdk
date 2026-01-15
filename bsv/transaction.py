@@ -130,56 +130,79 @@ class Transaction:
 
     def _calc_input_preimage_bip143(
         self, input_index: int, hash_type: int, _script_code: Script, prev_satoshis: int
-    ) -> bytes:  # NOSONAR - Complexity (17), requires refactoring
+    ) -> bytes:
         """
         Calculate BIP143/ForkID preimage for signature hashing.
         Uses tx_input.locking_script as the script_code (parameter kept for interface compatibility).
-        """
-        """
-        Calculate BIP143/ForkID preimage for signature hashing.
         """
         from io import BytesIO
 
         from .utils import unsigned_to_varint
 
-        # Get the input
         tx_input = self.inputs[input_index]
 
-        # Calculate hashPrevouts (32-byte hash)
-        if hash_type & int(SIGHASH.ANYONECANPAY):
-            hash_prevouts = b"\x00" * 32
-        else:
-            prevouts_data = b""
-            for inp in self.inputs:
-                prevouts_data += bytes.fromhex(inp.source_txid)[::-1]
-                prevouts_data += inp.source_output_index.to_bytes(4, "little")
-            hash_prevouts = hash256(prevouts_data)
+        # Calculate BIP143 hash components
+        hash_prevouts = self._calc_hash_prevouts(hash_type)
+        hash_sequence = self._calc_hash_sequence(hash_type)
+        hash_outputs = self._calc_hash_outputs(hash_type, input_index)
 
-        # Calculate hashSequence (32-byte hash)
+        # Build the preimage
+        return self._build_bip143_preimage(
+            tx_input, hash_prevouts, hash_sequence, hash_outputs, hash_type, prev_satoshis
+        )
+
+    def _calc_hash_prevouts(self, hash_type: int) -> bytes:
+        """Calculate hashPrevouts component for BIP143."""
+        if hash_type & int(SIGHASH.ANYONECANPAY):
+            return b"\x00" * 32
+
+        prevouts_data = b""
+        for inp in self.inputs:
+            prevouts_data += bytes.fromhex(inp.source_txid)[::-1]
+            prevouts_data += inp.source_output_index.to_bytes(4, "little")
+        return hash256(prevouts_data)
+
+    def _calc_hash_sequence(self, hash_type: int) -> bytes:
+        """Calculate hashSequence component for BIP143."""
         if (
             hash_type & int(SIGHASH.ANYONECANPAY)
             or (hash_type & 0x1F) == int(SIGHASH.SINGLE)
             or (hash_type & 0x1F) == int(SIGHASH.NONE)
         ):
-            hash_sequence = b"\x00" * 32
-        else:
-            sequence_data = b""
-            for inp in self.inputs:
-                sequence_data += inp.sequence.to_bytes(4, "little")
-            hash_sequence = hash256(sequence_data)
+            return b"\x00" * 32
 
-        # Calculate hashOutputs (32-byte hash)
-        if (hash_type & 0x1F) == int(SIGHASH.SINGLE) and input_index < len(self.outputs):
-            hash_outputs = hash256(self.outputs[input_index].serialize())
-        elif (hash_type & 0x1F) == int(SIGHASH.NONE):
-            hash_outputs = b"\x00" * 32
+        sequence_data = b""
+        for inp in self.inputs:
+            sequence_data += inp.sequence.to_bytes(4, "little")
+        return hash256(sequence_data)
+
+    def _calc_hash_outputs(self, hash_type: int, input_index: int) -> bytes:
+        """Calculate hashOutputs component for BIP143."""
+        sighash_type = hash_type & 0x1F
+        if sighash_type == int(SIGHASH.SINGLE) and input_index < len(self.outputs):
+            return hash256(self.outputs[input_index].serialize())
+        elif sighash_type == int(SIGHASH.NONE):
+            return b"\x00" * 32
         else:
             outputs_data = b""
             for out in self.outputs:
                 outputs_data += out.serialize()
-            hash_outputs = hash256(outputs_data)
+            return hash256(outputs_data)
 
-        # Build the preimage
+    def _build_bip143_preimage(
+        self,
+        tx_input,
+        hash_prevouts: bytes,
+        hash_sequence: bytes,
+        hash_outputs: bytes,
+        hash_type: int,
+        prev_satoshis: int,
+    ) -> bytes:
+        """Build the final BIP143 preimage."""
+        from io import BytesIO
+
+        from .utils import unsigned_to_varint
+
         stream = BytesIO()
         # 1. nVersion (4-byte little endian)
         stream.write(self.version.to_bytes(4, "little"))
@@ -387,7 +410,7 @@ class Transaction:
 
         # Distribute change among change outputs
         if change_distribution == "random":
-            # TODO: Implement random distribution
+            """Random change distribution not yet implemented."""
             raise NotImplementedError("Random change distribution is not yet implemented")
         elif change_distribution == "equal":
             per_output = change // change_count
@@ -397,7 +420,7 @@ class Transaction:
         return None
 
     async def broadcast(
-        self, broadcaster: Broadcaster = default_broadcaster(), check_fee: bool = True
+        self, broadcaster: Broadcaster = default_broadcaster(), _check_fee: bool = True
     ) -> BroadcastResponse:  # pragma: no cover
         return await broadcaster.broadcast(self)
 
@@ -419,11 +442,12 @@ class Transaction:
 
     @classmethod
     def from_beef(cls, stream: Union[str, bytes, Reader]) -> "Transaction":
-        stream = (
-            stream
-            if isinstance(stream, Reader)
-            else Reader(stream if isinstance(stream, bytes) else bytes.fromhex(stream))
-        )
+        if isinstance(stream, Reader):
+            reader = stream
+        else:
+            data = stream if isinstance(stream, bytes) else bytes.fromhex(stream)
+            reader = Reader(data)
+        stream = reader
         version = stream.read_uint32_le()
         if version != 4022206465:
             raise ValueError(f"Invalid BEEF version. Expected 4022206465, received {version}.")
