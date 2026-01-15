@@ -59,14 +59,14 @@ class NopDebugger:
 
 
 class NopStateHandler:
-    """No-op state handler implementation."""
+    """No-op state handler implementation following the null object pattern."""
 
     def state(self) -> dict:
         return {}
 
     def set_state(self, state: dict) -> None:
-        """Intentionally empty: null object pattern."""
-        # NOSONAR
+        """No-op: intentionally left empty as part of the null object pattern."""
+        return
 
 
 def as_bool(data: bytes) -> bool:
