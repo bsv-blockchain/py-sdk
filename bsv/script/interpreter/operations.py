@@ -1617,9 +1617,16 @@ def _extract_multisig_params(t: "Thread") -> Union[tuple[int, list[bytes], int, 
 def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> Union[list[bytes], Error]:
     """Extract public keys from stack."""
     pubkeys = []
+    require_strict = t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
     for _ in range(num_pubkeys):
         try:
-            pubkeys.append(t.dstack.pop_byte_array())
+            pubkey = t.dstack.pop_byte_array()
+            # Validate pubkey encoding if STRICTENC is enabled
+            if require_strict:
+                err = check_public_key_encoding(pubkey)
+                if err:
+                    return err
+            pubkeys.append(pubkey)
         except Exception:
             return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CHECKMULTISIG missing pubkey")
     return pubkeys

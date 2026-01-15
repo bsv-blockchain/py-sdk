@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Union
+from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from constants import OpCode
@@ -72,7 +72,7 @@ def decode_pushdata(encoded: bytes) -> bytes:
     return _decode_pushdata_opcode(encoded, opcode)
 
 
-def _decode_special_opcode(opcode: int) -> bytes | None:
+def _decode_special_opcode(opcode: int) -> Optional[bytes]:
     """Decode special opcodes (OP_0, OP_1-OP_16, OP_1NEGATE). Returns None if not a special opcode."""
     if opcode == OpCode.OP_0[0]:
         return b""

@@ -97,6 +97,7 @@ ignore = [
     "N801",     # invalid-class-name (acceptable for compatibility)
     "N814",     # camelcase-imported-as-constant (acceptable)
     "PLW1510",  # subprocess-run-without-check (acceptable when returncode is checked)
+    "UP045",    # X | None syntax not compatible with Python 3.9
 ]
 
 [tool.ruff.lint.per-file-ignores]

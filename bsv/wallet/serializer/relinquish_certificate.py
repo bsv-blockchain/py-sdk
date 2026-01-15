@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any, Optional
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
@@ -20,7 +20,7 @@ def deserialize_relinquish_certificate_args(data: bytes) -> dict[str, Any]:
     }
 
 
-def serialize_relinquish_certificate_result(_: dict[str, Any] | None) -> bytes:
+def serialize_relinquish_certificate_result(_: Optional[dict[str, Any]]) -> bytes:
     # No additional payload
     return b""
 

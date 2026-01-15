@@ -2,7 +2,7 @@
 Common serialization utilities for wallet serializer modules.
 """
 
-from typing import Any, Union
+from typing import Any, Optional
 
 from bsv.wallet.substrates.serializer import (
     Reader,
@@ -139,7 +139,7 @@ def deserialize_seek_permission(r: Reader) -> bool:
     return None if b == 0xFF else (b == 1)
 
 
-def serialize_relinquish_certificate_result(_: dict[str, Any] | None) -> bytes:
+def serialize_relinquish_certificate_result(_: Optional[dict[str, Any]]) -> bytes:
     """Serialize relinquish certificate result (empty)."""
     return b""
 
