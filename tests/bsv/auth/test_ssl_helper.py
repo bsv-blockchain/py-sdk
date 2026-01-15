@@ -50,9 +50,7 @@ class TestSSLHelper:
             # SECURITY NOTE: This is TEST-ONLY code for local development with self-signed certificates.
             # Production code MUST use proper certificate verification.
             # Using TLS 1.2+ with secure defaults from create_default_context()
-            context = ssl.create_default_context(
-                purpose=ssl.Purpose.SERVER_AUTH, cafile=None
-            )
+            context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=None)
             # Load self-signed test certificate to enable hostname verification
             try:
                 cert_file, _ = cls._get_or_create_certificate()

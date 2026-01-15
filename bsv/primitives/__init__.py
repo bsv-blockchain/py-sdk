@@ -9,7 +9,7 @@ from .symmetric_key import SymmetricKey
 __all__ = [
     "AESCBCDecrypt",
     "AESCBCEncrypt",
+    "SymmetricKey",
     "aescbc_decrypt",
     "aescbc_encrypt",
-    "SymmetricKey",
 ]

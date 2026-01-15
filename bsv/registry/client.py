@@ -21,6 +21,7 @@ from bsv.transaction.pushdrop import (
     decode_lock_before_pushdrop,
     make_pushdrop_unlocker,
 )
+from bsv.utils import Reader
 from bsv.wallet.key_deriver import Protocol as WalletProtocol
 from bsv.wallet.wallet_interface import WalletInterface
 
@@ -240,9 +241,7 @@ class RegistryClient:
 
         return results
 
-    def revoke_own_registry_entry(
-        self, ctx: Any, record: dict[str, Any]
-    ) -> dict[str, Any]:
+    def revoke_own_registry_entry(self, ctx: Any, record: dict[str, Any]) -> dict[str, Any]:
         """Revoke a registry entry owned by this wallet."""
         self._validate_ownership(record)
         txid, output_index, beef, satoshis = self._extract_record_data(record)
@@ -324,9 +323,7 @@ class RegistryClient:
             or {}
         )
 
-    def _create_revocation_unlocker(
-        self, txid: str, output_index: int, satoshis: int, record: dict[str, Any]
-    ):
+    def _create_revocation_unlocker(self, txid: str, output_index: int, satoshis: int, record: dict[str, Any]):
         """Create unlocker for the revocation transaction."""
         return make_pushdrop_unlocker(
             self.wallet,
@@ -345,9 +342,7 @@ class RegistryClient:
             ),
         )
 
-    def _broadcast_revocation_transaction(
-        self, ctx: Any, sign_res: dict[str, Any], record: dict[str, Any]
-    ) -> None:
+    def _broadcast_revocation_transaction(self, ctx: Any, sign_res: dict[str, Any], record: dict[str, Any]) -> None:
         """Broadcast the signed revocation transaction."""
         tx_bytes = cast(bytes, sign_res.get("tx") or b"")
         if not tx_bytes:

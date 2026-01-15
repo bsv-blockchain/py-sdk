@@ -124,6 +124,7 @@ def check_signature_encoding(
 
     return None
 
+
 def _validate_signature_length(sig: bytes) -> Optional[Error]:
     """Validate signature length constraints."""
     sig_len = len(sig)
@@ -137,10 +138,10 @@ def _validate_signature_length(sig: bytes) -> Optional[Error]:
 
     return None
 
+
 def _validate_der_structure(sig: bytes) -> Optional[Error]:
     """Validate DER encoding structure."""
     asn1_sequence_id = 0x30
-    asn1_integer_id = 0x02
 
     sequence_offset = 0
     data_len_offset = 1
@@ -193,7 +194,10 @@ def _validate_der_structure(sig: bytes) -> Optional[Error]:
 
     return None
 
-def _validate_der_integer(sig: bytes, type_offset: int, length: int, data_offset: int, component: str) -> Optional[Error]:
+
+def _validate_der_integer(
+    sig: bytes, type_offset: int, length: int, data_offset: int, component: str
+) -> Optional[Error]:
     """Validate a DER integer component (R or S)."""
     asn1_integer_id = 0x02
 
@@ -207,25 +211,24 @@ def _validate_der_integer(sig: bytes, type_offset: int, length: int, data_offset
     # Zero-length not allowed
     if length == 0:
         return Error(
-            getattr(ErrorCode, f"ERR_SIG_ZERO_{component}_LEN"),
-            f"malformed signature: {component} length is zero"
+            getattr(ErrorCode, f"ERR_SIG_ZERO_{component}_LEN"), f"malformed signature: {component} length is zero"
         )
 
     # Must not be negative
     if sig[data_offset] & 0x80 != 0:
         return Error(
-            getattr(ErrorCode, f"ERR_SIG_NEGATIVE_{component}"),
-            f"malformed signature: {component} is negative"
+            getattr(ErrorCode, f"ERR_SIG_NEGATIVE_{component}"), f"malformed signature: {component} is negative"
         )
 
     # No unnecessary leading zeros (except for negative representation)
     if length > 1 and sig[data_offset] == 0x00 and sig[data_offset + 1] & 0x80 == 0:
         return Error(
             getattr(ErrorCode, f"ERR_SIG_TOO_MUCH_{component}_PADDING"),
-            f"malformed signature: {component} value has too much padding"
+            f"malformed signature: {component} value has too much padding",
         )
 
     return None
+
 
 def _validate_low_s_value(sig: bytes) -> Optional[Error]:
     """Validate that S value is in the lower half of the curve order."""
@@ -1572,6 +1575,7 @@ def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     t.dstack.push(encode_bool(success))
     return None
 
+
 def _extract_multisig_params(t: "Thread") -> tuple[int, list[bytes], int, list[bytes]] | Error:
     """Extract and validate multisig parameters from stack."""
     # Get number of public keys
@@ -1609,6 +1613,7 @@ def _extract_multisig_params(t: "Thread") -> tuple[int, list[bytes], int, list[b
 
     return num_pubkeys, pubkeys, num_signatures, sigs
 
+
 def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> list[bytes] | Error:
     """Extract public keys from stack."""
     pubkeys = []
@@ -1619,6 +1624,7 @@ def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> list[bytes] | Error:
             return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CHECKMULTISIG missing pubkey")
     return pubkeys
 
+
 def _extract_signatures(t: "Thread", num_signatures: int) -> list[bytes] | Error:
     """Extract signatures from stack."""
     sigs = []
@@ -1628,6 +1634,7 @@ def _extract_signatures(t: "Thread", num_signatures: int) -> list[bytes] | Error
         except Exception:
             return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CHECKMULTISIG missing signature")
     return sigs
+
 
 def _validate_multisig_dummy(t: "Thread") -> Optional[Error]:
     """Validate the multisig dummy element."""
@@ -1641,6 +1648,7 @@ def _validate_multisig_dummy(t: "Thread") -> Optional[Error]:
 
     return None
 
+
 def _prepare_multisig_script(t: "Thread", sigs: list[bytes]) -> bytes:
     """Prepare script bytes for sighash calculation."""
     scr = t.sub_script()
@@ -1653,11 +1661,12 @@ def _prepare_multisig_script(t: "Thread", sigs: list[bytes]) -> bytes:
     except Exception:
         return b""
 
+
 def _verify_multisig_signatures(
-    t: "Thread", script_bytes: bytes, pubkeys: list[bytes], sigs: list[bytes],
-    num_signatures: int, num_pubkeys: int
+    t: "Thread", script_bytes: bytes, pubkeys: list[bytes], sigs: list[bytes], num_signatures: int, num_pubkeys: int
 ) -> bool:
     """Verify multisig signatures and return success status."""
+
     def _calc_sighash(flag: SIGHASH) -> Optional[bytes]:
         """Return signature hash digest for multisig evaluation."""
         return _compute_sighash_internal(t, script_bytes, flag)
@@ -1696,6 +1705,7 @@ def _verify_multisig_signatures(
             sig_idx += 1
 
     return success and remaining_sigs == 0
+
 
 def _verify_single_signature(t: "Thread", raw_sig: bytes, pub_key: bytes, calc_sighash) -> bool | Error:
     """Verify a single signature against a public key."""

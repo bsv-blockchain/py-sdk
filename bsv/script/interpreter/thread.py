@@ -346,6 +346,7 @@ class Thread:
         redeem_script_bytes = self.saved_first_stack[-1]
         try:
             from bsv.script.script import Script
+
             parsed_redeem = self.script_parser.parse(Script.from_bytes(redeem_script_bytes))
         except Error as e:
             return e

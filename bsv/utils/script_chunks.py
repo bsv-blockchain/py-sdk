@@ -13,6 +13,7 @@ def read_script_chunks(script: Union[bytes, str]) -> list[ScriptChunk]:
     script_bytes = _normalize_script_input(script)
     return _parse_script_bytes(script_bytes)
 
+
 def _normalize_script_input(script: Union[bytes, str]) -> bytes:
     """Convert script input to bytes, handling hex strings."""
     if isinstance(script, str):
@@ -22,6 +23,7 @@ def _normalize_script_input(script: Union[bytes, str]) -> bytes:
             # If conversion fails, treat as empty
             return b""
     return script
+
 
 def _parse_script_bytes(script: bytes) -> list[ScriptChunk]:
     """Parse script bytes into chunks."""
@@ -43,6 +45,7 @@ def _parse_script_bytes(script: bytes) -> list[ScriptChunk]:
 
     return chunks
 
+
 def _parse_single_opcode(script: bytes, op: int, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
     """Parse a single opcode and return (chunk, new_index)."""
     if op <= 75:  # direct push
@@ -56,12 +59,14 @@ def _parse_single_opcode(script: bytes, op: int, i: int, n: int) -> Optional[tup
     else:  # Non-push opcodes
         return ScriptChunk(op=op, data=None), i
 
+
 def _parse_direct_push(script: bytes, op: int, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
     """Parse direct push opcode (length encoded in opcode)."""
     ln = op
     if i + ln > n:
         return None
     return ScriptChunk(op=op, data=script[i : i + ln]), i + ln
+
 
 def _parse_pushdata1(script: bytes, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
     """Parse OP_PUSHDATA1 opcode."""
@@ -73,6 +78,7 @@ def _parse_pushdata1(script: bytes, i: int, n: int) -> Optional[tuple[ScriptChun
         return None
     return ScriptChunk(op=0x4C, data=script[i : i + ln]), i + ln
 
+
 def _parse_pushdata2(script: bytes, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
     """Parse OP_PUSHDATA2 opcode."""
     if i + 1 >= n:
@@ -82,6 +88,7 @@ def _parse_pushdata2(script: bytes, i: int, n: int) -> Optional[tuple[ScriptChun
     if i + ln > n:
         return None
     return ScriptChunk(op=0x4D, data=script[i : i + ln]), i + ln
+
 
 def _parse_pushdata4(script: bytes, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
     """Parse OP_PUSHDATA4 opcode."""

@@ -171,32 +171,31 @@ def _collect_results(result: ValidationResult, ctx: _ValidationContext):
     result.missing_inputs = list(ctx.missing_inputs)
 
 
-def verify_valid(
-    beef: Beef, allow_txid_only: bool = False
-) -> tuple[bool, dict[int, str]]:
+def verify_valid(beef: Beef, allow_txid_only: bool = False) -> tuple[bool, dict[int, str]]:
     """
     Validate structure and confirm that computed roots are consistent per block height.
     Returns (valid, roots_map).
     """
     vr = validate_transactions(beef)
-    if not self._is_basic_validation_passed(vr, allow_txid_only):
+    if not _is_basic_validation_passed(vr, allow_txid_only):
         return False, {}
 
-    roots = self._validate_bump_roots(beef)
+    roots = _validate_bump_roots(beef)
     if roots is None:
         return False, {}
 
-    if not self._validate_btx_references(beef):
+    if not _validate_btx_references(beef):
         return False, {}
 
     return True, roots
 
+
 def _is_basic_validation_passed(vr, allow_txid_only: bool) -> bool:
     """Check if basic transaction validation passed."""
-    return not (vr.missing_inputs or vr.not_valid or
-               (vr.txid_only and not allow_txid_only) or vr.with_missing_inputs)
+    return not (vr.missing_inputs or vr.not_valid or (vr.txid_only and not allow_txid_only) or vr.with_missing_inputs)
 
-def _validate_bump_roots(beef: Beef) -> Optional[dict[int, str]]:
+
+def _validate_bump_roots(beef: Beef) -> dict[int, str] | None:
     """Validate that all bumps have internally consistent roots."""
     roots: dict[int, str] = {}
 
@@ -205,6 +204,7 @@ def _validate_bump_roots(beef: Beef) -> Optional[dict[int, str]]:
             return None
 
     return roots
+
 
 def _validate_single_bump_roots(bump, roots: dict[int, str]) -> bool:
     """Validate roots for a single bump."""
@@ -216,6 +216,7 @@ def _validate_single_bump_roots(bump, roots: dict[int, str]) -> bool:
     except Exception:
         return False
     return True
+
 
 def _confirm_computed_root(mp: MerklePath, txid: str, roots: dict[int, str]) -> bool:
     """Confirm that computed root matches existing roots for the block height."""
@@ -233,6 +234,7 @@ def _confirm_computed_root(mp: MerklePath, txid: str, roots: dict[int, str]) -> 
         return True
     return existing == root
 
+
 def _validate_btx_references(beef: Beef) -> bool:
     """Validate that beefTx references are correct."""
     for txid, btx in getattr(beef, "txs", {}).items():
@@ -240,6 +242,7 @@ def _validate_btx_references(beef: Beef) -> bool:
             if not _validate_single_btx_reference(beef, txid, btx):
                 return False
     return True
+
 
 def _validate_single_btx_reference(beef: Beef, txid: str, btx) -> bool:
     """Validate a single beefTx reference."""

@@ -26,9 +26,7 @@ def PKCS7Unpad(data: bytes, block_size: int) -> bytes:  # NOSONAR - Standard PKC
     return data[:-padding]
 
 
-def aescbc_encrypt(
-    data: bytes, key: bytes, iv: bytes, concat_iv: bool
-) -> bytes:
+def aescbc_encrypt(data: bytes, key: bytes, iv: bytes, concat_iv: bool) -> bytes:
     block_size = AES.block_size
     padded = PKCS7Padd(data, block_size)
     # AES-CBC is used with HMAC-SHA256 for authenticated encryption (see aes_cbc_encrypt_mac)

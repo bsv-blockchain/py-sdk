@@ -29,6 +29,7 @@ def test_send_without_handler_returns_error(monkeypatch):
 
 def _create_fake_request():
     """Create a fake request function for testing."""
+
     def fake_request(self, method, url, headers=None, data=None):
         assert method == "GET"
         assert url == "https://api.test.local/health"
@@ -44,6 +45,7 @@ def _create_fake_request():
             "x-bsv-auth-signature": "",
         }
         return DummyResponse(200, response_headers, content=json.dumps({"ok": True}).encode("utf-8"))
+
     return fake_request
 
 

@@ -1,5 +1,6 @@
 import math
 from contextlib import suppress
+from io import BytesIO
 from typing import Any, Dict, List, Optional, Union
 
 from .broadcaster import Broadcaster, BroadcastResponse
@@ -231,9 +232,7 @@ class Transaction:
 
         return stream.getvalue()
 
-    def _calc_input_preimage_legacy(
-        self, input_index: int, hash_type: int
-    ) -> bytes:
+    def _calc_input_preimage_legacy(self, input_index: int, hash_type: int) -> bytes:
         """
         Calculate legacy preimage for signature hashing.
         Implements the original Bitcoin signature hashing algorithm with SIGHASH_SINGLE bug.

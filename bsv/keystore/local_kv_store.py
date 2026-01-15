@@ -180,9 +180,15 @@ class LocalKVStore(KVStoreInterface):
 
     def _should_return_encrypted(self, first_field: Any) -> bool:
         """Check if field should be returned in encrypted form."""
-        return (self._encrypt and isinstance(self._default_ca, dict) and self._default_ca and
-               (isinstance(first_field, (bytes, bytearray)) or
-                (isinstance(first_field, str) and not first_field.startswith("enc:"))))
+        return (
+            self._encrypt
+            and isinstance(self._default_ca, dict)
+            and self._default_ca
+            and (
+                isinstance(first_field, (bytes, bytearray))
+                or (isinstance(first_field, str) and not first_field.startswith("enc:"))
+            )
+        )
 
     def _format_encrypted_field(self, first_field: Any) -> str:
         """Format field as encrypted string."""
@@ -211,18 +217,21 @@ class LocalKVStore(KVStoreInterface):
             ca_args = self._merge_default_ca(None)
             protocol_id, key_id, counterparty = self._extract_encryption_params_from_ca(ca_args)
 
-            dec_res = self._wallet.decrypt(
-                ctx,
-                {
-                    "encryption_args": {
-                        "protocolID": protocol_id,
-                        "keyID": key_id,
-                        "counterparty": counterparty,
+            dec_res = (
+                self._wallet.decrypt(
+                    ctx,
+                    {
+                        "encryption_args": {
+                            "protocolID": protocol_id,
+                            "keyID": key_id,
+                            "counterparty": counterparty,
+                        },
+                        "ciphertext": ciphertext,
                     },
-                    "ciphertext": ciphertext,
-                },
-                self._originator,
-            ) or {}
+                    self._originator,
+                )
+                or {}
+            )
 
             pt = dec_res.get("plaintext")
             if isinstance(pt, (bytes, bytearray)):
@@ -255,15 +264,8 @@ class LocalKVStore(KVStoreInterface):
             or pd_opts.get("protocol_id")
             or pd_opts.get("protocolID")
         )
-        key_id = (
-            ca_args.get("key_id")
-            or ca_args.get("keyID")
-            or pd_opts.get("key_id")
-            or pd_opts.get("keyID")
-        )
-        counterparty = (
-            ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 2}
-        )  # Default to SELF (2)
+        key_id = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
+        counterparty = ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 2}  # Default to SELF (2)
         return protocol_id, key_id, counterparty
 
     def _decode_plaintext_field(self, first_field: Any) -> str | None:
@@ -353,12 +355,7 @@ class LocalKVStore(KVStoreInterface):
 
     def _extract_key_id(self, ca_args: dict, pd_opts: dict) -> Any:
         """Extract key ID from CA args."""
-        return (
-            ca_args.get("key_id")
-            or ca_args.get("keyID")
-            or pd_opts.get("key_id")
-            or pd_opts.get("keyID")
-        )
+        return ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
 
     def _build_beef_from_woc_outputs(self, outputs: list) -> bytes:
         """Build BEEF from WOC outputs as fallback."""
@@ -388,6 +385,7 @@ class LocalKVStore(KVStoreInterface):
             if matched_outputs and matched_tx_hexes:
                 unique_tx_hexes = list(dict.fromkeys(matched_tx_hexes))
                 from bsv.beef import build_beef_v2_from_raw_hexes
+
                 beef_bytes = build_beef_v2_from_raw_hexes(unique_tx_hexes)
                 return matched_outputs, beef_bytes
 
@@ -409,15 +407,11 @@ class LocalKVStore(KVStoreInterface):
         protocol_obj = None
         if prot is not None:
             protocol_obj = (
-                Protocol(prot.get("securityLevel", 0), prot.get("protocol", ""))
-                if isinstance(prot, dict)
-                else prot
+                Protocol(prot.get("securityLevel", 0), prot.get("protocol", "")) if isinstance(prot, dict) else prot
             )
 
         cp_norm = (
-            self._wallet._normalize_counterparty(cpty)
-            if hasattr(self._wallet, "_normalize_counterparty")
-            else None
+            self._wallet._normalize_counterparty(cpty) if hasattr(self._wallet, "_normalize_counterparty") else None
         )
 
         derived_pub = None
@@ -425,9 +419,7 @@ class LocalKVStore(KVStoreInterface):
         derived_pub_hex = None
         if protocol_obj is not None and kid is not None:
             try:
-                derived_pub = self._wallet.key_deriver.derive_public_key(
-                    protocol_obj, kid, cp_norm, for_self=False
-                )
+                derived_pub = self._wallet.key_deriver.derive_public_key(protocol_obj, kid, cp_norm, for_self=False)
                 derived_addr = derived_pub.address()
                 derived_pub_hex = derived_pub.hex()
             except Exception:
@@ -794,9 +786,7 @@ class LocalKVStore(KVStoreInterface):
             pass
         return f"{key}.0"
 
-    def _build_locking_script(
-        self, _ctx: Any, key: str, value: str, ca_args: dict = None
-    ) -> str:
+    def _build_locking_script(self, _ctx: Any, key: str, value: str, ca_args: dict = None) -> str:
         ca_args = self._merge_default_ca(ca_args)
         field_bytes = self._encrypt_value_if_needed(key, value, ca_args)
 
