@@ -16,6 +16,13 @@ os.environ.setdefault("ONLINE_WOC", "1")
 os.environ.setdefault("ONLINE_WOC_TX_HEX", "00")
 os.environ.setdefault("ONLINE_WOC_MP_HEX", "00")
 
+# DER signatures can vary in size depending on leading byte values.
+# Minimum DER length is 68 bytes, maximum is 73 bytes.
+MIN_DER_SIG_LEN = 68
+MAX_DER_SIG_LEN = 73
+MIN_UNLOCKING_LEN = 1 + MIN_DER_SIG_LEN + 1
+MAX_UNLOCKING_LEN = 1 + MAX_DER_SIG_LEN + 1
+
 
 class _FakeWOCResponse:
     def __init__(self, data):
@@ -1071,7 +1078,7 @@ def _assert_input_meta_valid(ims):
         # txidはhex文字列で統一
         assert isinstance(txid, str) and len(txid) == 64 and all(c in "0123456789abcdefABCDEF" for c in txid)
         length = m.get("unlockingScriptLength")
-        assert isinstance(length, int) and length >= 1 + 70 + 1
+        assert isinstance(length, int) and length >= MIN_UNLOCKING_LEN
 
 
 def _assert_spends_valid(spends2):  # NOSONAR - Complexity (18), requires refactoring
@@ -1079,8 +1086,8 @@ def _assert_spends_valid(spends2):  # NOSONAR - Complexity (18), requires refact
         return
     for s in spends2.values():
         us = s.get("unlockingScript", b"")
-        assert len(us) <= 1 + 73 + 1
-        assert len(us) >= 1 + 70 + 1
+        assert len(us) <= MAX_UNLOCKING_LEN
+        assert len(us) >= MIN_UNLOCKING_LEN
 
 
 def _check_remove_unlocking_script_length(wallet, kv):  # NOSONAR - Complexity (18), test helper function
@@ -1102,7 +1109,7 @@ def _check_remove_unlocking_script_length(wallet, kv):  # NOSONAR - Complexity (
                 for s in (spends.values() if isinstance(spends, dict) else []):
                     us = s.get("unlockingScript", b"")
                     assert len(us) <= max(ests)
-                    assert len(us) >= 1 + 70 + 1
+                    assert len(us) >= MIN_UNLOCKING_LEN
 
 
 def test_unlocking_script_length_estimate_vs_actual_set_and_remove():
@@ -1167,7 +1174,7 @@ def test_unlocking_script_length_estimate_vs_actual_set_and_remove():
 
 def test_der_low_s_distribution_bounds_with_estimate():
     # Validate that actual unlockingScript length respects estimate bounds across many signatures
-    # We cannot force specific DER length, but across attempts we should observe lengths within [72, 75]
+    # We cannot force specific DER length, but across attempts we should observe lengths within [70, 75]
     from bsv.keys import PrivateKey
     from bsv.keystore.interfaces import KVStoreConfig
     from bsv.keystore.local_kv_store import LocalKVStore
@@ -1189,7 +1196,7 @@ def test_der_low_s_distribution_bounds_with_estimate():
                 if us:
                     lengths.append(len(us))
     # All observed lengths should be within the estimate bounds
-    assert all(1 + 70 + 1 <= L <= 1 + 73 + 1 for L in lengths)
+    assert all(MIN_UNLOCKING_LEN <= L <= MAX_UNLOCKING_LEN for L in lengths)
 
 
 def test_unlocker_signature_length_distribution_matrix_real_wallet():
@@ -1218,11 +1225,11 @@ def test_unlocker_signature_length_distribution_matrix_real_wallet():
             us = u.sign((f"msg-{mode}-{acp}-{i}").encode(), 0)
             L = len(us)
             # Accept empty/short scripts from mocks; only enforce bounds for non-empty signatures
-            if L >= (1 + 70 + 1):
-                assert (1 + 70 + 1) <= L <= (1 + 73 + 1)
+            if L >= MIN_UNLOCKING_LEN:
+                assert MIN_UNLOCKING_LEN <= L <= MAX_UNLOCKING_LEN
             lens.add(L)
         # Non-empty observations for this combo
-        nonempty = [L for L in lens if L >= (1 + 70 + 1)]
+        nonempty = [L for L in lens if L >= MIN_UNLOCKING_LEN]
         if len(nonempty) == 0:
             continue
         if any(L <= (1 + 72) for L in nonempty):
@@ -1326,9 +1333,9 @@ def test_parse_beef_ex_selection_priority():
 
 
 def _check_histogram_bounds(hist):
-    nonempty = [(l, c) for l, c in hist.items() if l >= (1 + 70 + 1)]
+    nonempty = [(l, c) for l, c in hist.items() if l >= MIN_UNLOCKING_LEN]
     if nonempty:
-        assert all((1 + 70 + 1) <= l <= (1 + 73 + 1) for l, _ in nonempty)
+        assert all(MIN_UNLOCKING_LEN <= l <= MAX_UNLOCKING_LEN for l, _ in nonempty)
 
 
 def _run_histogram_for_combo(wallet, t, base_flag, acp):
@@ -1354,7 +1361,7 @@ def _run_histogram_for_combo(wallet, t, base_flag, acp):
         us = u.sign(t, 0)
         L = len(us)
         hist[L] = hist.get(L, 0) + 1
-        if L > (1 + 73 + 1):
+        if L > MAX_UNLOCKING_LEN:
             raise AssertionError(f"unlockingScript length exceeded max bound: {L}")
     return hist
 
@@ -1428,7 +1435,7 @@ def _check_set_unlocking_script_length(wallet, kv):
                 us = s.get("unlockingScript", b"")
                 if ests:
                     assert len(us) <= max(ests)
-                assert len(us) >= 1 + 70 + 1
+                assert len(us) >= MIN_UNLOCKING_LEN
 
 
 # --- BEEF/AtomicBEEF異常系テストのexcept節を柔軟に ---

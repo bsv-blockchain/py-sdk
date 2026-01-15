@@ -8,62 +8,90 @@ class ScriptChunk:
     data: Optional[bytes]
 
 
-def read_script_chunks(
-    script: Union[bytes, str],
-) -> list[ScriptChunk]:  # NOSONAR - Complexity (33), requires refactoring
-    # Accept hex string input for convenience (tests may pass hex)
+def read_script_chunks(script: Union[bytes, str]) -> list[ScriptChunk]:
+    """Parse script bytes into chunks of opcodes and data."""
+    script_bytes = _normalize_script_input(script)
+    return _parse_script_bytes(script_bytes)
+
+def _normalize_script_input(script: Union[bytes, str]) -> bytes:
+    """Convert script input to bytes, handling hex strings."""
     if isinstance(script, str):
         try:
-            script = bytes.fromhex(script)
+            return bytes.fromhex(script)
         except Exception:
             # If conversion fails, treat as empty
-            script = b""
+            return b""
+    return script
+
+def _parse_script_bytes(script: bytes) -> list[ScriptChunk]:
+    """Parse script bytes into chunks."""
     chunks: list[ScriptChunk] = []
     i = 0
     n = len(script)
+
     while i < n:
         op = script[i]
         i += 1
-        if op <= 75:  # direct push
-            ln = op
-            if i + ln > n:
-                break
-            chunks.append(ScriptChunk(op=op, data=script[i : i + ln]))
-            i += ln
-            continue
-        if op == 0x4C:  # OP_PUSHDATA1
-            if i >= n:
-                break
-            ln = script[i]
-            i += 1
-            if i + ln > n:
-                break
-            chunks.append(ScriptChunk(op=op, data=script[i : i + ln]))
-            i += ln
-            continue
-        if op == 0x4D:  # OP_PUSHDATA2
-            if i + 1 >= n:
-                break
-            ln = int.from_bytes(script[i : i + 2], "little")
-            i += 2
-            if i + ln > n:
-                break
-            chunks.append(ScriptChunk(op=op, data=script[i : i + ln]))
-            i += ln
-            continue
-        if op == 0x4E:  # OP_PUSHDATA4
-            if i + 3 >= n:
-                break
-            ln = int.from_bytes(script[i : i + 4], "little")
-            i += 4
-            if i + ln > n:
-                break
-            chunks.append(ScriptChunk(op=op, data=script[i : i + ln]))
-            i += ln
-            continue
-        # Non-push opcodes
-        chunks.append(ScriptChunk(op=op, data=None))
+
+        result = _parse_single_opcode(script, op, i, n)
+        if result is None:
+            break
+
+        chunk, new_i = result
+        chunks.append(chunk)
+        i = new_i
+
     return chunks
+
+def _parse_single_opcode(script: bytes, op: int, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
+    """Parse a single opcode and return (chunk, new_index)."""
+    if op <= 75:  # direct push
+        return _parse_direct_push(script, op, i, n)
+    elif op == 0x4C:  # OP_PUSHDATA1
+        return _parse_pushdata1(script, i, n)
+    elif op == 0x4D:  # OP_PUSHDATA2
+        return _parse_pushdata2(script, i, n)
+    elif op == 0x4E:  # OP_PUSHDATA4
+        return _parse_pushdata4(script, i, n)
+    else:  # Non-push opcodes
+        return ScriptChunk(op=op, data=None), i
+
+def _parse_direct_push(script: bytes, op: int, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
+    """Parse direct push opcode (length encoded in opcode)."""
+    ln = op
+    if i + ln > n:
+        return None
+    return ScriptChunk(op=op, data=script[i : i + ln]), i + ln
+
+def _parse_pushdata1(script: bytes, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
+    """Parse OP_PUSHDATA1 opcode."""
+    if i >= n:
+        return None
+    ln = script[i]
+    i += 1
+    if i + ln > n:
+        return None
+    return ScriptChunk(op=0x4C, data=script[i : i + ln]), i + ln
+
+def _parse_pushdata2(script: bytes, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
+    """Parse OP_PUSHDATA2 opcode."""
+    if i + 1 >= n:
+        return None
+    ln = int.from_bytes(script[i : i + 2], "little")
+    i += 2
+    if i + ln > n:
+        return None
+    return ScriptChunk(op=0x4D, data=script[i : i + ln]), i + ln
+
+def _parse_pushdata4(script: bytes, i: int, n: int) -> Optional[tuple[ScriptChunk, int]]:
+    """Parse OP_PUSHDATA4 opcode."""
+    if i + 3 >= n:
+        return None
+    ln = int.from_bytes(script[i : i + 4], "little")
+    i += 4
+    if i + ln > n:
+        return None
+    return ScriptChunk(op=0x4E, data=script[i : i + ln]), i + ln
 
 
 def serialize_chunks(chunks: list[ScriptChunk]) -> bytes:

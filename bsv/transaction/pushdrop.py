@@ -559,9 +559,9 @@ class PushDropUnlocker:
     def estimate_length_bounds(self) -> tuple[int, int]:
         """Return (min_estimate, max_estimate) for unlocking script length.
 
-        DER署名の長さは低S値などにより70〜73バイトの範囲で変動する。PUSHDATA長1＋DER長＋SIGHASH 1の範囲。
+        DER署名の長さは低S値などにより68〜73バイトの範囲で変動する。PUSHDATA長1＋DER長＋SIGHASH 1の範囲。
         """
-        min_len = 1 + 70 + 1
+        min_len = 1 + 68 + 1
         max_len = 1 + 73 + 1
         return (min_len, max_len)
 

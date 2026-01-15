@@ -242,23 +242,42 @@ class RegistryClient:
 
     def revoke_own_registry_entry(
         self, ctx: Any, record: dict[str, Any]
-    ) -> dict[str, Any]:  # NOSONAR - Complexity (26), requires refactoring
-        # Owner check: ensure this wallet controls the registry operator key
+    ) -> dict[str, Any]:
+        """Revoke a registry entry owned by this wallet."""
+        self._validate_ownership(record)
+        txid, output_index, beef, satoshis = self._extract_record_data(record)
+
+        ca_res = self._create_revocation_transaction(txid, output_index, beef, record)
+        sign_res = self._sign_revocation_transaction(ca_res, txid, output_index, satoshis, record)
+
+        self._broadcast_revocation_transaction(ctx, sign_res, record)
+        return sign_res
+
+    def _validate_ownership(self, record: dict[str, Any]) -> None:
+        """Validate that this wallet owns the registry token."""
         me = self.wallet.get_public_key({"identityKey": True}, self.originator) or {}
         my_pub = cast(str, me.get("publicKey") or "")
         operator = cast(str, record.get("registryOperator") or "")
         if operator and my_pub and operator.lower() != my_pub.lower():
             raise ValueError("this registry token does not belong to the current wallet")
 
+    def _extract_record_data(self, record: dict[str, Any]) -> tuple[str, int, bytes, int]:
+        """Extract required data from registry record."""
         txid = cast(str, record.get("txid") or "")
         output_index = int(record.get("outputIndex") or 0)
         beef = cast(bytes, record.get("beef") or b"")
         satoshis = int(record.get("satoshis") or 0)
+
         if not txid or not beef:
             raise ValueError("Invalid registry record - missing txid or beef")
 
-        # Create partial transaction that spends the registry UTXO
-        ca_res = (
+        return txid, output_index, beef, satoshis
+
+    def _create_revocation_transaction(
+        self, txid: str, output_index: int, beef: bytes, record: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Create the partial revocation transaction."""
+        return (
             self.wallet.create_action(
                 {
                     "description": f"Revoke {record.get('definitionType', 'registry')} item",
@@ -276,17 +295,40 @@ class RegistryClient:
             or {}
         )
 
+    def _sign_revocation_transaction(
+        self, ca_res: dict[str, Any], txid: str, output_index: int, satoshis: int, record: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Sign the revocation transaction."""
         signable = cast(dict[str, Any], (ca_res.get("signableTransaction") or {}))
         reference = signable.get("reference") or b""
 
-        # Build a real unlocker and sign the partial transaction input
-        # signableTransaction.tx is expected to be raw tx bytes (WalletWire signable), not BEEF
-        # signable["tx"] holds raw transaction bytes; use from_reader for consistency with ProtoWallet
         from bsv.utils import Reader
 
         tx_bytes = cast(bytes, signable.get("tx") or b"")
         partial_tx = Transaction.from_reader(Reader(tx_bytes)) if tx_bytes else Transaction()
-        unlocker = make_pushdrop_unlocker(
+
+        unlocker = self._create_revocation_unlocker(txid, output_index, satoshis, record)
+        unlocking_script = unlocker.sign(partial_tx, 0)
+
+        spends = {0: {"unlockingScript": unlocking_script}}
+        return (
+            self.wallet.sign_action(
+                {
+                    "reference": reference,
+                    "spends": spends,
+                    "tx": tx_bytes,
+                    "options": {"acceptDelayedBroadcast": False},
+                },
+                self.originator,
+            )
+            or {}
+        )
+
+    def _create_revocation_unlocker(
+        self, txid: str, output_index: int, satoshis: int, record: dict[str, Any]
+    ):
+        """Create unlocker for the revocation transaction."""
+        return make_pushdrop_unlocker(
             self.wallet,
             protocol_id=_map_definition_type_to_wallet_protocol(
                 cast(DefinitionType, record.get("definitionType", "basket"))
@@ -302,45 +344,37 @@ class RegistryClient:
                 bytes.fromhex(cast(str, record.get("lockingScript", ""))) if record.get("lockingScript") else None
             ),
         )
-        unlocking_script = unlocker.sign(partial_tx, 0)
 
-        spends = {0: {"unlockingScript": unlocking_script}}
-        sign_res = (
-            self.wallet.sign_action(
-                {
-                    "reference": reference,
-                    "spends": spends,
-                    "tx": tx_bytes,
-                    "options": {"acceptDelayedBroadcast": False},
-                },
-                self.originator,
-            )
-            or {}
-        )
+    def _broadcast_revocation_transaction(
+        self, ctx: Any, sign_res: dict[str, Any], record: dict[str, Any]
+    ) -> None:
+        """Broadcast the signed revocation transaction."""
+        tx_bytes = cast(bytes, sign_res.get("tx") or b"")
+        if not tx_bytes:
+            return
 
-        # Broadcast via default broadcaster if tx present
-        tx_bytes = cast(bytes, sign_res.get("tx") or tx_bytes)
-        if tx_bytes:
-            try:
-                tx = Transaction.from_reader(Reader(tx_bytes))
-                # Broadcast via topic mapping (tm_*) using TopicBroadcaster
-                topic_map = {
-                    "basket": "tm_basketmap",
-                    "protocol": "tm_protomap",
-                    "certificate": "tm_certmap",
-                }
-                topic = topic_map.get(cast(str, record.get("definitionType", "basket")), "tm_basketmap")
-                # network preset from wallet
-                net_res = self.wallet.get_network(ctx, {}, self.originator) or {}
-                network_preset = cast(str, net_res.get("network") or "mainnet")
-                tb = TopicBroadcaster([topic], BroadcasterConfig(network_preset))
-                try:
-                    tb.sync_broadcast(tx)
-                except Exception:
-                    pass
-            except Exception:
-                pass
-        return sign_res
+        try:
+            tx = Transaction.from_reader(Reader(tx_bytes))
+            topic = self._get_broadcast_topic(record)
+            network_preset = self._get_network_preset(ctx)
+            tb = TopicBroadcaster([topic], BroadcasterConfig(network_preset))
+            tb.sync_broadcast(tx)
+        except Exception:
+            pass  # Broadcast failure is not critical
+
+    def _get_broadcast_topic(self, record: dict[str, Any]) -> str:
+        """Get the broadcast topic for the registry type."""
+        topic_map = {
+            "basket": "tm_basketmap",
+            "protocol": "tm_protomap",
+            "certificate": "tm_certmap",
+        }
+        return topic_map.get(cast(str, record.get("definitionType", "basket")), "tm_basketmap")
+
+    def _get_network_preset(self, ctx: Any) -> str:
+        """Get the network preset from wallet."""
+        net_res = self.wallet.get_network(ctx, {}, self.originator) or {}
+        return cast(str, net_res.get("network") or "mainnet")
 
     def resolve(
         self, ctx: Any, definition_type: DefinitionType, query: dict[str, Any], resolver: Any | None = None

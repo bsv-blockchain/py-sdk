@@ -27,10 +27,8 @@ def test_send_without_handler_returns_error(monkeypatch):
     assert "handler" in str(err).lower() or "no handler" in str(err).lower() or "not registered" in str(err).lower()
 
 
-def test_send_general_performs_http_and_notifies_handler(
-    monkeypatch,
-):  # NOSONAR - Complexity (19), requires refactoring
-    # Stub requests.Session().request
+def _create_fake_request():
+    """Create a fake request function for testing."""
     def fake_request(self, method, url, headers=None, data=None):
         assert method == "GET"
         assert url == "https://api.test.local/health"
@@ -46,21 +44,11 @@ def test_send_general_performs_http_and_notifies_handler(
             "x-bsv-auth-signature": "",
         }
         return DummyResponse(200, response_headers, content=json.dumps({"ok": True}).encode("utf-8"))
+    return fake_request
 
-    # Patch the session in the transport instance
-    t = SimplifiedHTTPTransport("https://api.test.local")
-    t.client.request = types.MethodType(fake_request, t.client)
 
-    # Register handler to capture response
-    captured = {}
-
-    def on_data(message: AuthMessage):
-        captured["msg"] = message
-
-    assert t.on_data(on_data) is None
-
-    # Prepare a general message with binary payload describing the HTTP request
-    # Format: request_id (32 bytes) + varint method_len + method + varint path_len + path + varint search_len + search + varint n_headers + headers + varint body_len + body
+def _build_test_http_request_payload():
+    """Build a test HTTP request payload for the auth transport."""
     writer = Writer()
     # Request ID (32 random bytes)
     request_id = os.urandom(32)
@@ -82,7 +70,27 @@ def test_send_general_performs_http_and_notifies_handler(
     # Body - empty
     writer.write_var_int_num(0)
 
-    payload = writer.getvalue()
+    return writer.getvalue()
+
+
+def test_send_general_performs_http_and_notifies_handler(
+    monkeypatch,
+):  # NOSONAR - Complexity (19), requires refactoring
+    fake_request = _create_fake_request()
+
+    # Patch the session in the transport instance
+    t = SimplifiedHTTPTransport("https://api.test.local")
+    t.client.request = types.MethodType(fake_request, t.client)
+
+    # Register handler to capture response
+    captured = {}
+
+    def on_data(message: AuthMessage):
+        captured["msg"] = message
+
+    assert t.on_data(on_data) is None
+
+    payload = _build_test_http_request_payload()
     identity_key = PrivateKey(6002).public_key()
     msg = AuthMessage(version="0.1", message_type="general", identity_key=identity_key, payload=payload, signature=b"")
     err = t.send(msg)

@@ -26,6 +26,9 @@ def test_transaction_preimage_basic():
         tx_outputs=[TransactionOutput(satoshis=1000, locking_script=Script(b""))],
         locktime=0,
     )
+    # Set the locking script and satoshis for the input (from the output being spent)
+    tx.inputs[0].locking_script = Script(b"")
+    tx.inputs[0].satoshis = 1000  # Same as the output satoshis
 
     if hasattr(tx, "preimage"):
         preimage = tx.preimage(0)
@@ -48,6 +51,11 @@ def test_transaction_preimage_multiple_inputs():
         tx_outputs=[TransactionOutput(satoshis=1000, locking_script=Script(b""))],
         locktime=0,
     )
+    # Set the locking script and satoshis for the inputs (from the outputs being spent)
+    tx.inputs[0].locking_script = Script(b"")
+    tx.inputs[0].satoshis = 500
+    tx.inputs[1].locking_script = Script(b"")
+    tx.inputs[1].satoshis = 600
 
     if hasattr(tx, "preimage"):
         preimage0 = tx.preimage(0)
@@ -70,6 +78,9 @@ def test_transaction_preimage_with_sighash():
             tx_outputs=[TransactionOutput(satoshis=1000, locking_script=Script(b""))],
             locktime=0,
         )
+        # Set the locking script and satoshis for the input (from the output being spent)
+        tx.inputs[0].locking_script = Script(b"")
+        tx.inputs[0].satoshis = 1000
 
         if hasattr(tx, "preimage"):
             try:
@@ -99,10 +110,13 @@ def test_transaction_preimage_index_bounds():
         tx_outputs=[TransactionOutput(satoshis=1000, locking_script=Script(b""))],
         locktime=0,
     )
+    # Set the locking script and satoshis for the input (from the output being spent)
+    tx.inputs[0].locking_script = Script(b"")
+    tx.inputs[0].satoshis = 1000
 
     if hasattr(tx, "preimage"):
-        with pytest.raises(IndexError):
-            _ = tx._(99)  # Out of bounds
+        with pytest.raises(AssertionError):
+            _ = tx.preimage(99)  # Out of bounds
 
 
 def test_transaction_preimage_deterministic():
@@ -117,6 +131,9 @@ def test_transaction_preimage_deterministic():
         tx_outputs=[TransactionOutput(satoshis=1000, locking_script=Script(b""))],
         locktime=0,
     )
+    # Set the locking script and satoshis for the input (from the output being spent)
+    tx.inputs[0].locking_script = Script(b"")
+    tx.inputs[0].satoshis = 1000
 
     if hasattr(tx, "preimage"):
         preimage1 = tx.preimage(0)

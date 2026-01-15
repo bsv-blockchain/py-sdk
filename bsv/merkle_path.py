@@ -38,34 +38,63 @@ class MerklePath:
         self.block_height = block_height
         self.path = path
 
-        # store all the legal offsets which we expect given the txid indices.
+        self._validate_path_structure()
+        self._validate_root_consistency()
+
+    def _validate_path_structure(self) -> None:
+        """Validate the structure and offsets of the Merkle path."""
         legal_offsets = [set() for _ in range(len(self.path))]
+
         for height, leaves in enumerate(self.path):
-            if not leaves and height == 0:
-                raise ValueError(f"Empty level at height: {height}")
+            self._validate_level_not_empty(height, leaves)
+            self._validate_level_offsets(height, leaves, legal_offsets)
 
-            offsets_at_this_height = set()
-            for leaf in leaves:
-                if leaf["offset"] in offsets_at_this_height:
-                    raise ValueError(f"Duplicate offset: {leaf['offset']}, at height: {height}")
-                offsets_at_this_height.add(leaf["offset"])
+    def _validate_level_not_empty(self, height: int, leaves: list[MerkleLeaf]) -> None:
+        """Validate that level 0 is not empty."""
+        if not leaves and height == 0:
+            raise ValueError(f"Empty level at height: {height}")
 
-                if height == 0:
-                    if not leaf.get("duplicate"):
-                        for h in range(1, len(self.path)):
-                            legal_offsets[h].add(leaf["offset"] >> h ^ 1)
-                elif leaf["offset"] not in legal_offsets[height]:
-                    legal_offsets_at_height = ", ".join(map(str, legal_offsets[height]))
-                    raise ValueError(
-                        f"Invalid offset: {leaf['offset']}, at height: {height}, "
-                        f"with legal offsets: {legal_offsets_at_height}"
-                    )
+    def _validate_level_offsets(self, height: int, leaves: list[MerkleLeaf], legal_offsets: list[set]) -> None:
+        """Validate offsets for a single level."""
+        offsets_at_this_height = set()
+
+        for leaf in leaves:
+            self._validate_unique_offset(leaf, height, offsets_at_this_height)
+            self._validate_legal_offset(leaf, height, legal_offsets)
+            self._update_legal_offsets_for_higher_levels(leaf, height, legal_offsets)
+
+    def _validate_unique_offset(self, leaf: MerkleLeaf, height: int, offsets_at_height: set) -> None:
+        """Validate that offset is unique within this level."""
+        if leaf["offset"] in offsets_at_height:
+            raise ValueError(f"Duplicate offset: {leaf['offset']}, at height: {height}")
+        offsets_at_height.add(leaf["offset"])
+
+    def _validate_legal_offset(self, leaf: MerkleLeaf, height: int, legal_offsets: list[set]) -> None:
+        """Validate that offset is legal for this height."""
+        if height > 0 and leaf["offset"] not in legal_offsets[height]:
+            legal_offsets_at_height = ", ".join(map(str, legal_offsets[height]))
+            raise ValueError(
+                f"Invalid offset: {leaf['offset']}, at height: {height}, "
+                f"with legal offsets: {legal_offsets_at_height}"
+            )
+
+    def _update_legal_offsets_for_higher_levels(self, leaf: MerkleLeaf, height: int, legal_offsets: list[set]) -> None:
+        """Update legal offsets for higher levels based on level 0 leaves."""
+        if height == 0 and not leaf.get("duplicate"):
+            for h in range(1, len(self.path)):
+                legal_offsets[h].add(leaf["offset"] >> h ^ 1)
+
+    def _validate_root_consistency(self) -> None:
+        """Validate that all level 0 leaves produce the same root."""
+        if not self.path or not self.path[0]:
+            return
 
         root = None
-        for idx, leaf in enumerate(self.path[0]):
-            if idx == 0:
-                root = self.compute_root(leaf.get("hash_str"))
-            if root != self.compute_root(leaf.get("hash_str")):
+        for leaf in self.path[0]:
+            leaf_root = self.compute_root(leaf.get("hash_str"))
+            if root is None:
+                root = leaf_root
+            elif root != leaf_root:
                 raise ValueError("Mismatched roots")
 
     @staticmethod

@@ -78,7 +78,7 @@ class Beef:
 
         _rm(self, txid)
 
-    def merge_bump(self, bump: MerklePath) -> int:
+    def merge_bump(self, bump) -> int:
         from .beef_builder import merge_bump as _merge_bump
 
         return _merge_bump(self, bump)

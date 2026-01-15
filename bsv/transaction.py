@@ -233,19 +233,28 @@ class Transaction:
 
     def _calc_input_preimage_legacy(
         self, input_index: int, hash_type: int
-    ) -> bytes:  # NOSONAR - Complexity (17), requires refactoring
+    ) -> bytes:
         """
         Calculate legacy preimage for signature hashing.
         Implements the original Bitcoin signature hashing algorithm with SIGHASH_SINGLE bug.
         """
-        from io import BytesIO
-
         # Handle SIGHASH_SINGLE out-of-range bug
-        if (hash_type & 0x1F) == int(SIGHASH.SINGLE) and input_index >= len(self.outputs):
-            # Return the special "1" hash as uint256 little endian
+        if self._is_sighash_single_out_of_range(hash_type, input_index):
             return b"\x01" + (b"\x00" * 31)
 
-        # Create a copy of the transaction for modification
+        tx_copy = self._create_transaction_copy_for_signing(input_index)
+        self._apply_sighash_modifications(tx_copy, input_index, hash_type)
+
+        return self._serialize_modified_transaction(tx_copy, hash_type)
+
+    def _is_sighash_single_out_of_range(self, hash_type: int, input_index: int) -> bool:
+        """Check if SIGHASH_SINGLE is out of range (legacy bug)."""
+        return (hash_type & 0x1F) == int(SIGHASH.SINGLE) and input_index >= len(self.outputs)
+
+    def _create_transaction_copy_for_signing(self, input_index: int) -> "Transaction":
+        """Create a copy of the transaction for signing modifications."""
+        from io import BytesIO
+
         tx_copy = Transaction(
             tx_inputs=[
                 inp.__class__(
@@ -265,32 +274,49 @@ class Transaction:
         # Set the script for the input we're signing
         tx_copy.inputs[input_index].unlocking_script = self.inputs[input_index].locking_script
 
-        # Apply SIGHASH_NONE
+        return tx_copy
+
+    def _apply_sighash_modifications(self, tx_copy: "Transaction", input_index: int, hash_type: int) -> None:
+        """Apply sighash type modifications to the transaction copy."""
         if hash_type & int(SIGHASH.NONE):
-            tx_copy.outputs.clear()
-            # Clear sequences for other inputs
-            for i, inp in enumerate(tx_copy.inputs):
-                if i != input_index:
-                    inp.sequence = 0
-
-        # Apply SIGHASH_SINGLE
+            self._apply_sighash_none(tx_copy, input_index)
         elif hash_type & int(SIGHASH.SINGLE):
-            tx_copy.outputs = tx_copy.outputs[: input_index + 1]
-            # Null out outputs before the input index
-            for i in range(input_index):
-                tx_copy.outputs[i].satoshis = 0xFFFFFFFFFFFFFFFF  # -1 as underflow
-                tx_copy.outputs[i].locking_script = Script.from_bytes(b"")
-            # Clear sequences for other inputs
-            for i, inp in enumerate(tx_copy.inputs):
-                if i != input_index:
-                    inp.sequence = 0
+            self._apply_sighash_single(tx_copy, input_index)
 
-        # Apply ANYONECANPAY
         if hash_type & int(SIGHASH.ANYONECANPAY):
-            # Only keep the input we're signing
-            tx_copy.inputs = [tx_copy.inputs[input_index]]
+            self._apply_sighash_anyonecanpay(tx_copy, input_index)
 
-        # Serialize and append hash type
+    def _apply_sighash_none(self, tx_copy: "Transaction", input_index: int) -> None:
+        """Apply SIGHASH_NONE modifications."""
+        tx_copy.outputs.clear()
+        # Clear sequences for other inputs
+        for i, inp in enumerate(tx_copy.inputs):
+            if i != input_index:
+                inp.sequence = 0
+
+    def _apply_sighash_single(self, tx_copy: "Transaction", input_index: int) -> None:
+        """Apply SIGHASH_SINGLE modifications."""
+        tx_copy.outputs = tx_copy.outputs[: input_index + 1]
+        # Null out outputs before the input index
+        for i in range(input_index):
+            tx_copy.outputs[i].satoshis = 0xFFFFFFFFFFFFFFFF  # -1 as underflow
+            tx_copy.outputs[i].locking_script = Script.from_bytes(b"")
+        # Clear sequences for other inputs
+        for i, inp in enumerate(tx_copy.inputs):
+            if i != input_index:
+                inp.sequence = 0
+
+    def _apply_sighash_anyonecanpay(self, tx_copy: "Transaction", input_index: int) -> None:
+        """Apply SIGHASH_ANYONECANPAY modifications."""
+        # Only keep the input we're signing
+        tx_copy.inputs = [tx_copy.inputs[input_index]]
+
+    def _serialize_modified_transaction(self, tx_copy: "Transaction", hash_type: int) -> bytes:
+        """Serialize the modified transaction and append hash type."""
+        stream = BytesIO()
+        tx_copy.serialize_no_witness(stream)
+        stream.write(hash_type.to_bytes(4, "little"))
+        return stream.getvalue()
         stream = BytesIO()
         stream.write(tx_copy.serialize())
         stream.write(hash_type.to_bytes(4, "little"))

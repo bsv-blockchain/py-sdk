@@ -297,9 +297,7 @@ class Thread:
             )
         return None
 
-    def _check_script_completion(
-        self,
-    ) -> tuple[bool, Optional[Error]]:  # NOSONAR - Complexity (22), requires refactoring
+    def _check_script_completion(self) -> tuple[bool, Optional[Error]]:
         """Check if current script is complete and prepare for next."""
         if self.script_off < len(self.scripts[self.script_idx]):
             return False, None
@@ -307,43 +305,58 @@ class Thread:
         if len(self.cond_stack) != 0:
             return False, Error(ErrorCode.ERR_UNBALANCED_CONDITIONAL, "end of script reached in conditional execution")
 
-        # Alt stack doesn't persist between scripts (go-sdk behavior).
+        self._clear_alt_stack()
+        self.shift_script()
+
+        err = self._handle_p2sh_evaluation()
+        if err:
+            return False, err
+
+        return self.script_idx >= len(self.scripts), None
+
+    def _clear_alt_stack(self) -> None:
+        """Clear alt stack between scripts (go-sdk behavior)."""
         if self.astack is not None:
             try:
                 self.astack.drop_n(self.astack.depth())
             except Exception:
                 pass
 
-        self.shift_script()
+    def _handle_p2sh_evaluation(self) -> Optional[Error]:
+        """Handle P2SH (BIP16) evaluation for script transitions."""
+        if not (self.bip16 and not self.after_genesis and self.script_idx <= 2):
+            return None
 
-        # P2SH (BIP16) evaluation (go-sdk behavior before genesis only):
-        # - after finishing scriptSig (idx becomes 1): save stack
-        # - after finishing scriptPubKey (idx becomes 2): verify success, then execute redeemScript from saved stack
-        if self.bip16 and not self.after_genesis and self.script_idx <= 2:
-            if self.script_idx == 1:
-                self.saved_first_stack = list(self.dstack.stk)
-            elif self.script_idx == 2:
-                err = self.check_error_condition(False)
-                if err:
-                    return False, err
-                if len(self.saved_first_stack) < 1:
-                    return False, Error(ErrorCode.ERR_EVAL_FALSE, "false stack entry at end of script execution")
+        if self.script_idx == 1:
+            self.saved_first_stack = list(self.dstack.stk)
+        elif self.script_idx == 2:
+            return self._process_p2sh_redeem_script()
 
-                redeem_script_bytes = self.saved_first_stack[-1]
-                try:
-                    from bsv.script.script import Script
+        return None
 
-                    parsed_redeem = self.script_parser.parse(Script.from_bytes(redeem_script_bytes))
-                except Error as e:
-                    return False, e
-                except Exception as e:
-                    return False, Error(ErrorCode.ERR_INVALID_PARAMS, f"failed to parse redeem script: {e}")
+    def _process_p2sh_redeem_script(self) -> Optional[Error]:
+        """Process P2SH redeem script after scriptPubKey verification."""
+        err = self.check_error_condition(False)
+        if err:
+            return err
 
-                self.scripts.append(parsed_redeem)
-                # Restore stack from first script, excluding redeem script itself.
-                self.dstack.stk = list(self.saved_first_stack[:-1])
+        if len(self.saved_first_stack) < 1:
+            return Error(ErrorCode.ERR_EVAL_FALSE, "false stack entry at end of script execution")
 
-        return self.script_idx >= len(self.scripts), None
+        redeem_script_bytes = self.saved_first_stack[-1]
+        try:
+            from bsv.script.script import Script
+            parsed_redeem = self.script_parser.parse(Script.from_bytes(redeem_script_bytes))
+        except Error as e:
+            return e
+        except Exception as e:
+            return Error(ErrorCode.ERR_INVALID_PARAMS, f"failed to parse redeem script: {e}")
+
+        self.scripts.append(parsed_redeem)
+        # Restore stack from first script, excluding redeem script itself.
+        self.dstack.stk = list(self.saved_first_stack[:-1])
+
+        return None
 
     def sub_script(self) -> "ParsedScript":
         """Get the script starting from the most recent OP_CODESEPARATOR."""

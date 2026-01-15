@@ -173,52 +173,82 @@ def _collect_results(result: ValidationResult, ctx: _ValidationContext):
 
 def verify_valid(
     beef: Beef, allow_txid_only: bool = False
-) -> tuple[bool, dict[int, str]]:  # NOSONAR - Complexity (33), requires refactoring
+) -> tuple[bool, dict[int, str]]:
     """
     Validate structure and confirm that computed roots are consistent per block height.
     Returns (valid, roots_map).
     """
     vr = validate_transactions(beef)
-    if vr.missing_inputs or vr.not_valid or (vr.txid_only and not allow_txid_only) or vr.with_missing_inputs:
+    if not self._is_basic_validation_passed(vr, allow_txid_only):
         return False, {}
 
-    roots: dict[int, str] = {}
+    roots = self._validate_bump_roots(beef)
+    if roots is None:
+        return False, {}
 
-    def confirm_computed_root(mp: MerklePath, txid: str) -> bool:
-        try:
-            try:
-                root = mp.compute_root(txid)  # type: ignore[arg-type]
-            except TypeError:
-                root = mp.compute_root()  # type: ignore[call-arg]
-        except Exception:
-            return False
-        existing = roots.get(mp.block_height)
-        if existing is None:
-            roots[mp.block_height] = root
-            return True
-        return existing == root
-
-    # all bumps must have internally consistent roots across txid leaves
-    for bump in getattr(beef, "bumps", []) or []:
-        try:
-            for leaf in bump.path[0]:
-                if leaf.get("txid") and leaf.get("hash_str"):
-                    if not confirm_computed_root(bump, leaf["hash_str"]):
-                        return False, {}
-        except Exception:
-            return False, {}
-
-    # beefTx with bump_index must be present in specified bump
-    for txid, btx in getattr(beef, "txs", {}).items():
-        if btx.data_format == 1:
-            if btx.bump_index is None or btx.bump_index < 0 or btx.bump_index >= len(beef.bumps):
-                return False, {}
-            bump = beef.bumps[btx.bump_index]
-            found = any(leaf.get("hash_str") == txid for leaf in bump.path[0])
-            if not found:
-                return False, {}
+    if not self._validate_btx_references(beef):
+        return False, {}
 
     return True, roots
+
+def _is_basic_validation_passed(vr, allow_txid_only: bool) -> bool:
+    """Check if basic transaction validation passed."""
+    return not (vr.missing_inputs or vr.not_valid or
+               (vr.txid_only and not allow_txid_only) or vr.with_missing_inputs)
+
+def _validate_bump_roots(beef: Beef) -> Optional[dict[int, str]]:
+    """Validate that all bumps have internally consistent roots."""
+    roots: dict[int, str] = {}
+
+    for bump in getattr(beef, "bumps", []) or []:
+        if not _validate_single_bump_roots(bump, roots):
+            return None
+
+    return roots
+
+def _validate_single_bump_roots(bump, roots: dict[int, str]) -> bool:
+    """Validate roots for a single bump."""
+    try:
+        for leaf in bump.path[0]:
+            if leaf.get("txid") and leaf.get("hash_str"):
+                if not _confirm_computed_root(bump, leaf["hash_str"], roots):
+                    return False
+    except Exception:
+        return False
+    return True
+
+def _confirm_computed_root(mp: MerklePath, txid: str, roots: dict[int, str]) -> bool:
+    """Confirm that computed root matches existing roots for the block height."""
+    try:
+        try:
+            root = mp.compute_root(txid)  # type: ignore[arg-type]
+        except TypeError:
+            root = mp.compute_root()  # type: ignore[call-arg]
+    except Exception:
+        return False
+
+    existing = roots.get(mp.block_height)
+    if existing is None:
+        roots[mp.block_height] = root
+        return True
+    return existing == root
+
+def _validate_btx_references(beef: Beef) -> bool:
+    """Validate that beefTx references are correct."""
+    for txid, btx in getattr(beef, "txs", {}).items():
+        if btx.data_format == 1:
+            if not _validate_single_btx_reference(beef, txid, btx):
+                return False
+    return True
+
+def _validate_single_btx_reference(beef: Beef, txid: str, btx) -> bool:
+    """Validate a single beefTx reference."""
+    if btx.bump_index is None or btx.bump_index < 0 or btx.bump_index >= len(beef.bumps):
+        return False
+
+    bump = beef.bumps[btx.bump_index]
+    found = any(leaf.get("hash_str") == txid for leaf in bump.path[0])
+    return found
 
 
 def is_valid(beef: Beef, allow_txid_only: bool = False) -> bool:

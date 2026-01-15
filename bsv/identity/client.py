@@ -260,7 +260,7 @@ class IdentityClient:
             return DisplayableIdentity()
 
     @staticmethod
-    def _from_kv(fields: list[tuple]) -> DisplayableIdentity:
+    def _from_kv(fields: list[tuple] | None) -> DisplayableIdentity:
         d = dict(fields or [])
         name = d.get("name") or d.get("displayName") or "Unknown"
         identity_key = d.get("identityKey") or ""

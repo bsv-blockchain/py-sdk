@@ -52,10 +52,18 @@ class TestSSLHelper:
             # Using TLS 1.2+ with secure defaults from create_default_context()
             context = ssl.create_default_context(
                 purpose=ssl.Purpose.SERVER_AUTH, cafile=None
-            )  # NOSONAR - Test-only: Hostname verification disabled below for self-signed certs
-            # Disable hostname verification for self-signed test certificates
-            context.check_hostname = False  # NOSONAR - Test-only: Required for self-signed test certs
-            context.verify_mode = ssl.CERT_NONE  # NOSONAR - Test-only: Accepts self-signed test certs
+            )
+            # Load self-signed test certificate to enable hostname verification
+            try:
+                cert_file, _ = cls._get_or_create_certificate()
+                context.load_verify_locations(cert_file)
+                # Keep hostname verification enabled since we now trust the test certificate
+                context.check_hostname = True
+                context.verify_mode = ssl.CERT_REQUIRED
+            except Exception:
+                # Fallback to disabling verification if certificate loading fails
+                context.check_hostname = False  # NOSONAR - Test-only: Required for self-signed test certs
+                context.verify_mode = ssl.CERT_NONE  # NOSONAR - Test-only: Accepts self-signed test certs
             # Ensure minimum TLS 1.2 for security even in tests
             context.minimum_version = ssl.TLSVersion.TLSv1_2
             return context

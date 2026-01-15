@@ -41,10 +41,10 @@ class KnownIdentityTypes:  # NOSONAR - PascalCase constants match TS/Go SDK iden
     discord_cert = DiscordCert
     phone_cert = PhoneCert
     x_cert = XCert
-    registrant = Registrant
+    registrant_cert = Registrant
     email_cert = EmailCert
-    anyone = Anyone
-    self = Self
+    anyone_cert = Anyone
+    self_cert = Self
     cool_cert = CoolCert
 
 

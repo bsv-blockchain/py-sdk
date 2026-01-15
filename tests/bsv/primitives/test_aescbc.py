@@ -4,6 +4,8 @@ from Cryptodome.Random import get_random_bytes
 from bsv.primitives.aescbc import (
     AESCBCDecrypt,
     AESCBCEncrypt,
+    aescbc_decrypt,
+    aescbc_encrypt,
     InvalidPadding,
     PKCS7Padd,
     PKCS7Unpad,
@@ -20,35 +22,35 @@ def test_aescbc_encrypt_decrypt():
     data = b"Test data"
 
     # Normal encryption/decryption
-    ct = AESCBCEncrypt(data, key, iv, concat_iv=False)
-    pt = AESCBCDecrypt(ct, key, iv)
+    ct = aescbc_encrypt(data, key, iv, concat_iv=False)
+    pt = aescbc_decrypt(ct, key, iv)
     assert pt == data
 
     # With concat_iv
-    ct2 = AESCBCEncrypt(data, key, iv, concat_iv=True)
+    ct2 = aescbc_encrypt(data, key, iv, concat_iv=True)
     assert ct2[:16] == iv
-    pt2 = AESCBCDecrypt(ct2[16:], key, iv)
+    pt2 = aescbc_decrypt(ct2[16:], key, iv)
     assert pt2 == data
 
     # Long message
     long_data = b"This is a longer message that spans multiple AES blocks. " * 3
-    ct3 = AESCBCEncrypt(long_data, key, iv, concat_iv=False)
-    pt3 = AESCBCDecrypt(ct3, key, iv)
+    ct3 = aescbc_encrypt(long_data, key, iv, concat_iv=False)
+    pt3 = aescbc_decrypt(ct3, key, iv)
     assert pt3 == long_data
 
     # Invalid key length
     with pytest.raises(ValueError):
-        AESCBCEncrypt(data, b"shortkey", iv, concat_iv=False)
+        aescbc_encrypt(data, b"shortkey", iv, concat_iv=False)
 
     # Invalid IV length
     with pytest.raises(ValueError):
-        AESCBCEncrypt(data, key, b"shortiv", concat_iv=False)
+        aescbc_encrypt(data, key, b"shortiv", concat_iv=False)
 
     # Invalid padding (tampered ciphertext)
     bad_ct = bytearray(ct)
     bad_ct[-1] ^= 0xFF
     with pytest.raises(InvalidPadding):
-        AESCBCDecrypt(bytes(bad_ct), key, iv)
+        aescbc_decrypt(bytes(bad_ct), key, iv)
 
 
 def test_pkcs7_padding():

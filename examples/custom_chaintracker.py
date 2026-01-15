@@ -47,7 +47,7 @@ class BHSChainTracker(ChainTracker):
         elif response.status_code == 404:
             return False
         else:
-            raise Exception(f"Failed to verify merkleroot for height {height} because of an error: {response.json()}")
+            raise ValueError(f"Failed to verify merkleroot for height {height}: {response.json()}")
 
     def get_headers(self) -> dict[str, str]:
         headers = {

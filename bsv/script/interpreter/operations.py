@@ -93,7 +93,7 @@ def _pop_script_int(t: "Thread") -> tuple[Optional[ScriptNumber], Optional[Error
 
 def check_signature_encoding(
     sig: bytes, require_low_s: bool = True, require_der: bool = True, require_strict: bool = False
-) -> Optional[Error]:  # NOSONAR - Complexity (26), requires refactoring
+) -> Optional[Error]:
     """
     Check signature encoding with detailed DER validation.
 
@@ -106,7 +106,26 @@ def check_signature_encoding(
     if not require_der:
         return None
 
-    # Basic length checks are performed when validation is required (Go SDK behavior)
+    # Basic length validation
+    length_error = _validate_signature_length(sig)
+    if length_error:
+        return length_error
+
+    # DER structure validation
+    der_error = _validate_der_structure(sig)
+    if der_error:
+        return der_error
+
+    # Low S validation (requires valid DER)
+    if require_low_s:
+        low_s_error = _validate_low_s_value(sig)
+        if low_s_error:
+            return low_s_error
+
+    return None
+
+def _validate_signature_length(sig: bytes) -> Optional[Error]:
+    """Validate signature length constraints."""
     sig_len = len(sig)
     min_sig_len = 8
     max_sig_len = 72
@@ -116,135 +135,129 @@ def check_signature_encoding(
     if sig_len > max_sig_len:
         return Error(ErrorCode.ERR_SIG_TOO_LONG, f"malformed signature: too long: {sig_len} > {max_sig_len}")
 
-    # Constants from Go SDK
+    return None
+
+def _validate_der_structure(sig: bytes) -> Optional[Error]:
+    """Validate DER encoding structure."""
     asn1_sequence_id = 0x30
     asn1_integer_id = 0x02
-    min_sig_len = 8
-    max_sig_len = 72
 
-    # Offsets within signature
     sequence_offset = 0
     data_len_offset = 1
     r_type_offset = 2
     r_len_offset = 3
 
-    # If DER validation is not required, skip all DER checks
-    if not require_der:
-        pass  # Skip DER validation
-    else:
-        # The signature must adhere to the minimum and maximum allowed length.
-        if sig_len < min_sig_len:
-            return Error(ErrorCode.ERR_SIG_TOO_SHORT, f"malformed signature: too short: {sig_len} < {min_sig_len}")
-        if sig_len > max_sig_len:
-            return Error(ErrorCode.ERR_SIG_TOO_LONG, f"malformed signature: too long: {sig_len} > {max_sig_len}")
+    sig_len = len(sig)
 
-        # The signature must start with the ASN.1 sequence identifier.
-        if sig[sequence_offset] != asn1_sequence_id:
-            return Error(
-                ErrorCode.ERR_SIG_INVALID_SEQ_ID,
-                f"malformed signature: format has wrong type: {sig[sequence_offset]:#x}",
-            )
+    # Must start with ASN.1 sequence identifier
+    if sig[sequence_offset] != asn1_sequence_id:
+        return Error(
+            ErrorCode.ERR_SIG_INVALID_SEQ_ID,
+            f"malformed signature: format has wrong type: {sig[sequence_offset]:#x}",
+        )
 
-        # The signature must indicate the correct amount of data for all elements
-        # related to R and S.
-        if int(sig[data_len_offset]) != sig_len - 2:
-            return Error(
-                ErrorCode.ERR_SIG_INVALID_DATA_LEN,
-                f"malformed signature: bad length: {sig[data_len_offset]} != {sig_len - 2}",
-            )
+    # Validate data length
+    if int(sig[data_len_offset]) != sig_len - 2:
+        return Error(
+            ErrorCode.ERR_SIG_INVALID_DATA_LEN,
+            f"malformed signature: bad length: {sig[data_len_offset]} != {sig_len - 2}",
+        )
 
-        # Calculate the offsets of the elements related to S and ensure S is inside
-        # the signature.
-        r_len = int(sig[r_len_offset])
-        # In DER: rTypeOffset(2), rLenOffset(3), rStart(4). S type begins after R bytes.
-        r_start = r_len_offset + 1
-        s_type_offset = r_start + r_len
-        s_len_offset = s_type_offset + 1
+    # Calculate R and S positions
+    r_len = int(sig[r_len_offset])
+    r_start = r_len_offset + 1
+    s_type_offset = r_start + r_len
+    s_len_offset = s_type_offset + 1
 
-        if s_type_offset >= sig_len:
-            return Error(ErrorCode.ERR_SIG_MISSING_S_TYPE_ID, "malformed signature: S type indicator missing")
-        if s_len_offset >= sig_len:
-            return Error(ErrorCode.ERR_SIG_MISSING_S_LEN, "malformed signature: S length missing")
+    # Validate S is within bounds
+    if s_type_offset >= sig_len:
+        return Error(ErrorCode.ERR_SIG_MISSING_S_TYPE_ID, "malformed signature: S type indicator missing")
+    if s_len_offset >= sig_len:
+        return Error(ErrorCode.ERR_SIG_MISSING_S_LEN, "malformed signature: S length missing")
 
-        # The lengths of R and S must match the overall length of the signature.
-        s_offset = s_len_offset + 1
-        s_len = int(sig[s_len_offset])
-        if s_offset + s_len != sig_len:
-            return Error(ErrorCode.ERR_SIG_INVALID_S_LEN, "malformed signature: invalid S length")
+    # Validate lengths match
+    s_offset = s_len_offset + 1
+    s_len = int(sig[s_len_offset])
+    if s_offset + s_len != sig_len:
+        return Error(ErrorCode.ERR_SIG_INVALID_S_LEN, "malformed signature: invalid S length")
 
-        # R elements must be ASN.1 integers.
-        if sig[r_type_offset] != asn1_integer_id:
-            return Error(
-                ErrorCode.ERR_SIG_INVALID_R_INT_ID,
-                f"malformed signature: R integer marker: {sig[r_type_offset]:#x} != {asn1_integer_id:#x}",
-            )
+    # Validate R structure
+    r_error = _validate_der_integer(sig, r_type_offset, r_len, r_start, "R")
+    if r_error:
+        return r_error
 
-        # Zero-length integers are not allowed for R.
-        if r_len == 0:
-            return Error(ErrorCode.ERR_SIG_ZERO_R_LEN, "malformed signature: R length is zero")
+    # Validate S structure
+    s_error = _validate_der_integer(sig, s_type_offset, s_len, s_offset, "S")
+    if s_error:
+        return s_error
 
-        # R must not be negative.
-        if sig[r_start] & 0x80 != 0:
-            return Error(ErrorCode.ERR_SIG_NEGATIVE_R, "malformed signature: R is negative")
+    return None
 
-        # Null bytes at the start of R are not allowed, unless R would otherwise be
-        # interpreted as a negative number.
-        if r_len > 1 and sig[r_start] == 0x00 and sig[r_start + 1] & 0x80 == 0:
-            return Error(ErrorCode.ERR_SIG_TOO_MUCH_R_PADDING, "malformed signature: R value has too much padding")
+def _validate_der_integer(sig: bytes, type_offset: int, length: int, data_offset: int, component: str) -> Optional[Error]:
+    """Validate a DER integer component (R or S)."""
+    asn1_integer_id = 0x02
 
-        # S elements must be ASN.1 integers.
-        if sig[s_type_offset] != asn1_integer_id:
-            return Error(
-                ErrorCode.ERR_SIG_INVALID_S_INT_ID,
-                f"malformed signature: S integer marker: {sig[s_type_offset]:#x} != {asn1_integer_id:#x}",
-            )
+    # Must be ASN.1 integer
+    if sig[type_offset] != asn1_integer_id:
+        return Error(
+            getattr(ErrorCode, f"ERR_SIG_INVALID_{component}_INT_ID"),
+            f"malformed signature: {component} integer marker: {sig[type_offset]:#x} != {asn1_integer_id:#x}",
+        )
 
-        # Zero-length integers are not allowed for S.
-        if s_len == 0:
-            return Error(ErrorCode.ERR_SIG_ZERO_S_LEN, "malformed signature: S length is zero")
+    # Zero-length not allowed
+    if length == 0:
+        return Error(
+            getattr(ErrorCode, f"ERR_SIG_ZERO_{component}_LEN"),
+            f"malformed signature: {component} length is zero"
+        )
 
-        # S must not be negative.
-        if sig[s_offset] & 0x80 != 0:
-            return Error(ErrorCode.ERR_SIG_NEGATIVE_S, "malformed signature: S is negative")
+    # Must not be negative
+    if sig[data_offset] & 0x80 != 0:
+        return Error(
+            getattr(ErrorCode, f"ERR_SIG_NEGATIVE_{component}"),
+            f"malformed signature: {component} is negative"
+        )
 
-        # Null bytes at the start of S are not allowed, unless S would otherwise be
-        # interpreted as a negative number.
-        if s_len > 1 and sig[s_offset] == 0x00 and sig[s_offset + 1] & 0x80 == 0:
-            return Error(ErrorCode.ERR_SIG_TOO_MUCH_S_PADDING, "malformed signature: S value has too much padding")
+    # No unnecessary leading zeros (except for negative representation)
+    if length > 1 and sig[data_offset] == 0x00 and sig[data_offset + 1] & 0x80 == 0:
+        return Error(
+            getattr(ErrorCode, f"ERR_SIG_TOO_MUCH_{component}_PADDING"),
+            f"malformed signature: {component} value has too much padding"
+        )
 
-    # Verify the S value is <= half the order of the curve.
-    # Low S checking requires valid DER structure, so only check when DER validation passed
-    if require_low_s and require_der:
-        # Parse S value from the validated DER structure
-        # The DER structure has already been validated, so we can extract S
-        try:
-            # Skip sequence byte, length byte, R type, R length, R data
-            pos = 4  # After 0x30, length, 0x02, r_len
-            r_len = sig[r_len_offset]
-            pos += r_len  # Skip R data
+    return None
 
-            # Now at S type (0x02)
-            if pos + 2 >= len(sig):
-                return Error(ErrorCode.ERR_SIG_HIGH_S, "invalid DER structure for S extraction")
+def _validate_low_s_value(sig: bytes) -> Optional[Error]:
+    """Validate that S value is in the lower half of the curve order."""
+    try:
+        # Skip to S data: sequence + length + R type + R length + R data
+        pos = 4  # After 0x30, length, 0x02, r_len
+        r_len = sig[3]  # r_len_offset
+        pos += r_len  # Skip R data
 
-            s_len = sig[pos + 1]
-            s_start = pos + 2
-            s_end = s_start + s_len
+        # Now at S type (0x02)
+        if pos + 2 >= len(sig):
+            return Error(ErrorCode.ERR_SIG_HIGH_S, "invalid DER structure for S extraction")
 
-            if s_end > len(sig):
-                return Error(ErrorCode.ERR_SIG_HIGH_S, "invalid DER structure for S extraction")
+        s_len = sig[pos + 1]
+        s_start = pos + 2
+        s_end = s_start + s_len
 
-            s_bytes = sig[s_start:s_end]
-            if len(s_bytes) == 0:
-                return Error(ErrorCode.ERR_SIG_HIGH_S, "empty S value")
+        if s_end > len(sig):
+            return Error(ErrorCode.ERR_SIG_HIGH_S, "invalid DER structure for S extraction")
 
-            # Convert to integer and check if > curve.n // 2
-            s_value = int.from_bytes(s_bytes, byteorder="big")
-            curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-            if s_value > curve_order // 2:
-                return Error(ErrorCode.ERR_SIG_HIGH_S, "signature is not canonical due to unnecessarily high S value")
-        except (IndexError, ValueError):
-            return Error(ErrorCode.ERR_SIG_HIGH_S, "failed to parse S value from DER signature")
+        s_bytes = sig[s_start:s_end]
+        if len(s_bytes) == 0:
+            return Error(ErrorCode.ERR_SIG_HIGH_S, "empty S value")
+
+        # Convert to integer and check if > curve.n // 2
+        s_value = int.from_bytes(s_bytes, byteorder="big")
+        curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+        if s_value > curve_order // 2:
+            return Error(ErrorCode.ERR_SIG_HIGH_S, "signature is not canonical due to unnecessarily high S value")
+
+    except (IndexError, ValueError):
+        return Error(ErrorCode.ERR_SIG_HIGH_S, "failed to parse S value from DER signature")
 
     return None
 
@@ -1530,14 +1543,38 @@ def op_checksig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def op_checkmultisig(
-    pop: ParsedOpcode, t: "Thread"
-) -> Optional[Error]:  # NOSONAR - Complexity (82), requires refactoring
+def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     """Handle OP_CHECKMULTISIG."""
-    # Consensus stack handling + (partial) verification semantics aligned to go-sdk.
-    #
-    # Stack:
-    # [... dummy [sig ...] numsigs [pubkey ...] numpubkeys] -> [... bool]
+    # Extract and validate multisig parameters from stack
+    multisig_params = _extract_multisig_params(t)
+    if isinstance(multisig_params, Error):
+        return multisig_params
+
+    num_pubkeys, pubkeys, num_signatures, sigs = multisig_params
+
+    # Validate dummy element
+    dummy_error = _validate_multisig_dummy(t)
+    if dummy_error:
+        return dummy_error
+
+    # Prepare script for sighash calculation
+    script_bytes = _prepare_multisig_script(t, sigs)
+
+    # Perform signature verification
+    success = _verify_multisig_signatures(t, script_bytes, pubkeys, sigs, num_signatures, num_pubkeys)
+
+    # Check for VERIFY_NULL_FAIL
+    if not success and t.flags.has_flag(t.flags.VERIFY_NULL_FAIL):
+        if any(len(s) > 0 for s in sigs):
+            return Error(ErrorCode.ERR_SIG_NULLFAIL, "not all signatures empty on failed checkmultisig")
+
+    # Push result to stack
+    t.dstack.push(encode_bool(success))
+    return None
+
+def _extract_multisig_params(t: "Thread") -> tuple[int, list[bytes], int, list[bytes]] | Error:
+    """Extract and validate multisig parameters from stack."""
+    # Get number of public keys
     num_keys, err = _pop_script_int(t)
     if err:
         return err
@@ -1551,13 +1588,12 @@ def op_checkmultisig(
     if t.num_ops > t.cfg.max_ops():
         return Error(ErrorCode.ERR_TOO_MANY_OPERATIONS, f"exceeded max operation limit of {t.cfg.max_ops()}")
 
-    pubkeys: list[bytes] = []
-    for _ in range(num_pubkeys):
-        try:
-            pubkeys.append(t.dstack.pop_byte_array())
-        except Exception:
-            return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CHECKMULTISIG missing pubkey")
+    # Extract public keys
+    pubkeys = _extract_pubkeys(t, num_pubkeys)
+    if isinstance(pubkeys, Error):
+        return pubkeys
 
+    # Get number of signatures
     num_sigs, err = _pop_script_int(t)
     if err:
         return err
@@ -1566,14 +1602,35 @@ def op_checkmultisig(
     if num_signatures < 0 or num_signatures > num_pubkeys:
         return Error(ErrorCode.ERR_SIG_COUNT, f"invalid signature count: {num_signatures}")
 
-    sigs: list[bytes] = []
+    # Extract signatures
+    sigs = _extract_signatures(t, num_signatures)
+    if isinstance(sigs, Error):
+        return sigs
+
+    return num_pubkeys, pubkeys, num_signatures, sigs
+
+def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> list[bytes] | Error:
+    """Extract public keys from stack."""
+    pubkeys = []
+    for _ in range(num_pubkeys):
+        try:
+            pubkeys.append(t.dstack.pop_byte_array())
+        except Exception:
+            return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CHECKMULTISIG missing pubkey")
+    return pubkeys
+
+def _extract_signatures(t: "Thread", num_signatures: int) -> list[bytes] | Error:
+    """Extract signatures from stack."""
+    sigs = []
     for _ in range(num_signatures):
         try:
             sigs.append(t.dstack.pop_byte_array())
         except Exception:
             return Error(ErrorCode.ERR_INVALID_STACK_OPERATION, "OP_CHECKMULTISIG missing signature")
+    return sigs
 
-    # Pop the historical (buggy) extra dummy element.
+def _validate_multisig_dummy(t: "Thread") -> Optional[Error]:
+    """Validate the multisig dummy element."""
     try:
         dummy = t.dstack.pop_byte_array()
     except Exception:
@@ -1582,27 +1639,30 @@ def op_checkmultisig(
     if t.flags.has_flag(t.flags.STRICT_MULTISIG) and len(dummy) != 0:
         return Error(ErrorCode.ERR_SIG_NULLDUMMY, f"multisig dummy argument has length {len(dummy)} instead of 0")
 
-    # Build scriptCode (subscript) with all signatures removed, and with CODESEPARATOR removed.
+    return None
+
+def _prepare_multisig_script(t: "Thread", sigs: list[bytes]) -> bytes:
+    """Prepare script bytes for sighash calculation."""
     scr = t.sub_script()
     for rs in sigs:
         scr = remove_signature_from_script(scr, rs)
     scr = remove_opcode(scr, OpCode.OP_CODESEPARATOR.value)
 
     try:
-        script_bytes = _serialize_parsed_script(scr)
+        return _serialize_parsed_script(scr)
     except Exception:
-        script_bytes = b""
+        return b""
 
+def _verify_multisig_signatures(
+    t: "Thread", script_bytes: bytes, pubkeys: list[bytes], sigs: list[bytes],
+    num_signatures: int, num_pubkeys: int
+) -> bool:
+    """Verify multisig signatures and return success status."""
     def _calc_sighash(flag: SIGHASH) -> Optional[bytes]:
-        """
-        Return signature hash digest (32 bytes) for this multisig evaluation.
-        Mirrors go-sdk CalcInputSignatureHash selection between legacy and BIP143-style.
-        """
+        """Return signature hash digest for multisig evaluation."""
         return _compute_sighash_internal(t, script_bytes, flag)
 
-    # Go-sdk semantics:
-    # - only check pubkey encoding once the signature is non-empty and has passed its encoding checks
-    # - signature encoding is checked before pubkey encoding (observable under NOT + STRICTENC)
+    # Go-sdk semantics: verify signatures against public keys
     success = True
     remaining_sigs = num_signatures
     sig_idx = 0
@@ -1620,62 +1680,68 @@ def op_checkmultisig(
         pub_key = pubkeys[pubkey_idx]
 
         if len(raw_sig) == 0:
-            # Skip to the next pubkey if signature is empty.
+            # Skip to the next pubkey if signature is empty
             continue
 
-        # Split the signature into hash type and signature components.
-        shf_val = int(raw_sig[-1])
-        sig_bytes = raw_sig[:-1]
-
-        err = _check_hash_type_encoding(t, shf_val)
-        if err:
-            return err
-        shf = _sighash_from_int(shf_val)
-
-        # Signature encoding checks (before pubkey checks).
-        require_der = t.flags.has_flag(t.flags.VERIFY_DER_SIGNATURES) or t.flags.has_flag(
-            t.flags.VERIFY_STRICT_ENCODING
-        )
-        require_low_s = t.flags.has_flag(t.flags.VERIFY_LOW_S)
-        require_strict = t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
-        err = check_signature_encoding(sig_bytes, require_low_s, require_der, require_strict)
-        if err:
-            return err
-
-        # Pubkey encoding checks (STRICTENC) only when the signature is being evaluated.
-        if require_strict:
-            err = check_public_key_encoding(pub_key)
-            if err:
-                return err
-
-        sighash = _calc_sighash(shf)
-        if sighash is None:
-            # Mirror go-sdk: push false on sighash failure, not a hard error.
-            success = False
-            break
-
-        try:
-            sig_to_verify = sig_bytes
-            if not t.flags.has_any(Flag.VERIFY_DER_SIGNATURES, Flag.VERIFY_LOW_S, Flag.VERIFY_STRICT_ENCODING):
-                try:
-                    r, s = _deserialize_ecdsa_der_lax(sig_bytes)
-                    sig_to_verify = serialize_ecdsa_der((r, s))
-                except Exception:
-                    sig_to_verify = sig_bytes
-            ok = PublicKey(pub_key).verify(sig_to_verify, sighash, hasher=lambda m: m)
-        except Exception:
-            ok = False
-
-        if ok:
-            sig_idx += 1
+        # Process signature verification
+        verification_result = _verify_single_signature(t, raw_sig, pub_key, _calc_sighash)
+        if isinstance(verification_result, Error):
+            return False  # Hard error on encoding issues
+        elif verification_result is False:
+            # Verification failed, try next pubkey
+            continue
+        else:
+            # Verification succeeded
             remaining_sigs -= 1
+            sig_idx += 1
 
-    if not success and t.flags.has_flag(t.flags.VERIFY_NULL_FAIL):
-        if any(len(s) > 0 for s in sigs):
-            return Error(ErrorCode.ERR_SIG_NULLFAIL, "not all signatures empty on failed checkmultisig")
+    return success and remaining_sigs == 0
 
-    t.dstack.push_byte_array(encode_bool(success))
-    return None
+def _verify_single_signature(t: "Thread", raw_sig: bytes, pub_key: bytes, calc_sighash) -> bool | Error:
+    """Verify a single signature against a public key."""
+    # Split signature into hash type and signature components
+    shf_val = int(raw_sig[-1])
+    sig_bytes = raw_sig[:-1]
+
+    err = _check_hash_type_encoding(t, shf_val)
+    if err:
+        return err
+
+    shf = _sighash_from_int(shf_val)
+
+    # Signature encoding checks
+    require_der = t.flags.has_flag(t.flags.VERIFY_DER_SIGNATURES) or t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
+    require_low_s = t.flags.has_flag(t.flags.VERIFY_LOW_S)
+    require_strict = t.flags.has_flag(t.flags.VERIFY_STRICT_ENCODING)
+
+    err = check_signature_encoding(sig_bytes, require_low_s, require_der, require_strict)
+    if err:
+        return err
+
+    # Pubkey encoding checks (STRICTENC)
+    if require_strict:
+        err = check_public_key_encoding(pub_key)
+        if err:
+            return err
+
+    sighash = calc_sighash(shf)
+    if sighash is None:
+        return False  # Sighash failure
+
+    # Perform signature verification
+    try:
+        sig_to_verify = sig_bytes
+        if not t.flags.has_any(Flag.VERIFY_DER_SIGNATURES, Flag.VERIFY_LOW_S, Flag.VERIFY_STRICT_ENCODING):
+            try:
+                r, s = _deserialize_ecdsa_der_lax(sig_bytes)
+                sig_to_verify = serialize_ecdsa_der((r, s))
+            except Exception:
+                sig_to_verify = sig_bytes
+
+        ok = PublicKey(pub_key).verify(sig_to_verify, sighash, hasher=lambda m: m)
+        return ok
+    except Exception:
+        return False
 
 
 def op_checkmultisig_verify(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:

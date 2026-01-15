@@ -26,9 +26,9 @@ def PKCS7Unpad(data: bytes, block_size: int) -> bytes:  # NOSONAR - Standard PKC
     return data[:-padding]
 
 
-def AESCBCEncrypt(
+def aescbc_encrypt(
     data: bytes, key: bytes, iv: bytes, concat_iv: bool
-) -> bytes:  # NOSONAR - Standard AES-CBC naming convention
+) -> bytes:
     block_size = AES.block_size
     padded = PKCS7Padd(data, block_size)
     # AES-CBC is used with HMAC-SHA256 for authenticated encryption (see aes_cbc_encrypt_mac)
@@ -39,7 +39,7 @@ def AESCBCEncrypt(
     return ciphertext
 
 
-def AESCBCDecrypt(data: bytes, key: bytes, iv: bytes) -> bytes:  # NOSONAR - Standard AES-CBC naming convention
+def aescbc_decrypt(data: bytes, key: bytes, iv: bytes) -> bytes:
     block_size = AES.block_size
     # AES-CBC is used with HMAC-SHA256 for authenticated encryption (see aes_cbc_decrypt_mac)
     cipher = AES.new(key, AES.MODE_CBC, iv)  # NOSONAR - CBC mode with HMAC provides authenticated encryption
@@ -48,13 +48,13 @@ def AESCBCDecrypt(data: bytes, key: bytes, iv: bytes) -> bytes:  # NOSONAR - Sta
 
 
 def aes_encrypt_with_iv(key: bytes, iv: bytes, data: bytes) -> bytes:
-    # 既存のAESCBCEncryptの引数順に合わせてラップ
-    return AESCBCEncrypt(data, key, iv, concat_iv=False)
+    # 既存のaescbc_encryptの引数順に合わせてラップ
+    return aescbc_encrypt(data, key, iv, concat_iv=False)
 
 
 def aes_decrypt_with_iv(key: bytes, iv: bytes, data: bytes) -> bytes:
-    # 既存のAESCBCDecryptの引数順に合わせてラップ
-    return AESCBCDecrypt(data, key, iv)
+    # 既存のaescbc_decryptの引数順に合わせてラップ
+    return aescbc_decrypt(data, key, iv)
 
 
 # --- Encrypt-then-MAC helpers (Go ECIES compatible) ---
@@ -76,7 +76,7 @@ def aes_cbc_encrypt_mac(data: bytes, key_e: bytes, iv: bytes, mac_key: bytes, co
     bytes
         iv|ciphertext|mac if concat_iv else ciphertext|mac
     """
-    cipher_text = AESCBCEncrypt(data, key_e, iv, concat_iv)
+    cipher_text = aescbc_encrypt(data, key_e, iv, concat_iv)
     # data used for MAC (same as Go: iv concatenated if concat_iv True)
     # cipher_text already includes iv when concat_iv is True
     mac_input = cipher_text
@@ -123,9 +123,13 @@ def aes_cbc_decrypt_mac(
         cipher_text = mac_input
         iv_final = iv
 
-    return AESCBCDecrypt(cipher_text, key_e, iv_final)
+    return aescbc_decrypt(cipher_text, key_e, iv_final)
 
+
+# Backwards compatibility aliases
+AESCBCEncrypt = aescbc_encrypt
+AESCBCDecrypt = aescbc_decrypt
 
 # Snake_case aliases for PEP8 compliance (internal use)
-aes_cbc_encrypt = AESCBCEncrypt
-aes_cbc_decrypt = AESCBCDecrypt
+aes_cbc_encrypt = aescbc_encrypt
+aes_cbc_decrypt = aescbc_decrypt

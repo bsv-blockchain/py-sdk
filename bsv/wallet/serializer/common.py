@@ -139,7 +139,7 @@ def deserialize_seek_permission(r: Reader) -> bool:
     return None if b == 0xFF else (b == 1)
 
 
-def serialize_relinquish_certificate_result(_: dict[str, Any]) -> bytes:
+def serialize_relinquish_certificate_result(_: dict[str, Any] | None) -> bytes:
     """Serialize relinquish certificate result (empty)."""
     return b""
 

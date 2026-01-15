@@ -148,123 +148,189 @@ class LocalKVStore(KVStoreInterface):
         finally:
             self._release_key_lock(key)
 
-    def _get_onchain_value(self, ctx: Any, key: str) -> str | None:  # NOSONAR - Complexity (56), requires refactoring
+    def _get_onchain_value(self, ctx: Any, key: str) -> str | None:
         """Retrieve value from on-chain outputs (BEEF/PushDrop)."""
         outputs, beef_bytes = self._lookup_outputs_for_get(ctx, key)
         if not outputs:
             return None
+
         most_recent = outputs[-1]
         locking_script = self._extract_locking_script_from_output(beef_bytes, most_recent)
         if not locking_script:
             return None
+
         decoded = PushDrop.decode(locking_script)
-        if decoded and isinstance(decoded.get("fields"), list) and decoded["fields"]:
-            first_field = decoded["fields"][0]
-            # If encryption is enabled and default_ca is provided, return encrypted form for compatibility
-            if self._encrypt and isinstance(self._default_ca, dict) and self._default_ca:
-                try:
-                    if isinstance(first_field, (bytes, bytearray)):
-                        return "enc:" + base64.b64encode(bytes(first_field)).decode("ascii")
-                    elif isinstance(first_field, str):
-                        if first_field.startswith("enc:"):
-                            return first_field
-                        return "enc:" + base64.b64encode(first_field.encode("utf-8")).decode("ascii")
-                except Exception:
-                    try:
-                        # Normalize ciphertext bytes
-                        if isinstance(first_field, (bytes, bytearray)):
-                            first_field_bytes = bytes(first_field)
-                            if first_field_bytes.startswith(b"enc:"):
-                                ciphertext = base64.b64decode(first_field_bytes[4:])
-                            else:
-                                ciphertext = first_field_bytes
-                        elif isinstance(first_field, str):
-                            if first_field.startswith("enc:"):
-                                ciphertext = base64.b64decode(first_field[4:])
-                            else:
-                                ciphertext = first_field.encode("utf-8")
-                        else:
-                            ciphertext = b""
-                        # Build encryption_args from defaults
-                        ca_args = self._merge_default_ca(None)
-                        pd_opts = ca_args.get("pushdrop") or {}
-                        protocol_id = (
-                            ca_args.get("protocol_id")
-                            or ca_args.get("protocolID")
-                            or pd_opts.get("protocol_id")
-                            or pd_opts.get("protocolID")
-                        )
-                        key_id = (
-                            ca_args.get("key_id")
-                            or ca_args.get("keyID")
-                            or pd_opts.get("key_id")
-                            or pd_opts.get("keyID")
-                        )
-                        # CounterpartyType: SELF=2, ANYONE=1, OTHER=3, UNINITIALIZED=0
-                        counterparty = (
-                            ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 2}
-                        )  # Default to SELF (2)
-                        dec_res = (
-                            self._wallet.decrypt(
-                                ctx,
-                                {
-                                    "encryption_args": {
-                                        "protocolID": protocol_id,
-                                        "keyID": key_id,
-                                        "counterparty": counterparty,
-                                    },
-                                    "ciphertext": ciphertext,
-                                },
-                                self._originator,
-                            )
-                            or {}
-                        )
-                        pt = dec_res.get("plaintext")
-                        if isinstance(pt, (bytes, bytearray)):
-                            return pt.decode("utf-8")
-                    except Exception:
-                        pass
-                # Fallbacks (if decrypt not possible), try to decode as utf-8
-                try:
-                    if isinstance(first_field, (bytes, bytearray)):
-                        return first_field.decode("utf-8")
-                except Exception:
-                    return None
-                return first_field if isinstance(first_field, str) else None
-            # Non-encrypted path
-            try:
-                return first_field.decode("utf-8")
-            except Exception:
-                return None
+        if not decoded or not isinstance(decoded.get("fields"), list) or not decoded["fields"]:
+            return None
+
+        first_field = decoded["fields"][0]
+        return self._process_decoded_field(ctx, first_field)
+
+    def _process_decoded_field(self, ctx: Any, first_field: Any) -> str | None:
+        """Process a decoded field, handling encryption if enabled."""
+        if self._should_return_encrypted(first_field):
+            return self._format_encrypted_field(first_field)
+
+        if self._should_attempt_decryption():
+            decrypted = self._attempt_decryption(ctx, first_field)
+            if decrypted is not None:
+                return decrypted
+
+        return self._decode_plaintext_field(first_field)
+
+    def _should_return_encrypted(self, first_field: Any) -> bool:
+        """Check if field should be returned in encrypted form."""
+        return (self._encrypt and isinstance(self._default_ca, dict) and self._default_ca and
+               (isinstance(first_field, (bytes, bytearray)) or
+                (isinstance(first_field, str) and not first_field.startswith("enc:"))))
+
+    def _format_encrypted_field(self, first_field: Any) -> str:
+        """Format field as encrypted string."""
+        try:
+            if isinstance(first_field, (bytes, bytearray)):
+                return "enc:" + base64.b64encode(bytes(first_field)).decode("ascii")
+            elif isinstance(first_field, str):
+                if first_field.startswith("enc:"):
+                    return first_field
+                return "enc:" + base64.b64encode(first_field.encode("utf-8")).decode("ascii")
+        except Exception:
+            pass
         return None
 
-    def _lookup_outputs_for_get(
-        self, _ctx: Any, key: str
-    ) -> tuple[list, bytes]:  # NOSONAR - Complexity (67), requires refactoring
+    def _should_attempt_decryption(self) -> bool:
+        """Check if decryption should be attempted."""
+        return self._encrypt and isinstance(self._default_ca, dict) and self._default_ca
+
+    def _attempt_decryption(self, ctx: Any, first_field: Any) -> str | None:
+        """Attempt to decrypt the field."""
+        try:
+            ciphertext = self._normalize_ciphertext(first_field)
+            if not ciphertext:
+                return None
+
+            ca_args = self._merge_default_ca(None)
+            protocol_id, key_id, counterparty = self._extract_encryption_params_from_ca(ca_args)
+
+            dec_res = self._wallet.decrypt(
+                ctx,
+                {
+                    "encryption_args": {
+                        "protocolID": protocol_id,
+                        "keyID": key_id,
+                        "counterparty": counterparty,
+                    },
+                    "ciphertext": ciphertext,
+                },
+                self._originator,
+            ) or {}
+
+            pt = dec_res.get("plaintext")
+            if isinstance(pt, (bytes, bytearray)):
+                return pt.decode("utf-8")
+        except Exception:
+            pass
+        return None
+
+    def _normalize_ciphertext(self, first_field: Any) -> bytes:
+        """Normalize field to ciphertext bytes."""
+        if isinstance(first_field, (bytes, bytearray)):
+            first_field_bytes = bytes(first_field)
+            if first_field_bytes.startswith(b"enc:"):
+                return base64.b64decode(first_field_bytes[4:])
+            else:
+                return first_field_bytes
+        elif isinstance(first_field, str):
+            if first_field.startswith("enc:"):
+                return base64.b64decode(first_field[4:])
+            else:
+                return first_field.encode("utf-8")
+        return b""
+
+    def _extract_encryption_params_from_ca(self, ca_args: dict) -> tuple:
+        """Extract encryption parameters from CA args."""
+        pd_opts = ca_args.get("pushdrop") or {}
+        protocol_id = (
+            ca_args.get("protocol_id")
+            or ca_args.get("protocolID")
+            or pd_opts.get("protocol_id")
+            or pd_opts.get("protocolID")
+        )
+        key_id = (
+            ca_args.get("key_id")
+            or ca_args.get("keyID")
+            or pd_opts.get("key_id")
+            or pd_opts.get("keyID")
+        )
+        counterparty = (
+            ca_args.get("counterparty") or pd_opts.get("counterparty") or {"type": 2}
+        )  # Default to SELF (2)
+        return protocol_id, key_id, counterparty
+
+    def _decode_plaintext_field(self, first_field: Any) -> str | None:
+        """Decode field as plaintext."""
+        try:
+            if isinstance(first_field, (bytes, bytearray)):
+                return first_field.decode("utf-8")
+            elif isinstance(first_field, str):
+                return first_field
+        except Exception:
+            pass
+        return None
+
+    def _lookup_outputs_for_get(self, _ctx: Any, key: str) -> tuple[list, bytes]:
+        """Lookup outputs for get operation using multiple fallback strategies."""
         # Fast-path: return locally cached BEEF right after set
+        cached_result = self._get_cached_outputs(key)
+        if cached_result:
+            return cached_result
+
+        # Primary lookup via wallet
+        outputs, beef_bytes = self._lookup_via_wallet(key)
+
+        # Fallback 1: build BEEF from WOC if no BEEF but have outputs
+        if not beef_bytes and outputs:
+            beef_bytes = self._build_beef_from_woc_outputs(outputs)
+
+        # Fallback 2: scan WOC address histories for PushDrop outputs
+        if not outputs and not beef_bytes:
+            outputs, beef_bytes = self._scan_woc_for_pushdrop_outputs(key)
+
+        return outputs, beef_bytes
+
+    def _get_cached_outputs(self, key: str) -> tuple[list, bytes] | None:
+        """Return cached outputs if available."""
         cached = self._recent_beef_by_key.get(key)
         if cached:
             outs, beef = cached
             if outs and beef:
                 return outs, beef
+        return None
+
+    def _lookup_via_wallet(self, key: str) -> tuple[list, bytes]:
+        """Primary lookup using wallet.list_outputs."""
+        args = self._build_list_outputs_args(key)
+        lo = self._wallet.list_outputs(args, self._originator) or {}
+        outputs = lo.get("outputs") or []
+        beef_bytes = lo.get("BEEF") or b""
+        return outputs, beef_bytes
+
+    def _build_list_outputs_args(self, key: str) -> dict:
+        """Build arguments for wallet.list_outputs call."""
         args = {
             "basket": self._context,
             "tags": [key],
             "include": ENTIRE_TXS,
             "limit": 10,
         }
-        # Forward derivation defaults (TS/GO parity) for derived-address lookup
+
+        # Forward derivation defaults for derived-address lookup
         try:
             ca_args = self._merge_default_ca(None)
             pd_opts = ca_args.get("pushdrop") or {}
-            prot = (
-                ca_args.get("protocol_id")
-                or ca_args.get("protocolID")
-                or pd_opts.get("protocol_id")
-                or pd_opts.get("protocolID")
-            )
-            kid = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
+            prot = self._extract_protocol_id(ca_args, pd_opts)
+            kid = self._extract_key_id(ca_args, pd_opts)
             cpty = ca_args.get("counterparty") or pd_opts.get("counterparty")
+
             if prot is not None:
                 args["protocolID"] = prot
             if kid is not None:
@@ -273,108 +339,124 @@ class LocalKVStore(KVStoreInterface):
                 args["counterparty"] = cpty
         except Exception:
             pass
-        lo = self._wallet.list_outputs(args, self._originator) or {}
-        outputs = lo.get("outputs") or []
-        beef_bytes = lo.get("BEEF") or b""
-        if not beef_bytes and outputs:
-            # Fallback: build minimal BEEF v2 from WOC raw tx for the listed outputs
-            try:
-                timeout = int(os.getenv("WOC_TIMEOUT", "10"))
-                beef_bytes = self._build_beef_v2_from_woc_outputs(outputs, timeout=timeout)
-            except Exception:
-                beef_bytes = b""
-        # Fallback 2: If neither outputs nor BEEF exist, scan WOC address histories
-        # for subject transactions containing PushDrop locked by the derived public key.
-        if not outputs and not beef_bytes:
-            try:
-                # Re-derive defaults
-                ca_args = self._merge_default_ca(None)
-                pd_opts = ca_args.get("pushdrop") or {}
-                prot = (
-                    ca_args.get("protocol_id")
-                    or ca_args.get("protocolID")
-                    or pd_opts.get("protocol_id")
-                    or pd_opts.get("protocolID")
+
+        return args
+
+    def _extract_protocol_id(self, ca_args: dict, pd_opts: dict) -> Any:
+        """Extract protocol ID from CA args."""
+        return (
+            ca_args.get("protocol_id")
+            or ca_args.get("protocolID")
+            or pd_opts.get("protocol_id")
+            or pd_opts.get("protocolID")
+        )
+
+    def _extract_key_id(self, ca_args: dict, pd_opts: dict) -> Any:
+        """Extract key ID from CA args."""
+        return (
+            ca_args.get("key_id")
+            or ca_args.get("keyID")
+            or pd_opts.get("key_id")
+            or pd_opts.get("keyID")
+        )
+
+    def _build_beef_from_woc_outputs(self, outputs: list) -> bytes:
+        """Build BEEF from WOC outputs as fallback."""
+        try:
+            timeout = int(os.getenv("WOC_TIMEOUT", "10"))
+            return self._build_beef_v2_from_woc_outputs(outputs, timeout=timeout)
+        except Exception:
+            return b""
+
+    def _scan_woc_for_pushdrop_outputs(self, key: str) -> tuple[list, bytes]:
+        """Scan WOC for PushDrop outputs as final fallback."""
+        try:
+            candidates = self._get_address_candidates()
+            woc_api = os.environ.get("WOC_API_KEY") or ""
+            headers = {"Authorization": woc_api, "woc-api-key": woc_api} if woc_api else {}
+            timeout = int(os.getenv("WOC_TIMEOUT", "10"))
+
+            matched_outputs: list[dict] = []
+            matched_tx_hexes: list[str] = []
+            seen_txids: set = set()
+
+            for addr, pub_hex in candidates:
+                self._scan_address_for_pushdrop_outputs(
+                    addr, pub_hex, headers, timeout, seen_txids, matched_outputs, matched_tx_hexes
                 )
-                kid = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
-                cpty = ca_args.get("counterparty") or pd_opts.get("counterparty")
 
-                import requests
-
+            if matched_outputs and matched_tx_hexes:
+                unique_tx_hexes = list(dict.fromkeys(matched_tx_hexes))
                 from bsv.beef import build_beef_v2_from_raw_hexes
-                from bsv.transaction import Transaction
-                from bsv.utils import Reader
-                from bsv.wallet.key_deriver import Protocol
+                beef_bytes = build_beef_v2_from_raw_hexes(unique_tx_hexes)
+                return matched_outputs, beef_bytes
 
-                # Derive KV public key
-                protocol_obj = None
-                if prot is not None:
-                    protocol_obj = (
-                        Protocol(prot.get("securityLevel", 0), prot.get("protocol", ""))
-                        if isinstance(prot, dict)
-                        else prot
-                    )
-                cp_norm = (
-                    self._wallet._normalize_counterparty(cpty)
-                    if hasattr(self._wallet, "_normalize_counterparty")
-                    else None
+        except Exception as e_fallback2:
+            print(f"[KV WOC] fallback-2 scan failed: {e_fallback2}")
+
+        return [], b""
+
+    def _get_address_candidates(self) -> list[tuple[str, str | None]]:
+        """Get list of addresses to scan for PushDrop outputs."""
+        ca_args = self._merge_default_ca(None)
+        pd_opts = ca_args.get("pushdrop") or {}
+        prot = self._extract_protocol_id(ca_args, pd_opts)
+        kid = self._extract_key_id(ca_args, pd_opts)
+        cpty = ca_args.get("counterparty") or pd_opts.get("counterparty")
+
+        from bsv.wallet.key_deriver import Protocol
+
+        protocol_obj = None
+        if prot is not None:
+            protocol_obj = (
+                Protocol(prot.get("securityLevel", 0), prot.get("protocol", ""))
+                if isinstance(prot, dict)
+                else prot
+            )
+
+        cp_norm = (
+            self._wallet._normalize_counterparty(cpty)
+            if hasattr(self._wallet, "_normalize_counterparty")
+            else None
+        )
+
+        derived_pub = None
+        derived_addr = None
+        derived_pub_hex = None
+        if protocol_obj is not None and kid is not None:
+            try:
+                derived_pub = self._wallet.key_deriver.derive_public_key(
+                    protocol_obj, kid, cp_norm, for_self=False
                 )
-                derived_pub = None
-                derived_addr = None
-                derived_pub_hex = None
-                if protocol_obj is not None and kid is not None:
-                    try:
-                        derived_pub = self._wallet.key_deriver.derive_public_key(
-                            protocol_obj, kid, cp_norm, for_self=False
-                        )
-                        derived_addr = derived_pub.address()
-                        derived_pub_hex = derived_pub.hex()
-                    except Exception:
-                        pass
-                master_addr = None
-                try:
-                    master_addr = self._wallet.public_key.address()
-                except Exception:
-                    master_addr = None
+                derived_addr = derived_pub.address()
+                derived_pub_hex = derived_pub.hex()
+            except Exception:
+                pass
 
-                # Scan candidates in the order: master -> context(if address) -> derived
-                candidates: list[tuple[str, str, str | None]] = []
-                if master_addr:
-                    candidates.append(("master", master_addr, derived_pub_hex))
-                # Optional: if LocalKVStore.context is an address distinct from above, include it
-                try:
-                    basket_ctx = self._context
-                    if isinstance(basket_ctx, str) and basket_ctx:
-                        is_new = (basket_ctx != master_addr) and (basket_ctx != derived_addr)
-                        if is_new and self._looks_like_address(basket_ctx):
-                            candidates.append(("context", basket_ctx, derived_pub_hex))
-                except Exception:
-                    pass
-                if derived_addr:
-                    candidates.append(("derived", derived_addr, derived_pub_hex))
+        master_addr = None
+        try:
+            master_addr = self._wallet.public_key.address()
+        except Exception:
+            master_addr = None
 
-                woc_api = os.environ.get("WOC_API_KEY") or ""
-                headers = {"Authorization": woc_api, "woc-api-key": woc_api} if woc_api else {}
-                timeout = int(os.getenv("WOC_TIMEOUT", "10"))
-                matched_outputs: list[dict] = []
-                matched_tx_hexes: list[str] = []
-                seen_txids: set = set()
+        candidates: list[tuple[str, str | None]] = []
+        if master_addr:
+            candidates.append((master_addr, derived_pub_hex))
 
-                for _label, addr, pub_hex in candidates:
-                    if not addr:
-                        continue
-                    self._scan_address_for_pushdrop_outputs(
-                        addr, pub_hex, headers, timeout, seen_txids, matched_outputs, matched_tx_hexes
-                    )
+        # Optional: if LocalKVStore.context is an address distinct from above, include it
+        try:
+            basket_ctx = self._context
+            if isinstance(basket_ctx, str) and basket_ctx:
+                is_new = (basket_ctx != master_addr) and (basket_ctx != derived_addr)
+                if is_new and self._looks_like_address(basket_ctx):
+                    candidates.append((basket_ctx, derived_pub_hex))
+        except Exception:
+            pass
 
-                if matched_outputs and matched_tx_hexes:
-                    # Deduplicate txs keeping order
-                    unique_tx_hexes = list(dict.fromkeys(matched_tx_hexes))
-                    beef_bytes = build_beef_v2_from_raw_hexes(unique_tx_hexes)
-                    return matched_outputs, beef_bytes
-            except Exception as e_fallback2:
-                print(f"[KV WOC] fallback-2 scan failed: {e_fallback2}")
-        return outputs, beef_bytes
+        if derived_addr:
+            candidates.append((derived_addr, derived_pub_hex))
+
+        return candidates
 
     def _scan_address_for_pushdrop_outputs(
         self,
@@ -714,48 +796,65 @@ class LocalKVStore(KVStoreInterface):
 
     def _build_locking_script(
         self, _ctx: Any, key: str, value: str, ca_args: dict = None
-    ) -> str:  # NOSONAR - Complexity (17), requires refactoring
+    ) -> str:
         ca_args = self._merge_default_ca(ca_args)
+        field_bytes = self._encrypt_value_if_needed(key, value, ca_args)
 
-        # Encrypt the value if encryption is enabled
-        if self._encrypt:
-            # Use the same encryption args as for PushDrop; default-derive if missing
-            protocol_id = ca_args.get("protocol_id") or ca_args.get("protocolID") or self._get_protocol(key)
-            key_id = ca_args.get("key_id") or ca_args.get("keyID") or key
-            # CounterpartyType: SELF=2, ANYONE=1, OTHER=3, UNINITIALIZED=0
-            counterparty = ca_args.get("counterparty") or {"type": 2}  # Default to SELF (2)
+        protocol_id, key_id, counterparty = self._extract_pushdrop_params(ca_args)
 
-            if protocol_id and key_id:
-                # Encrypt the value using wallet.encrypt
-                # Set forSelf=True when counterparty is SELF (type=0) to ensure correct key derivation
-                is_self = isinstance(counterparty, dict) and counterparty.get("type") == 0
-                encrypt_args = {
-                    "encryption_args": {
-                        "protocolID": protocol_id,
-                        "keyID": key_id,
-                        "counterparty": counterparty,
-                        "forSelf": is_self,
-                    },
-                    "plaintext": value.encode("utf-8"),
-                }
-                encrypt_result = self._wallet.encrypt(encrypt_args, self._originator)
-                if "ciphertext" in encrypt_result:
-                    ciphertext = encrypt_result["ciphertext"]
-                    # Convert list of ints to bytes if needed (wallet.encrypt returns list)
-                    if isinstance(ciphertext, (list, bytes, bytearray)):
-                        field_bytes = bytes(ciphertext)
-                    else:
-                        field_bytes = value.encode("utf-8")
-                else:
-                    # Fallback to plaintext if encryption fails
-                    field_bytes = value.encode("utf-8")
-            else:
-                # No encryption keys available, use plaintext
-                field_bytes = value.encode("utf-8")
-        else:
-            field_bytes = value.encode("utf-8")
+        pd = PushDrop(self._wallet, self._originator)
+        return pd.lock(
+            [field_bytes],
+            protocol_id,
+            key_id,
+            counterparty,
+            for_self=True,
+            include_signature=True,
+            lock_position="before",
+        )
 
-        fields = [field_bytes]
+    def _encrypt_value_if_needed(self, key: str, value: str, ca_args: dict) -> bytes:
+        """Encrypt value if encryption is enabled, otherwise return plaintext bytes."""
+        if not self._encrypt:
+            return value.encode("utf-8")
+
+        protocol_id, key_id, counterparty = self._extract_encryption_params(key, ca_args)
+        if not (protocol_id and key_id):
+            return value.encode("utf-8")
+
+        return self._perform_encryption(value, protocol_id, key_id, counterparty)
+
+    def _extract_encryption_params(self, key: str, ca_args: dict) -> tuple:
+        """Extract protocol_id, key_id, and counterparty for encryption."""
+        protocol_id = ca_args.get("protocol_id") or ca_args.get("protocolID") or self._get_protocol(key)
+        key_id = ca_args.get("key_id") or ca_args.get("keyID") or key
+        counterparty = ca_args.get("counterparty") or {"type": 2}  # Default to SELF (2)
+        return protocol_id, key_id, counterparty
+
+    def _perform_encryption(self, value: str, protocol_id: Any, key_id: Any, counterparty: dict) -> bytes:
+        """Perform encryption and return ciphertext bytes."""
+        is_self = isinstance(counterparty, dict) and counterparty.get("type") == 0
+        encrypt_args = {
+            "encryption_args": {
+                "protocolID": protocol_id,
+                "keyID": key_id,
+                "counterparty": counterparty,
+                "forSelf": is_self,
+            },
+            "plaintext": value.encode("utf-8"),
+        }
+        encrypt_result = self._wallet.encrypt(encrypt_args, self._originator)
+
+        if "ciphertext" in encrypt_result:
+            ciphertext = encrypt_result["ciphertext"]
+            if isinstance(ciphertext, (list, bytes, bytearray)):
+                return bytes(ciphertext)
+
+        # Fallback to plaintext if encryption fails
+        return value.encode("utf-8")
+
+    def _extract_pushdrop_params(self, ca_args: dict) -> tuple:
+        """Extract protocol_id, key_id, and counterparty for PushDrop."""
         pd_opts = ca_args.get("pushdrop") or {}
         protocol_id = (
             ca_args.get("protocol_id")
@@ -765,16 +864,7 @@ class LocalKVStore(KVStoreInterface):
         )
         key_id = ca_args.get("key_id") or ca_args.get("keyID") or pd_opts.get("key_id") or pd_opts.get("keyID")
         counterparty = ca_args.get("counterparty", pd_opts.get("counterparty"))
-        pd = PushDrop(self._wallet, self._originator)
-        return pd.lock(
-            fields,
-            protocol_id,
-            key_id,
-            counterparty,
-            for_self=True,
-            include_signature=True,
-            lock_position="before",
-        )
+        return protocol_id, key_id, counterparty
 
     def _lookup_outputs_for_set(self, _ctx: Any, key: str, ca_args: dict | None = None) -> tuple[list, bytes]:
         ca_args = self._merge_default_ca(ca_args)
@@ -1117,18 +1207,23 @@ class LocalKVStore(KVStoreInterface):
             inputs_meta.append(meta)
         return inputs_meta
 
-    def _prepare_spends(
-        self, key, inputs_meta, signable_tx_bytes, input_beef
-    ):  # NOSONAR - Complexity (20), requires refactoring
+    def _prepare_spends(self, key, inputs_meta, signable_tx_bytes, input_beef):
         """
         Prepare spends dict for sign_action: {idx: {"unlockingScript": ...}}
         Go/TS parity: use PushDrop unlocker and signable transaction.
         """
+        tx = self._link_transaction_for_signing(signable_tx_bytes, input_beef)
+        if tx is None:
+            return {}
+
+        unlocker = self._create_unlocker(key)
+        return self._build_spends_dict(tx, inputs_meta, unlocker)
+
+    def _link_transaction_for_signing(self, signable_tx_bytes, input_beef):
+        """Link transaction using BEEF for proper signing context."""
         from bsv.transaction import Transaction, parse_beef_ex
         from bsv.utils import Reader
 
-        spends = {}
-        # Try to link the signable tx using provided BEEF to ensure SourceTransaction is available
         try:
             tx = Transaction.from_reader(Reader(signable_tx_bytes))
             if input_beef:
@@ -1141,36 +1236,57 @@ class LocalKVStore(KVStoreInterface):
                             tx = linked
                 except Exception:
                     pass
+            return tx
         except Exception:
-            return spends
+            return None
+
+    def _create_unlocker(self, key):
+        """Create PushDrop unlocker for the given key."""
         pd = PushDrop(self._wallet, self._originator)
-        # Use default protocol for unlocking (GO pattern: protocol and key are separate)
         unlock_protocol = self._get_protocol(key)
-        unlocker = pd.unlock(unlock_protocol, key, None, sign_outputs="all")  # None = SELF counterparty
-        # Only prepare spends for inputs whose outpoint matches the tx input at the same index
+        return pd.unlock(unlock_protocol, key, None, sign_outputs="all")  # None = SELF counterparty
+
+    def _build_spends_dict(self, tx, inputs_meta, unlocker):
+        """Build spends dictionary for matching inputs."""
+        spends = {}
         for idx, meta in enumerate(inputs_meta):
-            try:
-                outpoint = meta.get("outpoint") or {}
-                meta_txid = outpoint.get("txid")
-                meta_index = int(outpoint.get("index", -1))
-                # Validate index in tx
-                if not (0 <= idx < len(tx.inputs)):
-                    continue
-                tin = tx.inputs[idx]
-                txid_matches = False
-                try:
-                    txid_matches = tin.source_txid == meta_txid
-                except Exception:
-                    txid_matches = False
-                index_matches = getattr(tin, "source_output_index", -1) == meta_index
-                if not (txid_matches and index_matches):
-                    continue
-                unlocking_script = unlocker.sign(tx, idx)
-                spends[idx] = {"unlockingScript": unlocking_script}
-            except Exception:
-                # Skip on error; do not produce empty spends entries
-                continue
+            spend = self._create_spend_for_input(tx, idx, meta, unlocker)
+            if spend:
+                spends[idx] = spend
         return spends
+
+    def _create_spend_for_input(self, tx, idx, meta, unlocker):
+        """Create spend entry for a single input if it matches."""
+        try:
+            outpoint = meta.get("outpoint") or {}
+            meta_txid = outpoint.get("txid")
+            meta_index = int(outpoint.get("index", -1))
+
+            # Validate index is within bounds
+            if not (0 <= idx < len(tx.inputs)):
+                return None
+
+            # Check if outpoint matches
+            if not self._outpoint_matches(tx.inputs[idx], meta_txid, meta_index):
+                return None
+
+            # Create unlocking script
+            unlocking_script = unlocker.sign(tx, idx)
+            return {"unlockingScript": unlocking_script}
+
+        except Exception:
+            # Skip on error; do not produce empty spends entries
+            return None
+
+    def _outpoint_matches(self, tx_input, meta_txid, meta_index):
+        """Check if transaction input matches the expected outpoint."""
+        try:
+            txid_matches = tx_input.source_txid == meta_txid
+        except Exception:
+            txid_matches = False
+
+        index_matches = getattr(tx_input, "source_output_index", -1) == meta_index
+        return txid_matches and index_matches
 
     # ------------------------------
     # WOC fallback: build minimal BEEF v2

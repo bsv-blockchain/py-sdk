@@ -47,7 +47,7 @@ class TestWriterPrimitives:
 
 class TestReaderPrimitives:
     def test_read_endianness_and_varint(self):
-        data = b"\x34\x12" b"\xef\xcd\xab\x89" b"\x12\x34" b"\x89\xab\xcd\xef" b"\x03"
+        data = b"\x34\x12\xef\xcd\xab\x89\x12\x34\x89\xab\xcd\xef\x03"
         r = Reader(data)
 
         # Reader has BE/LE helpers for 16/32
