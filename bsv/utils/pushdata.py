@@ -72,7 +72,7 @@ def decode_pushdata(encoded: bytes) -> bytes:
     return _decode_pushdata_opcode(encoded, opcode)
 
 
-def _decode_special_opcode(opcode: int) -> Union[bytes, None]:
+def _decode_special_opcode(opcode: int) -> bytes | None:
     """Decode special opcodes (OP_0, OP_1-OP_16, OP_1NEGATE). Returns None if not a special opcode."""
     if opcode == OpCode.OP_0[0]:
         return b""

@@ -202,7 +202,7 @@ def allowed_error_codes(expected: str) -> list[ErrorCode]:
     if expected == "OK":
         return []
 
-    def _maybe(name: str) -> Union[ErrorCode, None]:
+    def _maybe(name: str) -> ErrorCode | None:
         return getattr(ErrorCode, name, None)  # type: ignore[arg-type]
 
     def _codes(*names: str) -> list[ErrorCode]:
