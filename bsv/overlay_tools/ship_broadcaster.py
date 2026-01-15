@@ -299,7 +299,7 @@ class TopicBroadcaster:
             failed_hosts = getattr(self, "_failed_hosts", None)
             if failed_hosts is None:
                 failed_hosts = set()
-                setattr(self, "_failed_hosts", failed_hosts)
+                self._failed_hosts = failed_hosts
             failed_hosts.add(host)
             # Re-raise the original exception to preserve existing behavior.
             raise
