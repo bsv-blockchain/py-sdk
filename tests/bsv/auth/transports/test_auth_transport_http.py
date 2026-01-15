@@ -1,11 +1,25 @@
 import json
 import os
+import struct
 import types
 
 from bsv.auth.auth_message import AuthMessage
 from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
 from bsv.keys import PrivateKey
-from bsv.utils.reader_writer import Writer
+from bsv.utils.reader_writer import Reader, Writer
+
+
+def _read_varint(reader: Reader) -> int:
+    """Read a varint value from the reader."""
+    first = reader.read(1)[0]
+    if first < 0xFD:
+        return first
+    elif first == 0xFD:
+        return struct.unpack("<H", reader.read(2))[0]
+    elif first == 0xFE:
+        return struct.unpack("<I", reader.read(4))[0]
+    else:
+        return struct.unpack("<Q", reader.read(8))[0]
 
 
 class DummyResponse:
@@ -101,58 +115,22 @@ def test_send_general_performs_http_and_notifies_handler(
     resp_msg = captured["msg"]
     assert isinstance(resp_msg, AuthMessage)
     # Parse binary response payload: request_id (32 bytes) + varint status_code + varint n_headers + headers + varint body_len + body
-    import struct
-
-    from bsv.utils.reader_writer import Reader
-
     reader = Reader(resp_msg.payload)
     # Skip request_id (32 bytes)
     _ = reader.read(32)
     # Read status code (varint)
-    status_first = reader.read(1)[0]
-    if status_first < 0xFD:
-        status_code = status_first
-    elif status_first == 0xFD:
-        status_code = struct.unpack("<H", reader.read(2))[0]
-    elif status_first == 0xFE:
-        status_code = struct.unpack("<I", reader.read(4))[0]
-    else:
-        status_code = struct.unpack("<Q", reader.read(8))[0]
+    status_code = _read_varint(reader)
     assert status_code == 200
     # Read headers count (varint)
-    n_headers_first = reader.read(1)[0]
-    if n_headers_first < 0xFD:
-        n_headers = n_headers_first
-    elif n_headers_first == 0xFD:
-        n_headers = struct.unpack("<H", reader.read(2))[0]
-    elif n_headers_first == 0xFE:
-        n_headers = struct.unpack("<I", reader.read(4))[0]
-    else:
-        n_headers = struct.unpack("<Q", reader.read(8))[0]
+    n_headers = _read_varint(reader)
     # Read headers
     headers = {}
     for _ in range(n_headers):
         # Read key length (varint)
-        key_len_first = reader.read(1)[0]
-        if key_len_first < 0xFD:
-            key_len = key_len_first
-        elif key_len_first == 0xFD:
-            key_len = struct.unpack("<H", reader.read(2))[0]
-        elif key_len_first == 0xFE:
-            key_len = struct.unpack("<I", reader.read(4))[0]
-        else:
-            key_len = struct.unpack("<Q", reader.read(8))[0]
+        key_len = _read_varint(reader)
         key = reader.read(key_len).decode("utf-8")
         # Read value length (varint)
-        value_len_first = reader.read(1)[0]
-        if value_len_first < 0xFD:
-            value_len = value_len_first
-        elif value_len_first == 0xFD:
-            value_len = struct.unpack("<H", reader.read(2))[0]
-        elif value_len_first == 0xFE:
-            value_len = struct.unpack("<I", reader.read(4))[0]
-        else:
-            value_len = struct.unpack("<Q", reader.read(8))[0]
+        value_len = _read_varint(reader)
         value = reader.read(value_len).decode("utf-8")
         headers[key] = value
     assert headers.get("x-bsv-test") == "1"

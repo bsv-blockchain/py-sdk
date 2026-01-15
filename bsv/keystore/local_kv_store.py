@@ -190,7 +190,7 @@ class LocalKVStore(KVStoreInterface):
             )
         )
 
-    def _format_encrypted_field(self, first_field: Any) -> str:
+    def _format_encrypted_field(self, first_field: Any) -> str | None:
         """Format field as encrypted string."""
         try:
             if isinstance(first_field, (bytes, bytearray)):
@@ -295,7 +295,7 @@ class LocalKVStore(KVStoreInterface):
 
         # Fallback 2: scan WOC address histories for PushDrop outputs
         if not outputs and not beef_bytes:
-            outputs, beef_bytes = self._scan_woc_for_pushdrop_outputs(key)
+            outputs, beef_bytes = self._scan_woc_for_pushdrop_outputs()
 
         return outputs, beef_bytes
 
@@ -365,7 +365,7 @@ class LocalKVStore(KVStoreInterface):
         except Exception:
             return b""
 
-    def _scan_woc_for_pushdrop_outputs(self, key: str) -> tuple[list, bytes]:
+    def _scan_woc_for_pushdrop_outputs(self) -> tuple[list, bytes]:
         """Scan WOC for PushDrop outputs as final fallback."""
         try:
             candidates = self._get_address_candidates()
@@ -394,44 +394,46 @@ class LocalKVStore(KVStoreInterface):
 
         return [], b""
 
-    def _get_address_candidates(self) -> list[tuple[str, str | None]]:
-        """Get list of addresses to scan for PushDrop outputs."""
-        ca_args = self._merge_default_ca(None)
-        pd_opts = ca_args.get("pushdrop") or {}
+    def _create_protocol_object(self, ca_args: dict, pd_opts: dict) -> Any:
+        """Create protocol object from CA args and pushdrop options."""
         prot = self._extract_protocol_id(ca_args, pd_opts)
-        kid = self._extract_key_id(ca_args, pd_opts)
-        cpty = ca_args.get("counterparty") or pd_opts.get("counterparty")
+        if prot is None:
+            return None
 
         from bsv.wallet.key_deriver import Protocol
 
-        protocol_obj = None
-        if prot is not None:
-            protocol_obj = (
-                Protocol(prot.get("securityLevel", 0), prot.get("protocol", "")) if isinstance(prot, dict) else prot
-            )
+        return Protocol(prot.get("securityLevel", 0), prot.get("protocol", "")) if isinstance(prot, dict) else prot
+
+    def _derive_address_components(self, protocol_obj: Any, kid: Any, cpty: Any) -> tuple[Any, str | None, str | None]:
+        """Derive address components from protocol, key ID, and counterparty."""
+        if protocol_obj is None or kid is None:
+            return None, None, None
 
         cp_norm = (
             self._wallet._normalize_counterparty(cpty) if hasattr(self._wallet, "_normalize_counterparty") else None
         )
 
-        derived_pub = None
-        derived_addr = None
-        derived_pub_hex = None
-        if protocol_obj is not None and kid is not None:
-            try:
-                derived_pub = self._wallet.key_deriver.derive_public_key(protocol_obj, kid, cp_norm, for_self=False)
-                derived_addr = derived_pub.address()
-                derived_pub_hex = derived_pub.hex()
-            except Exception:
-                pass
-
-        master_addr = None
         try:
-            master_addr = self._wallet.public_key.address()
+            derived_pub = self._wallet.key_deriver.derive_public_key(protocol_obj, kid, cp_norm, for_self=False)
+            derived_addr = derived_pub.address()
+            derived_pub_hex = derived_pub.hex()
+            return derived_pub, derived_addr, derived_pub_hex
         except Exception:
-            master_addr = None
+            return None, None, None
 
+    def _get_master_address(self) -> str | None:
+        """Get the master address from the wallet."""
+        try:
+            return self._wallet.public_key.address()
+        except Exception:
+            return None
+
+    def _build_address_candidates(
+        self, master_addr: str | None, derived_addr: str | None, derived_pub_hex: str | None
+    ) -> list[tuple[str, str | None]]:
+        """Build the list of address candidates."""
         candidates: list[tuple[str, str | None]] = []
+
         if master_addr:
             candidates.append((master_addr, derived_pub_hex))
 
@@ -449,6 +451,19 @@ class LocalKVStore(KVStoreInterface):
             candidates.append((derived_addr, derived_pub_hex))
 
         return candidates
+
+    def _get_address_candidates(self) -> list[tuple[str, str | None]]:
+        """Get list of addresses to scan for PushDrop outputs."""
+        ca_args = self._merge_default_ca(None)
+        pd_opts = ca_args.get("pushdrop") or {}
+        cpty = ca_args.get("counterparty") or pd_opts.get("counterparty")
+
+        protocol_obj = self._create_protocol_object(ca_args, pd_opts)
+        kid = self._extract_key_id(ca_args, pd_opts)
+        _, derived_addr, derived_pub_hex = self._derive_address_components(protocol_obj, kid, cpty)
+        master_addr = self._get_master_address()
+
+        return self._build_address_candidates(master_addr, derived_addr, derived_pub_hex)
 
     def _scan_address_for_pushdrop_outputs(
         self,

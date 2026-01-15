@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import os
 
@@ -51,6 +52,7 @@ def _patch_woc_dependencies(monkeypatch):
         async def is_valid_root_for_height(
             self, root: str, height: int
         ) -> bool:  # NOSONAR - Mock method matching async interface
+            await asyncio.sleep(0)
             return root == fake_root
 
     monkeypatch.setattr("bsv.chaintrackers.whatsonchain.WhatsOnChainTracker", DummyTracker)

@@ -316,11 +316,6 @@ class Transaction:
         tx_copy.serialize_no_witness(stream)
         stream.write(hash_type.to_bytes(4, "little"))
         return stream.getvalue()
-        stream = BytesIO()
-        stream.write(tx_copy.serialize())
-        stream.write(hash_type.to_bytes(4, "little"))
-
-        return stream.getvalue()
 
     def sign(self, bypass: bool = True) -> "Transaction":  # pragma: no cover
         """

@@ -20,7 +20,7 @@ def deserialize_relinquish_certificate_args(data: bytes) -> dict[str, Any]:
     }
 
 
-def serialize_relinquish_certificate_result(_: dict[str, Any]) -> bytes:
+def serialize_relinquish_certificate_result(_: dict[str, Any] | None) -> bytes:
     # No additional payload
     return b""
 
