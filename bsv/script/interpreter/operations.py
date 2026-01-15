@@ -597,7 +597,7 @@ def op_if(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSONAR - Compl
             if t.flags.has_flag(t.flags.VERIFY_MINIMAL_IF):
                 b = t.dstack.peek_byte_array(0)
                 if len(b) > 1:
-                    return Error(ErrorCode.ERR_MINIMAL_IF, f"conditionl has data of length {len(b)}")
+                    return Error(ErrorCode.ERR_MINIMAL_IF, f"conditional has data of length {len(b)}")
                 if len(b) == 1 and b[0] != 1:
                     return Error(ErrorCode.ERR_MINIMAL_IF, "conditional failed")
             val = t.dstack.pop_byte_array()
@@ -621,7 +621,7 @@ def op_notif(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:  # NOSONAR - Co
             if t.flags.has_flag(t.flags.VERIFY_MINIMAL_IF):
                 b = t.dstack.peek_byte_array(0)
                 if len(b) > 1:
-                    return Error(ErrorCode.ERR_MINIMAL_IF, f"conditionl has data of length {len(b)}")
+                    return Error(ErrorCode.ERR_MINIMAL_IF, f"conditional has data of length {len(b)}")
                 if len(b) == 1 and b[0] != 1:
                     return Error(ErrorCode.ERR_MINIMAL_IF, "conditional failed")
             val = t.dstack.pop_byte_array()

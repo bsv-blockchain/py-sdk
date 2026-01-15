@@ -46,16 +46,16 @@ class NopDebugger:
     """No-op debugger implementation."""
 
     def before_stack_push(self, data: bytes) -> None:
-        """No-op: intentionally empty for performance when debugging is disabled."""
+        pass
 
     def after_stack_push(self, data: bytes) -> None:
-        """No-op: intentionally empty for performance when debugging is disabled."""
+        pass
 
     def before_stack_pop(self) -> None:
-        """No-op: intentionally empty for performance when debugging is disabled."""
+        pass
 
     def after_stack_pop(self, data: bytes) -> None:
-        """No-op: intentionally empty for performance when debugging is disabled."""
+        pass
 
 
 class NopStateHandler:
@@ -65,7 +65,6 @@ class NopStateHandler:
         return {}
 
     def set_state(self, state: dict) -> None:
-        """No-op: intentionally left empty as part of the null object pattern."""
         return
 
 
