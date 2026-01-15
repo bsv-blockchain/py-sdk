@@ -311,7 +311,7 @@ class TopicBroadcaster:
             return True
 
         required_topics = self.require_acknowledgment_from_all_hosts_for_topics
-        for _host, acknowledged in host_acknowledgments.items():
+        for _, acknowledged in host_acknowledgments.items():
             for topic in required_topics:
                 if topic not in acknowledged:
                     return False

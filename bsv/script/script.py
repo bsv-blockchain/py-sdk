@@ -14,6 +14,9 @@ OPCODE_NAME_VALUE_DICT = {item.name: item.value for item in OpCode}
 # Merge with aliases
 OPCODE_NAME_VALUE_DICT.update(OPCODE_ALIASES)
 
+# Maximum data size for OP_PUSHDATA4 (2^32 - 1 bytes)
+MAX_PUSH_DATA_SIZE = 2**32 - 1
+
 
 class ScriptChunk:
     """
@@ -212,7 +215,7 @@ class Script:
         elif data_length < pow(2, 32):
             return OpCode.OP_PUSHDATA4
         else:
-            raise ValueError(f"data too large: {data_length} bytes (maximum allowed: {pow(2, 32) - 1} bytes)")
+            raise ValueError(f"data too large: {data_length} bytes (maximum allowed: {MAX_PUSH_DATA_SIZE} bytes)")
 
     def to_asm(self) -> str:
         return " ".join(str(chunk) for chunk in self.chunks)

@@ -5,7 +5,7 @@ This module implements Schnorr Zero-Knowledge Proof protocol matching
 the TypeScript SDK implementation.
 """
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from bsv.curve import Point, curve, curve_add, curve_multiply
 from bsv.hash import sha256
@@ -25,7 +25,7 @@ class Schnorr:
 
     def generate_proof(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
         self, a: PrivateKey, A: PublicKey, B: PublicKey, S: Optional[Point]
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """
         Generates a proof that demonstrates the link between public key A and shared secret S.
 
@@ -62,7 +62,7 @@ class Schnorr:
         return {"R": R, "SPrime": S_prime, "z": z}
 
     def verify_proof(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
-        self, A: Optional[Point], B: Optional[Point], S: Optional[Point], proof: dict[str, any]
+        self, A: Optional[Point], B: Optional[Point], S: Optional[Point], proof: dict[str, Any]
     ) -> bool:
         """
         Verifies the proof of the link between public key A and shared secret S.

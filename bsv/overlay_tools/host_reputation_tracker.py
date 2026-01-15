@@ -187,7 +187,7 @@ class HostReputationTracker:
         now = int(time.time() * 1000)
         ranked = []
 
-        for _host, entry in self.stats.items():
+        for _, entry in self.stats.items():
             # Skip if in backoff period
             if entry.backoff_until > now:
                 continue

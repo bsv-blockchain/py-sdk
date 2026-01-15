@@ -121,7 +121,7 @@ class Historian:
 
     def _interpret_outputs(self, tx: Transaction, context: Optional[C], history: list[T]):
         """Interpret transaction outputs and append results to history."""
-        for i, _output in enumerate(tx.outputs):
+        for i, _ in enumerate(tx.outputs):
             try:
                 result = self.interpreter(tx, i, context)
                 if result is not None:
