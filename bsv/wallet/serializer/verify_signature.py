@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
@@ -63,7 +63,7 @@ def deserialize_verify_signature_args(data: bytes) -> dict[str, Any]:
     return out
 
 
-def verify_signature(wallet: Any, args: Union[Dict[str, Any], None], _origin: str) -> Dict[str, Any]:
+def verify_signature(wallet: Any, args: dict[str, Any] | None, _origin: str) -> dict[str, Any]:
     """
     Verify a signature using the wallet.
 
