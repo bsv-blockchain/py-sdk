@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from bsv.wallet.substrates.serializer import Reader, Writer
 
@@ -22,7 +22,7 @@ def deserialize_relinquish_output_args(data: bytes) -> dict[str, Any]:
     return {"basket": basket, "output": {"txid": txid, "index": int(idx)}}
 
 
-def serialize_relinquish_output_result(_: dict[str, Any] | None) -> bytes:
+def serialize_relinquish_output_result(_: Union[Dict[str, Any], None]) -> bytes:
     return b""
 
 

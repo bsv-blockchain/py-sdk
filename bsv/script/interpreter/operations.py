@@ -5,7 +5,7 @@ Ported from go-sdk/script/interpreter/operations.go and py-sdk/bsv/script/spend.
 """
 
 # Type hint for Thread to avoid circular import
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from bsv.constants import SIGHASH, OpCode
 from bsv.curve import curve
@@ -1576,7 +1576,7 @@ def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def _extract_multisig_params(t: "Thread") -> tuple[int, list[bytes], int, list[bytes]] | Error:
+def _extract_multisig_params(t: "Thread") -> Union[tuple[int, list[bytes], int, list[bytes]], Error]:
     """Extract and validate multisig parameters from stack."""
     # Get number of public keys
     num_keys, err = _pop_script_int(t)
@@ -1614,7 +1614,7 @@ def _extract_multisig_params(t: "Thread") -> tuple[int, list[bytes], int, list[b
     return num_pubkeys, pubkeys, num_signatures, sigs
 
 
-def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> list[bytes] | Error:
+def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> Union[list[bytes], Error]:
     """Extract public keys from stack."""
     pubkeys = []
     for _ in range(num_pubkeys):
@@ -1625,7 +1625,7 @@ def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> list[bytes] | Error:
     return pubkeys
 
 
-def _extract_signatures(t: "Thread", num_signatures: int) -> list[bytes] | Error:
+def _extract_signatures(t: "Thread", num_signatures: int) -> Union[list[bytes], Error]:
     """Extract signatures from stack."""
     sigs = []
     for _ in range(num_signatures):
@@ -1707,7 +1707,7 @@ def _verify_multisig_signatures(
     return success and remaining_sigs == 0
 
 
-def _verify_single_signature(t: "Thread", raw_sig: bytes, pub_key: bytes, calc_sighash) -> bool | Error:
+def _verify_single_signature(t: "Thread", raw_sig: bytes, pub_key: bytes, calc_sighash) -> Union[bool, Error]:
     """Verify a single signature against a public key."""
     # Split signature into hash type and signature components
     shf_val = int(raw_sig[-1])

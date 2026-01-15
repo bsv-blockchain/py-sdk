@@ -1,5 +1,5 @@
 import base64
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from bsv.wallet.wallet_interface import WalletInterface
 
@@ -260,7 +260,7 @@ class IdentityClient:
             return DisplayableIdentity()
 
     @staticmethod
-    def _from_kv(fields: list[tuple] | None) -> DisplayableIdentity:
+    def _from_kv(fields: Union[List[Tuple], None]) -> DisplayableIdentity:
         d = dict(fields or [])
         name = d.get("name") or d.get("displayName") or "Unknown"
         identity_key = d.get("identityKey") or ""
