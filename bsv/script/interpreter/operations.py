@@ -45,9 +45,9 @@ def cast_to_bool(val: bytes) -> bool:
     return False
 
 
-def encode_bool(f: bool) -> bytes:
+def encode_bool(boolean: bool) -> bytes:
     """Convert boolean to bytes."""
-    return b"\x01" if f else b""
+    return b"\x01" if boolean else b""
 
 
 def bin2num(octets: bytes) -> int:

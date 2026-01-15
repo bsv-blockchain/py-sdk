@@ -301,7 +301,8 @@ class TopicBroadcaster:
                 failed_hosts = set()
                 self._failed_hosts = failed_hosts
             failed_hosts.add(host)
-            # Re-raise the original exception to preserve existing behavior.
+            # Re-raise the original exception so callers see exactly the same error
+            # from facilitator.send as before; tracking must not swallow or wrap it.
             raise
 
     def _check_all_hosts_acknowledgment(self, host_acknowledgments: dict[str, set]) -> bool:
