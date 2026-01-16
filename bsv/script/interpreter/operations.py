@@ -1434,8 +1434,8 @@ def _compute_legacy_sighash(t: "Thread", script_bytes: bytes, shf_val: int) -> b
 
     raw = bytearray()
     raw += t.tx.version.to_bytes(4, "little")
-    _serialize_legacy_inputs(raw, t, script_bytes, hash_type, anyone_can_pay)
-    _serialize_legacy_outputs(raw, t, hash_type)
+    raw = _serialize_legacy_inputs(raw, t, script_bytes, hash_type, anyone_can_pay)
+    raw = _serialize_legacy_outputs	(raw, t, hash_type)
     raw += t.tx.locktime.to_bytes(4, "little")
     raw += shf_val.to_bytes(4, "little")
 
@@ -1443,7 +1443,7 @@ def _compute_legacy_sighash(t: "Thread", script_bytes: bytes, shf_val: int) -> b
 
 
 def _serialize_legacy_inputs(
-    raw: bytearray, t: "Thread", script_bytes: bytes, hash_type: int, anyone_can_pay: bool
+    raw: bytearray, t: "Thread", script_bytes: bytes, hash_type: int, anyone_can_pay: bytearray
 ) -> None:
     """Serialize inputs for legacy sighash computation."""
     if anyone_can_pay:
@@ -1467,8 +1467,11 @@ def _serialize_legacy_inputs(
             seq = 0
         raw += seq.to_bytes(4, "little")
 
+    return raw
 
-def _serialize_legacy_outputs(raw: bytearray, t: "Thread", hash_type: int) -> None:  # NOSONAR(S1481)
+
+# pylint: disable=unused-variable
+def _serialize_legacy_outputs(raw: bytearray, t: "Thread", hash_type: int) -> bytearray:
     """Serialize outputs for legacy sighash computation."""
     if hash_type == int(SIGHASH.NONE):
         raw += unsigned_to_varint(0)
@@ -1483,6 +1486,8 @@ def _serialize_legacy_outputs(raw: bytearray, t: "Thread", hash_type: int) -> No
         raw += unsigned_to_varint(len(t.tx.outputs))
         for o in t.tx.outputs:
             raw += o.serialize()
+
+    return raw
 
 
 def _compute_signature_hash(
