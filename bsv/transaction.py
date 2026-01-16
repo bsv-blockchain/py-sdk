@@ -36,7 +36,6 @@ class InsufficientFunds(ValueError):
 
 
 class Transaction:
-
     def __init__(
         self,
         tx_inputs: Optional[list[TransactionInput]] = None,

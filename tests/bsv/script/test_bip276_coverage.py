@@ -73,7 +73,7 @@ def test_bip276_decode_malformed():
     try:
         _ = decode_script("bitcoin-script:invalid")
         # May handle gracefully
-    except (ValueError, Exception):
+    except ValueError:
         pass  # Or raise error
 
 

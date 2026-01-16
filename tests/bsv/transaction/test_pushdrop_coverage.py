@@ -68,7 +68,7 @@ def test_pushdrop_lock_empty_fields():
         pd = PushDrop(wallet)
         script = pd.lock([], "test", "key1", None)
         assert script is not None
-    except (ImportError, Exception):
+    except ImportError:
         pytest.skip("PushDrop lock not fully testable")
 
 
@@ -81,7 +81,7 @@ def test_pushdrop_lock_single_field():
         pd = PushDrop(wallet)
         script = pd.lock([b"single"], "test", "key1", None)
         assert script is not None
-    except (ImportError, Exception):
+    except ImportError:
         pytest.skip("PushDrop lock not fully testable")
 
 
@@ -95,7 +95,7 @@ def test_pushdrop_lock_with_lockingkey():
         fields = [b"data"]
         script = pd.lock(fields, "test", "key1", None)
         assert script is not None
-    except (ImportError, Exception):
+    except ImportError:
         pytest.skip("PushDrop lock not fully testable")
 
 
@@ -114,7 +114,7 @@ def test_pushdrop_unlock_basic():
         priv = PrivateKey()
         unlock_template = pd.unlock("test", "key1", priv.public_key())
         assert unlock_template is not None
-    except (ImportError, Exception):
+    except ImportError:
         pytest.skip("PushDrop unlock not fully testable")
 
 
@@ -135,7 +135,7 @@ def test_pushdrop_decode_basic():
         if hasattr(PushDrop, "decode"):
             result = PushDrop.decode(script.serialize() if hasattr(script, "serialize") else bytes(script))
             assert result is not None
-    except (ImportError, Exception):
+    except ImportError:
         pytest.skip("PushDrop decode not fully testable")
 
 
@@ -151,7 +151,7 @@ def test_pushdrop_decode_with_key():
         if hasattr(PushDrop, "decode"):
             result = PushDrop.decode(script, priv)
             assert result is not None
-    except (ImportError, Exception):
+    except ImportError:
         pytest.skip("PushDrop decode not fully testable")
 
 
@@ -165,7 +165,7 @@ def test_pushdrop_large_fields():
         large_field = b"\x00" * 1000
         script = pd.lock([large_field], "test", "key1", None)
         assert script is not None
-    except (ImportError, Exception):
+    except ImportError:
         pytest.skip("PushDrop not fully testable")
 
 
@@ -179,7 +179,7 @@ def test_pushdrop_multiple_fields():
         fields = [b"field1", b"field2", b"field3", b"field4"]
         script = pd.lock(fields, "test", "key1", None)
         assert script is not None
-    except (ImportError, Exception):
+    except ImportError:
         pytest.skip("PushDrop not fully testable")
 
 
@@ -192,5 +192,5 @@ def test_pushdrop_empty_field():
         pd = PushDrop(wallet)
         script = pd.lock([b"", b"data"], "test", "key1", None)
         assert script is not None
-    except (ImportError, Exception):
+    except ImportError:
         pytest.skip("PushDrop not fully testable")

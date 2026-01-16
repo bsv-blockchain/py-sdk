@@ -87,7 +87,10 @@ def test_transaction_input_init_empty_script():
 def test_transaction_input_init_with_script():
     """Test TransactionInput with unlocking script."""
     inp = TransactionInput(
-        source_txid="0" * 64, source_output_index=0, unlocking_script=Script(b"\x51"), sequence=0xFFFFFFFF  # OP_1
+        source_txid="0" * 64,
+        source_output_index=0,
+        unlocking_script=Script(b"\x51"),
+        sequence=0xFFFFFFFF,  # OP_1
     )
     assert len(inp.unlocking_script.serialize()) > 0
 

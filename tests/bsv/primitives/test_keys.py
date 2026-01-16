@@ -179,14 +179,14 @@ def test_encryption():
 
     # Verify encryption produces different ciphertext each time (due to randomness)
     encrypted_2 = public_key.encrypt_text(plain)
-    assert (
-        encrypted_new != encrypted_2
-    ), "Encryption should produce different ciphertext each time (with random ephemeral keys)"
+    assert encrypted_new != encrypted_2, (
+        "Encryption should produce different ciphertext each time (with random ephemeral keys)"
+    )
 
     # But both should decrypt to same plaintext
-    assert (
-        private_key.decrypt_text(encrypted_2) == plain
-    ), "Different ciphertexts of same plaintext should decrypt correctly"
+    assert private_key.decrypt_text(encrypted_2) == plain, (
+        "Different ciphertexts of same plaintext should decrypt correctly"
+    )
 
 
 def test_brc42():

@@ -113,7 +113,7 @@ class TestRegistryClient(unittest.TestCase):
         r = WalletWireResolver(self.wallet)
         # Call via TS/Go-compatible entry (__call__ takes service name)
         outs = r(None, "ls_basketmap", {"basketID": "by"})
-        self.assertTrue(isinstance(outs, list))
+        self.assertIsInstance(outs, list)
         assert len(outs) == 1
 
 

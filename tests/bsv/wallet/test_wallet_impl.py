@@ -90,7 +90,6 @@ def test_encrypt_decrypt_with_protocol_two_parties():
     # Encrypt with Alice for Bob; decrypt with Bob
     alice = ProtoWallet(PrivateKey(1001), permission_callback=lambda a: True)
     bob = ProtoWallet(PrivateKey(1002), permission_callback=lambda a: True)
-    protocol = Protocol(1, "testprotocol")  # noqa: F841
     key_id = "key1"
     plain = b"abcxyz"
 
@@ -163,9 +162,9 @@ def test_seek_permission_denied_returns_error_dict():
 
     # Verify error response structure
     assert "error" in res, "Should return error dict when permission denied"
-    assert (
-        "not permitted" in res["error"].lower() or "denied" in res["error"].lower()
-    ), f"Error should mention permission denial, got: {res['error']}"
+    assert "not permitted" in res["error"].lower() or "denied" in res["error"].lower(), (
+        f"Error should mention permission denial, got: {res['error']}"
+    )
     assert "publicKey" not in res, "Should not return public key when permission denied"
 
     # Test with different action (encrypt)

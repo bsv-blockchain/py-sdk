@@ -18,7 +18,6 @@ def to_unlock_script_template(sign, estimated_unlocking_byte_length):
 
 
 class ScriptTemplate(metaclass=ABCMeta):
-
     @abstractmethod
     def lock(self, **kwargs) -> Script:
         """
@@ -35,7 +34,6 @@ class ScriptTemplate(metaclass=ABCMeta):
 
 
 class Unknown(ScriptTemplate):  # pragma: no cover
-
     def __str__(self) -> str:
         return "<ScriptTemplate:Unknown>"
 
@@ -50,7 +48,6 @@ class Unknown(ScriptTemplate):  # pragma: no cover
 
 
 class P2PKH(ScriptTemplate):
-
     def __str__(self) -> str:  # pragma: no cover
         return "<ScriptTemplate:P2PKH>"
 
@@ -91,7 +88,6 @@ class P2PKH(ScriptTemplate):
 
 
 class OpReturn(ScriptTemplate):
-
     def __str__(self) -> str:  # pragma: no cover
         return "<ScriptTemplate:OP_RETURN>"
 
@@ -115,7 +111,6 @@ class OpReturn(ScriptTemplate):
 
 
 class P2PK(ScriptTemplate):
-
     def __str__(self) -> str:  # pragma: no cover
         return "<ScriptTemplate:P2PK>"
 
@@ -152,7 +147,6 @@ class P2PK(ScriptTemplate):
 
 
 class BareMultisig(ScriptTemplate):
-
     def __str__(self) -> str:  # pragma: no cover
         return "<ScriptTemplate:BareMultisig>"
 
@@ -195,7 +189,6 @@ class BareMultisig(ScriptTemplate):
 
 
 class RPuzzle(ScriptTemplate):
-
     def __init__(self, puzzle_type: str = "raw"):
         """
         Constructs an R Puzzle template instance for a given puzzle type.

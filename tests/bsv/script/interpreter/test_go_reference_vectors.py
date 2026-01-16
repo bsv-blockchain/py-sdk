@@ -337,9 +337,9 @@ def test_go_script_tests_json(test_idx: int, test_vec: list[Any]) -> None:
         return
 
     assert err is not None, f"vector #{test_idx} expected error {expected}, got OK"
-    assert any(
-        is_error_code(err, c) for c in allowed
-    ), f"vector #{test_idx} expected {expected} (codes={allowed}), got {err}"
+    assert any(is_error_code(err, c) for c in allowed), (
+        f"vector #{test_idx} expected {expected} (codes={allowed}), got {err}"
+    )
 
 
 def _build_prev_outs_from_inputs(inputs: list[Any]) -> dict[tuple[str, int], TransactionOutput]:

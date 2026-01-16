@@ -26,15 +26,15 @@ class IdentityClientOptions:
 
 
 class KnownIdentityTypes:  # NOSONAR - PascalCase constants match TS/Go SDK identity certificate types
-    IdentiCert = "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="
-    DiscordCert = "2TgqRC35B1zehGmB21xveZNc7i5iqHc0uxMb+1NMPW4="
-    PhoneCert = "mffUklUzxbHr65xLohn0hRL0Tq2GjW1GYF/OPfzqJ6A="
-    XCert = "vdDWvftf1H+5+ZprUw123kjHlywH+v20aPQTuXgMpNc="
-    Registrant = "YoPsbfR6YQczjzPdHCoGC7nJsOdPQR50+SYqcWpJ0y0="
-    EmailCert = "exOl3KM0dIJ04EW5pZgbZmPag6MdJXd3/a1enmUU/BA="
-    Anyone = "mfkOMfLDQmrr3SBxBQ5WeE+6Hy3VJRFq6w4A5Ljtlis="
-    Self = "Hkge6X5JRxt1cWXtHLCrSTg6dCVTxjQJJ48iOYd7n3g="
-    CoolCert = "AGfk/WrT1eBDXpz3mcw386Zww2HmqcIn3uY6x4Af1eo="
+    IdentiCert = "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="  # noqa: S117
+    DiscordCert = "2TgqRC35B1zehGmB21xveZNc7i5iqHc0uxMb+1NMPW4="  # noqa: S117
+    PhoneCert = "mffUklUzxbHr65xLohn0hRL0Tq2GjW1GYF/OPfzqJ6A="  # noqa: S117
+    XCert = "vdDWvftf1H+5+ZprUw123kjHlywH+v20aPQTuXgMpNc="  # noqa: S117
+    Registrant = "YoPsbfR6YQczjzPdHCoGC7nJsOdPQR50+SYqcWpJ0y0="  # noqa: S117
+    EmailCert = "exOl3KM0dIJ04EW5pZgbZmPag6MdJXd3/a1enmUU/BA="  # noqa: S117
+    Anyone = "mfkOMfLDQmrr3SBxBQ5WeE+6Hy3VJRFq6w4A5Ljtlis="  # noqa: S117
+    Self = "Hkge6X5JRxt1cWXtHLCrSTg6dCVTxjQJJ48iOYd7n3g="  # noqa: S117
+    CoolCert = "AGfk/WrT1eBDXpz3mcw386Zww2HmqcIn3uY6x4Af1eo="  # noqa: S117
 
     # Snake_case aliases for internal use (PEP8 compliance)
     identi_cert = IdentiCert

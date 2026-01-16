@@ -90,7 +90,9 @@ def validate_mnemonic(mnemonic: str, lang: str = "en"):
     assert entropy_bit_length in BIP39_ENTROPY_BIT_LENGTH_LIST, "invalid mnemonic, bad entropy bit length"
     entropy_bits: str = bits[:entropy_bit_length]
     checksum_bits: str = bytes_to_bits(sha256(bits_to_bytes(entropy_bits)))[: entropy_bit_length // 32]
-    assert checksum_bits == bits[entropy_bit_length:], "invalid mnemonic, checksum mismatch"
+    assert bits.endswith(checksum_bits) and len(bits) == entropy_bit_length + len(checksum_bits), (
+        "invalid mnemonic, checksum mismatch"
+    )
 
 
 def seed_from_mnemonic(mnemonic: str, lang: str = "en", passphrase: str = "", prefix: str = "mnemonic") -> bytes:

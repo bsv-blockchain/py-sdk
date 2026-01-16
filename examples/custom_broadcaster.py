@@ -16,7 +16,6 @@ from bsv import (
 
 
 class WOC(Broadcaster):
-
     def __init__(self, network: str = "main", http_client: HttpClient = None):
         """
         Constructs an instance of the WOC broadcaster.

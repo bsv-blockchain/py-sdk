@@ -176,7 +176,7 @@ def test_transaction_multiple_inputs():
             unlocking_script=Script.from_asm(""),
             sequence=0xFFFFFFFF,
         )
-        for i in range(3)
+        for _ in range(3)
     ]
     tx = Transaction(version=1, tx_inputs=inputs, tx_outputs=[], locktime=0)
     assert len(tx.inputs) == 3

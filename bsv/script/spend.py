@@ -697,7 +697,7 @@ class Spend:
                 x2 = self.stack.pop()
                 if len(x1) + len(x2) > MAX_SCRIPT_ELEMENT_SIZE:
                     self.script_evaluation_error(
-                        "It's not currently possible to push data " f"larger than {MAX_SCRIPT_ELEMENT_SIZE} bytes."
+                        f"It's not currently possible to push data larger than {MAX_SCRIPT_ELEMENT_SIZE} bytes."
                     )
                 self.stack.append(x1 + x2)
 
@@ -721,7 +721,7 @@ class Spend:
                 size = self.bin2num(self.stack.pop())
                 if size > MAX_SCRIPT_ELEMENT_SIZE:
                     self.script_evaluation_error(
-                        "It's not currently possible to push data " f"larger than {MAX_SCRIPT_ELEMENT_SIZE} bytes."
+                        f"It's not currently possible to push data larger than {MAX_SCRIPT_ELEMENT_SIZE} bytes."
                     )
                 n = self.bin2num(self.stack.pop())
                 x = bytearray(self.minimally_encode(n))

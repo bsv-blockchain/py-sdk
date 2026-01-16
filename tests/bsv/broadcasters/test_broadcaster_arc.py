@@ -26,7 +26,6 @@ load_env_file()
 
 
 class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
-
     def setUp(self):
         self.URL = "https://api.taal.com/arc"
         self.api_key = os.getenv("ARC_API_KEY", "test_api_key_fallback")

@@ -62,7 +62,11 @@ class Schnorr:
         return {"R": R, "SPrime": S_prime, "z": z}
 
     def verify_proof(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
-        self, A: Optional[Point], B: Optional[Point], S: Optional[Point], proof: dict[str, Any]
+        self,
+        A: Optional[Point],
+        B: Optional[Point],
+        S: Optional[Point],
+        proof: dict[str, Any],  # noqa: S117
     ) -> bool:
         """
         Verifies the proof of the link between public key A and shared secret S.
@@ -129,18 +133,23 @@ class Schnorr:
         return self._compute_challenge_from_points(a_encoded, b_encoded, s_encoded, s_prime_encoded, r_encoded)
 
     def _compute_challenge_from_points(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
-        self, A: Optional[Point], B: Optional[Point], S: Optional[Point], S_prime: Optional[Point], R: Optional[Point]
+        self,
+        A: Optional[Point],
+        B: Optional[Point],
+        S: Optional[Point],
+        S_prime: Optional[Point],
+        R: Optional[Point],  # noqa: S117
     ) -> int:
         """Compute challenge e from points."""
         if A is None or B is None or S is None or S_prime is None or R is None:
             return 0
 
         # Encode points as compressed public keys
-        A_encoded = self._encode_point(A)
-        B_encoded = self._encode_point(B)
-        S_encoded = self._encode_point(S)
-        S_prime_encoded = self._encode_point(S_prime)
-        R_encoded = self._encode_point(R)
+        A_encoded = self._encode_point(A)  # noqa: S117
+        B_encoded = self._encode_point(B)  # noqa: S117
+        S_encoded = self._encode_point(S)  # noqa: S117
+        S_prime_encoded = self._encode_point(S_prime)  # noqa: S117
+        R_encoded = self._encode_point(R)  # noqa: S117
 
         # Concatenate all encoded points
         message = A_encoded + B_encoded + S_encoded + S_prime_encoded + R_encoded

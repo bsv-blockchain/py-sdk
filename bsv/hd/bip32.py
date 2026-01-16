@@ -60,7 +60,6 @@ class Xkey:
 
 
 class Xpub(Xkey):
-
     def __init__(self, xpub: Union[str, bytes]):
         super().__init__(xpub)
         self.network: Network = XPUB_PREFIX_NETWORK_DICT.get(self.prefix)
@@ -116,7 +115,6 @@ class Xpub(Xkey):
 
 
 class Xprv(Xkey):
-
     def __init__(self, xprv: Union[str, bytes]):
         super().__init__(xprv)
         self.network: Network = XPRV_PREFIX_NETWORK_DICT.get(self.prefix)
@@ -204,9 +202,9 @@ def ckd(xkey: Union[Xprv, Xpub], path: str) -> Union[Xprv, Xpub]:
 
     if steps[0] == "m":
         # should be master key
-        assert (
-            xkey.depth == 0 and xkey.fingerprint == b"\x00\x00\x00\x00" and xkey.index == 0
-        ), "absolute path for non-master key"
+        assert xkey.depth == 0 and xkey.fingerprint == b"\x00\x00\x00\x00" and xkey.index == 0, (
+            "absolute path for non-master key"
+        )
 
     child = xkey
     for step in steps[1:]:

@@ -220,9 +220,7 @@ class KeyShares:
             # Split the share string into parts
             share_parts = share.split(".")
             if len(share_parts) != 4:
-                raise ValueError(
-                    f"Invalid share format in share {idx}. " f'Expected format: "x.y.t.i" - received {share}'
-                )
+                raise ValueError(f'Invalid share format in share {idx}. Expected format: "x.y.t.i" - received {share}')
 
             # Parse the parts
             x, y, t, i = share_parts

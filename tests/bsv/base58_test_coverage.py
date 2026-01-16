@@ -89,7 +89,7 @@ def test_decode_invalid_character():
     try:
         _ = decode("0OIl")  # Contains invalid chars
         # May handle or raise
-    except (ValueError, Exception):
+    except ValueError:
         # Expected for invalid base58
         pass
 

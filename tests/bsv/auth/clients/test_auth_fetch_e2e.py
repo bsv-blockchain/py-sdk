@@ -115,7 +115,7 @@ async def test_authfetch_e2e(auth_server):
                 timeout=10,
             )
 
-    print(f"[test] got response: status={getattr(resp,'status_code',None)} text={getattr(resp,'text',None)}")
+    print(f"[test] got response: status={getattr(resp, 'status_code', None)} text={getattr(resp, 'text', None)}")
     assert resp is not None
     assert resp.status_code == 200
     data = json.loads(resp.text)

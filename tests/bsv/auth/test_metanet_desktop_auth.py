@@ -1281,20 +1281,20 @@ def test_single_process_server_management():  # NOSONAR - Complexity (17), requi
     try:
         # Create and start multiple servers
         for i in range(3):
-            print(f"\n📡 サーバー {i+1} を起動中...")
+            print(f"\n📡 サーバー {i + 1} を起動中...")
             server = MockHTTPServer()
 
             if server.start():
-                print(f"✅ サーバー {i+1} が起動しました: {server.get_server_url()}")
+                print(f"✅ サーバー {i + 1} が起動しました: {server.get_server_url()}")
                 servers.append(server)
 
                 # Wait for server to be ready
                 if server.wait_for_server_ready():
-                    print(f"✅ サーバー {i+1} が準備完了しました")
+                    print(f"✅ サーバー {i + 1} が準備完了しました")
                 else:
-                    print(f"❌ サーバー {i+1} の準備が完了しませんでした")
+                    print(f"❌ サーバー {i + 1} の準備が完了しませんでした")
             else:
-                print(f"❌ サーバー {i+1} の起動に失敗しました")
+                print(f"❌ サーバー {i + 1} の起動に失敗しました")
 
         print(f"\n🎉 {len(servers)} 個のサーバーが正常に起動しました")
 
@@ -1306,11 +1306,11 @@ def test_single_process_server_management():  # NOSONAR - Complexity (17), requi
                 try:
                     response = requests.get(f"{server.get_server_url()}/health", timeout=1)
                     if response.status_code == 200:
-                        print(f"✅ サーバー {i+1} のヘルスチェック: 正常")
+                        print(f"✅ サーバー {i + 1} のヘルスチェック: 正常")
                     else:
-                        print(f"❌ サーバー {i+1} のヘルスチェック: エラー {response.status_code}")
+                        print(f"❌ サーバー {i + 1} のヘルスチェック: エラー {response.status_code}")
                 except Exception as e:
-                    print(f"❌ サーバー {i+1} のヘルスチェック: 接続エラー {e}")
+                    print(f"❌ サーバー {i + 1} のヘルスチェック: 接続エラー {e}")
         except ImportError:
             print("⚠️ requestsライブラリが利用できないため、ヘルスチェックをスキップ")
 
@@ -1322,7 +1322,7 @@ def test_single_process_server_management():  # NOSONAR - Complexity (17), requi
         print(f"\n🛑 {len(servers)} 個のサーバーを停止中...")
         for i, server in enumerate(servers):
             server.stop()
-            print(f"✅ サーバー {i+1} を停止しました")
+            print(f"✅ サーバー {i + 1} を停止しました")
 
         print("🎯 単一プロセスでのサーバー管理テストが完了しました")
 

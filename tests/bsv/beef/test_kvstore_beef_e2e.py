@@ -1108,7 +1108,7 @@ def _check_remove_unlocking_script_length(wallet, kv):  # NOSONAR - Complexity (
             spends = wallet.last_sign_spends
             # Remove flows may skip sign_action if outputs are empty
             if spends is not None:
-                for s in (spends.values() if isinstance(spends, dict) else []):
+                for s in spends.values() if isinstance(spends, dict) else []:
                     us = s.get("unlockingScript", b"")
                     assert len(us) <= max(ests)
                     assert len(us) >= MIN_UNLOCKING_LEN
@@ -1433,7 +1433,7 @@ def _check_set_unlocking_script_length(wallet, kv):
         spends = wallet.last_sign_spends
         # Remove flows may skip sign_action if outputs are empty
         if spends is not None:
-            for s in (spends.values() if isinstance(spends, dict) else []):
+            for s in spends.values() if isinstance(spends, dict) else []:
                 us = s.get("unlockingScript", b"")
                 if ests:
                     assert len(us) <= max(ests)

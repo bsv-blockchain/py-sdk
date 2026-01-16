@@ -96,7 +96,7 @@ def test_overlay_lookup_empty():
         if hasattr(client, "lookup"):
             try:
                 _ = client.lookup("")
-            except (ValueError, Exception):
+            except ValueError:
                 # Expected
                 pass
     except (ImportError, AttributeError):

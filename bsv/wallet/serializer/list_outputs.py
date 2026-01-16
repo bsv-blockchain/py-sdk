@@ -162,7 +162,7 @@ def _deserialize_output(r: Reader) -> dict[str, Any]:
     idx = r.read_varint()
     satoshis = int(r.read_varint())
     ls_len = r.read_varint()
-    lockingScript = (
+    locking_script = (
         b"" if ls_len == (1 << 64) - 1 else r.read_bytes(int(ls_len))
     )  # NOSONAR - camelCase matches wallet wire API
     customInstructions = r.read_string()  # NOSONAR - camelCase matches wallet wire API
@@ -173,7 +173,7 @@ def _deserialize_output(r: Reader) -> dict[str, Any]:
     return {
         "outpoint": {"txid": txid, "index": int(idx)},
         "satoshis": satoshis,
-        "lockingScript": lockingScript,
+        "lockingScript": locking_script,
         "customInstructions": customInstructions,
         "tags": tags,
         "labels": labels,

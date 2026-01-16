@@ -76,12 +76,12 @@ def test_schnorr_verify_wrong_key():
     wrong_b = PrivateKey()
     A = a.public_key()
     B = b.public_key()
-    wrong_B = wrong_b.public_key()
+    wrong_b_pub = wrong_b.public_key()
     S = curve_multiply(a.int(), B.point())
 
     proof = schnorr.generate_proof(a, A, B, S)
     # Verify with wrong public key B
-    is_valid = schnorr.verify_proof(A.point(), wrong_B.point(), S, proof)
+    is_valid = schnorr.verify_proof(A.point(), wrong_b_pub.point(), S, proof)
 
     assert not is_valid
 
@@ -119,20 +119,20 @@ def test_schnorr_sign_wrong_message_size():
     B = b.public_key()
 
     # Correct shared secret: S = a * B
-    correct_S = curve_multiply(a.int(), B.point())
+    correct_s = curve_multiply(a.int(), B.point())
 
     # Generate proof with correct shared secret
-    proof = schnorr.generate_proof(a, A, B, correct_S)
+    proof = schnorr.generate_proof(a, A, B, correct_s)
 
     # This should verify correctly
-    is_valid_correct = schnorr.verify_proof(A.point(), B.point(), correct_S, proof)
+    is_valid_correct = schnorr.verify_proof(A.point(), B.point(), correct_s, proof)
     assert is_valid_correct
 
     # Create incorrect shared secret by adding generator point (breaks the relationship)
-    incorrect_S = curve_add(correct_S, curve.g) if correct_S else curve.g
+    incorrect_s = curve_add(correct_s, curve.g) if correct_s else curve.g
 
     # Verify proof with incorrect shared secret (should fail)
-    is_valid_wrong = schnorr.verify_proof(A.point(), B.point(), incorrect_S, proof)
+    is_valid_wrong = schnorr.verify_proof(A.point(), B.point(), incorrect_s, proof)
     assert not is_valid_wrong
 
 

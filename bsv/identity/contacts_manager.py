@@ -282,7 +282,7 @@ class ContactsManager:
                                 "basket": "contacts",
                                 "satoshis": 1,
                                 "lockingScript": locking_script,
-                                "outputDescription": f'Updated Contact: {contact.get("name", identity_key[:10])}',
+                                "outputDescription": f"Updated Contact: {contact.get('name', identity_key[:10])}",
                                 "tags": [f"identityKey {hashed_key.hex()}"],
                                 "customInstructions": json.dumps({"keyID": key_id}),
                             }
@@ -300,7 +300,7 @@ class ContactsManager:
                             "basket": "contacts",
                             "satoshis": 1,
                             "lockingScript": locking_script,
-                            "outputDescription": f'Contact: {contact.get("name", identity_key[:10])}',
+                            "outputDescription": f"Contact: {contact.get('name', identity_key[:10])}",
                             "tags": [f"identityKey {hashed_key.hex()}"],
                             "customInstructions": json.dumps({"keyID": key_id}),
                         }

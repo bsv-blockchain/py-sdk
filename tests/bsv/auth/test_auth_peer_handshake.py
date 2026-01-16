@@ -62,16 +62,16 @@ def test_mutual_authentication_and_general_message():  # NOSONAR - Protocol nota
     wB = HandshakeWallet(PrivateKey(2222))  # NOSONAR - Protocol notation (wallet B)
 
     # Peers
-    pA = Peer(
+    peer_a = Peer(
         PeerOptions(wallet=wA, transport=tA, session_manager=DefaultSessionManager())
     )  # NOSONAR - Protocol notation (peer A)
-    pB = Peer(
+    peer_b = Peer(
         PeerOptions(wallet=wB, transport=tB, session_manager=DefaultSessionManager())
     )  # NOSONAR - Protocol notation (peer B)
 
     # Ensure peers are started (transport callbacks registered)
-    pA.start()
-    pB.start()
+    peer_a.start()
+    peer_b.start()
 
     # Bob waits for general message then responds back
     got_from_alice = threading.Event()
@@ -79,19 +79,19 @@ def test_mutual_authentication_and_general_message():  # NOSONAR - Protocol nota
 
     def on_bob_general(sender_pk, payload):
         # Bob replies to Alice
-        pB.to_peer(b"Hello Alice!", identity_key=sender_pk)
+        peer_b.to_peer(b"Hello Alice!", identity_key=sender_pk)
         got_from_bob.set()
 
-    pB.listen_for_general_messages(on_bob_general)
+    peer_b.listen_for_general_messages(on_bob_general)
 
     def on_alice_general(sender_pk, payload):
         got_from_alice.set()
 
-    pA.listen_for_general_messages(on_alice_general)
+    peer_a.listen_for_general_messages(on_alice_general)
 
     # Alice initiates communication; handshake should occur implicitly
     # Increase timeout to allow handshake to complete
-    err = pA.to_peer(b"Hello Bob!", max_wait_time=5000)
+    err = peer_a.to_peer(b"Hello Bob!", max_wait_time=5000)
     assert err is None
 
     # Wait for both directions

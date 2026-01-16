@@ -6,7 +6,6 @@ from .utils import Reader
 
 
 class TransactionOutput:
-
     def __init__(
         self,
         locking_script: Script,

@@ -33,7 +33,6 @@ For further details on R-Puzzles, visit: https://bsv.brc.dev/scripts/0017.
 
 
 class RPuzzle(ScriptTemplate):
-
     def __init__(self, puzzle_type: str = "raw"):
         """
         Constructs an R Puzzle template instance for a given puzzle type.

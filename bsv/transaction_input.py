@@ -12,7 +12,6 @@ from .utils import Reader
 
 
 class TransactionInput:
-
     def __init__(
         self,
         source_transaction=None,

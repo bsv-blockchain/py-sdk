@@ -149,7 +149,7 @@ class TestPrivateKeySharing(unittest.TestCase):
             # WIFを生成できることを確認
             wif = recovered_key.wif()
             self.assertIsInstance(wif, str)
-            self.assertTrue(len(wif) > 0)
+            self.assertGreater(len(wif), 0)
 
     def test_create_backup_and_recover(self):
         """Test creating backup shares and recovering the key from them."""

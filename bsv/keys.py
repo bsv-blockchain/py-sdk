@@ -24,7 +24,6 @@ from .utils import (
 
 
 class PublicKey:
-
     def __init__(self, public_key: Union[str, bytes, Point, CcPublicKey]):
         """
         create public key from serialized hex string or bytes, or curve point, or CoinCurve public key
@@ -146,7 +145,6 @@ class PublicKey:
 
 
 class PrivateKey:
-
     def __init__(
         self, private_key: Union[str, int, bytes, CcPrivateKey, None] = None, network: Optional[Network] = None
     ):

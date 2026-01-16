@@ -61,9 +61,9 @@ class TestEngine:
         # Empty options (no scripts) should be caught by validation
         err = engine.execute(lambda o: None)  # Empty options
         assert err is not None, "Engine should return error for missing scripts"
-        assert is_error_code(
-            err, ErrorCode.ERR_INVALID_PARAMS
-        ), f"Expected ERR_INVALID_PARAMS for missing scripts, got {err.code}"
+        assert is_error_code(err, ErrorCode.ERR_INVALID_PARAMS), (
+            f"Expected ERR_INVALID_PARAMS for missing scripts, got {err.code}"
+        )
 
     def test_engine_with_after_genesis(self):
         """Test engine with after genesis flag."""

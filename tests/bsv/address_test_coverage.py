@@ -331,7 +331,7 @@ def test_decode_wif_direct():
         priv = PrivateKey()
         priv.compressed = True
         wif = priv.wif()
-        private_key, compressed, network = decode_wif(wif)
+        private_key, compressed, _ = decode_wif(wif)
         assert isinstance(private_key, bytes)
         assert compressed is True
         assert len(private_key) == 32

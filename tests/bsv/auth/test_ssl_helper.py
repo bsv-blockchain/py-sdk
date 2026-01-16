@@ -147,8 +147,7 @@ class TestSSLHelper:
             .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
             .not_valid_after(
                 # Certificate valid for 1 year
-                datetime.datetime.now(datetime.timezone.utc)
-                + datetime.timedelta(days=365)
+                datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=365)
             )
             .add_extension(
                 x509.SubjectAlternativeName(

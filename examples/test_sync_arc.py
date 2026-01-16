@@ -11,7 +11,6 @@ Simple example of synchronous ARC broadcasting and status checking.
 
 
 def main():
-
     # Setup ARC broadcaster
     arc = ARC("https://api.taal.com/arc", "mainnet_2e3a7d0f845a5049b_________98fc4271")
 

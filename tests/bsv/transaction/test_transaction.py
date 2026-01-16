@@ -675,6 +675,3 @@ def test_input_auto_txid():
             source_output_index=0,
             unlocking_script_template=P2PKH().unlock(private_key),
         )
-
-
-# TODO: Test tx.verify()

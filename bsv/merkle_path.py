@@ -74,8 +74,7 @@ class MerklePath:
         if height > 0 and leaf["offset"] not in legal_offsets[height]:
             legal_offsets_at_height = ", ".join(map(str, legal_offsets[height]))
             raise ValueError(
-                f"Invalid offset: {leaf['offset']}, at height: {height}, "
-                f"with legal offsets: {legal_offsets_at_height}"
+                f"Invalid offset: {leaf['offset']}, at height: {height}, with legal offsets: {legal_offsets_at_height}"
             )
 
     def _update_legal_offsets_for_higher_levels(self, leaf: MerkleLeaf, height: int, legal_offsets: list[set]) -> None:

@@ -173,7 +173,7 @@ class TestScriptInterpreterEdgeCases:
             ("OP_0 OP_0 OP_CAT", "Concatenate empty strings"),
             ("OP_0 OP_SIZE", "Size of empty string"),
             # Large strings
-            (f"{'00'*500} {'ff'*500} OP_CAT", "Concatenate large strings"),
+            (f"{'00' * 500} {'ff' * 500} OP_CAT", "Concatenate large strings"),
             # Split operations
             ("0102030405 02 OP_SPLIT", "Split with valid position"),
             ("0102030405 ff OP_SPLIT", "Split with invalid position"),

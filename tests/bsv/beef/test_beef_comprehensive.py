@@ -122,15 +122,13 @@ def test_beef_sort_txs():
 
     # Parent should be in one of the result categories
     assert (
-        parent_id
-        in result.not_valid  # or parent_id in result.valid or
+        parent_id in result.not_valid  # or parent_id in result.valid or
         # parent_id in result.with_missing_inputs or parent_id in result.txid_only
     )
 
     # Child should also be in one of the result categories
     assert (
-        child_id
-        in result.not_valid  # or child_id in result.valid or
+        child_id in result.not_valid  # or child_id in result.valid or
         # child_id in result.with_missing_inputs or child_id in result.txid_only
     )
 
@@ -153,9 +151,9 @@ def test_beef_to_log_string():
     # Verify log string is not empty and contains expected information
     assert log_str is not None, "Log string should not be None"
     assert len(log_str) > 0, "Log string should not be empty"
-    assert (
-        "BEEF" in log_str or "beef" in log_str.lower() or len(log_str) > 10
-    ), "Log string should contain BEEF information or be substantive"
+    assert "BEEF" in log_str or "beef" in log_str.lower() or len(log_str) > 10, (
+        "Log string should contain BEEF information or be substantive"
+    )
     assert "BEEF with" in log_str
     assert "BUMPs" in log_str or "BUMP" in log_str
     assert "Transactions" in log_str or "Transaction" in log_str

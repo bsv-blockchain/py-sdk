@@ -24,7 +24,7 @@ class DummyWallet(SimpleNamespace):
                 value = self.kv_storage[key]
                 # Create a locking script that contains the value
                 value_hex = value.encode("utf-8").hex()
-                locking_script_hex = f"2102a1633cafb311f41c1137864d7dd7cf2d5c9e5c2e5b5f5a5d5c5b5a59584f5e5fac{len(value_hex)//2:02x}{value_hex}2c64756d6d795f7369676e61747572655f666f725f74657374696e675f707572706f7365735f333262797465736d"
+                locking_script_hex = f"2102a1633cafb311f41c1137864d7dd7cf2d5c9e5c2e5b5f5a5d5c5b5a59584f5e5fac{len(value_hex) // 2:02x}{value_hex}2c64756d6d795f7369676e61747572655f666f725f74657374696e675f707572706f7365735f333262797465736d"
                 return {
                     "outputs": [
                         {

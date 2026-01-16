@@ -215,7 +215,7 @@ def test_http_client_empty_url():
             try:
                 _ = client.get("")
                 # Success case - acceptable
-            except (ValueError, Exception):
+            except ValueError:
                 # Expected exception - also acceptable
                 pass
     except ImportError:

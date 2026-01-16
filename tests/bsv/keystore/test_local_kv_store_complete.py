@@ -89,9 +89,9 @@ class TestLocalKVStoreGet:
 
         config = KVStoreConfig(wallet=wallet, context=TEST_CONTEXT, encrypt=True)
         store = LocalKVStore(config)
-        defaultValue = "default"
+        default_value = "default"
 
-        result = store.get(None, TEST_KEY, defaultValue)
+        result = store.get(None, TEST_KEY, default_value)
         assert result == defaultValue
 
     def test_should_return_empty_string_if_no_output_found_and_no_default_value(self):

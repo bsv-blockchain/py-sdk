@@ -284,7 +284,6 @@ def test_transceiver_create_action_decoded():
             patch.object(t, "create_action", return_value=b"mock_decoded_response"),
             patch("bsv.wallet.serializer.create_action_result.deserialize_create_action_result") as mock_deserialize,
         ):
-
             mock_deserialize.return_value = {"result": "decoded"}
             result = t.create_action_decoded(None, {"action": "test"}, "test")
             assert result == {"result": "decoded"}
@@ -304,7 +303,6 @@ def test_transceiver_sign_action_decoded():
             patch.object(t, "sign_action", return_value=b"mock_decoded_response"),
             patch("bsv.wallet.serializer.sign_action_result.deserialize_sign_action_result") as mock_deserialize,
         ):
-
             mock_deserialize.return_value = {"signature": "decoded"}
             result = t.sign_action_decoded(None, {"action_id": "test"}, "test")
             assert result == {"signature": "decoded"}
@@ -324,7 +322,6 @@ def test_transceiver_abort_action_decoded():
             patch.object(t, "abort_action", return_value=b"mock_decoded_response"),
             patch("bsv.wallet.serializer.abort_action.deserialize_abort_action_result") as mock_deserialize,
         ):
-
             mock_deserialize.return_value = {"aborted": True}
             result = t.abort_action_decoded(None, {"action_id": "test"}, "test")
             assert result == {"aborted": True}
@@ -344,7 +341,6 @@ def test_transceiver_list_actions_decoded():
             patch.object(t, "list_actions", return_value=b"mock_decoded_response"),
             patch("bsv.wallet.serializer.list_actions.deserialize_list_actions_result") as mock_deserialize,
         ):
-
             mock_deserialize.return_value = {"actions": []}
             result = t.list_actions_decoded(None, {}, "test")
             assert result == {"actions": []}

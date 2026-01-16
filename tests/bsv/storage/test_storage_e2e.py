@@ -74,9 +74,9 @@ def test_storage_list_uploads_e2e():
     # If list is not empty, verify structure of upload entries
     if len(uploads) > 0:
         first_upload = uploads[0]
-        assert isinstance(first_upload, dict) or hasattr(
-            first_upload, "__dict__"
-        ), "Upload entries should be dict-like or objects with attributes"
+        assert isinstance(first_upload, dict) or hasattr(first_upload, "__dict__"), (
+            "Upload entries should be dict-like or objects with attributes"
+        )
 
 
 @pytest.mark.e2e

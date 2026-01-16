@@ -70,7 +70,7 @@ def test_merkle_path_verify():
     try:
         is_valid = mp.verify(b"\x00" * 32, b"\x00" * 32)
         assert isinstance(is_valid, bool)
-    except (AttributeError, Exception):
+    except AttributeError:
         # May not have verify method
         pass
 

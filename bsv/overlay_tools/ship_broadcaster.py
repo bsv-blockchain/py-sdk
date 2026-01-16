@@ -23,10 +23,6 @@ class HTTPProtocolError(BroadcastError):
     """Exception raised when HTTP protocol requirement is violated."""
 
 
-class BroadcastResponseError(BroadcastError):
-    """Exception raised when broadcast response is invalid."""
-
-
 @dataclass
 class TaggedBEEF:
     """Tagged BEEF structure."""
@@ -105,7 +101,7 @@ class HTTPSOverlayBroadcastFacilitator:
                         return await response.json()
                     else:
                         error_text = await response.text()
-                        raise BroadcastResponseError(f"Broadcast failed: {error_text}")
+                        raise BroadcastError(f"Broadcast failed: {error_text}")
 
         except (BroadcastError, HTTPProtocolError):
             raise
@@ -311,7 +307,7 @@ class TopicBroadcaster:
             return True
 
         required_topics = self.require_acknowledgment_from_all_hosts_for_topics
-        for _, acknowledged in host_acknowledgments.items():
+        for acknowledged in host_acknowledgments.values():
             for topic in required_topics:
                 if topic not in acknowledged:
                     return False

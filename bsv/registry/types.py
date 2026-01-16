@@ -15,13 +15,13 @@ class CertificateFieldDescriptor(TypedDict):
 
 @dataclass
 class BasketDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
-    definitionType: Literal["basket"]
-    basketID: str
+    definitionType: Literal["basket"]  # noqa: S117
+    basketID: str  # noqa: S117
     name: str
-    iconURL: str
+    iconURL: str  # noqa: S117
     description: str
-    documentationURL: str
-    registryOperator: str | None = None
+    documentationURL: str  # noqa: S117
+    registryOperator: str | None = None  # noqa: S117
 
     @property
     def definition_type(self) -> Literal["basket"]:
@@ -77,14 +77,14 @@ class ProtocolDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
 
 @dataclass
 class CertificateDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
-    definitionType: Literal["certificate"]
+    definitionType: Literal["certificate"]  # noqa: S117
     type: str
     name: str
-    iconURL: str
+    iconURL: str  # noqa: S117
     description: str
-    documentationURL: str
+    documentationURL: str  # noqa: S117
     fields: dict[str, CertificateFieldDescriptor]
-    registryOperator: str | None = None
+    registryOperator: str | None = None  # noqa: S117
 
     @property
     def definition_type(self) -> Literal["certificate"]:
@@ -113,9 +113,9 @@ DefinitionData = Union[
 @dataclass
 class TokenData:  # NOSONAR - camelCase matches TS/Go registry API
     txid: str
-    outputIndex: int
+    outputIndex: int  # noqa: S117
     satoshis: int
-    lockingScript: str
+    lockingScript: str  # noqa: S117
     beef: bytes
 
     @property

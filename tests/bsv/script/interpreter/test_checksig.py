@@ -366,9 +366,9 @@ class TestCheckSigVectors:
 
             # Verify signature and pubkey were on stack (consumed by CHECKSIG)
             # If stack underflow occurred, we'd get ERR_INVALID_STACK_OPERATION instead
-            assert not is_error_code(
-                err, ErrorCode.ERR_INVALID_STACK_OPERATION
-            ), "Should not be a stack operation error - signature and pubkey should be present"
+            assert not is_error_code(err, ErrorCode.ERR_INVALID_STACK_OPERATION), (
+                "Should not be a stack operation error - signature and pubkey should be present"
+            )
 
     def test_checksig_stack_underflow_no_items(self):
         """Test OP_CHECKSIG with no stack items - ported from TypeScript invalid vectors."""
@@ -606,7 +606,7 @@ class TestCheckSig:
 
         # Test NONE sighash
         sig_none = b"dummy_der_sig\x02"  # SIGHASH_NONE
-        sighash, sig_bytes, err = _extract_sighash_from_signature(thread, sig_none)
+        sighash, _, err = _extract_sighash_from_signature(thread, sig_none)
         assert err is None
         assert sighash.value == 2  # SIGHASH_NONE
 

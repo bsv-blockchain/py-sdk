@@ -74,9 +74,7 @@ def test_calc_input_preimage_bip143(
     # Compare with expected
     expected_bytes = bytes.fromhex(expected_preimage)
     assert actual_preimage == expected_bytes, (
-        f"BIP143 preimage test failed: {test_name}\n"
-        f"Expected: {expected_preimage}\n"
-        f"Actual:   {actual_preimage.hex()}"
+        f"BIP143 preimage test failed: {test_name}\nExpected: {expected_preimage}\nActual:   {actual_preimage.hex()}"
     )
 
 
@@ -140,7 +138,5 @@ def test_calc_input_signature_hash(
     # Compare with expected
     expected_bytes = bytes.fromhex(expected_sig_hash)
     assert actual_sig_hash == expected_bytes, (
-        f"Signature hash test failed: {test_name}\n"
-        f"Expected: {expected_sig_hash}\n"
-        f"Actual:   {actual_sig_hash.hex()}"
+        f"Signature hash test failed: {test_name}\nExpected: {expected_sig_hash}\nActual:   {actual_sig_hash.hex()}"
     )

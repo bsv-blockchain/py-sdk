@@ -106,7 +106,7 @@ def test_chaintracker_invalid_height():
         if hasattr(tracker, "get_header"):
             try:
                 tracker.get_header(-1)
-            except (ValueError, Exception):
+            except ValueError:
                 # Expected
                 pass
     except (ImportError, AttributeError):

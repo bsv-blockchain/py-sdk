@@ -38,7 +38,6 @@ class ScriptChunk:
 
 
 class Script:
-
     def __init__(self, script: Union[str, bytes, None] = None):
         """
         Create script from hex string or bytes
