@@ -92,7 +92,7 @@ class TestLocalKVStoreGet:
         default_value = "default"
 
         result = store.get(None, TEST_KEY, default_value)
-        assert result == defaultValue
+        assert result == default_value
 
     def test_should_return_empty_string_if_no_output_found_and_no_default_value(self):
         """Test get returns empty string when no output found and no defaultValue."""

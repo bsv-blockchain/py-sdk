@@ -15,92 +15,92 @@ class CertificateFieldDescriptor(TypedDict):
 
 @dataclass
 class BasketDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
-    definitionType: Literal["basket"]  # noqa: S117
-    basketID: str  # noqa: S117
+    definition_type: Literal["basket"]
+    basket_id: str
     name: str
-    iconURL: str  # noqa: S117
+    icon_url: str
     description: str
-    documentationURL: str  # noqa: S117
-    registryOperator: str | None = None  # noqa: S117
+    documentation_url: str
+    registry_operator: str | None = None
 
     @property
-    def definition_type(self) -> Literal["basket"]:
-        return self.definitionType
+    def definitionType(self) -> Literal["basket"]:
+        return self.definition_type
 
     @property
-    def basket_id(self) -> str:
-        return self.basketID
+    def basketID(self) -> str:
+        return self.basket_id
 
     @property
-    def icon_url(self) -> str:
-        return self.iconURL
+    def iconURL(self) -> str:
+        return self.icon_url
 
     @property
-    def documentation_url(self) -> str:
-        return self.documentationURL
+    def documentationURL(self) -> str:
+        return self.documentation_url
 
     @property
-    def registry_operator(self) -> str | None:
-        return self.registryOperator
+    def registryOperator(self) -> str | None:
+        return self.registry_operator
 
 
 @dataclass
 class ProtocolDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
-    definitionType: Literal["protocol"]
-    protocolID: dict[str, Any]  # WalletProtocol-like: {securityLevel, protocol}
+    definition_type: Literal["protocol"]
+    protocol_id: dict[str, Any]  # WalletProtocol-like: {securityLevel, protocol}
     name: str
-    iconURL: str
+    icon_url: str
     description: str
-    documentationURL: str
-    registryOperator: str | None = None
+    documentation_url: str
+    registry_operator: str | None = None
 
     @property
-    def definition_type(self) -> Literal["protocol"]:
-        return self.definitionType
+    def definitionType(self) -> Literal["protocol"]:
+        return self.definition_type
 
     @property
-    def protocol_id(self) -> dict[str, Any]:
-        return self.protocolID
+    def protocolID(self) -> dict[str, Any]:
+        return self.protocol_id
 
     @property
-    def icon_url(self) -> str:
-        return self.iconURL
+    def iconURL(self) -> str:
+        return self.icon_url
 
     @property
-    def documentation_url(self) -> str:
-        return self.documentationURL
+    def documentationURL(self) -> str:
+        return self.documentation_url
 
     @property
-    def registry_operator(self) -> str | None:
-        return self.registryOperator
+    def registryOperator(self) -> str | None:
+        return self.registry_operator
 
 
 @dataclass
 class CertificateDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
-    definitionType: Literal["certificate"]  # noqa: S117
+    definition_type: Literal["certificate"]
     type: str
     name: str
-    iconURL: str  # noqa: S117
+    icon_url: str
     description: str
-    documentationURL: str  # noqa: S117
+    documentation_url: str
     fields: dict[str, CertificateFieldDescriptor]
-    registryOperator: str | None = None  # noqa: S117
+    registry_operator: str | None = None
 
     @property
-    def definition_type(self) -> Literal["certificate"]:
-        return self.definitionType
+    def definitionType(self) -> Literal["certificate"]:
+        return self.definition_type
 
     @property
-    def icon_url(self) -> str:
-        return self.iconURL
+    def iconURL(self) -> str:
+        return self.icon_url
 
     @property
-    def documentation_url(self) -> str:
-        return self.documentationURL
+    def documentationURL(self) -> str:
+        return self.documentation_url
 
     @property
-    def registry_operator(self) -> str | None:
-        return self.registryOperator
+    def registryOperator(self) -> str | None:
+        return self.registry_operator
 
 
 DefinitionData = Union[
@@ -113,18 +113,18 @@ DefinitionData = Union[
 @dataclass
 class TokenData:  # NOSONAR - camelCase matches TS/Go registry API
     txid: str
-    outputIndex: int  # noqa: S117
+    output_index: int
     satoshis: int
-    lockingScript: str  # noqa: S117
+    locking_script: str
     beef: bytes
 
     @property
-    def output_index(self) -> int:
-        return self.outputIndex
+    def outputIndex(self) -> int:
+        return self.output_index
 
     @property
-    def locking_script(self) -> str:
-        return self.lockingScript
+    def lockingScript(self) -> str:
+        return self.locking_script
 
 
 RegistryRecord = Union[

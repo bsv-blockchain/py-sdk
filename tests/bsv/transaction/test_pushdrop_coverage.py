@@ -55,7 +55,7 @@ def test_pushdrop_lock_basic():
         fields = [b"field1", b"field2"]
         script = pd.lock(fields, "test", "key1", None)
         assert script is not None
-    except (ImportError, Exception):
+    except Exception:
         pytest.skip("PushDrop lock not fully testable")
 
 

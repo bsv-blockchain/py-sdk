@@ -103,7 +103,7 @@ class HTTPSOverlayBroadcastFacilitator:
                         error_text = await response.text()
                         raise BroadcastError(f"Broadcast failed: {error_text}")
 
-        except (BroadcastError, HTTPProtocolError):
+        except BroadcastError:
             raise
         except Exception as e:
             raise BroadcastError(f"Broadcast failed: {e!s}")
@@ -266,7 +266,7 @@ class TopicBroadcaster:
             )
 
             if answer.type != "output-list":
-                raise BroadcastResponseError("SHIP answer is not an output list.")
+                raise BroadcastError("SHIP answer is not an output list.")
 
             for output in answer.outputs:
                 try:

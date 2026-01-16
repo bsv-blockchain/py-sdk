@@ -24,24 +24,22 @@ class Schnorr:
         """Initialize Schnorr instance."""
 
     def generate_proof(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
-        self, a: PrivateKey, A: PublicKey, B: PublicKey, S: Optional[Point]
+        self, a: PrivateKey, a_pub: PublicKey, b_pub: PublicKey, s: Optional[Point]
     ) -> dict[str, Any]:
         """
         Generates a proof that demonstrates the link between public key A and shared secret S.
 
         Args:
             a: Private key corresponding to public key A
-            A: Public key
-            B: Other party's public key
-            S: Shared secret point
+            a_pub: Public key
+            b_pub: Other party's public key
+            s: Shared secret point
 
         Returns:
             Proof dictionary with keys: R (Point), SPrime (Point), z (int)
         """
         # Internal PEP8-compliant variable names
-        a_pub = A
-        b_pub = B
-        shared_secret = S
+        shared_secret = s
 
         # Generate random private key r
         r_key = PrivateKey()
@@ -63,45 +61,45 @@ class Schnorr:
 
     def verify_proof(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
         self,
-        A: Optional[Point],
-        B: Optional[Point],
-        S: Optional[Point],
-        proof: dict[str, Any],  # noqa: S117
+        a: Optional[Point],
+        b: Optional[Point],
+        s: Optional[Point],
+        proof: dict[str, Any],
     ) -> bool:
         """
         Verifies the proof of the link between public key A and shared secret S.
 
         Args:
-            A: Public key point
-            B: Other party's public key point
-            S: Shared secret point
+            a: Public key point
+            b: Other party's public key point
+            s: Shared secret point
             proof: Proof dictionary with keys: R, SPrime, z
 
         Returns:
             True if the proof is valid, False otherwise
         """
         # Internal PEP8-compliant variable names
-        a_point = A
-        b_point = B
-        s_point = S
+        a_point = a
+        b_point = b
+        s_point = s
 
         if a_point is None or b_point is None or s_point is None:
             return False
 
-        R = proof.get("R")  # NOSONAR - Mathematical notation
-        S_prime = proof.get("SPrime")  # NOSONAR - Mathematical notation
+        r = proof.get("R")  # NOSONAR - Mathematical notation
+        s_prime = proof.get("SPrime")  # NOSONAR - Mathematical notation
         z = proof.get("z")
 
-        if R is None or S_prime is None or z is None:
+        if r is None or s_prime is None or z is None:
             return False
 
         # Compute challenge e
-        e = self._compute_challenge_from_points(a_point, b_point, s_point, S_prime, R)
+        e = self._compute_challenge_from_points(a_point, b_point, s_point, s_prime, r)
 
         # Check zG = R + eA
         zG = curve_multiply(z, curve.g)  # NOSONAR - Mathematical notation
         eA = curve_multiply(e, a_point)  # NOSONAR - Mathematical notation
-        R_plus_eA = curve_add(R, eA)  # NOSONAR - Mathematical notation
+        R_plus_eA = curve_add(r, eA)  # NOSONAR - Mathematical notation
 
         if zG != R_plus_eA:
             return False
@@ -109,7 +107,7 @@ class Schnorr:
         # Check zB = S' + eS
         zB = curve_multiply(z, b_point)  # NOSONAR - Mathematical notation
         eS = curve_multiply(e, s_point)  # NOSONAR - Mathematical notation
-        S_prime_plus_eS = curve_add(S_prime, eS)  # NOSONAR - Mathematical notation
+        S_prime_plus_eS = curve_add(s_prime, eS)  # NOSONAR - Mathematical notation
 
         if zB != S_prime_plus_eS:
             return False
@@ -134,25 +132,25 @@ class Schnorr:
 
     def _compute_challenge_from_points(  # NOSONAR - Mathematical notation for Schnorr ZKP protocol
         self,
-        A: Optional[Point],
-        B: Optional[Point],
-        S: Optional[Point],
-        S_prime: Optional[Point],
-        R: Optional[Point],  # noqa: S117
+        a: Optional[Point],
+        b: Optional[Point],
+        s: Optional[Point],
+        s_prime: Optional[Point],
+        r: Optional[Point],
     ) -> int:
         """Compute challenge e from points."""
-        if A is None or B is None or S is None or S_prime is None or R is None:
+        if a is None or b is None or s is None or s_prime is None or r is None:
             return 0
 
         # Encode points as compressed public keys
-        A_encoded = self._encode_point(A)  # noqa: S117
-        B_encoded = self._encode_point(B)  # noqa: S117
-        S_encoded = self._encode_point(S)  # noqa: S117
-        S_prime_encoded = self._encode_point(S_prime)  # noqa: S117
-        R_encoded = self._encode_point(R)  # noqa: S117
+        a_encoded = self._encode_point(a)
+        b_encoded = self._encode_point(b)
+        s_encoded = self._encode_point(s)
+        s_prime_encoded = self._encode_point(s_prime)
+        r_encoded = self._encode_point(r)
 
         # Concatenate all encoded points
-        message = A_encoded + B_encoded + S_encoded + S_prime_encoded + R_encoded
+        message = a_encoded + b_encoded + s_encoded + s_prime_encoded + r_encoded
 
         # Hash and reduce modulo curve order
         hash_bytes = sha256(message)

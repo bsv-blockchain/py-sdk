@@ -50,21 +50,21 @@ def _map_definition_type_to_basket_name(definition_type: DefinitionType) -> str:
 def _build_pushdrop_fields(data: DefinitionData, registry_operator: str) -> list[bytes]:
     if isinstance(data, BasketDefinitionData):
         fields = [
-            data.basketID,
+            data.basket_id,
             data.name,
-            data.iconURL,
+            data.icon_url,
             data.description,
-            data.documentationURL,
+            data.documentation_url,
         ]
     elif isinstance(data, ProtocolDefinitionData):
         import json
 
         fields = [
-            json.dumps(data.protocolID),
+            json.dumps(data.protocol_id),
             data.name,
-            data.iconURL,
+            data.icon_url,
             data.description,
-            data.documentationURL,
+            data.documentation_url,
         ]
     elif isinstance(data, CertificateDefinitionData):
         import json
@@ -72,9 +72,9 @@ def _build_pushdrop_fields(data: DefinitionData, registry_operator: str) -> list
         fields = [
             data.type,
             data.name,
-            data.iconURL,
+            data.icon_url,
             data.description,
-            data.documentationURL,
+            data.documentation_url,
             json.dumps(data.fields),
         ]
     else:
@@ -154,7 +154,7 @@ class RegistryClient:
         pub = self.wallet.get_public_key({"identityKey": True}, self.originator) or {}
         operator = cast(str, pub.get("publicKey") or "")
 
-        _ = _map_definition_type_to_wallet_protocol(data.definitionType)  # Reserved for future use
+        _ = _map_definition_type_to_wallet_protocol(data.definition_type)  # Reserved for future use
         fields = _build_pushdrop_fields(data, operator)
 
         # Build lock-before pushdrop script
@@ -168,13 +168,13 @@ class RegistryClient:
         ca_res = (
             self.wallet.create_action(
                 {
-                    "description": f"Register a new {data.definitionType} item",
+                    "description": f"Register a new {data.definition_type} item",
                     "outputs": [
                         {
                             "satoshis": REGISTRANT_TOKEN_AMOUNT,
                             "lockingScript": locking_script_bytes,
-                            "outputDescription": f"New {data.definitionType} registration token",
-                            "basket": _map_definition_type_to_basket_name(data.definitionType),
+                            "outputDescription": f"New {data.definition_type} registration token",
+                            "basket": _map_definition_type_to_basket_name(data.definition_type),
                         }
                     ],
                     "options": {"randomizeOutputs": randomize_outputs},
@@ -388,7 +388,7 @@ class RegistryClient:
         ]
         self._resolver.set_backend(resolver)
         ans = self._resolver.query(ctx, LookupQuestion(service=service_name, query=query))
-        outputs = [{"beef": o.beef, "outputIndex": o.outputIndex} for o in ans.outputs]
+        outputs = [{"beef": o.beef, "outputIndex": o.output_index} for o in ans.outputs]
         parsed: list[DefinitionData] = []
         for o in outputs:
             try:

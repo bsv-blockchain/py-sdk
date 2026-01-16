@@ -26,26 +26,30 @@ class IdentityClientOptions:
 
 
 class KnownIdentityTypes:  # NOSONAR - PascalCase constants match TS/Go SDK identity certificate types
-    IdentiCert = "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="  # noqa: S117
-    DiscordCert = "2TgqRC35B1zehGmB21xveZNc7i5iqHc0uxMb+1NMPW4="  # noqa: S117
-    PhoneCert = "mffUklUzxbHr65xLohn0hRL0Tq2GjW1GYF/OPfzqJ6A="  # noqa: S117
-    XCert = "vdDWvftf1H+5+ZprUw123kjHlywH+v20aPQTuXgMpNc="  # noqa: S117
-    Registrant = "YoPsbfR6YQczjzPdHCoGC7nJsOdPQR50+SYqcWpJ0y0="  # noqa: S117
-    EmailCert = "exOl3KM0dIJ04EW5pZgbZmPag6MdJXd3/a1enmUU/BA="  # noqa: S117
-    Anyone = "mfkOMfLDQmrr3SBxBQ5WeE+6Hy3VJRFq6w4A5Ljtlis="  # noqa: S117
-    Self = "Hkge6X5JRxt1cWXtHLCrSTg6dCVTxjQJJ48iOYd7n3g="  # noqa: S117
-    CoolCert = "AGfk/WrT1eBDXpz3mcw386Zww2HmqcIn3uY6x4Af1eo="  # noqa: S117
+    identi_cert = "z40BOInXkI8m7f/wBrv4MJ09bZfzZbTj2fJqCtONqCY="
+    discord_cert = "2TgqRC35B1zehGmB21xveZNc7i5iqHc0uxMb+1NMPW4="
+    phone_cert = "mffUklUzxbHr65xLohn0hRL0Tq2GjW1GYF/OPfzqJ6A="
+    x_cert = "vdDWvftf1H+5+ZprUw123kjHlywH+v20aPQTuXgMpNc="
+    registrant = "YoPsbfR6YQczjzPdHCoGC7nJsOdPQR50+SYqcWpJ0y0="
+    email_cert = "exOl3KM0dIJ04EW5pZgbZmPag6MdJXd3/a1enmUU/BA="
+    anyone = "mfkOMfLDQmrr3SBxBQ5WeE+6Hy3VJRFq6w4A5Ljtlis="
+    self_cert = "Hkge6X5JRxt1cWXtHLCrSTg6dCVTxjQJJ48iOYd7n3g="
+    cool_cert = "AGfk/WrT1eBDXpz3mcw386Zww2HmqcIn3uY6x4Af1eo="
+
+    # PascalCase aliases for backward compatibility with TS/Go SDK
+    IdentiCert = identi_cert
+    DiscordCert = discord_cert
+    PhoneCert = phone_cert
+    XCert = x_cert
+    Registrant = registrant
+    EmailCert = email_cert
+    Anyone = anyone
+    Self = self_cert
+    CoolCert = cool_cert
 
     # Snake_case aliases for internal use (PEP8 compliance)
-    identi_cert = IdentiCert
-    discord_cert = DiscordCert
-    phone_cert = PhoneCert
-    x_cert = XCert
-    registrant_cert = Registrant
-    email_cert = EmailCert
-    anyone_cert = Anyone
-    self_cert = Self
-    cool_cert = CoolCert
+    registrant_cert = registrant
+    anyone_cert = anyone
 
 
 # Type aliases
