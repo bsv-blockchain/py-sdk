@@ -412,5 +412,5 @@ class RegistryClient:
                 continue
         # Apply simple filters if present
         if definition_type == "basket" and "basketID" in query:
-            parsed = [r for r in parsed if getattr(r, "basketID", None) == query.get("basketID")]
+            parsed = [r for r in parsed if getattr(r, "basket_id", None) == query.get("basketID")]
         return parsed

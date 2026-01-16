@@ -23,27 +23,6 @@ class BasketDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     documentation_url: str
     registry_operator: str | None = None
 
-    # Deprecated camelCase aliases for backward compatibility
-    @property
-    def definitionType(self) -> Literal["basket"]:
-        return self.definition_type
-
-    @property
-    def basketID(self) -> str:
-        return self.basket_id
-
-    @property
-    def iconURL(self) -> str:
-        return self.icon_url
-
-    @property
-    def documentationURL(self) -> str:
-        return self.documentation_url
-
-    @property
-    def registryOperator(self) -> str | None:
-        return self.registry_operator
-
 
 @dataclass
 class ProtocolDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
@@ -54,27 +33,6 @@ class ProtocolDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     description: str
     documentation_url: str
     registry_operator: str | None = None
-
-    # Deprecated camelCase aliases for backward compatibility
-    @property
-    def definitionType(self) -> Literal["protocol"]:
-        return self.definition_type
-
-    @property
-    def protocolID(self) -> dict[str, Any]:
-        return self.protocol_id
-
-    @property
-    def iconURL(self) -> str:
-        return self.icon_url
-
-    @property
-    def documentationURL(self) -> str:
-        return self.documentation_url
-
-    @property
-    def registryOperator(self) -> str | None:
-        return self.registry_operator
 
 
 @dataclass
@@ -87,23 +45,6 @@ class CertificateDefinitionData:  # NOSONAR - camelCase matches TS/Go registry A
     documentation_url: str
     fields: dict[str, CertificateFieldDescriptor]
     registry_operator: str | None = None
-
-    # Deprecated camelCase aliases for backward compatibility
-    @property
-    def definitionType(self) -> Literal["certificate"]:
-        return self.definition_type
-
-    @property
-    def iconURL(self) -> str:
-        return self.icon_url
-
-    @property
-    def documentationURL(self) -> str:
-        return self.documentation_url
-
-    @property
-    def registryOperator(self) -> str | None:
-        return self.registry_operator
 
 
 DefinitionData = Union[
@@ -120,15 +61,6 @@ class TokenData:  # NOSONAR - camelCase matches TS/Go registry API
     satoshis: int
     locking_script: str
     beef: bytes
-
-    # Deprecated camelCase aliases for backward compatibility
-    @property
-    def outputIndex(self) -> int:
-        return self.output_index
-
-    @property
-    def lockingScript(self) -> str:
-        return self.locking_script
 
 
 RegistryRecord = Union[
