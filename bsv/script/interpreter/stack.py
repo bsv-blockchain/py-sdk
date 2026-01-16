@@ -69,7 +69,7 @@ class NopStateHandler:
         return {}
 
     def set_state(self, state: dict) -> None:
-        # Returning None is equivalent to passing an empty dictionary because NOP is a no-op
+        # No-op implementation: state updates are intentionally ignored
         pass
 
 

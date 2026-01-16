@@ -255,7 +255,7 @@ def _validate_low_s_value(sig: bytes) -> Optional[Error]:
 
         # Convert to integer and check if > curve.n // 2
         s_value = int.from_bytes(s_bytes, byteorder="big")
-        curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+        curve_order = curve.n
         if s_value > curve_order // 2:
             return Error(ErrorCode.ERR_SIG_HIGH_S, "signature is not canonical due to unnecessarily high S value")
 

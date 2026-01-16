@@ -16,7 +16,18 @@ import os
 import secrets
 from typing import Union
 
-from Cryptodome.Cipher import AES
+try:
+    # Preferred namespace used by PyCryptodome
+    from Cryptodome.Cipher import AES
+except ImportError as e:
+    try:
+        # Fallback to the older/alternative namespace if available
+        from Crypto.Cipher import AES  # type: ignore[no-redef]
+    except ImportError:
+        raise ImportError(
+            "SymmetricKey requires an AES implementation from the 'pycryptodome' "
+            "package. Please install it with:\n\n    pip install pycryptodome\n"
+        ) from e
 
 
 class SymmetricKey:

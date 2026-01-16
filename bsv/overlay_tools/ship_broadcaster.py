@@ -78,7 +78,7 @@ class HTTPSOverlayBroadcastFacilitator:
         import aiohttp
 
         if not url.startswith("https:") and not self.allow_http:
-            raise ValueError('HTTPS facilitator can only use URLs that start with "https:"')
+            raise ValueError('HTTPS facilitator requires URLs starting with "https:" (allow_http=False)')
 
         headers = {"Content-Type": "application/octet-stream", "X-Topics": ",".join(tagged_beef.topics)}
 

@@ -69,7 +69,10 @@ class Thread:
         elif self.prev_output is not None:
             locking_script = self.prev_output.locking_script
         else:
-            return Error(ErrorCode.ERR_INVALID_PARAMS, "no locking script available")
+            return Error(
+                ErrorCode.ERR_INVALID_PARAMS,
+                "no locking script available: neither opts.locking_script nor prev_output.locking_script is set",
+            )
 
         if self.opts.unlocking_script is not None:
             unlocking_script = self.opts.unlocking_script
