@@ -69,7 +69,7 @@ class NopStateHandler:
         return {}
 
     def set_state(self, state: dict) -> None:
-        return
+        pass
 
 
 def as_bool(data: bytes) -> bool:
