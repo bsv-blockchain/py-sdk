@@ -1435,7 +1435,7 @@ def _compute_legacy_sighash(t: "Thread", script_bytes: bytes, shf_val: int) -> b
     raw = bytearray()
     raw += t.tx.version.to_bytes(4, "little")
     raw = _serialize_legacy_inputs(raw, t, script_bytes, hash_type, anyone_can_pay)
-    raw = _serialize_legacy_outputs	(raw, t, hash_type)
+    raw = _serialize_legacy_outputs(raw, t, hash_type)
     raw += t.tx.locktime.to_bytes(4, "little")
     raw += shf_val.to_bytes(4, "little")
 
