@@ -46,15 +46,19 @@ class NopDebugger:
     """No-op debugger implementation."""
 
     def before_stack_push(self, data: bytes) -> None:
+        # No-op implementation for null object pattern
         pass
 
     def after_stack_push(self, data: bytes) -> None:
+        # No-op implementation for null object pattern
         pass
 
     def before_stack_pop(self) -> None:
+        # No-op implementation for null object pattern
         pass
 
     def after_stack_pop(self, data: bytes) -> None:
+        # No-op implementation for null object pattern
         pass
 
 
@@ -78,7 +82,8 @@ def as_bool(data: bytes) -> bool:
             # Negative 0 is also considered false
             if i == len(data) - 1 and byte_val == 0x80:
                 return False
-            return True
+            else:
+                return True
 
     return False
 

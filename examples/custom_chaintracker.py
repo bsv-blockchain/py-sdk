@@ -35,10 +35,9 @@ def load_env_file():
         with open(env_file) as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith("#"):
-                    if "=" in line:
-                        key, value = line.split("=", 1)
-                        os.environ[key.strip()] = value.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ[key.strip()] = value.strip()
 
 
 class BHSChainTracker(ChainTracker):
