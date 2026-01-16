@@ -220,7 +220,7 @@ class TestSHIPBroadcaster:
         facilitator = HTTPSOverlayBroadcastFacilitator(allow_http=False)
         tagged_beef = TaggedBEEF(beef=b"test_beef", topics=["tm_test"])
 
-        with pytest.raises(ValueError, match='HTTPS facilitator can only use URLs that start with "https:"'):
+        with pytest.raises(ValueError, match='HTTPS facilitator requires URLs starting with "https:" \\(allow_http=False\\)'):
             # Using HTTP intentionally to test security feature that rejects insecure URLs
             await facilitator.send("http://example.com", tagged_beef)  # NOSONAR
 
