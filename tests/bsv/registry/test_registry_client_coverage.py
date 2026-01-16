@@ -53,12 +53,12 @@ def test_register_definition(client):
     """Test register definition."""
     # Build minimal valid BasketDefinitionData
     data = BasketDefinitionData(
-        definitionType="basket",
-        basketID="test-basket-123",
+        definition_type="basket",
+        basket_id="test-basket-123",
         name="Test Basket",
-        iconURL="https://example.com/icon.png",
+        icon_url="https://example.com/icon.png",
         description="A test basket for coverage",
-        documentationURL="https://example.com/docs",
+        documentation_url="https://example.com/docs",
     )
 
     # Mock wallet.get_public_key to return a valid identity public key hex

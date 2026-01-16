@@ -68,13 +68,13 @@ def test_bip276_decode_invalid_prefix():
 
 def test_bip276_decode_malformed():
     """Test BIP276 decoding malformed string."""
-    from bsv.script.bip276 import decode_script
+    from bsv.script.bip276 import InvalidBIP276Format, decode_script
 
     try:
         _ = decode_script("bitcoin-script:invalid")
         # May handle gracefully
-    except ValueError:
-        pass  # Or raise error
+    except InvalidBIP276Format:
+        pass  # Expected for malformed input
 
 
 # ========================================================================

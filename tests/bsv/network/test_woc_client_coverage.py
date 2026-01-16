@@ -168,11 +168,16 @@ def test_woc_client_invalid_txid():
     client = WOCClient()
 
     if hasattr(client, "get_tx_hex"):
-        try:
-            _ = client.get_tx_hex("invalid")
-        except ValueError:
-            # Expected
-            pass
+        # Mock a 404 response for invalid txid
+        mock_response = Mock()
+        mock_response.raise_for_status.side_effect = HTTPError("404 Client Error: Not Found")
+
+        with patch("bsv.network.woc_client.requests.get", return_value=mock_response):
+            try:
+                _ = client.get_tx_hex("invalid")
+            except HTTPError:
+                # Expected - 404 Client Error
+                pass
 
 
 def test_woc_client_invalid_address():

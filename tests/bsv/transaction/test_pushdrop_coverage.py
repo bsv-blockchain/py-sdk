@@ -149,7 +149,7 @@ def test_pushdrop_decode_with_key():
         script = Script(b"\x21" + priv.public_key().serialize() + b"\xac")
 
         if hasattr(PushDrop, "decode"):
-            result = PushDrop.decode(script, priv)
+            result = PushDrop.decode(script.to_bytes())
             assert result is not None
     except ImportError:
         pytest.skip("PushDrop decode not fully testable")

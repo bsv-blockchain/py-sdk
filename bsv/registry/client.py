@@ -388,7 +388,7 @@ class RegistryClient:
         ]
         self._resolver.set_backend(resolver)
         ans = self._resolver.query(ctx, LookupQuestion(service=service_name, query=query))
-        outputs = [{"beef": o.beef, "outputIndex": o.output_index} for o in ans.outputs]
+        outputs = [{"beef": o.beef, "outputIndex": o.outputIndex} for o in ans.outputs]
         parsed: list[DefinitionData] = []
         for o in outputs:
             try:

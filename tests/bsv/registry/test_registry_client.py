@@ -19,12 +19,12 @@ class TestRegistryClient(unittest.TestCase):
 
     def test_register_and_list_basket(self):
         data = BasketDefinitionData(
-            definitionType="basket",
-            basketID="b123",
+            definition_type="basket",
+            basket_id="b123",
             name="basket-name",
-            iconURL="https://icon",
+            icon_url="https://icon",
             description="desc",
-            documentationURL="https://docs",
+            documentation_url="https://docs",
         )
 
         res = self.client.register_definition(None, data)
@@ -36,24 +36,24 @@ class TestRegistryClient(unittest.TestCase):
 
     def test_register_protocol_and_list(self):
         data = ProtocolDefinitionData(
-            definitionType="protocol",
-            protocolID={"securityLevel": 1, "protocol": "protomap"},
+            definition_type="protocol",
+            protocol_id={"securityLevel": 1, "protocol": "protomap"},
             name="proto",
-            iconURL="",
+            icon_url="",
             description="",
-            documentationURL="",
+            documentation_url="",
         )
         _ = self.client.register_definition(None, data)
         _ = self.client.list_own_registry_entries(None, "protocol")
 
     def test_register_certificate_and_list(self):
         data = CertificateDefinitionData(
-            definitionType="certificate",
+            definition_type="certificate",
             type="cert.type",
             name="cert",
-            iconURL="",
+            icon_url="",
             description="",
-            documentationURL="",
+            documentation_url="",
             fields={"fieldA": {"friendlyName": "A", "description": "", "type": "text", "fieldIcon": ""}},
         )
         _ = self.client.register_definition(None, data)
@@ -64,12 +64,12 @@ class TestRegistryClient(unittest.TestCase):
         def resolver(_ctx: Any, _service_name: str, _query: dict[str, Any]) -> list[dict[str, Any]]:
             # Reuse list_own_registry_entries BEEF path by creating a basket definition first
             data = BasketDefinitionData(
-                definitionType="basket",
-                basketID="b1",
+                definition_type="basket",
+                basket_id="b1",
                 name="n",
-                iconURL="",
+                icon_url="",
                 description="",
-                documentationURL="",
+                documentation_url="",
             )
             _ = self.client.register_definition(None, data)
             listed = self.client.list_own_registry_entries(None, "basket")
@@ -84,12 +84,12 @@ class TestRegistryClient(unittest.TestCase):
 
     def test_revoke_flow_mock(self):
         data = BasketDefinitionData(
-            definitionType="basket",
-            basketID="b2",
+            definition_type="basket",
+            basket_id="b2",
             name="n2",
-            iconURL="",
+            icon_url="",
             description="",
-            documentationURL="",
+            documentation_url="",
         )
         _ = self.client.register_definition(None, data)
         listed = self.client.list_own_registry_entries(None, "basket")
@@ -101,12 +101,12 @@ class TestRegistryClient(unittest.TestCase):
         # create three entries with differing values
         for bid in ("bx", "by", "bz"):
             data = BasketDefinitionData(
-                definitionType="basket",
-                basketID=bid,
+                definition_type="basket",
+                basket_id=bid,
                 name=f"name-{bid}",
-                iconURL="",
+                icon_url="",
                 description="",
-                documentationURL="",
+                documentation_url="",
             )
             _ = self.client.register_definition(None, data)
 
