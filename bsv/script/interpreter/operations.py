@@ -283,7 +283,7 @@ def _deserialize_ecdsa_der_lax(data: bytes) -> tuple[int, int]:
     r_off = 4
     if r_off + r_len + 2 > len(der):
         raise ValueError("bad DER R length")
-    r = int.from_bytes(der[r_off : r_off + r_len], "big", signed=False)
+    r_value = int.from_bytes(der[r_off : r_off + r_len], "big", signed=False)
     s_type_off = r_off + r_len
     if der[s_type_off] != 0x02:
         raise ValueError("bad DER S marker")
@@ -291,8 +291,8 @@ def _deserialize_ecdsa_der_lax(data: bytes) -> tuple[int, int]:
     s_off = s_type_off + 2
     if s_off + s_len != len(der):
         raise ValueError("bad DER S length")
-    s = int.from_bytes(der[s_off : s_off + s_len], "big", signed=False)
-    return r, s
+    s_value = int.from_bytes(der[s_off : s_off + s_len], "big", signed=False)
+    return r_value, s_value
 
 
 def remove_signature_from_script(script: list[ParsedOpcode], sig: bytes) -> list[ParsedOpcode]:
@@ -1519,8 +1519,8 @@ def _verify_signature_with_nullfail(t: "Thread", pub_key: bytes, sig_bytes: byte
         # reasonably-parseable DER signature into strict form before verifying.
         if not t.flags.has_any(Flag.VERIFY_DER_SIGNATURES, Flag.VERIFY_LOW_S, Flag.VERIFY_STRICT_ENCODING):
             try:
-                r, s = _deserialize_ecdsa_der_lax(sig_bytes)
-                sig_to_verify = serialize_ecdsa_der((r, s))
+                r_value, s_value = _deserialize_ecdsa_der_lax(sig_bytes)
+                sig_to_verify = serialize_ecdsa_der((r_value, s_value))
             except Exception:
                 sig_to_verify = sig_bytes
 
@@ -1752,8 +1752,8 @@ def _verify_single_signature(t: "Thread", raw_sig: bytes, pub_key: bytes, calc_s
         sig_to_verify = sig_bytes
         if not t.flags.has_any(Flag.VERIFY_DER_SIGNATURES, Flag.VERIFY_LOW_S, Flag.VERIFY_STRICT_ENCODING):
             try:
-                r, s = _deserialize_ecdsa_der_lax(sig_bytes)
-                sig_to_verify = serialize_ecdsa_der((r, s))
+                r_value, s_value = _deserialize_ecdsa_der_lax(sig_bytes)
+                sig_to_verify = serialize_ecdsa_der((r_value, s_value))
             except Exception:
                 sig_to_verify = sig_bytes
 

@@ -134,6 +134,9 @@ class TopicBroadcaster:
         )
         self.resolver = config.resolver or LookupResolver(LookupResolverConfig(network_preset=self.network_preset))
 
+        # Initialize failure tracking
+        self._failed_hosts: set[str] = set()
+
         self.require_acknowledgment_from_all_hosts_for_topics = config.require_acknowledgment_from_all_hosts_for_topics
         self.require_acknowledgment_from_any_host_for_topics = (
             config.require_acknowledgment_from_any_host_for_topics or self.topics
@@ -292,11 +295,7 @@ class TopicBroadcaster:
             return await self.facilitator.send(host, tagged_beef)
         except Exception:
             # Basic host failure tracking: record the failing host on this instance.
-            failed_hosts = getattr(self, "_failed_hosts", None)
-            if failed_hosts is None:
-                failed_hosts = set()
-                self._failed_hosts = failed_hosts
-            failed_hosts.add(host)
+            self._failed_hosts.add(host)
             # Re-raise the original exception so callers see exactly the same error
             # from facilitator.send as before; tracking must not swallow or wrap it.
             raise

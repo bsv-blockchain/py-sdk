@@ -43,22 +43,21 @@ class StateHandler(Protocol):
 
 
 class NopDebugger:
-    """No-op debugger implementation."""
+    """No-op debugger implementation following the null object pattern.
+    All methods intentionally perform no operations; they exist to satisfy
+    the Debugger interface without affecting interpreter behavior.
+    """
 
     def before_stack_push(self, data: bytes) -> None:
-        # No-op implementation for null object pattern
         pass
 
     def after_stack_push(self, data: bytes) -> None:
-        # No-op implementation for null object pattern
         pass
 
     def before_stack_pop(self) -> None:
-        # No-op implementation for null object pattern
         pass
 
     def after_stack_pop(self, data: bytes) -> None:
-        # No-op implementation for null object pattern
         pass
 
 
