@@ -49,15 +49,19 @@ class NopDebugger:
     """
 
     def before_stack_push(self, data: bytes) -> None:
+        # Intentionally empty - no-op implementation for null object pattern
         pass
 
     def after_stack_push(self, data: bytes) -> None:
+        # Intentionally empty - no-op implementation for null object pattern
         pass
 
     def before_stack_pop(self) -> None:
+        # Intentionally empty - no-op implementation for null object pattern
         pass
 
     def after_stack_pop(self, data: bytes) -> None:
+        # Intentionally empty - no-op implementation for null object pattern
         pass
 
 
