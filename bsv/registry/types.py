@@ -23,6 +23,7 @@ class BasketDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     documentation_url: str
     registry_operator: str | None = None
 
+    # Deprecated camelCase aliases for backward compatibility
     @property
     def definitionType(self) -> Literal["basket"]:
         return self.definition_type
@@ -54,6 +55,7 @@ class ProtocolDefinitionData:  # NOSONAR - camelCase matches TS/Go registry API
     documentation_url: str
     registry_operator: str | None = None
 
+    # Deprecated camelCase aliases for backward compatibility
     @property
     def definitionType(self) -> Literal["protocol"]:
         return self.definition_type
@@ -86,6 +88,7 @@ class CertificateDefinitionData:  # NOSONAR - camelCase matches TS/Go registry A
     fields: dict[str, CertificateFieldDescriptor]
     registry_operator: str | None = None
 
+    # Deprecated camelCase aliases for backward compatibility
     @property
     def definitionType(self) -> Literal["certificate"]:
         return self.definition_type
@@ -118,6 +121,7 @@ class TokenData:  # NOSONAR - camelCase matches TS/Go registry API
     locking_script: str
     beef: bytes
 
+    # Deprecated camelCase aliases for backward compatibility
     @property
     def outputIndex(self) -> int:
         return self.output_index

@@ -99,13 +99,13 @@ def _parse_locking_script(definition_type: DefinitionType, locking_script_hex: s
         if len(fields) != 6:
             raise ValueError("Unexpected field count for basket type")
         return BasketDefinitionData(
-            definitionType="basket",
-            basketID=fields[0].decode(),
+            definition_type="basket",
+            basket_id=fields[0].decode(),
             name=fields[1].decode(),
-            iconURL=fields[2].decode(),
+            icon_url=fields[2].decode(),
             description=fields[3].decode(),
-            documentationURL=fields[4].decode(),
-            registryOperator=fields[5].decode(),
+            documentation_url=fields[4].decode(),
+            registry_operator=fields[5].decode(),
         )
     if definition_type == "protocol":
         if len(fields) != 6:
@@ -113,13 +113,13 @@ def _parse_locking_script(definition_type: DefinitionType, locking_script_hex: s
         import json
 
         return ProtocolDefinitionData(
-            definitionType="protocol",
-            protocolID=json.loads(fields[0].decode()),
+            definition_type="protocol",
+            protocol_id=json.loads(fields[0].decode()),
             name=fields[1].decode(),
-            iconURL=fields[2].decode(),
+            icon_url=fields[2].decode(),
             description=fields[3].decode(),
-            documentationURL=fields[4].decode(),
-            registryOperator=fields[5].decode(),
+            documentation_url=fields[4].decode(),
+            registry_operator=fields[5].decode(),
         )
     if definition_type == "certificate":
         if len(fields) != 7:
@@ -132,14 +132,14 @@ def _parse_locking_script(definition_type: DefinitionType, locking_script_hex: s
         except Exception:
             parsed_fields = {}
         return CertificateDefinitionData(
-            definitionType="certificate",
+            definition_type="certificate",
             type=fields[0].decode(),
             name=fields[1].decode(),
-            iconURL=fields[2].decode(),
+            icon_url=fields[2].decode(),
             description=fields[3].decode(),
-            documentationURL=fields[4].decode(),
+            documentation_url=fields[4].decode(),
             fields=cast(dict[str, Any], parsed_fields),
-            registryOperator=fields[6].decode(),
+            registry_operator=fields[6].decode(),
         )
     raise ValueError(f"Unsupported definition type: {definition_type}")
 

@@ -202,9 +202,9 @@ def ckd(xkey: Union[Xprv, Xpub], path: str) -> Union[Xprv, Xpub]:
 
     if steps[0] == "m":
         # should be master key
-        assert xkey.depth == 0 and xkey.fingerprint == b"\x00\x00\x00\x00" and xkey.index == 0, (
-            "absolute path for non-master key"
-        )
+        assert (
+            xkey.depth == 0 and xkey.fingerprint == b"\x00\x00\x00\x00" and xkey.index == 0
+        ), "absolute path for non-master key"
 
     child = xkey
     for step in steps[1:]:

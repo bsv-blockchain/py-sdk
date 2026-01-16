@@ -29,12 +29,12 @@ def test_key_derivation_consistency():
 
     # Test BIP32 derivation consistency
     for i in range(2):
-        assert keys_from_bip32_xprv[i].address() == keys_from_bip32_xpub[i].address(), (
-            f"BIP32 xprv/xpub derivation mismatch at index {i}"
-        )
-        assert keys_from_bip32_xprv[i].address() == keys_from_bip32_mnemonic[i].address(), (
-            f"BIP32 xprv/mnemonic derivation mismatch at index {i}"
-        )
+        assert (
+            keys_from_bip32_xprv[i].address() == keys_from_bip32_xpub[i].address()
+        ), f"BIP32 xprv/xpub derivation mismatch at index {i}"
+        assert (
+            keys_from_bip32_xprv[i].address() == keys_from_bip32_mnemonic[i].address()
+        ), f"BIP32 xprv/mnemonic derivation mismatch at index {i}"
 
     # Test BIP44 derivation
     keys_from_bip32_mnemonic = bip32_derive_xprvs_from_mnemonic(
@@ -46,9 +46,9 @@ def test_key_derivation_consistency():
 
     # Test BIP44 derivation consistency
     for i in range(2):
-        assert keys_from_bip32_mnemonic[i].address() == keys_from_bip44_mnemonic[i].address(), (
-            f"BIP32/BIP44 derivation mismatch at index {i}"
-        )
+        assert (
+            keys_from_bip32_mnemonic[i].address() == keys_from_bip44_mnemonic[i].address()
+        ), f"BIP32/BIP44 derivation mismatch at index {i}"
 
 
 def test_invalid_mnemonic():

@@ -145,6 +145,6 @@ def test_concurrent_handshakes_different_peers():
         if session is not None:
             assert hasattr(session, "session_nonce"), "Session should have session_nonce"
             assert hasattr(session, "peer_identity_key"), "Session should have peer_identity_key"
-            assert session.peer_identity_key == expected_key, (
-                f"Session should have correct peer identity key: expected {expected_key.hex()}, got {session.peer_identity_key.hex()}"
-            )
+            assert (
+                session.peer_identity_key == expected_key
+            ), f"Session should have correct peer identity key: expected {expected_key.hex()}, got {session.peer_identity_key.hex()}"
