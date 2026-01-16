@@ -1468,7 +1468,7 @@ def _serialize_legacy_inputs(
         raw += seq.to_bytes(4, "little")
 
 
-def _serialize_legacy_outputs(raw: bytearray, t: "Thread", hash_type: int) -> None:
+def _serialize_legacy_outputs(raw: bytearray, t: "Thread", hash_type: int) -> None:  # NOSONAR(S1481)
     """Serialize outputs for legacy sighash computation."""
     if hash_type == int(SIGHASH.NONE):
         raw += unsigned_to_varint(0)
