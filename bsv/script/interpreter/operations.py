@@ -1443,8 +1443,8 @@ def _compute_legacy_sighash(t: "Thread", script_bytes: bytes, shf_val: int) -> b
 
 
 def _serialize_legacy_inputs(
-    raw: bytearray, t: "Thread", script_bytes: bytes, hash_type: int, anyone_can_pay: bytearray
-) -> None:
+    raw: bytearray, t: "Thread", script_bytes: bytes, hash_type: int, anyone_can_pay: bool
+) -> bytearray:
     """Serialize inputs for legacy sighash computation."""
     if anyone_can_pay:
         raw += unsigned_to_varint(1)
