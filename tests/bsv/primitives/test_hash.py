@@ -20,10 +20,8 @@ def test_ripemd160_sha256():
 
 KEY = b"key"
 MESSAGE_HMAC_SHA256 = bytes.fromhex("9307b3b915efb5171ff14d8cb55fbcc798c6c0ef1456d66ded1a6aa723a58b7b")
-MESSAGE_HMAC_SHA512 = bytes.fromhex(
-    "ff06ab36757777815c008d32c8e14a705b4e7bf310351a06a23b612dc4c7433e\
-                                     7757d20525a5593b71020ea2ee162d2311b247e9855862b270122419652c0c92"
-)
+MESSAGE_HMAC_SHA512 = bytes.fromhex("ff06ab36757777815c008d32c8e14a705b4e7bf310351a06a23b612dc4c7433e\
+                                     7757d20525a5593b71020ea2ee162d2311b247e9855862b270122419652c0c92")
 
 
 def test_hmac_sha256():
