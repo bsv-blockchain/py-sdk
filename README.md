@@ -5,9 +5,25 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/bsv-sdk)](https://pypi.org/project/bsv-sdk)
 [![Coverage](https://img.shields.io/badge/coverage-85.7%25-green)](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)
 
+> ## ⚠️ Beta Version Available (v2.0.0b1)
+>
+> A **beta version** is now available for **BRC-100 compliance** support.
+>
+> If you are using `bsv-wallet-toolbox` or `bsv-middleware`, please use this version:
+>
+> ```bash
+> pip install bsv-sdk==2.0.0b1
+> # or to install the latest pre-release version:
+> pip install bsv-sdk --pre
+> ```
+>
+> For the stable version (1.0.x): `pip install bsv-sdk`
+
 ## Migration Guide (v2.0.0)
 
-**Breaking Changes:** Version 2.0.0 introduces several breaking changes to standardize on camelCase JSON schemas and stricter AuthMessage validation.
+**Note:** The camelCase changes described below **only apply to BRC-100 related modules** (authentication, wallet wire protocol, etc.). These changes affect **JSON wire formats** for cross-SDK interoperability with TypeScript SDK and Go SDK. Python class attributes and method parameters remain in snake_case per PEP 8 conventions.
+
+**Breaking Changes:** Version 2.0.0 introduces changes to standardize on camelCase JSON schemas and stricter AuthMessage validation for BRC-100 compliance.
 
 ### Key Changes
 
