@@ -24,6 +24,24 @@ from bsv import (
 )
 
 
+def validate_transaction(tx, source_tx, input_index=0):
+    """Helper function to validate a transaction using Spend."""
+    from bsv import Spend
+    return Spend({
+        'sourceTXID': tx.inputs[input_index].source_txid,
+        'sourceOutputIndex': tx.inputs[input_index].source_output_index,
+        'sourceSatoshis': source_tx.outputs[0].satoshis,
+        'lockingScript': source_tx.outputs[0].locking_script,
+        'transactionVersion': tx.version,
+        'otherInputs': [],
+        'inputIndex': input_index,
+        'unlockingScript': tx.inputs[input_index].unlocking_script,
+        'outputs': tx.outputs,
+        'inputSequence': tx.inputs[input_index].sequence,
+        'lockTime': tx.locktime,
+    }).validate()
+
+
 def main():
     print("OP_CAT Example")
     print("=" * 50)
@@ -106,23 +124,7 @@ def main():
     print()
 
     # Verify the transaction would be valid
-    from bsv import Spend
-
-    spend = Spend({
-        'sourceTXID': tx.inputs[0].source_txid,
-        'sourceOutputIndex': tx.inputs[0].source_output_index,
-        'sourceSatoshis': source_tx.outputs[0].satoshis,
-        'lockingScript': source_tx.outputs[0].locking_script,
-        'transactionVersion': tx.version,
-        'otherInputs': [],
-        'inputIndex': 0,
-        'unlockingScript': tx.inputs[0].unlocking_script,
-        'outputs': tx.outputs,
-        'inputSequence': tx.inputs[0].sequence,
-        'lockTime': tx.locktime,
-    })
-
-    is_valid = spend.validate()
+    is_valid = validate_transaction(tx, source_tx)
     print(f"Transaction validation: {'PASS' if is_valid else 'FAIL'}")
     print()
 
@@ -160,21 +162,7 @@ def main():
         mock_tx.sign()
 
         # Validate
-        test_spend = Spend({
-            'sourceTXID': mock_tx.inputs[0].source_txid,
-            'sourceOutputIndex': 0,
-            'sourceSatoshis': 100,
-            'lockingScript': lock_script,
-            'transactionVersion': mock_tx.version,
-            'otherInputs': [],
-            'inputIndex': 0,
-            'unlockingScript': mock_tx.inputs[0].unlocking_script,
-            'outputs': mock_tx.outputs,
-            'inputSequence': mock_tx.inputs[0].sequence,
-            'lockTime': mock_tx.locktime,
-        })
-
-        valid = test_spend.validate()
+        valid = validate_transaction(mock_tx, mock_source)
         print(f"  Validation: {'✓ PASS' if valid else '✗ FAIL'}")
         print()
 
