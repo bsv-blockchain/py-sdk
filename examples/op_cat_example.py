@@ -14,7 +14,6 @@ When executed, the unlocking script pushes data_piece_1 and data_piece_2 onto th
 OP_CAT concatenates them, and OP_EQUAL checks if the result matches expected_data.
 """
 
-import asyncio
 from bsv import (
     Transaction,
     TransactionInput,
@@ -22,12 +21,10 @@ from bsv import (
     PrivateKey,
     OpCat,
     P2PKH,
-    BroadcastResponse,
-    WhatsOnChainBroadcaster,
 )
 
 
-async def main():
+def main():
     print("OP_CAT Example")
     print("=" * 50)
 
@@ -129,20 +126,6 @@ async def main():
     print(f"Transaction validation: {'PASS' if is_valid else 'FAIL'}")
     print()
 
-    # Optional: Broadcast the transaction (commented out for safety)
-    # Note: This would require a real UTXO to spend
-    """
-    print("Broadcasting transaction...")
-    try:
-        res = await tx.broadcast(WhatsOnChainBroadcaster("test"))
-        if isinstance(res, BroadcastResponse):
-            print(f"Transaction broadcast successfully: {res.txid}")
-        else:
-            print(f"Broadcast failed: {res}")
-    except Exception as e:
-        print(f"Broadcast error: {e}")
-    """
-
     # Demonstrate with different data combinations
     print("Demonstrating different data combinations:")
     print("-" * 40)
@@ -199,4 +182,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
