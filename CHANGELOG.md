@@ -29,7 +29,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- (Include new features or significant user-visible enhancements here.)
+- **OpCat Script Template**: Added new `OpCat` class for creating and spending outputs locked with OP_CAT scripts
+  - Supports flexible data concatenation: `OP_CAT <expected_data> OP_EQUAL` locking scripts
+  - Template-based unlocking with two data pieces that concatenate to match the expected result
+  - Includes comprehensive tests and example script demonstrating OP_CAT functionality
 
 ### Changed
 - (Detail modifications that are non-breaking but relevant to the end-users.)
