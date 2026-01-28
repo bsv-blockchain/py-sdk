@@ -61,27 +61,56 @@ class Script:
         """Backward compatibility property for script field."""
         return self.script_bytes
 
+    def _update_conditional_depth(self, op: bytes, depth: int) -> int:
+        """Update conditional block depth based on opcode."""
+        if op == OpCode.OP_IF or op == OpCode.OP_NOTIF or op == OpCode.OP_VERIF or op == OpCode.OP_VERNOTIF:
+            return depth + 1
+        if op == OpCode.OP_ENDIF:
+            return max(0, depth - 1)
+        return depth
+
+    def _handle_op_return(self, reader: Reader, chunk: ScriptChunk) -> bool:
+        """Handle OP_RETURN opcode. Returns True if parsing should terminate."""
+        remaining_length = len(reader.getvalue()) - reader.tell()
+        if remaining_length > 0:
+            chunk.data = reader.read_bytes(remaining_length)
+        else:
+            chunk.data = None
+        self.chunks.append(chunk)
+        return True  # Terminate parsing
+
+    def _read_push_data(self, reader: Reader, op: bytes) -> Optional[bytes]:
+        """Read push data based on opcode. Returns data bytes or None."""
+        if b"\x01" <= op <= b"\x4b":
+            return reader.read_bytes(int.from_bytes(op, "big"))
+        if op == OpCode.OP_PUSHDATA1:
+            length = reader.read_uint8()
+            return reader.read_bytes(length) if length is not None else None
+        if op == OpCode.OP_PUSHDATA2:
+            length = reader.read_uint16_le()
+            return reader.read_bytes(length) if length is not None else None
+        if op == OpCode.OP_PUSHDATA4:
+            length = reader.read_uint32_le()
+            return reader.read_bytes(length) if length is not None else None
+        return None
+
     def _build_chunks(self):
         self.chunks = []
         reader = Reader(self.script_bytes)
+        in_conditional_block = 0
+
         while not reader.eof():
             op = reader.read_bytes(1)
             chunk = ScriptChunk(op)
-            data = None
-            if b"\x01" <= op <= b"\x4b":
-                data = reader.read_bytes(int.from_bytes(op, "big"))
-            elif op == OpCode.OP_PUSHDATA1:  # 0x4c
-                length = reader.read_uint8()
-                if length is not None:
-                    data = reader.read_bytes(length)
-            elif op == OpCode.OP_PUSHDATA2:
-                length = reader.read_uint16_le()
-                if length is not None:
-                    data = reader.read_bytes(length)
-            elif op == OpCode.OP_PUSHDATA4:
-                length = reader.read_uint32_le()
-                if length is not None:
-                    data = reader.read_bytes(length)
+
+            in_conditional_block = self._update_conditional_depth(op, in_conditional_block)
+
+            if op == OpCode.OP_RETURN and in_conditional_block == 0:
+                if self._handle_op_return(reader, chunk):
+                    break
+                continue
+
+            data = self._read_push_data(reader, op)
             chunk.data = data
             self.chunks.append(chunk)
 
