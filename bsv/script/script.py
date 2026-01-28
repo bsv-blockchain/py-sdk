@@ -44,80 +44,87 @@ class Script:
         Create script from hex string or bytes
         """
         if script is None:
-            self.script: bytes = b""
+            self._bytes: bytes = b""
         elif isinstance(script, str):
             # script in hex string
-            self.script: bytes = bytes.fromhex(script)
+            self._bytes: bytes = bytes.fromhex(script)
         elif isinstance(script, bytes):
             # script in bytes
-            self.script: bytes = script
+            self._bytes: bytes = script
         else:
             raise TypeError("unsupported script type")
         # An array of script chunks that make up the script.
         self.chunks: List[ScriptChunk] = []
         self._build_chunks()
 
+    def _update_conditional_depth(self, op: bytes, depth: int) -> int:
+        """Update conditional block depth based on opcode."""
+        if (
+            op == OpCode.OP_IF
+            or op == OpCode.OP_NOTIF
+            or op == OpCode.OP_VERIF
+            or op == OpCode.OP_VERNOTIF
+        ):
+            return depth + 1
+        if op == OpCode.OP_ENDIF:
+            return max(0, depth - 1)
+        return depth
+
+    def _handle_op_return(self, reader: Reader, chunk: ScriptChunk) -> bool:
+        """Handle OP_RETURN opcode. Returns True if parsing should terminate."""
+        remaining_length = len(reader.getvalue()) - reader.tell()
+        if remaining_length > 0:
+            chunk.data = reader.read_bytes(remaining_length)
+        else:
+            chunk.data = None
+        self.chunks.append(chunk)
+        return True  # Terminate parsing
+
+    def _read_push_data(self, reader: Reader, op: bytes) -> Optional[bytes]:
+        """Read push data based on opcode. Returns data bytes or None."""
+        if b"\x01" <= op <= b"\x4b":
+            return reader.read_bytes(int.from_bytes(op, "big"))
+        if op == OpCode.OP_PUSHDATA1:
+            length = reader.read_uint8()
+            return reader.read_bytes(length) if length is not None else None
+        if op == OpCode.OP_PUSHDATA2:
+            length = reader.read_uint16_le()
+            return reader.read_bytes(length) if length is not None else None
+        if op == OpCode.OP_PUSHDATA4:
+            length = reader.read_uint32_le()
+            return reader.read_bytes(length) if length is not None else None
+        return None
+
     def _build_chunks(self):
         self.chunks = []
-        reader = Reader(self.script)
-        in_conditional_block = (
-            0  # Track conditional depth for proper OP_RETURN handling
-        )
+        reader = Reader(self._bytes)
+        in_conditional_block = 0
 
         while not reader.eof():
             op = reader.read_bytes(1)
             chunk = ScriptChunk(op)
-            data = None
 
-            # Track conditional blocks (OP_IF, OP_NOTIF, OP_VERIF, OP_VERNOTIF)
-            if (
-                op == OpCode.OP_IF
-                or op == OpCode.OP_NOTIF
-                or op == OpCode.OP_VERIF
-                or op == OpCode.OP_VERNOTIF
-            ):
-                in_conditional_block += 1
-            elif op == OpCode.OP_ENDIF:
-                in_conditional_block = max(0, in_conditional_block - 1)
+            in_conditional_block = self._update_conditional_depth(
+                op, in_conditional_block
+            )
 
-            # Handle OP_RETURN: terminate script, treat remaining as data
-            # Only terminate if not inside a conditional block
             if op == OpCode.OP_RETURN and in_conditional_block == 0:
-                # Read all remaining bytes as data (from position after 0x6a)
-                remaining_length = len(reader.getvalue()) - reader.tell()
-                if remaining_length > 0:
-                    data = reader.read_bytes(remaining_length)
-                chunk.data = data
-                self.chunks.append(chunk)
-                break  # Terminate parsing
+                if self._handle_op_return(reader, chunk):
+                    break
+                continue
 
-            # Handle push data operations
-            if b"\x01" <= op <= b"\x4b":
-                data = reader.read_bytes(int.from_bytes(op, "big"))
-            elif op == OpCode.OP_PUSHDATA1:  # 0x4c
-                length = reader.read_uint8()
-                if length is not None:
-                    data = reader.read_bytes(length)
-            elif op == OpCode.OP_PUSHDATA2:
-                length = reader.read_uint16_le()
-                if length is not None:
-                    data = reader.read_bytes(length)
-            elif op == OpCode.OP_PUSHDATA4:
-                length = reader.read_uint32_le()
-                if length is not None:
-                    data = reader.read_bytes(length)
-
+            data = self._read_push_data(reader, op)
             chunk.data = data
             self.chunks.append(chunk)
 
     def serialize(self) -> bytes:
-        return self.script
+        return self._bytes
 
     def hex(self) -> str:
-        return self.script.hex()
+        return self._bytes.hex()
 
     def byte_length(self) -> int:
-        return len(self.script)
+        return len(self._bytes)
 
     size = byte_length
 
@@ -138,11 +145,11 @@ class Script:
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, Script):
-            return self.script == o.script
+            return self._bytes == o._bytes
         return super().__eq__(o)
 
     def __str__(self) -> str:
-        return self.script.hex()
+        return self._bytes.hex()
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -159,49 +166,57 @@ class Script:
         return s
 
     @classmethod
+    def _parse_opcode_token(cls, token: str) -> Optional[bytes]:
+        """Parse a single token as an opcode. Returns opcode bytes or None."""
+        if token in OPCODE_NAME_VALUE_DICT:
+            return OPCODE_NAME_VALUE_DICT[token]
+        if token == "0":
+            return b"\x00"
+        if token == "-1":
+            return OpCode.OP_1NEGATE
+        return None
+
+    @classmethod
+    def _parse_data_token(cls, token: str) -> tuple[bytes, bytes]:
+        """Parse a token as hex data. Returns (opcode, data) tuple."""
+        hex_string = token
+        if len(hex_string) % 2 != 0:
+            hex_string = "0" + hex_string
+        hex_bytes = bytes.fromhex(hex_string)
+        if hex_bytes.hex() != hex_string.lower():
+            raise ValueError("invalid hex string in script")
+
+        hex_len = len(hex_bytes)
+        if 0 <= hex_len < int.from_bytes(OpCode.OP_PUSHDATA1, "big"):
+            opcode_value = int.to_bytes(hex_len, 1, "big")
+        elif hex_len < pow(2, 8):
+            opcode_value = OpCode.OP_PUSHDATA1
+        elif hex_len < pow(2, 16):
+            opcode_value = OpCode.OP_PUSHDATA2
+        else:
+            opcode_value = OpCode.OP_PUSHDATA4
+        return (opcode_value, hex_bytes)
+
+    @classmethod
     def from_asm(cls, asm: str) -> "Script":
         chunks: [ScriptChunk] = []
-        if not asm:  # Handle empty string
+        if not asm:
             return Script.from_chunks(chunks)
+
         tokens = asm.split(" ")
         i = 0
         while i < len(tokens):
             token = tokens[i]
-            opcode_value: Optional[bytes] = None
-            # BRC-106: Check if token is a recognized opcode (including aliases)
-            if token in OPCODE_NAME_VALUE_DICT:
-                opcode_value = OPCODE_NAME_VALUE_DICT[token]
-                chunks.append(ScriptChunk(opcode_value))
-                i += 1
-            elif token == "0":
-                # Numeric literal 0
-                opcode_value = b"\x00"
-                chunks.append(ScriptChunk(opcode_value))
-                i += 1
-            elif token == "-1":
-                # Numeric literal -1
-                opcode_value = OpCode.OP_1NEGATE
+            opcode_value = cls._parse_opcode_token(token)
+
+            if opcode_value is not None:
                 chunks.append(ScriptChunk(opcode_value))
                 i += 1
             else:
-                # Assume it's hex data to push
-                hex_string = token
-                if len(hex_string) % 2 != 0:
-                    hex_string = "0" + hex_string
-                hex_bytes = bytes.fromhex(hex_string)
-                if hex_bytes.hex() != hex_string.lower():
-                    raise ValueError("invalid hex string in script")
-                hex_len = len(hex_bytes)
-                if 0 <= hex_len < int.from_bytes(OpCode.OP_PUSHDATA1, "big"):
-                    opcode_value = int.to_bytes(hex_len, 1, "big")
-                elif hex_len < pow(2, 8):
-                    opcode_value = OpCode.OP_PUSHDATA1
-                elif hex_len < pow(2, 16):
-                    opcode_value = OpCode.OP_PUSHDATA2
-                elif hex_len < pow(2, 32):
-                    opcode_value = OpCode.OP_PUSHDATA4
+                opcode_value, hex_bytes = cls._parse_data_token(token)
                 chunks.append(ScriptChunk(opcode_value, hex_bytes))
-                i = i + 1
+                i += 1
+
         return Script.from_chunks(chunks)
 
     def to_asm(self) -> str:
