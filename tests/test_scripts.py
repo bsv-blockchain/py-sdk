@@ -10,6 +10,32 @@ from bsv.utils import address_to_public_key_hash, encode_pushdata, encode_int
 from bsv.curve import curve_multiply, curve, Point
 
 
+def _create_spend_validator(tx, source_tx, input_index=0, other_inputs=None):
+    """Helper function to create and validate a Spend object from transaction data."""
+    if other_inputs is None:
+        other_inputs = []
+    spend = Spend(
+        {
+            "sourceTXID": tx.inputs[input_index].source_txid,
+            "sourceOutputIndex": tx.inputs[input_index].source_output_index,
+            "sourceSatoshis": source_tx.outputs[
+                tx.inputs[input_index].source_output_index
+            ].satoshis,
+            "lockingScript": source_tx.outputs[
+                tx.inputs[input_index].source_output_index
+            ].locking_script,
+            "transactionVersion": tx.version,
+            "otherInputs": other_inputs,
+            "inputIndex": input_index,
+            "unlockingScript": tx.inputs[input_index].unlocking_script,
+            "outputs": tx.outputs,
+            "inputSequence": tx.inputs[input_index].sequence,
+            "lockTime": tx.locktime,
+        }
+    )
+    assert spend.validate()
+
+
 def test_script():
     locking_script = "76a9146a176cd51593e00542b8e1958b7da2be97452d0588ac"
     assert Script(locking_script) == Script(bytes.fromhex(locking_script))
@@ -63,22 +89,7 @@ def test_p2pkh():
     assert isinstance(unlocking_script, Script)
     assert unlocking_script.byte_length() in [106, 107]
 
-    spend = Spend(
-        {
-            "sourceTXID": tx.inputs[0].source_txid,
-            "sourceOutputIndex": tx.inputs[0].source_output_index,
-            "sourceSatoshis": source_tx.outputs[0].satoshis,
-            "lockingScript": source_tx.outputs[0].locking_script,
-            "transactionVersion": tx.version,
-            "otherInputs": [],
-            "inputIndex": 0,
-            "unlockingScript": tx.inputs[0].unlocking_script,
-            "outputs": tx.outputs,
-            "inputSequence": tx.inputs[0].sequence,
-            "lockTime": tx.locktime,
-        }
-    )
-    assert spend.validate()
+    _create_spend_validator(tx, source_tx)
 
 
 def test_op_return():
@@ -185,23 +196,7 @@ def test_p2pk():
     unlocking_script = P2PK().unlock(private_key).sign(tx, 0)
     assert isinstance(unlocking_script, Script)
     assert unlocking_script.byte_length() in [72, 73]
-
-    spend = Spend(
-        {
-            "sourceTXID": tx.inputs[0].source_txid,
-            "sourceOutputIndex": tx.inputs[0].source_output_index,
-            "sourceSatoshis": source_tx.outputs[0].satoshis,
-            "lockingScript": source_tx.outputs[0].locking_script,
-            "transactionVersion": tx.version,
-            "otherInputs": [],
-            "inputIndex": 0,
-            "unlockingScript": tx.inputs[0].unlocking_script,
-            "outputs": tx.outputs,
-            "inputSequence": tx.inputs[0].sequence,
-            "lockTime": tx.locktime,
-        }
-    )
-    assert spend.validate()
+    _create_spend_validator(tx, source_tx)
 
 
 def test_bare_multisig():
@@ -249,23 +244,7 @@ def test_bare_multisig():
     unlocking_script = BareMultisig().unlock(privs[:2]).sign(tx, 0)
     assert isinstance(unlocking_script, Script)
     assert unlocking_script.byte_length() >= 144
-
-    spend = Spend(
-        {
-            "sourceTXID": tx.inputs[0].source_txid,
-            "sourceOutputIndex": tx.inputs[0].source_output_index,
-            "sourceSatoshis": source_tx.outputs[0].satoshis,
-            "lockingScript": source_tx.outputs[0].locking_script,
-            "transactionVersion": tx.version,
-            "otherInputs": [],
-            "inputIndex": 0,
-            "unlockingScript": tx.inputs[0].unlocking_script,
-            "outputs": tx.outputs,
-            "inputSequence": tx.inputs[0].sequence,
-            "lockTime": tx.locktime,
-        }
-    )
-    assert spend.validate()
+    _create_spend_validator(tx, source_tx)
 
 
 def test_is_push_only():
@@ -374,23 +353,7 @@ def test_r_puzzle():
     tx.sign()
 
     assert len(tx.inputs[0].unlocking_script.serialize()) >= 106
-
-    spend = Spend(
-        {
-            "sourceTXID": tx.inputs[0].source_txid,
-            "sourceOutputIndex": tx.inputs[0].source_output_index,
-            "sourceSatoshis": source_tx.outputs[0].satoshis,
-            "lockingScript": source_tx.outputs[0].locking_script,
-            "transactionVersion": tx.version,
-            "otherInputs": [],
-            "inputIndex": 0,
-            "unlockingScript": tx.inputs[0].unlocking_script,
-            "outputs": tx.outputs,
-            "inputSequence": tx.inputs[0].sequence,
-            "lockTime": tx.locktime,
-        }
-    )
-    assert spend.validate()
+    _create_spend_validator(tx, source_tx)
 
 
 def test_p2pkh_sighash_acp():
@@ -428,20 +391,4 @@ def test_p2pkh_sighash_acp():
             unlocking_script_template=P2PKH().unlock(key),
         )
     )
-
-    spend = Spend(
-        {
-            "sourceTXID": tx.inputs[0].source_txid,
-            "sourceOutputIndex": tx.inputs[0].source_output_index,
-            "sourceSatoshis": source_tx.outputs[0].satoshis,
-            "lockingScript": source_tx.outputs[0].locking_script,
-            "transactionVersion": tx.version,
-            "otherInputs": [tx.inputs[1]],
-            "inputIndex": 0,
-            "unlockingScript": tx.inputs[0].unlocking_script,
-            "outputs": tx.outputs,
-            "inputSequence": tx.inputs[0].sequence,
-            "lockTime": tx.locktime,
-        }
-    )
-    assert spend.validate()
+    _create_spend_validator(tx, source_tx, other_inputs=[tx.inputs[1]])
