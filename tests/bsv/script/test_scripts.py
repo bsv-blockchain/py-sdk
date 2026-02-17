@@ -89,6 +89,54 @@ def test_op_return():
         OpReturn().lock([1])
 
 
+def test_op_return_chunk_parsing():
+    """
+    Test that OP_RETURN correctly terminates script parsing and treats remaining bytes as data.
+    This verifies the fix for issue where scripts starting with 0x00 6a were incorrectly parsed.
+    """
+    # Test case: OP_FALSE OP_RETURN with data (the bug case)
+    # Script: 00 (OP_FALSE) 6a (OP_RETURN) 04 (push 4 bytes) 54657374 ("Test")
+    script = Script("006a0454657374")
+    chunks = list(script.chunks)
+
+    # Should parse as 2 chunks, not 3
+    assert len(chunks) == 2, f"Expected 2 chunks, got {len(chunks)}"
+
+    # First chunk: OP_FALSE
+    assert chunks[0].op == b"\x00"
+    assert chunks[0].data is None
+
+    # Second chunk: OP_RETURN with all remaining data
+    assert chunks[1].op == b"\x6a"
+    assert chunks[1].data == b"\x04Test"
+
+    # Test case: OP_RETURN with data (no OP_FALSE prefix)
+    script2 = Script("6a0454657374")
+    chunks2 = list(script2.chunks)
+
+    assert len(chunks2) == 1, f"Expected 1 chunk, got {len(chunks2)}"
+    assert chunks2[0].op == b"\x6a"
+    assert chunks2[0].data == b"\x04Test"
+
+    # Test case: OP_RETURN with no data
+    script3 = Script("6a")
+    chunks3 = list(script3.chunks)
+
+    assert len(chunks3) == 1
+    assert chunks3[0].op == b"\x6a"
+    assert chunks3[0].data is None
+
+    # Test case: OP_FALSE OP_RETURN with no data
+    script4 = Script("006a")
+    chunks4 = list(script4.chunks)
+
+    assert len(chunks4) == 2
+    assert chunks4[0].op == b"\x00"
+    assert chunks4[0].data is None
+    assert chunks4[1].op == b"\x6a"
+    assert chunks4[1].data is None
+
+
 def test_p2pk():
     private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
     public_key = private_key.public_key()
