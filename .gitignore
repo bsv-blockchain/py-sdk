@@ -9,5 +9,5 @@ htmlcov/
 .coverage
 build/
 .venv/
-.env.local
+.env*
 .wallet
