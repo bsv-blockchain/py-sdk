@@ -17,6 +17,58 @@ REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS = True
 REQUIRE_LOW_S_SIGNATURES = True
 REQUIRE_CLEAN_STACK = True
 
+# Bit-shift mask tables matching the BSV node interpreter
+_LSHIFT_MASKS = [0xFF, 0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01]
+_RSHIFT_MASKS = [0xFF, 0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80]
+
+
+def _lshift_bytes(data: bytes, n_bits: int) -> bytes:
+    """Left-shift a byte vector by n_bits bits (big-endian, preserves length).
+
+    Matches the BSV node LShift() helper in interpreter.cpp.
+    """
+    length = len(data)
+    if length == 0 or n_bits == 0:
+        return data
+    if n_bits >= length * 8:
+        return b'\x00' * length
+    bit_shift = n_bits % 8
+    byte_shift = n_bits // 8
+    mask = _LSHIFT_MASKS[bit_shift]
+    overflow_mask = (~mask) & 0xFF
+    result = bytearray(length)
+    for i in range(length - 1, -1, -1):
+        if byte_shift <= i:
+            k = i - byte_shift
+            result[k] |= (data[i] & mask) << bit_shift
+            if k >= 1 and bit_shift > 0:
+                result[k - 1] |= (data[i] & overflow_mask) >> (8 - bit_shift)
+    return bytes(result)
+
+
+def _rshift_bytes(data: bytes, n_bits: int) -> bytes:
+    """Right-shift a byte vector by n_bits bits (big-endian, preserves length).
+
+    Matches the BSV node RShift() helper in interpreter.cpp.
+    """
+    length = len(data)
+    if length == 0 or n_bits == 0:
+        return data
+    if n_bits >= length * 8:
+        return b'\x00' * length
+    bit_shift = n_bits % 8
+    byte_shift = n_bits // 8
+    mask = _RSHIFT_MASKS[bit_shift]
+    overflow_mask = (~mask) & 0xFF
+    result = bytearray(length)
+    for i in range(length):
+        k = i + byte_shift
+        if k < length:
+            result[k] |= (data[i] & mask) >> bit_shift
+        if k + 1 < length and bit_shift > 0:
+            result[k + 1] |= (data[i] & overflow_mask) << (8 - bit_shift)
+    return bytes(result)
+
 
 class Spend:
     def __init__(self, params):
@@ -400,7 +452,7 @@ class Spend:
                 if len(self.stack) < 1:
                     self.script_evaluation_error('OP_INVERT requires at least one item to be on the stack.')
                 x = self.stack.pop()
-                x = bytes([~b for b in x])
+                x = bytes([~b & 0xFF for b in x])
                 self.stack.append(x)
 
             elif current_opcode in [OpCode.OP_LSHIFT, OpCode.OP_RSHIFT]:
@@ -410,11 +462,12 @@ class Spend:
                 n = self.bin2num(self.stacktop(-1))
                 if n < 0:
                     self.script_evaluation_error(f'{_codename} requires the top stack item to be non-negative.')
-                x = self.stack.pop(-2)
+                self.stack.pop()  # pop n
+                x = self.stack.pop()  # pop x
                 if current_opcode == OpCode.OP_LSHIFT:
-                    x = x[n:] + b'\x00' * n
+                    x = _lshift_bytes(x, n)
                 else:
-                    x = b'\x00' * n + x[:-n]
+                    x = _rshift_bytes(x, n)
                 self.stack.append(x)
 
             elif current_opcode in [OpCode.OP_EQUAL, OpCode.OP_EQUALVERIFY]:
@@ -489,11 +542,15 @@ class Spend:
                 elif current_opcode == OpCode.OP_DIV:
                     if x2 == 0:
                         self.script_evaluation_error('OP_DIV cannot divide by zero!')
-                    x = x1 // x2
+                    # C-style truncation toward zero (matches CScriptNum behaviour in node)
+                    sign = -1 if (x1 < 0) != (x2 < 0) else 1
+                    x = sign * (abs(x1) // abs(x2))
                 elif current_opcode == OpCode.OP_MOD:
                     if x2 == 0:
                         self.script_evaluation_error('OP_MOD cannot divide by zero!')
-                    x = x1 % x2
+                    # C-style modulo: sign follows dividend (matches CScriptNum behaviour in node)
+                    sign = -1 if (x1 < 0) != (x2 < 0) else 1
+                    x = x1 - x2 * (sign * (abs(x1) // abs(x2)))
                 elif current_opcode == OpCode.OP_BOOLAND:
                     x = 1 if x1 != 0 and x2 != 0 else 0
                 elif current_opcode == OpCode.OP_BOOLOR:
@@ -652,7 +709,7 @@ class Spend:
                         i_sig += 1
                         sigs_count -= 1
                     i_key += 1
-                    sigs_count -= 1
+                    keys_count -= 1
 
                     # If there are more signatures left than keys left, then too many signatures have failed
                     if sigs_count > keys_count:
@@ -729,7 +786,7 @@ class Spend:
                           'is large enough to hold the value expressed in the second-from-top stack item.')
                     self.script_evaluation_error(_m)
 
-                msb = b'\x00'
+                msb = 0
                 if len(x) > 0:
                     msb = x[-1] & 0x80
                     x[-1] &= 0x7f
@@ -815,7 +872,7 @@ class Spend:
         if len(data) == 0:
             return op == OpCode.OP_0
         if len(data) == 1 and 1 <= data[0] <= 16:
-            return op == OpCode.OP_1 + (int.from_bytes(data, 'big') - 1).to_bytes(1, 'big')
+            return op == (int.from_bytes(OpCode.OP_1, 'big') + data[0] - 1).to_bytes(1, 'big')
         if len(data) == 1 and data[0] == 0x81:
             return op == OpCode.OP_1NEGATE
         if len(data) <= 75:
