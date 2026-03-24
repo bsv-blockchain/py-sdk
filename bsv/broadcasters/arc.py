@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 if TYPE_CHECKING:
     from ..transaction import Transaction
 
-from ..broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
+from .broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
 from ..http_client import HttpClient, SyncHttpClient, default_http_client, default_sync_http_client
 
 
