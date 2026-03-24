@@ -271,3 +271,55 @@ class TestOpRight:
             "616263",
         )
         assert spend.validate()
+
+
+# ============================================================
+# OP_LSHIFTNUM tests
+# ============================================================
+
+class TestOpLshiftnum:
+    def test_basic(self):
+        # 1 << 3 = 8
+        spend = make_spend("OP_3 OP_LSHIFTNUM OP_8 OP_EQUALVERIFY OP_TRUE", "OP_1")
+        assert spend.validate()
+
+    def test_zero_shift(self):
+        # 5 << 0 = 5
+        spend = make_spend("OP_0 OP_LSHIFTNUM OP_5 OP_EQUALVERIFY OP_TRUE", "OP_5")
+        assert spend.validate()
+
+    def test_multi_byte_result(self):
+        # 255 << 1 = 510; 255 = 0xff (push ff00 to avoid sign), 510 = 0x01fe
+        spend = make_spend("OP_1 OP_LSHIFTNUM fe01 OP_EQUALVERIFY OP_TRUE", "ff00")
+        assert spend.validate()
+
+    def test_negative_shift_error(self):
+        spend = make_spend("OP_1NEGATE OP_LSHIFTNUM OP_TRUE", "OP_1")
+        with pytest.raises(Exception):
+            spend.validate()
+
+
+# ============================================================
+# OP_RSHIFTNUM tests
+# ============================================================
+
+class TestOpRshiftnum:
+    def test_basic(self):
+        # 8 >> 3 = 1
+        spend = make_spend("OP_3 OP_RSHIFTNUM OP_1 OP_EQUALVERIFY OP_TRUE", "OP_8")
+        assert spend.validate()
+
+    def test_zero_shift(self):
+        # 5 >> 0 = 5
+        spend = make_spend("OP_0 OP_RSHIFTNUM OP_5 OP_EQUALVERIFY OP_TRUE", "OP_5")
+        assert spend.validate()
+
+    def test_truncation(self):
+        # 7 >> 1 = 3
+        spend = make_spend("OP_1 OP_RSHIFTNUM OP_3 OP_EQUALVERIFY OP_TRUE", "OP_7")
+        assert spend.validate()
+
+    def test_negative_number(self):
+        # -8 >> 2 = -2; -8 = 0x88, result -2 = 0x82
+        spend = make_spend("OP_2 OP_RSHIFTNUM 82 OP_EQUALVERIFY OP_TRUE", "88")
+        assert spend.validate()
