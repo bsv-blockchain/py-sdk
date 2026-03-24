@@ -94,7 +94,7 @@ class Spend:
             self.script_evaluation_error("This opcode is currently disabled.")
 
         if is_script_executing and OpCode.OP_0 <= current_opcode <= OpCode.OP_PUSHDATA4:
-            if REQUIRE_MINIMAL_PUSH and not self.is_chunk_minimal(operation):
+            if not self.is_relaxed() and REQUIRE_MINIMAL_PUSH and not self.is_chunk_minimal(operation):
                 self.script_evaluation_error("This data is not minimally-encoded.")
             if operation.data is None:
                 self.stack.append(b"")
@@ -626,7 +626,7 @@ class Spend:
                 # TODO
                 f = self.verify_signature(sig, pub_key, sub_script)
 
-                if not f and len(sig) > 0:
+                if not self.is_relaxed() and not f and len(sig) > 0:
                     self.script_evaluation_error(
                         f"{_codename} failed to verify the signature, "
                         "and requires an empty signature when verification fails."
@@ -722,7 +722,7 @@ class Spend:
                 # to removing it from the stack.
                 if len(self.stack) < 1:
                     self.script_evaluation_error(f"{_codename} requires an extra item to be on the stack.")
-                if len(self.stacktop(-1)) > 0:
+                if not self.is_relaxed() and len(self.stacktop(-1)) > 0:
                     self.script_evaluation_error(f"{_codename} requires the extra stack item to be empty.")
                 self.stack.pop()
 
@@ -837,7 +837,7 @@ class Spend:
         Validates the spend action by interpreting the locking and unlocking scripts.
         Returns true if the scripts are valid and the spend is legitimate, otherwise false.
         """
-        if REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS and not self.unlocking_script.is_push_only():
+        if not self.is_relaxed() and REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS and not self.unlocking_script.is_push_only():
             self.script_evaluation_error("Unlocking scripts can only contain push operations, and no other opcodes.")
 
         while True:
@@ -848,7 +848,7 @@ class Spend:
         if len(self.if_stack) > 0:
             self.script_evaluation_error("Every OP_IF must be terminated prior to the end of the script.")
 
-        if REQUIRE_CLEAN_STACK:
+        if not self.is_relaxed() and REQUIRE_CLEAN_STACK:
             if len(self.stack) != 1:
                 self.script_evaluation_error(
                     "The clean stack rule requires exactly one item to be on the stack after script execution."
@@ -882,6 +882,10 @@ class Spend:
                     return False
                 return True
         return False
+
+    def is_relaxed(self) -> bool:
+        """Chronicle: tx version > 1 relaxes malleability restrictions."""
+        return self.transaction_version > 1
 
     @classmethod
     def is_op_disabled(cls, opcode: bytes) -> bool:
@@ -941,7 +945,7 @@ class Spend:
 
         with suppress(Exception):
             _, s = deserialize_ecdsa_der(sig)
-            if REQUIRE_LOW_S_SIGNATURES and s > curve.n // 2:
+            if not self.is_relaxed() and REQUIRE_LOW_S_SIGNATURES and s > curve.n // 2:
                 self.script_evaluation_error("The signature must have a low S value.")
             return True
         self.script_evaluation_error("The signature format is invalid.")
