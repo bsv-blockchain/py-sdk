@@ -7,7 +7,12 @@ from bsv.utils import Reader, encode_pushdata, unsigned_to_varint
 
 # BRC-106 compliance: Opcode aliases for parsing
 # Build a comprehensive mapping of all opcode names (including aliases) to their byte values
-OPCODE_ALIASES = {"OP_FALSE": b"\x00", "OP_0": b"\x00", "OP_TRUE": b"\x51", "OP_1": b"\x51"}
+OPCODE_ALIASES = {
+    "OP_FALSE": b"\x00", "OP_0": b"\x00", "OP_TRUE": b"\x51", "OP_1": b"\x51",
+    # Chronicle backward-compatible aliases
+    "OP_NOP4": b"\xb3", "OP_NOP5": b"\xb4", "OP_NOP6": b"\xb5",
+    "OP_NOP7": b"\xb6", "OP_NOP8": b"\xb7",
+}
 
 # Build name->value mapping for all OpCodes
 OPCODE_NAME_VALUE_DICT = {item.name: item.value for item in OpCode}
