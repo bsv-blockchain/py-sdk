@@ -202,8 +202,8 @@ Full spec: `CHRONICLE_ROADMAP.md` in repo root. Reference impl: TS-SDK v2.0.0+.
 
 ## Verification
 
-After each step:
+After each step, run only the new/changed Chronicle tests:
 ```bash
 pytest tests/bsv/script/test_chronicle_*.py -v
-pytest --cov=bsv --cov-report=html  # full suite, verify no regressions
 ```
+Full regression suite (`pytest --cov=bsv`) only at the end after Step 10.
