@@ -148,8 +148,6 @@ class Spend:
                 OpCode.OP_NOP1,
                 OpCode.OP_NOP2,
                 OpCode.OP_NOP3,
-                OpCode.OP_LSHIFTNUM,  # Temporarily NOP until Chronicle opcode impl
-                OpCode.OP_RSHIFTNUM,  # Temporarily NOP until Chronicle opcode impl
                 OpCode.OP_NOP9,
                 OpCode.OP_NOP10,
                 OpCode.OP_NOP11,
@@ -487,6 +485,24 @@ class Spend:
                     # Integer division truncating toward zero
                     x = int(x / 2) if x >= 0 else -int(-x / 2)
                 self.stack.append(self.minimally_encode(x))
+
+            elif current_opcode in [OpCode.OP_LSHIFTNUM, OpCode.OP_RSHIFTNUM]:
+                _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
+                if len(self.stack) < 2:
+                    self.script_evaluation_error(f"{_codename} requires at least two items on the stack.")
+                shift = self.bin2num(self.stack.pop())
+                value = self.bin2num(self.stack.pop())
+                if shift < 0:
+                    self.script_evaluation_error(f"{_codename}: shift amount must be non-negative.")
+                if current_opcode == OpCode.OP_LSHIFTNUM:
+                    result = value << shift
+                else:
+                    # Right shift preserving sign: negate, shift, negate
+                    if value < 0:
+                        result = -((-value) >> shift)
+                    else:
+                        result = value >> shift
+                self.stack.append(self.minimally_encode(result))
 
             elif current_opcode in [
                 OpCode.OP_ADD,
