@@ -148,9 +148,6 @@ class Spend:
                 OpCode.OP_NOP1,
                 OpCode.OP_NOP2,
                 OpCode.OP_NOP3,
-                OpCode.OP_SUBSTR,  # Temporarily NOP until Chronicle opcode impl
-                OpCode.OP_LEFT,    # Temporarily NOP until Chronicle opcode impl
-                OpCode.OP_RIGHT,   # Temporarily NOP until Chronicle opcode impl
                 OpCode.OP_LSHIFTNUM,  # Temporarily NOP until Chronicle opcode impl
                 OpCode.OP_RSHIFTNUM,  # Temporarily NOP until Chronicle opcode impl
                 OpCode.OP_NOP9,
@@ -746,6 +743,38 @@ class Spend:
                     )
                 self.stack.append(x1[:n])
                 self.stack.append(x1[n:])
+
+            elif current_opcode == OpCode.OP_SUBSTR:
+                if len(self.stack) < 3:
+                    self.script_evaluation_error("OP_SUBSTR requires at least three items on the stack.")
+                length = self.bin2num(self.stack.pop())
+                start = self.bin2num(self.stack.pop())
+                data = self.stack.pop()
+                if len(data) == 0:
+                    self.script_evaluation_error("OP_SUBSTR: source string is empty.")
+                if length < 0:
+                    self.script_evaluation_error("OP_SUBSTR: length is negative.")
+                if start < 0 or start + length > len(data):
+                    self.script_evaluation_error("OP_SUBSTR: specified range exceeds source string.")
+                self.stack.append(data[start:start + length])
+
+            elif current_opcode == OpCode.OP_LEFT:
+                if len(self.stack) < 2:
+                    self.script_evaluation_error("OP_LEFT requires at least two items on the stack.")
+                length = self.bin2num(self.stack.pop())
+                data = self.stack.pop()
+                if length < 0 or length > len(data):
+                    self.script_evaluation_error("OP_LEFT: length out of range.")
+                self.stack.append(data[:length])
+
+            elif current_opcode == OpCode.OP_RIGHT:
+                if len(self.stack) < 2:
+                    self.script_evaluation_error("OP_RIGHT requires at least two items on the stack.")
+                length = self.bin2num(self.stack.pop())
+                data = self.stack.pop()
+                if length < 0 or length > len(data):
+                    self.script_evaluation_error("OP_RIGHT: length out of range.")
+                self.stack.append(data[len(data) - length:])
 
             elif current_opcode == OpCode.OP_NUM2BIN:
                 if len(self.stack) < 2:
