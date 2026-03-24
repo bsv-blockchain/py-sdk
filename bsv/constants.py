@@ -6,6 +6,7 @@ NUMBER_BYTE_LENGTH: int = 32
 
 TRANSACTION_SEQUENCE: int = int(os.getenv("BSV_PY_SDK_TRANSACTION_SEQUENCE") or 0xFFFFFFFF)
 TRANSACTION_VERSION: int = int(os.getenv("BSV_PY_SDK_TRANSACTION_VERSION") or 1)
+TRANSACTION_VERSION_CHRONICLE: int = 2  # Relaxed malleability rules
 TRANSACTION_LOCKTIME: int = int(os.getenv("BSV_PY_SDK_TRANSACTION_LOCKTIME") or 0)
 TRANSACTION_FEE_RATE: int = int(os.getenv("BSV_PY_SDK_TRANSACTION_FEE_RATE") or 100)  # satoshi per kilobyte
 BIP32_DERIVATION_PATH = os.getenv("BSV_PY_SDK_BIP32_DERIVATION_PATH") or "m/"
@@ -278,6 +279,13 @@ class OpCode(bytes, Enum):
     OP_NOP1 = b"\xb0"
     OP_NOP2 = b"\xb1"
     OP_NOP3 = b"\xb2"
+    # Chronicle opcodes (restored in 2026 Chronicle upgrade)
+    OP_SUBSTR = b"\xb3"
+    OP_LEFT = b"\xb4"
+    OP_RIGHT = b"\xb5"
+    OP_LSHIFTNUM = b"\xb6"
+    OP_RSHIFTNUM = b"\xb7"
+    # Backward-compatible aliases (OP_NOP4-8 are aliases for the above)
     OP_NOP4 = b"\xb3"
     OP_NOP5 = b"\xb4"
     OP_NOP6 = b"\xb5"
@@ -364,3 +372,9 @@ OPCODE_VALUE_NAME_DICT: dict[bytes, str] = {item.value: item.name for item in Op
 # When multiple names exist for the same opcode value, prefer the more descriptive one
 OPCODE_VALUE_NAME_DICT[b"\x00"] = "OP_FALSE"  # More human-readable than OP_0
 OPCODE_VALUE_NAME_DICT[b"\x51"] = "OP_TRUE"  # More human-readable than OP_1
+# Chronicle opcodes: canonical names for restored opcodes
+OPCODE_VALUE_NAME_DICT[b"\xb3"] = "OP_SUBSTR"
+OPCODE_VALUE_NAME_DICT[b"\xb4"] = "OP_LEFT"
+OPCODE_VALUE_NAME_DICT[b"\xb5"] = "OP_RIGHT"
+OPCODE_VALUE_NAME_DICT[b"\xb6"] = "OP_LSHIFTNUM"
+OPCODE_VALUE_NAME_DICT[b"\xb7"] = "OP_RSHIFTNUM"
