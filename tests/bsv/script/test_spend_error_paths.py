@@ -37,13 +37,14 @@ def create_minimal_spend():
 
 
 def test_spend_disabled_opcode():
-    """Test Spend raises error for disabled opcode."""
+    """Test Spend raises error for disabled opcode (Chronicle: no opcodes are disabled now)."""
     spend = create_minimal_spend()
 
-    # Replace unlocking script with disabled opcode
-    spend.unlocking_script = Script.from_chunks([ScriptChunk(OpCode.OP_2MUL)])  # OP_2MUL is disabled
+    # After Chronicle, OP_2MUL is no longer disabled — it's a real opcode.
+    # It will fail with a stack error instead (no items to multiply).
+    spend.unlocking_script = Script.from_chunks([ScriptChunk(OpCode.OP_2MUL)])
 
-    with pytest.raises(Exception, match="currently disabled"):
+    with pytest.raises(Exception, match="requires at least one item"):
         spend.step()
 
 
