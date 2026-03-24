@@ -479,6 +479,18 @@ class Spend:
                     x = 1 if x != 0 else 0
                 self.stack.append(self.minimally_encode(x))
 
+            elif current_opcode in [OpCode.OP_2MUL, OpCode.OP_2DIV]:
+                _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
+                if len(self.stack) < 1:
+                    self.script_evaluation_error(f"{_codename} requires at least one item to be on the stack.")
+                x = self.bin2num(self.stack.pop())
+                if current_opcode == OpCode.OP_2MUL:
+                    x = x * 2
+                else:
+                    # Integer division truncating toward zero
+                    x = int(x / 2) if x >= 0 else -int(-x / 2)
+                self.stack.append(self.minimally_encode(x))
+
             elif current_opcode in [
                 OpCode.OP_ADD,
                 OpCode.OP_SUB,
@@ -828,10 +840,7 @@ class Spend:
 
     @classmethod
     def is_op_disabled(cls, opcode: bytes) -> bool:
-        return (
-            opcode == OpCode.OP_2MUL
-            or opcode == OpCode.OP_2DIV
-        )
+        return False
 
     @classmethod
     def is_chunk_minimal(cls, chunk: ScriptChunk) -> bool:

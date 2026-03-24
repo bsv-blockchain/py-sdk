@@ -106,3 +106,56 @@ class TestOpVernotif:
         # Non-matching => VERNOTIF negates => TRUE branch
         spend = make_spend("OP_VERNOTIF OP_TRUE OP_ELSE OP_FALSE OP_ENDIF", "02000000", tx_version=1)
         assert spend.validate()
+
+
+# ============================================================
+# OP_2MUL tests
+# ============================================================
+
+class TestOp2Mul:
+    def test_not_disabled(self):
+        assert not Spend.is_op_disabled(OpCode.OP_2MUL)
+
+    def test_basic(self):
+        # 3 * 2 = 6
+        spend = make_spend("OP_2MUL OP_6 OP_EQUALVERIFY OP_TRUE", "OP_3")
+        assert spend.validate()
+
+    def test_zero(self):
+        # 0 * 2 = 0
+        spend = make_spend("OP_2MUL OP_0 OP_EQUALVERIFY OP_TRUE", "OP_0")
+        assert spend.validate()
+
+    def test_negative(self):
+        # -1 * 2 = -2; check: -2 + 1 + 1 = 0
+        spend = make_spend("OP_2MUL OP_1ADD OP_1ADD OP_0 OP_EQUALVERIFY OP_TRUE", "OP_1NEGATE")
+        assert spend.validate()
+
+
+# ============================================================
+# OP_2DIV tests
+# ============================================================
+
+class TestOp2Div:
+    def test_not_disabled(self):
+        assert not Spend.is_op_disabled(OpCode.OP_2DIV)
+
+    def test_basic(self):
+        # 6 / 2 = 3
+        spend = make_spend("OP_2DIV OP_3 OP_EQUALVERIFY OP_TRUE", "OP_6")
+        assert spend.validate()
+
+    def test_truncation(self):
+        # 7 / 2 = 3 (integer division)
+        spend = make_spend("OP_2DIV OP_3 OP_EQUALVERIFY OP_TRUE", "OP_7")
+        assert spend.validate()
+
+    def test_zero(self):
+        # 0 / 2 = 0
+        spend = make_spend("OP_2DIV OP_0 OP_EQUALVERIFY OP_TRUE", "OP_0")
+        assert spend.validate()
+
+    def test_negative(self):
+        # -2 / 2 = -1; -2 is encoded as 0x82, -1 as 0x81
+        spend = make_spend("OP_2DIV OP_1NEGATE OP_EQUALVERIFY OP_TRUE", "82")
+        assert spend.validate()
