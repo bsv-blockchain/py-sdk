@@ -96,6 +96,97 @@ def tx_preimages(
     return digests
 
 
+def _preimage_otda(
+    input_index: int,
+    inputs: list[TransactionInput],
+    outputs: list[TransactionOutput],
+    tx_version: int,
+    tx_locktime: int,
+) -> bytes:
+    """
+    OTDA (Original Transaction Digest Algorithm) preimage for Chronicle.
+    This is the pre-ForkID original Bitcoin signature digest algorithm.
+    Serializes the transaction directly (no hash commitments like BIP143).
+    """
+    from io import BytesIO as _BytesIO
+
+    sighash = inputs[input_index].sighash
+    base_type = sighash & 0x1F
+
+    stream = _BytesIO()
+
+    # nVersion
+    stream.write(tx_version.to_bytes(4, "little"))
+
+    # Serialize inputs
+    # Handle ANYONECANPAY: only include the signing input
+    if sighash & SIGHASH.ANYONECANPAY:
+        tx_inputs = [(input_index, inputs[input_index])]
+    else:
+        tx_inputs = list(enumerate(inputs))
+
+    # Number of inputs
+    _write_varint(stream, len(tx_inputs))
+    for idx, inp in tx_inputs:
+        # outpoint
+        stream.write(bytes.fromhex(inp.source_txid)[::-1])
+        stream.write(inp.source_output_index.to_bytes(4, "little"))
+        # scriptSig: only for the signing input
+        if idx == input_index:
+            script_bytes = inp.locking_script.serialize()
+            _write_varint(stream, len(script_bytes))
+            stream.write(script_bytes)
+        else:
+            _write_varint(stream, 0)
+        # sequence: zero for other inputs with NONE/SINGLE
+        if idx != input_index and base_type in (int(SIGHASH.NONE), int(SIGHASH.SINGLE)):
+            stream.write((0).to_bytes(4, "little"))
+        else:
+            stream.write(inp.sequence.to_bytes(4, "little"))
+
+    # Serialize outputs
+    if base_type == int(SIGHASH.NONE):
+        _write_varint(stream, 0)
+    elif base_type == int(SIGHASH.SINGLE):
+        # Outputs up to and including the signing input index
+        out_count = input_index + 1
+        _write_varint(stream, out_count)
+        for i in range(out_count):
+            if i < input_index:
+                # Blank outputs before the signing input
+                stream.write((0xFFFFFFFFFFFFFFFF).to_bytes(8, "little"))
+                _write_varint(stream, 0)
+            else:
+                stream.write(outputs[i].serialize())
+    else:
+        _write_varint(stream, len(outputs))
+        for out in outputs:
+            stream.write(out.serialize())
+
+    # nLockTime
+    stream.write(tx_locktime.to_bytes(4, "little"))
+
+    # Sighash type (4 bytes LE)
+    stream.write(sighash.to_bytes(4, "little"))
+
+    return stream.getvalue()
+
+
+def _write_varint(stream, n: int) -> None:
+    """Write a Bitcoin varint to a stream."""
+    if n < 0xFD:
+        stream.write(n.to_bytes(1, "little"))
+    elif n <= 0xFFFF:
+        stream.write(b"\xfd")
+        stream.write(n.to_bytes(2, "little"))
+    elif n <= 0xFFFFFFFF:
+        stream.write(b"\xfe")
+        stream.write(n.to_bytes(4, "little"))
+    else:
+        stream.write(b"\xff")
+        stream.write(n.to_bytes(8, "little"))
+
+
 def tx_preimage(
     input_index: int,
     inputs: list[TransactionInput],
@@ -105,9 +196,17 @@ def tx_preimage(
 ) -> bytes:
     """
     Calculates and returns the preimage for a specific input index.
+    Routes to BIP143 or OTDA based on sighash flags.
     """
     sighash = inputs[input_index].sighash
+    has_forkid = bool(sighash & SIGHASH.FORKID)
+    has_chronicle = bool(sighash & SIGHASH.CHRONICLE)
 
+    # OTDA: no ForkID, or both ForkID + Chronicle
+    if not has_forkid or (has_forkid and has_chronicle):
+        return _preimage_otda(input_index, inputs, outputs, tx_version, tx_locktime)
+
+    # BIP143 path (ForkID set, Chronicle not set)
     # hash previous outs
     if not sighash & SIGHASH.ANYONECANPAY:
         hash_prevouts = hash256(
