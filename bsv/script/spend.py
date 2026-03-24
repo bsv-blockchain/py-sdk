@@ -123,16 +123,36 @@ class Spend:
                 n = int.from_bytes(current_opcode, "big") - (int.from_bytes(OpCode.OP_1, "big") - 1)
                 self.stack.append(self.minimally_encode(n))
 
+            elif current_opcode == OpCode.OP_VER:
+                # Push transaction version as 4-byte little-endian
+                self.stack.append(self.transaction_version.to_bytes(4, "little"))
+
+            elif current_opcode in [OpCode.OP_VERIF, OpCode.OP_VERNOTIF]:
+                if len(self.stack) < 1:
+                    self.script_evaluation_error("OP_VERIF/OP_VERNOTIF requires at least one item on the stack.")
+                buf = self.stack.pop()
+                f_value = False
+                if len(buf) == 4:
+                    ver_bytes = self.transaction_version.to_bytes(4, "little")
+                    # Greater-than-or-equal comparison: tx_version >= popped value
+                    # Compare as unsigned little-endian integers
+                    tx_ver_int = int.from_bytes(ver_bytes, "little")
+                    buf_int = int.from_bytes(buf, "little")
+                    f_value = tx_ver_int >= buf_int
+                if current_opcode == OpCode.OP_VERNOTIF:
+                    f_value = not f_value
+                self.if_stack.append(self.encode_bool(f_value))
+
             elif current_opcode in [
                 OpCode.OP_NOP,
                 OpCode.OP_NOP1,
                 OpCode.OP_NOP2,
                 OpCode.OP_NOP3,
-                OpCode.OP_NOP4,
-                OpCode.OP_NOP5,
-                OpCode.OP_NOP6,
-                OpCode.OP_NOP7,
-                OpCode.OP_NOP8,
+                OpCode.OP_SUBSTR,  # Temporarily NOP until Chronicle opcode impl
+                OpCode.OP_LEFT,    # Temporarily NOP until Chronicle opcode impl
+                OpCode.OP_RIGHT,   # Temporarily NOP until Chronicle opcode impl
+                OpCode.OP_LSHIFTNUM,  # Temporarily NOP until Chronicle opcode impl
+                OpCode.OP_RSHIFTNUM,  # Temporarily NOP until Chronicle opcode impl
                 OpCode.OP_NOP9,
                 OpCode.OP_NOP10,
                 OpCode.OP_NOP11,
@@ -811,9 +831,6 @@ class Spend:
         return (
             opcode == OpCode.OP_2MUL
             or opcode == OpCode.OP_2DIV
-            or opcode == OpCode.OP_VERIF
-            or opcode == OpCode.OP_VERNOTIF
-            or opcode == OpCode.OP_VER
         )
 
     @classmethod
