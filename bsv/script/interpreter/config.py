@@ -90,7 +90,7 @@ class AfterGenesisConfig:
         return sys.maxsize
 
     def max_script_number_length(self) -> int:
-        return 750 * 1000  # 750 KB
+        return 32 * 1000 * 1000  # 32 MB (Chronicle upgrade)
 
     def max_ops(self) -> int:
         return sys.maxsize
