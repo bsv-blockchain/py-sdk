@@ -286,7 +286,7 @@ class UTXOManager:
     """
 
     WOC_TESTNET = "https://api.whatsonchain.com/v1/bsv/test"
-    FEE_MODEL = SatoshisPerKilobyte(500)
+    FEE_MODEL = SatoshisPerKilobyte(100)
     POOL_FILE = os.path.join(os.path.dirname(__file__), ".utxo_pool.json")
 
     def __init__(self, funded_key: PrivateKey, broadcaster):
