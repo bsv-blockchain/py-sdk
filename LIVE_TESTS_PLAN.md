@@ -82,7 +82,7 @@ def custom_unlock(priv_key, data_prefix_script=None):
 ### Helper: `p2pkh_lock_with_prefix(prefix_asm, priv_key) -> Script`
 Builds a locking script: `{prefix opcodes} OP_DUP OP_HASH160 <pkh> OP_EQUALVERIFY OP_CHECKSIG`. The prefix opcodes consume data items from the stack (pushed by unlocking script) before P2PKH validation runs on the remaining `<sig> <pubkey>`.
 
-## Step 2: test_live_sighash_matrix.py — All 12 Sighash Flags x 2 Versions [ ]
+## Step 2: test_live_sighash_matrix.py — All 12 Sighash Flags x 2 Versions [x]
 
 **File:** `tests/bsv/live/test_live_sighash_matrix.py`
 
