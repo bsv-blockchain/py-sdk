@@ -59,12 +59,12 @@ def priv_key():
 
 @pytest.fixture
 def priv_key2():
-    return PrivateKey("KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73Nd2Mcv1")
+    return PrivateKey("L32Mf2qU7BLmPmnbs943EYWRv4EUpqnFxkViinPMYesxWLnL6DTA")
 
 
 @pytest.fixture
 def priv_key3():
-    return PrivateKey("L3p8oAcQTtuokSCRHQ7i4MhjWc9zornvpJLfIq6BCHEbLbwYDDFp")
+    return PrivateKey("L1DkuXRTu3cGZAmJCDw2TWAoEaRKesq2sZUGzUmbYExgDwhQWe5T")
 
 
 @pytest.fixture
