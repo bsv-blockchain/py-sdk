@@ -274,15 +274,20 @@ def testnet_broadcaster():
 class UTXOManager:
     """Manages a pool of UTXOs from a fan-out transaction for testnet tests.
 
+    UTXOs are persisted to a JSON file so they survive across test runs.
+    On first run, fetches a UTXO from WoC, creates a fan-out tx, and saves
+    the resulting UTXOs. On subsequent runs, loads from the file and only
+    re-fans-out if the pool is exhausted.
+
     Flow:
-    1. Fetch UTXOs for the funded key's address from WoC
-    2. Create a fan-out tx splitting one large UTXO into many small ones
-    3. Broadcast the fan-out tx
-    4. Each test calls take_utxo() to get one funded output
+    1. Try to load persisted UTXOs from .utxo_pool.json
+    2. If none available, fetch from WoC and fan-out
+    3. Each test calls take_utxo() which also persists the updated pool
     """
 
     WOC_TESTNET = "https://api.whatsonchain.com/v1/bsv/test"
     FEE_MODEL = SatoshisPerKilobyte(500)
+    POOL_FILE = os.path.join(os.path.dirname(__file__), ".utxo_pool.json")
 
     def __init__(self, funded_key: PrivateKey, broadcaster):
         self.key = funded_key
@@ -291,6 +296,49 @@ class UTXOManager:
         self.lock_script = self.p2pkh.lock(self.key.address())
         self.utxos: list[tuple[Transaction, int, int]] = []  # (source_tx, vout, satoshis)
         self.broadcast_count = 0
+        # Cache of tx hex -> Transaction for deserialized source txs
+        self._tx_cache: dict[str, Transaction] = {}
+
+    # --- Persistence ---
+
+    def _save_pool(self):
+        """Save remaining UTXOs to disk as JSON."""
+        import json
+
+        records = []
+        for source_tx, vout, satoshis in self.utxos:
+            records.append({
+                "source_tx_hex": source_tx.hex(),
+                "vout": vout,
+                "satoshis": satoshis,
+            })
+        with open(self.POOL_FILE, "w") as f:
+            json.dump(records, f, indent=2)
+
+    def _load_pool(self) -> bool:
+        """Load UTXOs from disk. Returns True if any were loaded."""
+        import json
+
+        if not os.path.exists(self.POOL_FILE):
+            return False
+        try:
+            with open(self.POOL_FILE) as f:
+                records = json.load(f)
+            if not records:
+                return False
+            for rec in records:
+                tx_hex = rec["source_tx_hex"]
+                if tx_hex not in self._tx_cache:
+                    tx = Transaction.from_hex(tx_hex)
+                    if tx is None:
+                        continue
+                    self._tx_cache[tx_hex] = tx
+                self.utxos.append((self._tx_cache[tx_hex], rec["vout"], rec["satoshis"]))
+            return len(self.utxos) > 0
+        except (json.JSONDecodeError, KeyError, OSError):
+            return False
+
+    # --- Network ---
 
     async def fetch_utxos_from_woc(self) -> list[dict]:
         """Fetch unspent outputs from WhatsOnChain testnet API."""
@@ -318,6 +366,20 @@ class UTXOManager:
                 if tx is None:
                     raise RuntimeError(f"Failed to parse tx {txid}")
                 return tx
+
+    # --- Fan-out ---
+
+    async def ensure_utxos(self, min_count: int = 10, satoshis_each: int = 3_000):
+        """Ensure at least min_count UTXOs are available, loading or fanning out as needed."""
+        # Try loading from disk first
+        if not self.utxos:
+            self._load_pool()
+
+        if len(self.utxos) >= min_count:
+            return
+
+        # Need to fan out
+        await self.fan_out(min_count, satoshis_each)
 
     async def fan_out(self, num_outputs: int, satoshis_each: int = 3_000):
         """Create and broadcast a fan-out transaction.
@@ -381,13 +443,17 @@ class UTXOManager:
         for i in range(num_outputs):
             self.utxos.append((fan_out_tx, i, satoshis_each))
 
+        # Persist to disk
+        self._save_pool()
         return fan_out_tx
 
     def take_utxo(self) -> tuple[Transaction, int, int]:
-        """Consume and return one UTXO (source_tx, vout, satoshis)."""
+        """Consume one UTXO and persist the updated pool."""
         if not self.utxos:
             raise RuntimeError("No UTXOs available — fan_out not called or all consumed")
-        return self.utxos.pop(0)
+        utxo = self.utxos.pop(0)
+        self._save_pool()
+        return utxo
 
     async def broadcast_test_tx(self, tx: Transaction) -> BroadcastResponse:
         """Broadcast a test transaction and track it."""
