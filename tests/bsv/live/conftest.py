@@ -455,8 +455,21 @@ class UTXOManager:
         self._save_pool()
         return utxo
 
-    async def broadcast_test_tx(self, tx: Transaction) -> BroadcastResponse:
-        """Broadcast a test transaction and track it."""
+    def return_utxo(self, utxo: tuple[Transaction, int, int]):
+        """Return a UTXO to the pool (e.g. after a failed broadcast)."""
+        self.utxos.insert(0, utxo)
+        self._save_pool()
+
+    async def broadcast_test_tx(
+        self, tx: Transaction, spent_utxo: tuple[Transaction, int, int] = None,
+    ) -> BroadcastResponse:
+        """Broadcast a test transaction and track it.
+
+        If spent_utxo is provided and the broadcast fails, the UTXO is
+        returned to the pool since it was never actually spent on-chain.
+        """
         result = await self.broadcaster.broadcast(tx)
         self.broadcast_count += 1
+        if result.status != "success" and spent_utxo is not None:
+            self.return_utxo(spent_utxo)
         return result
