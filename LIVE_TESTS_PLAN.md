@@ -16,7 +16,7 @@ tests/bsv/live/
   test_live_malleability.py            (v1 vs v2 relaxation in signed txs)
 ```
 
-## Step 1: conftest.py — Shared Infrastructure [ ]
+## Step 1: conftest.py — Shared Infrastructure [x]
 
 **File:** `tests/bsv/live/conftest.py`
 
