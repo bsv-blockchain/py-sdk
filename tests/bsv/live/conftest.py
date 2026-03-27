@@ -262,8 +262,16 @@ def funded_key():
 
 @pytest.fixture(scope="session")
 def testnet_broadcaster():
-    """ARC broadcaster pointed at testnet."""
-    return default_broadcaster(is_testnet=True)
+    """ARC broadcaster pointed at testnet with Chronicle script validation skip.
+
+    Uses X-SkipScriptValidation header because the ARC testnet validator
+    doesn't support Chronicle sighash yet, even though the underlying
+    node does (txs are accepted into the network).
+    """
+    from bsv.broadcasters.arc import ARC, ARCConfig
+
+    config = ARCConfig(headers={"X-SkipScriptValidation": "true"})
+    return ARC("https://testnet.arc.gorillapool.io", config)
 
 
 # ---------------------------------------------------------------------------
