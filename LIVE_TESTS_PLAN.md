@@ -1,4 +1,4 @@
-# Mocked Live Tests for Chronicle Network Upgrade
+# Mocked Live Tests + Testnet Broadcast for Chronicle Network Upgrade
 
 ## Context
 
@@ -239,4 +239,31 @@ pytest tests/bsv/live/ --cov=bsv --cov-report=html -v
 
 # Verify no regressions in existing tests
 pytest tests/bsv/script/test_chronicle_*.py -v
+
+# Run testnet broadcast tests (requires FUNDED_TESTNET_WIF)
+export FUNDED_TESTNET_WIF=cU7tvH2nfymk5UbhbcVRnSeTC1Yan5B9a6cWVZKyTf1bhctFZF3x
+pytest tests/bsv/live/test_live_testnet.py -v
 ```
+
+## Step 6: Testnet Broadcast Tests [x]
+
+**File:** `tests/bsv/live/test_live_testnet.py`
+
+- UTXOManager with fan-out + JSON persistence (`.utxo_pool.json`)
+- 98 testnet tests: P2PKH/P2PK/Multisig x 12 sighash x 2 versions + opcodes
+- Gated by `FUNDED_TESTNET_WIF` env var, `@pytest.mark.testnet`
+
+### Testnet Results (2026-03-27)
+
+- **12 FORKID P2PKH PASSED** (all 6 flags x v1 + v2)
+- **All CHRONICLE sighash FAILED** — "Transaction is malformed" from ARC
+- Cascading failures for remaining tests due to consumed UTXOs
+
+## Step 7: Investigate CHRONICLE sighash "malformed" rejection [ ]
+
+**Status:** Not started. Need to compare OTDA preimage output with TS-SDK reference.
+
+Possible causes:
+1. OTDA preimage format mismatch vs what testnet nodes expect
+2. Sighash byte encoding in the signature differs from node expectation
+3. EF format serialization issue when CHRONICLE bit is set
