@@ -359,3 +359,60 @@ class TestNullDummy:
         tx = _build_tx_no_validate(lock, unlock, tx_version=1)
         with pytest.raises(RuntimeError, match="extra stack item to be empty"):
             validate_spend(tx, 0)
+
+
+# ---------------------------------------------------------------------------
+# 7. MINIMALIF (OP_IF/OP_NOTIF conditional encoding)
+# ---------------------------------------------------------------------------
+
+
+class TestMinimalIf:
+    """MINIMALIF is relaxed for tx version > 1."""
+
+    def _make_nonminimal_if_unlock(self, priv_key):
+        """Unlocking template that pushes 0x02 (truthy but non-minimal) for OP_IF."""
+
+        def sign(tx, input_index):
+            tx_input = tx.inputs[input_index]
+            sighash = tx_input.sighash
+            signature = priv_key.sign(tx.preimage(input_index))
+            public_key = priv_key.public_key().serialize()
+            sig_script = (
+                encode_pushdata(signature + sighash.to_bytes(1, "little"))
+                + encode_pushdata(public_key)
+            )
+            # Push 0x02 (truthy but not minimal — should be 0x01)
+            nonminimal_true = encode_pushdata(b"\x02")
+            return Script(sig_script + nonminimal_true)
+
+        return to_unlock_script_template(sign, lambda: 120)
+
+    def _make_if_lock(self, priv_key):
+        """Locking: OP_IF <P2PKH> OP_ELSE OP_FALSE OP_ENDIF"""
+        pkh = hash160(priv_key.public_key().serialize())
+        return Script(
+            OpCode.OP_IF
+            + OpCode.OP_DUP
+            + OpCode.OP_HASH160
+            + encode_pushdata(pkh)
+            + OpCode.OP_EQUALVERIFY
+            + OpCode.OP_CHECKSIG
+            + OpCode.OP_ELSE
+            + OpCode.OP_FALSE
+            + OpCode.OP_ENDIF
+        )
+
+    def test_v2_allows_nonminimal_if(self, priv_key):
+        """v2 tx allows non-minimal boolean in OP_IF condition."""
+        lock = self._make_if_lock(priv_key)
+        unlock = self._make_nonminimal_if_unlock(priv_key)
+        tx = _build_tx_no_validate(lock, unlock, tx_version=2)
+        assert validate_spend(tx, 0)
+
+    def test_v1_rejects_nonminimal_if(self, priv_key):
+        """v1 tx rejects non-minimal boolean in OP_IF condition."""
+        lock = self._make_if_lock(priv_key)
+        unlock = self._make_nonminimal_if_unlock(priv_key)
+        tx = _build_tx_no_validate(lock, unlock, tx_version=1)
+        with pytest.raises(RuntimeError, match="minimally encoded"):
+            validate_spend(tx, 0)
