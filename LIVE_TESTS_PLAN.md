@@ -122,7 +122,7 @@ TX_VERSIONS = [1, 2]
 - `test_forkid_only_uses_bip143` — Verify preimage format for `ALL_FORKID`
 - `test_forkid_chronicle_uses_otda` — Verify preimage format for `ALL_FORKID_CHRONICLE`
 
-## Step 3: test_live_chronicle_opcodes.py — 10 Restored Opcodes [ ]
+## Step 3: test_live_chronicle_opcodes.py — 10 Restored Opcodes [x]
 
 **File:** `tests/bsv/live/test_live_chronicle_opcodes.py`
 
