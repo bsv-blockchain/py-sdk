@@ -255,15 +255,60 @@ pytest tests/bsv/live/test_live_testnet.py -v
 
 ### Testnet Results (2026-03-27)
 
-- **12 FORKID P2PKH PASSED** (all 6 flags x v1 + v2)
-- **All CHRONICLE sighash FAILED** — "Transaction is malformed" from ARC
-- Cascading failures for remaining tests due to consumed UTXOs
+- **98/98 PASSED** with `X-SkipScriptValidation: true` ARC header
+- ARC's script validator doesn't support Chronicle sighash yet, but the underlying node does
+- OTDA preimage verified byte-identical to TS-SDK (@bsv/sdk)
 
-## Step 7: Investigate CHRONICLE sighash "malformed" rejection [ ]
+## Step 7: Investigate CHRONICLE sighash "malformed" rejection [x]
 
-**Status:** Not started. Need to compare OTDA preimage output with TS-SDK reference.
+**Root cause:** ARC's script validator lacks Chronicle support. Fix: `X-SkipScriptValidation: true` header.
+OTDA preimage verified byte-identical to TS-SDK.
 
-Possible causes:
-1. OTDA preimage format mismatch vs what testnet nodes expect
-2. Sighash byte encoding in the signature differs from node expectation
-3. EF format serialization issue when CHRONICLE bit is set
+## Step 8: MINIMALIF malleability gate [x]
+
+Added 7th malleability restriction to `Spend.step()` for OP_IF/OP_NOTIF.
+Non-minimal conditionals (e.g. `0x02` instead of `0x01`) rejected in v1, allowed in v2.
+
+## Step 9: Engine/Thread Chronicle parity [ ]
+
+The Engine/Thread interpreter (`bsv/script/interpreter/`) is a Go SDK port from pre-Chronicle.
+It needs updates to match the Spend class.
+
+### 9a. Port 10 Chronicle opcodes to Engine
+
+**File:** `bsv/script/interpreter/operations.py`
+
+| Opcode | Current handler | Needed |
+|--------|----------------|--------|
+| OP_VER | `op_reserved` | Push tx version as 4-byte LE |
+| OP_VERIF | `op_verconditional` stub | Version conditional branching |
+| OP_VERNOTIF | `op_verconditional` stub | Negated version conditional |
+| OP_2MUL | disabled | Multiply by 2 |
+| OP_2DIV | disabled | Divide by 2 (truncate toward zero) |
+| OP_SUBSTR | `op_nop` (via NOP4 alias) | Substring extraction |
+| OP_LEFT | `op_nop` (via NOP5 alias) | Left n bytes |
+| OP_RIGHT | `op_nop` (via NOP6 alias) | Right n bytes |
+| OP_LSHIFTNUM | `op_nop` (via NOP7 alias) | Left shift numeric |
+| OP_RSHIFTNUM | `op_nop` (via NOP8 alias) | Right shift numeric |
+
+### 9b. Add malleability relaxation to Engine
+
+**File:** `bsv/script/interpreter/thread.py`
+
+- Add `is_relaxed()` method: `return self.tx_version > 1`
+- Gate 7 malleability checks with `not is_relaxed()`:
+  - NULLFAIL, NULLDUMMY, clean stack, MINIMALIF, strict encoding, minimal push, push-only
+
+### 9c. Add checksigData extension for post-Chronicle CHECKSIG
+
+**File:** `bsv/script/interpreter/operations.py`
+
+When CHECKSIG executes in scriptSig (unlocking script) post-Chronicle, the scriptCode
+should be extended: `scriptCode += scriptPubKey`. This matches the node's behavior at
+`interpreter.cpp:1478-1483`.
+
+### 9d. Remove OP_NOP4-8 aliases from NOP list
+
+The NOP list in `operations.py` still includes OP_NOP4-8 which are now aliases for
+OP_SUBSTR, OP_LEFT, OP_RIGHT, OP_LSHIFTNUM, OP_RSHIFTNUM. Remove them so the
+actual opcode handlers execute.
