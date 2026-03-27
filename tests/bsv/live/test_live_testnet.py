@@ -76,7 +76,7 @@ OPCODE_SIGHASH_VERSIONS = [
     pytest.param(SIGHASH.ALL_FORKID_CHRONICLE, 2, id="OTDA_v2"),
 ]
 
-FEE_MODEL = SatoshisPerKilobyte(500)
+FEE_MODEL = SatoshisPerKilobyte(100)
 
 
 # ---------------------------------------------------------------------------
