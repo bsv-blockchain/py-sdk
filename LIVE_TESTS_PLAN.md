@@ -191,7 +191,7 @@ Same pattern as Step 3 but for standard opcodes. Grouped by category, using `pyt
 - OP_NOP (and NOP1, NOP2/CLTV, NOP3/CSV, NOP9, NOP10)
 - OP_RETURN (in OP_FALSE OP_RETURN data script — not spendable, test construction only)
 
-## Step 5: test_live_malleability.py — v1 vs v2 Relaxation [ ]
+## Step 5: test_live_malleability.py — v1 vs v2 Relaxation [x]
 
 **File:** `tests/bsv/live/test_live_malleability.py`
 
