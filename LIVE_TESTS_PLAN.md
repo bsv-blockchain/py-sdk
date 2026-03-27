@@ -148,7 +148,7 @@ Stack order: unlocking pushes `data... sig pubkey`. Locking pops/consumes data f
 
 Each opcode gets tested at least twice: once with `SIGHASH.ALL_FORKID` (v1, BIP143) and once with `SIGHASH.ALL_FORKID_CHRONICLE` (v2, OTDA).
 
-## Step 4: test_live_standard_opcodes.py — Standard Opcodes [ ]
+## Step 4: test_live_standard_opcodes.py — Standard Opcodes [x]
 
 **File:** `tests/bsv/live/test_live_standard_opcodes.py`
 

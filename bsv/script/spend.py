@@ -417,7 +417,7 @@ class Spend:
                 if len(self.stack) < 1:
                     self.script_evaluation_error("OP_INVERT requires at least one item to be on the stack.")
                 x = self.stack.pop()
-                x = bytes([~b for b in x])
+                x = bytes([b ^ 0xFF for b in x])
                 self.stack.append(x)
 
             elif current_opcode in [OpCode.OP_LSHIFT, OpCode.OP_RSHIFT]:
