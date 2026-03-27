@@ -8,6 +8,7 @@ Run with: pytest tests/bsv/live/test_live_testnet.py -v -m testnet
 """
 
 import pytest
+import pytest_asyncio
 
 from bsv.constants import SIGHASH
 from bsv.fee_models import SatoshisPerKilobyte
@@ -127,12 +128,19 @@ TOTAL_TEST_UTXOS = 130  # with some buffer
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(scope="module")
+# Module-level cache for the UTXO manager (initialized once on first use)
+_utxo_mgr_cache: UTXOManager | None = None
+
+
+@pytest_asyncio.fixture
 async def utxo_mgr(funded_key, testnet_broadcaster):
-    """Fan-out the funded UTXO into individual test UTXOs."""
-    mgr = UTXOManager(funded_key, testnet_broadcaster)
-    await mgr.fan_out(TOTAL_TEST_UTXOS, satoshis_each=3_000)
-    return mgr
+    """Fan-out the funded UTXO into individual test UTXOs (cached per module)."""
+    global _utxo_mgr_cache
+    if _utxo_mgr_cache is None:
+        mgr = UTXOManager(funded_key, testnet_broadcaster)
+        await mgr.fan_out(TOTAL_TEST_UTXOS, satoshis_each=3_000)
+        _utxo_mgr_cache = mgr
+    return _utxo_mgr_cache
 
 
 # ---------------------------------------------------------------------------
