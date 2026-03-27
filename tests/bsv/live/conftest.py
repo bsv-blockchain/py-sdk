@@ -1,10 +1,14 @@
 """Shared fixtures and helpers for mocked live tests."""
 
+import os
+
 import pytest
 
 from bsv.broadcasters.broadcaster import BroadcastResponse, Broadcaster
+from bsv.broadcasters import default_broadcaster
 from bsv.chaintracker import ChainTracker
 from bsv.constants import SIGHASH, OpCode
+from bsv.fee_models import SatoshisPerKilobyte
 from bsv.hash import hash160
 from bsv.keys import PrivateKey
 from bsv.script.script import Script
@@ -14,6 +18,13 @@ from bsv.transaction import Transaction
 from bsv.transaction_input import TransactionInput
 from bsv.transaction_output import TransactionOutput
 from bsv.utils import encode_pushdata
+
+
+# ---------------------------------------------------------------------------
+# Testnet configuration
+# ---------------------------------------------------------------------------
+
+FUNDED_TESTNET_WIF = os.environ.get("FUNDED_TESTNET_WIF")
 
 
 # ---------------------------------------------------------------------------
@@ -234,3 +245,152 @@ def p2pkh_lock_with_prefix(prefix_asm: str, priv_key: PrivateKey) -> Script:
         + OpCode.OP_CHECKSIG
     )
     return Script(prefix.serialize() + p2pkh_suffix.serialize())
+
+
+# ---------------------------------------------------------------------------
+# Testnet fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def funded_key():
+    """Funded testnet private key. Skips if FUNDED_TESTNET_WIF not set."""
+    if not FUNDED_TESTNET_WIF:
+        pytest.skip("FUNDED_TESTNET_WIF not set")
+    return PrivateKey(FUNDED_TESTNET_WIF)
+
+
+@pytest.fixture(scope="session")
+def testnet_broadcaster():
+    """ARC broadcaster pointed at testnet."""
+    return default_broadcaster(is_testnet=True)
+
+
+# ---------------------------------------------------------------------------
+# UTXO Manager for testnet chaining
+# ---------------------------------------------------------------------------
+
+
+class UTXOManager:
+    """Manages a pool of UTXOs from a fan-out transaction for testnet tests.
+
+    Flow:
+    1. Fetch UTXOs for the funded key's address from WoC
+    2. Create a fan-out tx splitting one large UTXO into many small ones
+    3. Broadcast the fan-out tx
+    4. Each test calls take_utxo() to get one funded output
+    """
+
+    WOC_TESTNET = "https://api.whatsonchain.com/v1/bsv/test"
+    FEE_MODEL = SatoshisPerKilobyte(500)
+
+    def __init__(self, funded_key: PrivateKey, broadcaster):
+        self.key = funded_key
+        self.broadcaster = broadcaster
+        self.p2pkh = P2PKH()
+        self.lock_script = self.p2pkh.lock(self.key.address())
+        self.utxos: list[tuple[Transaction, int, int]] = []  # (source_tx, vout, satoshis)
+        self.broadcast_count = 0
+
+    async def fetch_utxos_from_woc(self) -> list[dict]:
+        """Fetch unspent outputs from WhatsOnChain testnet API."""
+        import aiohttp
+
+        address = self.key.address()
+        url = f"{self.WOC_TESTNET}/address/{address}/unspent"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    raise RuntimeError(f"WoC API returned {resp.status} for {url}")
+                return await resp.json()
+
+    async def fetch_raw_tx(self, txid: str) -> Transaction:
+        """Fetch a raw transaction hex from WoC and parse it."""
+        import aiohttp
+
+        url = f"{self.WOC_TESTNET}/tx/{txid}/hex"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    raise RuntimeError(f"WoC API returned {resp.status} for {url}")
+                hex_str = await resp.text()
+                tx = Transaction.from_hex(hex_str.strip())
+                if tx is None:
+                    raise RuntimeError(f"Failed to parse tx {txid}")
+                return tx
+
+    async def fan_out(self, num_outputs: int, satoshis_each: int = 3_000):
+        """Create and broadcast a fan-out transaction.
+
+        Takes the largest available UTXO and splits it into num_outputs
+        P2PKH outputs, each with satoshis_each satoshis.
+        """
+        # Fetch UTXOs from WoC
+        woc_utxos = await self.fetch_utxos_from_woc()
+        if not woc_utxos:
+            raise RuntimeError(
+                f"No UTXOs found for address {self.key.address()} on testnet"
+            )
+
+        # Sort by value descending, pick the largest
+        woc_utxos.sort(key=lambda u: u["value"], reverse=True)
+        best = woc_utxos[0]
+        needed = num_outputs * satoshis_each + 5_000  # fee buffer
+        if best["value"] < needed:
+            raise RuntimeError(
+                f"Largest UTXO has {best['value']} sat, need at least {needed} sat "
+                f"for {num_outputs} outputs at {satoshis_each} sat each"
+            )
+
+        # Fetch the source transaction
+        source_tx = await self.fetch_raw_tx(best["tx_hash"])
+
+        # Build the fan-out tx
+        inp = TransactionInput(
+            source_transaction=source_tx,
+            source_txid=best["tx_hash"],
+            source_output_index=best["tx_pos"],
+            unlocking_script_template=self.p2pkh.unlock(self.key),
+            sequence=0xFFFFFFFF,
+        )
+        outputs = [
+            TransactionOutput(
+                locking_script=self.lock_script,
+                satoshis=satoshis_each,
+            )
+            for _ in range(num_outputs)
+        ]
+        # Add a change output for leftovers
+        outputs.append(
+            TransactionOutput(locking_script=self.lock_script, change=True)
+        )
+
+        fan_out_tx = Transaction([inp], outputs, version=1)
+        fan_out_tx.fee(self.FEE_MODEL)
+        fan_out_tx.sign()
+
+        # Broadcast
+        result = await self.broadcaster.broadcast(fan_out_tx)
+        if result.status != "success":
+            raise RuntimeError(
+                f"Fan-out broadcast failed: {getattr(result, 'description', result.status)}"
+            )
+        self.broadcast_count += 1
+
+        # Record all non-change outputs as available UTXOs
+        for i in range(num_outputs):
+            self.utxos.append((fan_out_tx, i, satoshis_each))
+
+        return fan_out_tx
+
+    def take_utxo(self) -> tuple[Transaction, int, int]:
+        """Consume and return one UTXO (source_tx, vout, satoshis)."""
+        if not self.utxos:
+            raise RuntimeError("No UTXOs available — fan_out not called or all consumed")
+        return self.utxos.pop(0)
+
+    async def broadcast_test_tx(self, tx: Transaction) -> BroadcastResponse:
+        """Broadcast a test transaction and track it."""
+        result = await self.broadcaster.broadcast(tx)
+        self.broadcast_count += 1
+        return result
