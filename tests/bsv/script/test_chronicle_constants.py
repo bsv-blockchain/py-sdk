@@ -53,5 +53,18 @@ def test_asm_nop_aliases_parse():
     assert Script.from_asm("OP_NOP8").serialize() == Script.from_asm("OP_RSHIFTNUM").serialize()
 
 
+def test_to_asm_outputs_chronicle_names_not_nop():
+    """Verify to_asm() outputs OP_SUBSTR (not OP_NOP4) for byte b'\\xb3' etc."""
+    for nop, chronicle in [
+        ("OP_NOP4", "OP_SUBSTR"),
+        ("OP_NOP5", "OP_LEFT"),
+        ("OP_NOP6", "OP_RIGHT"),
+        ("OP_NOP7", "OP_LSHIFTNUM"),
+        ("OP_NOP8", "OP_RSHIFTNUM"),
+    ]:
+        script = Script.from_asm(nop)
+        assert script.to_asm() == chronicle, f"from_asm({nop}).to_asm() should be {chronicle}"
+
+
 def test_transaction_version_chronicle_constant():
     assert TRANSACTION_VERSION_CHRONICLE == 2
