@@ -90,7 +90,10 @@ class AfterGenesisConfig:
         return sys.maxsize
 
     def max_script_number_length(self) -> int:
-        return 32 * 1000 * 1000  # 32 MB (Chronicle upgrade)
+        # 32 MB — Chronicle upgrade. This limit is network-wide at activation
+        # height, not per-tx-version. All transactions (v1 and v2) benefit
+        # from the increased limit once Chronicle activates.
+        return 32 * 1000 * 1000
 
     def max_ops(self) -> int:
         return sys.maxsize

@@ -426,6 +426,8 @@ class Spend:
                 if len(self.stack) < 1:
                     self.script_evaluation_error("OP_INVERT requires at least one item to be on the stack.")
                 x = self.stack.pop()
+                # Bug fix (independent of Chronicle): ~b produces negative ints in Python,
+                # b ^ 0xFF correctly gives the bitwise complement as unsigned bytes.
                 x = bytes([b ^ 0xFF for b in x])
                 self.stack.append(x)
 
