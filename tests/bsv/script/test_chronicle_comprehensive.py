@@ -263,3 +263,56 @@ class TestCodeSeparatorWithChronicle:
             tx_version=2,
         )
         assert spend.validate()
+
+
+# ============================================================
+# Chronicle opcodes in unlocking scripts (review 9.4.2.4)
+# ============================================================
+
+class TestChronicleOpcodesInUnlocking:
+    """v2 tx: Chronicle-specific opcodes execute in unlocking scripts."""
+
+    def test_2mul_in_unlocking(self):
+        """OP_2MUL in unlocking script: 3 * 2 = 6."""
+        spend = make_spend(
+            "OP_6 OP_EQUALVERIFY OP_TRUE",
+            "OP_3 OP_2MUL",
+            tx_version=2,
+        )
+        assert spend.validate()
+
+    def test_2div_in_unlocking(self):
+        """OP_2DIV in unlocking script: 6 / 2 = 3."""
+        spend = make_spend(
+            "OP_3 OP_EQUALVERIFY OP_TRUE",
+            "OP_6 OP_2DIV",
+            tx_version=2,
+        )
+        assert spend.validate()
+
+    def test_lshiftnum_in_unlocking(self):
+        """OP_LSHIFTNUM in unlocking script: 1 << 3 = 8."""
+        spend = make_spend(
+            "OP_8 OP_EQUALVERIFY OP_TRUE",
+            "OP_1 OP_3 OP_LSHIFTNUM",
+            tx_version=2,
+        )
+        assert spend.validate()
+
+    def test_rshiftnum_in_unlocking(self):
+        """OP_RSHIFTNUM in unlocking script: 8 >> 2 = 2."""
+        spend = make_spend(
+            "OP_2 OP_EQUALVERIFY OP_TRUE",
+            "OP_8 OP_2 OP_RSHIFTNUM",
+            tx_version=2,
+        )
+        assert spend.validate()
+
+    def test_substr_in_unlocking(self):
+        """OP_SUBSTR in unlocking script: "abcde"[1:2] = "bc"."""
+        spend = make_spend(
+            "6263 OP_EQUALVERIFY OP_TRUE",
+            "6162636465 OP_1 OP_2 OP_SUBSTR",
+            tx_version=2,
+        )
+        assert spend.validate()
