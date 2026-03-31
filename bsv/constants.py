@@ -80,6 +80,16 @@ class SIGHASH(int, Enum):
             cls.SINGLE_ANYONECANPAY_FORKID_CHRONICLE,
         ]
 
+    @staticmethod
+    def use_otda(sighash: int) -> bool:
+        """Determine whether to use OTDA (Original Transaction Digest Algorithm).
+
+        Routing: FORKID only → BIP143; FORKID+CHRONICLE or no FORKID → OTDA.
+        """
+        has_forkid = bool(sighash & SIGHASH.FORKID)
+        has_chronicle = bool(sighash & SIGHASH.CHRONICLE)
+        return not has_forkid or (has_forkid and has_chronicle)
+
 
 #
 # ARC
