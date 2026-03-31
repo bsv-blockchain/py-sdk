@@ -176,8 +176,8 @@ async def build_two_step_testnet_tx(
 # Count total tests to size the fan-out
 # ---------------------------------------------------------------------------
 
-# P2PKH: 24, P2PK: 24, Multisig: 24, Chronicle opcodes: 20, Standard opcodes: ~25
-TOTAL_TEST_UTXOS = 130  # with some buffer
+# P2PKH: 24, P2PK: 24, Multisig: 24, Chronicle opcodes: 20, Standard opcodes: ~25, Unlocking: 2
+TOTAL_TEST_UTXOS = 135  # with some buffer
 
 
 # ---------------------------------------------------------------------------
@@ -485,6 +485,42 @@ class TestTestnetStandardOpcodes:
         tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
         result = await utxo_mgr.broadcast_test_tx(tx)
         assert result.status == "success"
+
+
+# ---------------------------------------------------------------------------
+# v2 unlocking script opcodes (malleability relaxation)
+# ---------------------------------------------------------------------------
+
+
+class TestTestnetUnlockingOpcodes:
+    """v2 tx: non-push opcodes in unlocking script (review 9.4.2.1)."""
+
+    @pytest.mark.asyncio
+    async def test_v2_add_in_unlocking(self, funded_key, utxo_mgr):
+        """v2 tx with OP_1 OP_2 OP_ADD in unlocking script producing 3."""
+        lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_key)
+        # Unlocking: <sig> <pubkey> OP_1 OP_2 OP_ADD — non-push opcode in unlock
+        data = Script.from_asm("OP_1 OP_2 OP_ADD")
+        unlock = custom_unlock(funded_key, data_prefix_script=data)
+        tx = await build_two_step_testnet_tx(
+            utxo_mgr, lock, unlock, funded_key,
+            sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
+        )
+        result = await utxo_mgr.broadcast_test_tx(tx)
+        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+
+    @pytest.mark.asyncio
+    async def test_v2_2mul_in_unlocking(self, funded_key, utxo_mgr):
+        """v2 tx with Chronicle OP_2MUL in unlocking script."""
+        lock = p2pkh_lock_with_prefix("OP_6 OP_NUMEQUALVERIFY", funded_key)
+        data = Script.from_asm("OP_3 OP_2MUL")
+        unlock = custom_unlock(funded_key, data_prefix_script=data)
+        tx = await build_two_step_testnet_tx(
+            utxo_mgr, lock, unlock, funded_key,
+            sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
+        )
+        result = await utxo_mgr.broadcast_test_tx(tx)
+        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
 
 # ---------------------------------------------------------------------------
