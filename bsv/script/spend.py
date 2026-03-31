@@ -898,6 +898,17 @@ class Spend:
 
     @classmethod
     def is_op_disabled(cls, opcode: bytes) -> bool:
+        """Check if an opcode is disabled.
+
+        After the Chronicle network upgrade (MainNet block 943,816), NO opcodes
+        are disabled for ANY transaction version. Opcode restoration is network-wide
+        at activation height — it is NOT gated by tx version. Only malleability
+        restrictions (clean stack, push-only unlocking, etc.) are version-gated
+        via is_relaxed() (tx version > 1).
+
+        This is distinct from pre-Chronicle behavior where OP_VER, OP_VERIF,
+        OP_VERNOTIF, OP_2MUL, and OP_2DIV were disabled.
+        """
         return False
 
     @classmethod
