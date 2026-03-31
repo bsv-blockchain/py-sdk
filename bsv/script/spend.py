@@ -224,15 +224,6 @@ class Spend:
                         _m = "OP_IF and OP_NOTIF require at least one item on the stack when they are used!"
                         self.script_evaluation_error(_m)
                     octets = self.stacktop(-1)
-                    # MINIMALIF: condition must be exactly empty or 0x01
-                    if not self.is_relaxed() and len(octets) > 1:
-                        self.script_evaluation_error(
-                            "OP_IF/OP_NOTIF conditional must be minimally encoded (empty or 0x01)."
-                        )
-                    if not self.is_relaxed() and len(octets) == 1 and octets[0] != 1:
-                        self.script_evaluation_error(
-                            "OP_IF/OP_NOTIF conditional must be minimally encoded (empty or 0x01)."
-                        )
                     f = self.cast_to_bool(octets)
                     if current_opcode == OpCode.OP_NOTIF:
                         f = not f

@@ -122,12 +122,17 @@ async def build_two_step_testnet_tx(
     funded_key,
     sighash: int = SIGHASH.ALL_FORKID,
     tx_version: int = 1,
+    step2_broadcaster=None,
 ):
     """Two-step tx for non-P2PKH script types (P2PK, Multisig, custom opcodes).
 
     Step 1: Spend P2PKH fan-out UTXO → create output locked with test script
     Step 2: Spend that output with the test unlock template + sighash
-    Returns (step2_tx, original_utxo) so caller can recover on failure.
+    Returns step2_tx for caller to broadcast.
+
+    Args:
+        step2_broadcaster: Optional broadcaster for step 2 (e.g. WoC for
+            v2 txs with non-push unlocking scripts that ARC rejects).
     """
     p2pkh = P2PKH()
 
@@ -495,16 +500,13 @@ class TestTestnetStandardOpcodes:
 class TestTestnetUnlockingOpcodes:
     """v2 tx: non-push opcodes in unlocking script (review 9.4.2.1).
 
-    ARC enforces push-only unlocking scripts (error 463) regardless of
-    tx version or X-SkipScriptValidation header. These tests are xfail
-    until ARC supports Chronicle's malleability relaxation. The SDK
-    correctly handles non-push unlocking scripts — verified by mock tests
-    in test_chronicle_comprehensive.py::TestVersion2Integration.
+    These tests broadcast via WoC (node-direct) because ARC rejects
+    non-push unlocking scripts (error 463) even for v2 Chronicle txs.
+    The node itself accepts them under Chronicle's malleability relaxation.
     """
 
     @pytest.mark.asyncio
-    @pytest.mark.xfail(reason="ARC error 463: enforces push-only unlocking scripts pre-Chronicle")
-    async def test_v2_add_in_unlocking(self, funded_key, utxo_mgr):
+    async def test_v2_add_in_unlocking(self, funded_key, utxo_mgr, woc_testnet_broadcaster):
         """v2 tx with OP_1 OP_2 OP_ADD in unlocking script producing 3."""
         lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_1 OP_2 OP_ADD")
@@ -513,12 +515,11 @@ class TestTestnetUnlockingOpcodes:
             utxo_mgr, lock, unlock, funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
-    @pytest.mark.xfail(reason="ARC error 463: enforces push-only unlocking scripts pre-Chronicle")
-    async def test_v2_2mul_in_unlocking(self, funded_key, utxo_mgr):
+    async def test_v2_2mul_in_unlocking(self, funded_key, utxo_mgr, woc_testnet_broadcaster):
         """v2 tx with Chronicle OP_2MUL in unlocking script."""
         lock = p2pkh_lock_with_prefix("OP_6 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_3 OP_2MUL")
@@ -527,7 +528,7 @@ class TestTestnetUnlockingOpcodes:
             utxo_mgr, lock, unlock, funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
 
