@@ -228,3 +228,38 @@ class TestMixedSighash:
         # Validate both inputs via Spend
         from tests.bsv.live.conftest import validate_all_inputs
         validate_all_inputs(tx)
+
+
+# ============================================================
+# OP_CODESEPARATOR interaction tests (review 9.4.2.3)
+# ============================================================
+
+class TestCodeSeparatorWithChronicle:
+    """Chronicle opcodes after OP_CODESEPARATOR."""
+
+    def test_2mul_after_codeseparator(self):
+        """OP_2MUL executes correctly after OP_CODESEPARATOR."""
+        spend = make_spend(
+            "OP_CODESEPARATOR OP_2MUL OP_6 OP_EQUALVERIFY OP_TRUE",
+            "OP_3",
+            tx_version=2,
+        )
+        assert spend.validate()
+
+    def test_substr_after_codeseparator(self):
+        """OP_SUBSTR executes correctly after OP_CODESEPARATOR."""
+        spend = make_spend(
+            "OP_CODESEPARATOR OP_1 OP_1 OP_SUBSTR 62 OP_EQUALVERIFY OP_TRUE",
+            "616263",
+            tx_version=2,
+        )
+        assert spend.validate()
+
+    def test_lshiftnum_after_codeseparator(self):
+        """OP_LSHIFTNUM executes correctly after OP_CODESEPARATOR."""
+        spend = make_spend(
+            "OP_CODESEPARATOR OP_2 OP_LSHIFTNUM OP_8 OP_EQUALVERIFY OP_TRUE",
+            "OP_2",
+            tx_version=2,
+        )
+        assert spend.validate()
