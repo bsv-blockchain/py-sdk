@@ -274,6 +274,18 @@ def testnet_broadcaster():
     return ARC("https://testnet.arc.gorillapool.io", config)
 
 
+@pytest.fixture(scope="session")
+def woc_testnet_broadcaster():
+    """WoC broadcaster for testnet — submits directly to the node.
+
+    Use this for v2 transactions with non-push unlocking scripts that ARC
+    rejects (error 463) but the node accepts under Chronicle rules.
+    """
+    from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcaster
+
+    return WhatsOnChainBroadcaster(network="test")
+
+
 # ---------------------------------------------------------------------------
 # UTXO Manager for testnet chaining
 # ---------------------------------------------------------------------------
@@ -472,14 +484,20 @@ class UTXOManager:
 
     async def broadcast_test_tx(
         self, tx: Transaction, spent_utxo: tuple[Transaction, int, int] = None,
+        broadcaster: Broadcaster = None,
     ) -> BroadcastResponse:
         """Broadcast a test transaction and track it.
 
         If spent_utxo is provided and the broadcast fails, the UTXO is
         returned to the pool since it was never actually spent on-chain.
         Prints a clickable WhatsonChain link on successful broadcasts.
+
+        Args:
+            broadcaster: Optional override broadcaster (e.g. WoC for txs
+                that ARC rejects due to non-push unlocking scripts).
         """
-        result = await self.broadcaster.broadcast(tx)
+        bc = broadcaster or self.broadcaster
+        result = await bc.broadcast(tx)
         self.broadcast_count += 1
         if result.status == "success":
             txid = result.txid or tx.txid()
