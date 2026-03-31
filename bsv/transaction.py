@@ -118,18 +118,11 @@ class Transaction:
         # Ensure hash_type is treated as uint32
         hash_type = hash_type & 0xFFFFFFFF
 
-        # Choose algorithm based on ForkID and Chronicle bits
-        has_forkid = bool(hash_type & int(SIGHASH.FORKID))
-        has_chronicle = bool(hash_type & int(SIGHASH.CHRONICLE))
-
-        if has_forkid and not has_chronicle:
-            # Use BIP143/ForkID algorithm
-            preimage = self._calc_input_preimage_bip143(input_index, hash_type, script_code, prev_satoshis)
-            return hash256(preimage)
-        else:
-            # OTDA: no ForkID, or both ForkID + Chronicle
+        if SIGHASH.use_otda(hash_type):
             preimage = self._calc_input_preimage_legacy(input_index, hash_type)
-            return hash256(preimage)
+        else:
+            preimage = self._calc_input_preimage_bip143(input_index, hash_type, script_code, prev_satoshis)
+        return hash256(preimage)
 
     def _calc_input_preimage_bip143(
         self, input_index: int, hash_type: int, _script_code: Script, prev_satoshis: int

@@ -199,14 +199,11 @@ def tx_preimage(
     Routes to BIP143 or OTDA based on sighash flags.
     """
     sighash = inputs[input_index].sighash
-    has_forkid = bool(sighash & SIGHASH.FORKID)
-    has_chronicle = bool(sighash & SIGHASH.CHRONICLE)
 
-    # OTDA: no ForkID, or both ForkID + Chronicle
-    if not has_forkid or (has_forkid and has_chronicle):
+    if SIGHASH.use_otda(sighash):
         return _preimage_otda(input_index, inputs, outputs, tx_version, tx_locktime)
 
-    # BIP143 path (ForkID set, Chronicle not set)
+    # BIP143 path
     # hash previous outs
     if not sighash & SIGHASH.ANYONECANPAY:
         hash_prevouts = hash256(
