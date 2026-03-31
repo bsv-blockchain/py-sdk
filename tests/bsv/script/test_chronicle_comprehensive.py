@@ -3,8 +3,12 @@
 import pytest
 
 from bsv.constants import OpCode, SIGHASH
+from bsv.keys import PrivateKey
 from bsv.script.script import Script
 from bsv.script.spend import Spend
+from bsv.script.type import P2PKH
+from bsv.transaction import Transaction
+from bsv.transaction_input import TransactionInput
 from bsv.transaction_output import TransactionOutput
 
 
@@ -169,3 +173,58 @@ class TestLargeNumbers:
         # 128 * 2 = 256; 128 = 8000 (sign bit), 256 = 0001
         spend = make_spend("OP_2MUL 0001 OP_EQUALVERIFY OP_TRUE", "8000")
         assert spend.validate()
+
+
+# ============================================================
+# Mixed sighash tests (review 9.4.2.2)
+# ============================================================
+
+class TestMixedSighash:
+    """Mix BIP143 and OTDA inputs within a single transaction."""
+
+    def _build_funding_tx(self, locking_script, satoshis=10_000):
+        return Transaction(
+            tx_inputs=[TransactionInput(
+                source_txid="00" * 32,
+                source_output_index=0,
+                unlocking_script=Script(),
+                sequence=0xFFFFFFFF,
+            )],
+            tx_outputs=[TransactionOutput(locking_script=locking_script, satoshis=satoshis)],
+            version=1,
+        )
+
+    def test_mixed_bip143_and_otda_inputs(self):
+        """One input using BIP143 (FORKID) and another using OTDA (FORKID+CHRONICLE)."""
+        priv = PrivateKey("L1RrrnXkcKut5DEMwtDthjwRcTTwED36thyL1DebVrKuwvohjMNi")
+        p2pkh = P2PKH()
+        lock = p2pkh.lock(priv.address())
+
+        funding1 = self._build_funding_tx(lock)
+        funding2 = self._build_funding_tx(lock)
+
+        inp1 = TransactionInput(
+            source_transaction=funding1,
+            source_output_index=0,
+            unlocking_script_template=p2pkh.unlock(priv),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH.ALL_FORKID,  # BIP143
+        )
+        inp2 = TransactionInput(
+            source_transaction=funding2,
+            source_output_index=0,
+            unlocking_script_template=p2pkh.unlock(priv),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH.ALL_FORKID_CHRONICLE,  # OTDA
+        )
+
+        tx = Transaction(
+            [inp1, inp2],
+            [TransactionOutput(locking_script=lock, satoshis=19_000)],
+            version=2,
+        )
+        tx.sign(bypass=False)
+
+        # Validate both inputs via Spend
+        from tests.bsv.live.conftest import validate_all_inputs
+        validate_all_inputs(tx)
