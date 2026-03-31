@@ -446,6 +446,8 @@ class UTXOManager:
                 f"Fan-out broadcast failed: {getattr(result, 'description', result.status)}"
             )
         self.broadcast_count += 1
+        txid = result.txid or fan_out_tx.txid()
+        print(f"\n  -> Fan-out: https://test.whatsonchain.com/tx/{txid}")
 
         # Record all non-change outputs as available UTXOs
         for i in range(num_outputs):
@@ -475,9 +477,13 @@ class UTXOManager:
 
         If spent_utxo is provided and the broadcast fails, the UTXO is
         returned to the pool since it was never actually spent on-chain.
+        Prints a clickable WhatsonChain link on successful broadcasts.
         """
         result = await self.broadcaster.broadcast(tx)
         self.broadcast_count += 1
+        if result.status == "success":
+            txid = result.txid or tx.txid()
+            print(f"\n  -> https://test.whatsonchain.com/tx/{txid}")
         if result.status != "success" and spent_utxo is not None:
             self.return_utxo(spent_utxo)
         return result
