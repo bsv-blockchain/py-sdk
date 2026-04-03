@@ -123,6 +123,7 @@ async def build_two_step_testnet_tx(
     sighash: int = SIGHASH.ALL_FORKID,
     tx_version: int = 1,
     step2_broadcaster=None,
+    setup_version: int = 1,
 ):
     """Two-step tx for non-P2PKH script types (P2PK, Multisig, custom opcodes).
 
@@ -133,6 +134,7 @@ async def build_two_step_testnet_tx(
     Args:
         step2_broadcaster: Optional broadcaster for step 2 (e.g. WoC for
             v2 txs with non-push unlocking scripts that ARC rejects).
+        setup_version: Version of the setup (step 1) transaction (default 1).
     """
     p2pkh = P2PKH()
 
@@ -147,7 +149,7 @@ async def build_two_step_testnet_tx(
             sequence=0xFFFFFFFF,
         )],
         [TransactionOutput(locking_script=test_lock_script, change=True)],
-        version=1,
+        version=setup_version,
     )
     setup_tx.fee(FEE_MODEL)
     setup_tx.sign()
@@ -181,8 +183,8 @@ async def build_two_step_testnet_tx(
 # Count total tests to size the fan-out
 # ---------------------------------------------------------------------------
 
-# P2PKH: 24, P2PK: 24, Multisig: 24, Chronicle opcodes: 20, Standard opcodes: ~25, Unlocking: 2
-TOTAL_TEST_UTXOS = 135  # with some buffer
+# P2PKH: 24, P2PK: 24, Multisig: 24, Chronicle opcodes: 20, Standard opcodes: ~25, Unlocking: 2, CrossConfig: ~15
+TOTAL_TEST_UTXOS = 155  # with some buffer
 
 
 # ---------------------------------------------------------------------------
@@ -527,6 +529,137 @@ class TestTestnetUnlockingOpcodes:
         tx = await build_two_step_testnet_tx(
             utxo_mgr, lock, unlock, funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
+        )
+        result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
+        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+
+
+# ---------------------------------------------------------------------------
+# Cross-configuration tests
+# ---------------------------------------------------------------------------
+
+
+CROSS_VERSION_COMBOS = [
+    pytest.param(1, 2, id="setup_v1_spend_v2"),
+    pytest.param(2, 1, id="setup_v2_spend_v1"),
+]
+
+
+class TestTestnetCrossConfig:
+    """Cross-configuration tests: version transitions, mixed sighash, mixed sources."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("setup_ver,spend_ver", CROSS_VERSION_COMBOS)
+    async def test_p2pkh_version_transition(self, funded_key, utxo_mgr, setup_ver, spend_ver):
+        """P2PKH with setup tx version != spending tx version."""
+        p2pkh = P2PKH()
+        utxo = utxo_mgr.take_utxo()
+        source_tx, vout, _ = utxo
+        tx = build_testnet_tx(
+            source_tx, vout,
+            p2pkh.lock(funded_key.address()),
+            p2pkh.unlock(funded_key),
+            funded_key,
+            sighash=SIGHASH.ALL_FORKID,
+            tx_version=spend_ver,
+        )
+        result = await utxo_mgr.broadcast_test_tx(tx, spent_utxo=utxo)
+        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("setup_ver,spend_ver", CROSS_VERSION_COMBOS)
+    async def test_p2pk_version_transition(self, funded_key, utxo_mgr, setup_ver, spend_ver):
+        """P2PK with setup version != spend version."""
+        p2pk = P2PK()
+        tx = await build_two_step_testnet_tx(
+            utxo_mgr,
+            p2pk.lock(funded_key.public_key().serialize()),
+            p2pk.unlock(funded_key),
+            funded_key,
+            sighash=SIGHASH.ALL_FORKID,
+            tx_version=spend_ver,
+            setup_version=setup_ver,
+        )
+        result = await utxo_mgr.broadcast_test_tx(tx)
+        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+
+    @pytest.mark.asyncio
+    async def test_mixed_sighash_inputs(self, funded_key, utxo_mgr):
+        """Two-input tx: one BIP143, one OTDA, both P2PKH."""
+        p2pkh = P2PKH()
+        utxo1 = utxo_mgr.take_utxo()
+        utxo2 = utxo_mgr.take_utxo()
+        src1, vout1, _ = utxo1
+        src2, vout2, _ = utxo2
+
+        inp1 = TransactionInput(
+            source_transaction=src1,
+            source_output_index=vout1,
+            unlocking_script_template=p2pkh.unlock(funded_key),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH(SIGHASH.ALL_FORKID),
+        )
+        inp2 = TransactionInput(
+            source_transaction=src2,
+            source_output_index=vout2,
+            unlocking_script_template=p2pkh.unlock(funded_key),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH(SIGHASH.ALL_FORKID_CHRONICLE),
+        )
+        tx = Transaction(
+            [inp1, inp2],
+            [TransactionOutput(
+                locking_script=p2pkh.lock(funded_key.address()),
+                change=True,
+            )],
+            version=2,
+        )
+        tx.fee(FEE_MODEL)
+        tx.sign(bypass=False)
+        validate_all_inputs(tx)
+
+        result = await utxo_mgr.broadcast_test_tx(tx)
+        if result.status != "success":
+            utxo_mgr.return_utxo(utxo1)
+            utxo_mgr.return_utxo(utxo2)
+        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+
+    @pytest.mark.asyncio
+    async def test_chronicle_opcode_bip143_v2(self, funded_key, utxo_mgr):
+        """Chronicle opcode (OP_2MUL) with BIP143 sighash in v2 tx."""
+        lock = p2pkh_lock_with_prefix("OP_2MUL OP_4 OP_NUMEQUALVERIFY", funded_key)
+        data = Script.from_asm("OP_2")
+        unlock = custom_unlock(funded_key, data_prefix_script=data)
+        tx = await build_two_step_testnet_tx(
+            utxo_mgr, lock, unlock, funded_key,
+            sighash=SIGHASH.ALL_FORKID, tx_version=2,
+        )
+        result = await utxo_mgr.broadcast_test_tx(tx)
+        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+
+    @pytest.mark.asyncio
+    async def test_chronicle_opcode_otda_v1(self, funded_key, utxo_mgr):
+        """Chronicle opcode (OP_2MUL) with OTDA sighash in v1 tx."""
+        lock = p2pkh_lock_with_prefix("OP_2MUL OP_4 OP_NUMEQUALVERIFY", funded_key)
+        data = Script.from_asm("OP_2")
+        unlock = custom_unlock(funded_key, data_prefix_script=data)
+        tx = await build_two_step_testnet_tx(
+            utxo_mgr, lock, unlock, funded_key,
+            sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=1,
+        )
+        result = await utxo_mgr.broadcast_test_tx(tx)
+        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+
+    @pytest.mark.asyncio
+    async def test_v2_nonpush_unlock_v1_setup(self, funded_key, utxo_mgr, woc_testnet_broadcaster):
+        """v2 tx with non-push unlocking script spending a v1-created output."""
+        lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_key)
+        data = Script.from_asm("OP_1 OP_2 OP_ADD")
+        unlock = custom_unlock(funded_key, data_prefix_script=data)
+        tx = await build_two_step_testnet_tx(
+            utxo_mgr, lock, unlock, funded_key,
+            sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
+            setup_version=1,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
