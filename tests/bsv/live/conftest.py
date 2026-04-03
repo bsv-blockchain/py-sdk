@@ -88,7 +88,7 @@ def mock_broadcaster():
 # ---------------------------------------------------------------------------
 
 
-def build_funding_tx(locking_script: Script, satoshis: int = 10_000) -> Transaction:
+def build_funding_tx(locking_script: Script, satoshis: int = 10_000, version: int = 1) -> Transaction:
     """Create a synthetic funding transaction with one output.
 
     The funding tx itself does not need to be valid — it just provides
@@ -106,7 +106,7 @@ def build_funding_tx(locking_script: Script, satoshis: int = 10_000) -> Transact
         tx_outputs=[
             TransactionOutput(locking_script=locking_script, satoshis=satoshis),
         ],
-        version=1,
+        version=version,
     )
 
 
@@ -196,6 +196,44 @@ def build_signed_tx(
     ]
 
     tx = Transaction(inputs, outputs, version=tx_version)
+    tx.sign(bypass=False)
+    validate_all_inputs(tx)
+    return tx
+
+
+def build_cross_config_tx(
+    input_configs: list[tuple[Script, object, int]],
+    spending_version: int = 1,
+    funding_version: int = 1,
+    satoshis: int = 10_000,
+) -> Transaction:
+    """Build a tx with per-input sighash and explicit funding/spending versions.
+
+    Args:
+        input_configs: List of (locking_script, unlock_template, sighash) per input.
+        spending_version: Version of the spending transaction.
+        funding_version: Version of the synthetic funding transactions.
+        satoshis: Satoshis per funding UTXO.
+    """
+    inputs = []
+    for lock, unlock, sh in input_configs:
+        funding_tx = build_funding_tx(lock, satoshis=satoshis, version=funding_version)
+        inputs.append(
+            TransactionInput(
+                source_transaction=funding_tx,
+                source_output_index=0,
+                unlocking_script_template=unlock,
+                sequence=0xFFFFFFFF,
+                sighash=SIGHASH(sh),
+            )
+        )
+
+    total = satoshis * len(input_configs)
+    outputs = [
+        TransactionOutput(locking_script=input_configs[0][0], satoshis=total - 500)
+    ]
+
+    tx = Transaction(inputs, outputs, version=spending_version)
     tx.sign(bypass=False)
     validate_all_inputs(tx)
     return tx
