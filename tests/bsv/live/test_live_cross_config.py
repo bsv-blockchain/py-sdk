@@ -272,104 +272,60 @@ class TestMixedInputSighash:
 class TestMixedInputSources:
     """Single tx spending inputs from different-versioned source txs."""
 
-    def test_v1_and_v2_source_inputs_v2_spend(self, priv_key):
-        """Input from v1 source + input from v2 source, v2 spending tx."""
+    @staticmethod
+    def _build_mixed_source_tx(priv_key, source_configs, spending_version):
+        """Build a tx with inputs from different-versioned funding txs.
+
+        Args:
+            source_configs: List of (funding_version, sighash) per input.
+            spending_version: Version of the spending transaction.
+        """
         p2pkh = P2PKH()
         lock = p2pkh.lock(priv_key.address())
         unlock = p2pkh.unlock(priv_key)
 
-        funding_v1 = build_funding_tx(lock, satoshis=10_000, version=1)
-        funding_v2 = build_funding_tx(lock, satoshis=10_000, version=2)
+        inputs = []
+        for funding_ver, sh in source_configs:
+            funding_tx = build_funding_tx(lock, satoshis=10_000, version=funding_ver)
+            inputs.append(
+                TransactionInput(
+                    source_transaction=funding_tx,
+                    source_output_index=0,
+                    unlocking_script_template=unlock,
+                    sequence=0xFFFFFFFF,
+                    sighash=SIGHASH(sh),
+                )
+            )
 
-        inputs = [
-            TransactionInput(
-                source_transaction=funding_v1,
-                source_output_index=0,
-                unlocking_script_template=unlock,
-                sequence=0xFFFFFFFF,
-                sighash=SIGHASH(SIGHASH.ALL_FORKID),
-            ),
-            TransactionInput(
-                source_transaction=funding_v2,
-                source_output_index=0,
-                unlocking_script_template=unlock,
-                sequence=0xFFFFFFFF,
-                sighash=SIGHASH(SIGHASH.ALL_FORKID_CHRONICLE),
-            ),
-        ]
+        total = 10_000 * len(source_configs) - 500
         tx = Transaction(
             inputs,
-            [TransactionOutput(locking_script=lock, satoshis=19_500)],
-            version=2,
+            [TransactionOutput(locking_script=lock, satoshis=total)],
+            version=spending_version,
         )
         tx.sign(bypass=False)
         validate_all_inputs(tx)
+
+    def test_v1_and_v2_source_inputs_v2_spend(self, priv_key):
+        """Input from v1 source + input from v2 source, v2 spending tx."""
+        self._build_mixed_source_tx(priv_key, [
+            (1, SIGHASH.ALL_FORKID),
+            (2, SIGHASH.ALL_FORKID_CHRONICLE),
+        ], spending_version=2)
 
     def test_v2_and_v1_source_inputs_v1_spend(self, priv_key):
         """Input from v2 source + input from v1 source, v1 spending tx."""
-        p2pkh = P2PKH()
-        lock = p2pkh.lock(priv_key.address())
-        unlock = p2pkh.unlock(priv_key)
-
-        funding_v2 = build_funding_tx(lock, satoshis=10_000, version=2)
-        funding_v1 = build_funding_tx(lock, satoshis=10_000, version=1)
-
-        inputs = [
-            TransactionInput(
-                source_transaction=funding_v2,
-                source_output_index=0,
-                unlocking_script_template=unlock,
-                sequence=0xFFFFFFFF,
-                sighash=SIGHASH(SIGHASH.ALL_FORKID),
-            ),
-            TransactionInput(
-                source_transaction=funding_v1,
-                source_output_index=0,
-                unlocking_script_template=unlock,
-                sequence=0xFFFFFFFF,
-                sighash=SIGHASH(SIGHASH.ALL_FORKID),
-            ),
-        ]
-        tx = Transaction(
-            inputs,
-            [TransactionOutput(locking_script=lock, satoshis=19_500)],
-            version=1,
-        )
-        tx.sign(bypass=False)
-        validate_all_inputs(tx)
+        self._build_mixed_source_tx(priv_key, [
+            (2, SIGHASH.ALL_FORKID),
+            (1, SIGHASH.ALL_FORKID),
+        ], spending_version=1)
 
     def test_mixed_sources_mixed_sighash_v2(self, priv_key):
         """v1 source with BIP143 + v2 source with OTDA, v2 spending tx."""
-        p2pkh = P2PKH()
-        lock = p2pkh.lock(priv_key.address())
-        unlock = p2pkh.unlock(priv_key)
-
-        funding_v1 = build_funding_tx(lock, satoshis=10_000, version=1)
-        funding_v2 = build_funding_tx(lock, satoshis=10_000, version=2)
-
-        inputs = [
-            TransactionInput(
-                source_transaction=funding_v1,
-                source_output_index=0,
-                unlocking_script_template=unlock,
-                sequence=0xFFFFFFFF,
-                sighash=SIGHASH(SIGHASH.ALL_FORKID),
-            ),
-            TransactionInput(
-                source_transaction=funding_v2,
-                source_output_index=0,
-                unlocking_script_template=unlock,
-                sequence=0xFFFFFFFF,
-                sighash=SIGHASH(SIGHASH.ALL_FORKID_CHRONICLE),
-            ),
-        ]
-        tx = Transaction(
-            inputs,
-            [TransactionOutput(locking_script=lock, satoshis=19_500)],
-            version=2,
-        )
-        tx.sign(bypass=False)
-        validate_all_inputs(tx)
+        self._build_mixed_source_tx(priv_key, [
+            (1, SIGHASH.ALL_FORKID),
+            (2, SIGHASH.ALL_FORKID_CHRONICLE),
+        ], spending_version=2)
 
 
 # ---------------------------------------------------------------------------
