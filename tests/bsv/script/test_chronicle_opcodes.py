@@ -117,17 +117,14 @@ class TestOp2Mul:
         assert not Spend.is_op_disabled(OpCode.OP_2MUL)
 
     def test_basic(self):
-        # 3 * 2 = 6
         spend = make_spend("OP_2MUL OP_6 OP_EQUALVERIFY OP_TRUE", "OP_3")
         assert spend.validate()
 
     def test_zero(self):
-        # 0 * 2 = 0
         spend = make_spend("OP_2MUL OP_0 OP_EQUALVERIFY OP_TRUE", "OP_0")
         assert spend.validate()
 
     def test_negative(self):
-        # -1 * 2 = -2; check: -2 + 1 + 1 = 0
         spend = make_spend("OP_2MUL OP_1ADD OP_1ADD OP_0 OP_EQUALVERIFY OP_TRUE", "OP_1NEGATE")
         assert spend.validate()
 
@@ -141,22 +138,18 @@ class TestOp2Div:
         assert not Spend.is_op_disabled(OpCode.OP_2DIV)
 
     def test_basic(self):
-        # 6 / 2 = 3
         spend = make_spend("OP_2DIV OP_3 OP_EQUALVERIFY OP_TRUE", "OP_6")
         assert spend.validate()
 
     def test_truncation(self):
-        # 7 / 2 = 3 (integer division)
         spend = make_spend("OP_2DIV OP_3 OP_EQUALVERIFY OP_TRUE", "OP_7")
         assert spend.validate()
 
     def test_zero(self):
-        # 0 / 2 = 0
         spend = make_spend("OP_2DIV OP_0 OP_EQUALVERIFY OP_TRUE", "OP_0")
         assert spend.validate()
 
     def test_negative(self):
-        # -2 / 2 = -1; -2 is encoded as 0x82, -1 as 0x81
         spend = make_spend("OP_2DIV OP_1NEGATE OP_EQUALVERIFY OP_TRUE", "82")
         assert spend.validate()
 
@@ -167,8 +160,6 @@ class TestOp2Div:
 
 class TestOpSubstr:
     def test_basic(self):
-        # "BSV Blockchain" = 42535620426c6f636b636861696e
-        # OP_4 OP_5 OP_SUBSTR => "Block" = 426c6f636b
         spend = make_spend(
             "OP_4 OP_5 OP_SUBSTR 426c6f636b OP_EQUALVERIFY OP_TRUE",
             "42535620426c6f636b636861696e",
@@ -176,7 +167,6 @@ class TestOpSubstr:
         assert spend.validate()
 
     def test_full_string(self):
-        # Start 0, length = full string length (3 bytes "abc" = 616263)
         spend = make_spend(
             "OP_0 OP_3 OP_SUBSTR 616263 OP_EQUALVERIFY OP_TRUE",
             "616263",
@@ -194,7 +184,6 @@ class TestOpSubstr:
             spend.validate()
 
     def test_out_of_range_error(self):
-        # 3 byte string, start=1, length=3 => 1+3=4 > 3
         spend = make_spend("OP_1 OP_3 OP_SUBSTR OP_TRUE", "616263")
         with pytest.raises(Exception):
             spend.validate()
@@ -211,7 +200,6 @@ class TestOpSubstr:
 
 class TestOpLeft:
     def test_basic(self):
-        # "BSV" = 425356, left 3 of "BSV Blockchain"
         spend = make_spend(
             "OP_3 OP_LEFT 425356 OP_EQUALVERIFY OP_TRUE",
             "42535620426c6f636b636861696e",
@@ -227,7 +215,6 @@ class TestOpLeft:
         assert spend.validate()
 
     def test_overflow_error(self):
-        # length 4 on a 3-byte string
         spend = make_spend("OP_4 OP_LEFT OP_TRUE", "616263")
         with pytest.raises(Exception):
             spend.validate()
@@ -239,7 +226,6 @@ class TestOpLeft:
 
 class TestOpRight:
     def test_basic(self):
-        # Right 5 of "BSV Blockchain" => "chain" = 636861696e
         spend = make_spend(
             "OP_5 OP_RIGHT 636861696e OP_EQUALVERIFY OP_TRUE",
             "42535620426c6f636b636861696e",
@@ -255,7 +241,6 @@ class TestOpRight:
         assert spend.validate()
 
     def test_one_byte(self):
-        # Right 1 of "abc" => "c" = 63
         spend = make_spend("OP_1 OP_RIGHT 63 OP_EQUALVERIFY OP_TRUE", "616263")
         assert spend.validate()
 
@@ -265,7 +250,6 @@ class TestOpRight:
             spend.validate()
 
     def test_left_right_cat_roundtrip(self):
-        # LEFT(2) + RIGHT(1) of "abc" => "ab" + "c" => "abc"
         spend = make_spend(
             "OP_DUP OP_2 OP_LEFT OP_SWAP OP_1 OP_RIGHT OP_CAT 616263 OP_EQUALVERIFY OP_TRUE",
             "616263",
@@ -279,17 +263,14 @@ class TestOpRight:
 
 class TestOpLshiftnum:
     def test_basic(self):
-        # 1 << 3 = 8
         spend = make_spend("OP_3 OP_LSHIFTNUM OP_8 OP_EQUALVERIFY OP_TRUE", "OP_1")
         assert spend.validate()
 
     def test_zero_shift(self):
-        # 5 << 0 = 5
         spend = make_spend("OP_0 OP_LSHIFTNUM OP_5 OP_EQUALVERIFY OP_TRUE", "OP_5")
         assert spend.validate()
 
     def test_multi_byte_result(self):
-        # 255 << 1 = 510; 255 = 0xff (push ff00 to avoid sign), 510 = 0x01fe
         spend = make_spend("OP_1 OP_LSHIFTNUM fe01 OP_EQUALVERIFY OP_TRUE", "ff00")
         assert spend.validate()
 
@@ -305,21 +286,17 @@ class TestOpLshiftnum:
 
 class TestOpRshiftnum:
     def test_basic(self):
-        # 8 >> 3 = 1
         spend = make_spend("OP_3 OP_RSHIFTNUM OP_1 OP_EQUALVERIFY OP_TRUE", "OP_8")
         assert spend.validate()
 
     def test_zero_shift(self):
-        # 5 >> 0 = 5
         spend = make_spend("OP_0 OP_RSHIFTNUM OP_5 OP_EQUALVERIFY OP_TRUE", "OP_5")
         assert spend.validate()
 
     def test_truncation(self):
-        # 7 >> 1 = 3
         spend = make_spend("OP_1 OP_RSHIFTNUM OP_3 OP_EQUALVERIFY OP_TRUE", "OP_7")
         assert spend.validate()
 
     def test_negative_number(self):
-        # -8 >> 2 = -2; -8 = 0x88, result -2 = 0x82
         spend = make_spend("OP_2 OP_RSHIFTNUM 82 OP_EQUALVERIFY OP_TRUE", "88")
         assert spend.validate()
