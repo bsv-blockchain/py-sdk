@@ -283,6 +283,71 @@ xdg-open htmlcov/index.html
 
 We welcome contributions that improve test coverage, especially in currently under-tested areas.
 
+### Chronicle Live Tests
+
+The SDK includes a comprehensive live test suite for the Chronicle network upgrade, located in `tests/bsv/live/`. These tests validate real transaction building, signing, script execution, and broadcasting across all sighash flag combinations and script types.
+
+#### Mock Tests (no network required)
+
+250 tests that build real `Transaction` objects, sign them with real keys, and validate every input through the `Spend` script interpreter — without touching the network:
+
+```bash
+# Run all mock live tests
+pytest tests/bsv/live/ -v -m "not testnet"
+```
+
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| `test_live_sighash_matrix.py` | 102 | All 12 sighash flags x 2 tx versions x P2PKH/P2PK/Multisig |
+| `test_live_chronicle_opcodes.py` | 43 | 10 restored opcodes (OP_VER, OP_VERIF, OP_2MUL, OP_SUBSTR, etc.) x BIP143 + OTDA |
+| `test_live_standard_opcodes.py` | 93 | Stack, arithmetic, bitwise, crypto, flow control opcodes |
+| `test_live_malleability.py` | 12 | 6 malleability restrictions x v1-rejects/v2-relaxes pairs |
+
+#### Testnet Broadcast Tests (requires funded key)
+
+98 tests that broadcast real transactions to BSV testnet via ARC, verifying end-to-end correctness:
+
+```bash
+# Set funded testnet private key
+export FUNDED_TESTNET_WIF="cYourTestnetWifHere"
+
+# Run testnet broadcast tests
+pytest tests/bsv/live/test_live_testnet.py -v
+```
+
+**How it works:**
+
+1. **UTXO Fan-out**: A single funded UTXO is split into ~130 small outputs via a fan-out transaction
+2. **Two-step transactions**: For non-P2PKH scripts (P2PK, Multisig, custom opcodes), a setup tx converts the P2PKH UTXO into the test script type, then a second tx spends it with the target sighash
+3. **Spend pre-validation**: Every test tx is validated through the `Spend` interpreter before broadcasting
+4. **UTXO persistence**: The UTXO pool is saved to `.utxo_pool.json` between test runs. Failed broadcasts automatically return UTXOs to the pool
+5. **ARC headers**: Uses `X-SkipScriptValidation` header to bypass ARC's script validator (which may lag behind the node's Chronicle support)
+
+| Test Class | Tests | Coverage |
+|------------|-------|----------|
+| `TestTestnetP2PKH` | 24 | P2PKH x 12 sighash flags x 2 tx versions |
+| `TestTestnetP2PK` | 24 | P2PK x 12 sighash flags x 2 tx versions |
+| `TestTestnetMultisig` | 24 | 2-of-3 BareMultisig x 12 sighash flags x 2 tx versions |
+| `TestTestnetChronicleOpcodes` | 20 | 10 Chronicle opcodes x BIP143 + OTDA paths |
+| `TestTestnetStandardOpcodes` | 7 | ADD, SUB, MUL, CAT, HASH160, IF/ELSE, CHECKSIGVERIFY |
+
+**Sighash flags tested** (all 12):
+
+| Flag | Value | Algorithm |
+|------|-------|-----------|
+| `ALL_FORKID` | 0x41 | BIP143 |
+| `NONE_FORKID` | 0x42 | BIP143 |
+| `SINGLE_FORKID` | 0x43 | BIP143 |
+| `ALL_ANYONECANPAY_FORKID` | 0xC1 | BIP143 |
+| `NONE_ANYONECANPAY_FORKID` | 0xC2 | BIP143 |
+| `SINGLE_ANYONECANPAY_FORKID` | 0xC3 | BIP143 |
+| `ALL_FORKID_CHRONICLE` | 0x61 | OTDA |
+| `NONE_FORKID_CHRONICLE` | 0x62 | OTDA |
+| `SINGLE_FORKID_CHRONICLE` | 0x63 | OTDA |
+| `ALL_ANYONECANPAY_FORKID_CHRONICLE` | 0xE1 | OTDA |
+| `NONE_ANYONECANPAY_FORKID_CHRONICLE` | 0xE2 | OTDA |
+| `SINGLE_ANYONECANPAY_FORKID_CHRONICLE` | 0xE3 | OTDA |
+
 ## Beginner Tutorial
 #### [Step-by-Step BSV Tutorial: Sending BSV and NFTs](./docs/beginner_tutorial.md)
 
