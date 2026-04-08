@@ -104,6 +104,17 @@ def _opcode_map() -> dict[str, int]:
     m["CHECKLOCKTIMEVERIFY"] = OpCode.OP_NOP2.value[0]
     m["CHECKSEQUENCEVERIFY"] = OpCode.OP_NOP3.value[0]
     m["OP_RESERVED"] = OpCode.OP_RESERVED.value[0]
+    # Chronicle: NOP4-8 are now aliases for OP_SUBSTR etc., but Go reference vectors still use NOP names
+    m["NOP4"] = OpCode.OP_SUBSTR.value[0]
+    m["OP_NOP4"] = OpCode.OP_SUBSTR.value[0]
+    m["NOP5"] = OpCode.OP_LEFT.value[0]
+    m["OP_NOP5"] = OpCode.OP_LEFT.value[0]
+    m["NOP6"] = OpCode.OP_RIGHT.value[0]
+    m["OP_NOP6"] = OpCode.OP_RIGHT.value[0]
+    m["NOP7"] = OpCode.OP_LSHIFTNUM.value[0]
+    m["OP_NOP7"] = OpCode.OP_LSHIFTNUM.value[0]
+    m["NOP8"] = OpCode.OP_RSHIFTNUM.value[0]
+    m["OP_NOP8"] = OpCode.OP_RSHIFTNUM.value[0]
     return m
 
 

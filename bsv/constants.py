@@ -6,6 +6,7 @@ NUMBER_BYTE_LENGTH: int = 32
 
 TRANSACTION_SEQUENCE: int = int(os.getenv("BSV_PY_SDK_TRANSACTION_SEQUENCE") or 0xFFFFFFFF)
 TRANSACTION_VERSION: int = int(os.getenv("BSV_PY_SDK_TRANSACTION_VERSION") or 1)
+TRANSACTION_VERSION_CHRONICLE: int = 2  # Relaxed malleability rules
 TRANSACTION_LOCKTIME: int = int(os.getenv("BSV_PY_SDK_TRANSACTION_LOCKTIME") or 0)
 TRANSACTION_FEE_RATE: int = int(os.getenv("BSV_PY_SDK_TRANSACTION_FEE_RATE") or 100)  # satoshi per kilobyte
 BIP32_DERIVATION_PATH = os.getenv("BSV_PY_SDK_BIP32_DERIVATION_PATH") or "m/"
@@ -28,6 +29,7 @@ class SIGHASH(int, Enum):
     ANYONECANPAY: int = 0x80
 
     FORKID: int = 0x40
+    CHRONICLE: int = 0x20
 
     ALL_FORKID = ALL | FORKID
     NONE_FORKID = NONE | FORKID
@@ -35,6 +37,13 @@ class SIGHASH(int, Enum):
     ALL_ANYONECANPAY_FORKID = ALL_FORKID | ANYONECANPAY
     NONE_ANYONECANPAY_FORKID = NONE_FORKID | ANYONECANPAY
     SINGLE_ANYONECANPAY_FORKID = SINGLE_FORKID | ANYONECANPAY
+
+    ALL_FORKID_CHRONICLE = ALL | FORKID | CHRONICLE
+    NONE_FORKID_CHRONICLE = NONE | FORKID | CHRONICLE
+    SINGLE_FORKID_CHRONICLE = SINGLE | FORKID | CHRONICLE
+    ALL_ANYONECANPAY_FORKID_CHRONICLE = ALL_FORKID_CHRONICLE | ANYONECANPAY
+    NONE_ANYONECANPAY_FORKID_CHRONICLE = NONE_FORKID_CHRONICLE | ANYONECANPAY
+    SINGLE_ANYONECANPAY_FORKID_CHRONICLE = SINGLE_FORKID_CHRONICLE | ANYONECANPAY
 
     def __or__(self, other):
         """Support OR operation while maintaining SIGHASH type."""
@@ -63,7 +72,23 @@ class SIGHASH(int, Enum):
             cls.ALL_ANYONECANPAY_FORKID,
             cls.NONE_ANYONECANPAY_FORKID,
             cls.SINGLE_ANYONECANPAY_FORKID,
+            cls.ALL_FORKID_CHRONICLE,
+            cls.NONE_FORKID_CHRONICLE,
+            cls.SINGLE_FORKID_CHRONICLE,
+            cls.ALL_ANYONECANPAY_FORKID_CHRONICLE,
+            cls.NONE_ANYONECANPAY_FORKID_CHRONICLE,
+            cls.SINGLE_ANYONECANPAY_FORKID_CHRONICLE,
         ]
+
+    @staticmethod
+    def use_otda(sighash: int) -> bool:
+        """Determine whether to use OTDA (Original Transaction Digest Algorithm).
+
+        Routing: FORKID only → BIP143; FORKID+CHRONICLE or no FORKID → OTDA.
+        """
+        has_forkid = bool(sighash & SIGHASH.FORKID)
+        has_chronicle = bool(sighash & SIGHASH.CHRONICLE)
+        return not has_forkid or (has_forkid and has_chronicle)
 
 
 #
@@ -278,6 +303,13 @@ class OpCode(bytes, Enum):
     OP_NOP1 = b"\xb0"
     OP_NOP2 = b"\xb1"
     OP_NOP3 = b"\xb2"
+    # Chronicle opcodes (restored in 2026 Chronicle upgrade)
+    OP_SUBSTR = b"\xb3"
+    OP_LEFT = b"\xb4"
+    OP_RIGHT = b"\xb5"
+    OP_LSHIFTNUM = b"\xb6"
+    OP_RSHIFTNUM = b"\xb7"
+    # Backward-compatible aliases (OP_NOP4-8 are aliases for the above)
     OP_NOP4 = b"\xb3"
     OP_NOP5 = b"\xb4"
     OP_NOP6 = b"\xb5"
@@ -364,3 +396,9 @@ OPCODE_VALUE_NAME_DICT: dict[bytes, str] = {item.value: item.name for item in Op
 # When multiple names exist for the same opcode value, prefer the more descriptive one
 OPCODE_VALUE_NAME_DICT[b"\x00"] = "OP_FALSE"  # More human-readable than OP_0
 OPCODE_VALUE_NAME_DICT[b"\x51"] = "OP_TRUE"  # More human-readable than OP_1
+# Chronicle opcodes: canonical names for restored opcodes
+OPCODE_VALUE_NAME_DICT[b"\xb3"] = "OP_SUBSTR"
+OPCODE_VALUE_NAME_DICT[b"\xb4"] = "OP_LEFT"
+OPCODE_VALUE_NAME_DICT[b"\xb5"] = "OP_RIGHT"
+OPCODE_VALUE_NAME_DICT[b"\xb6"] = "OP_LSHIFTNUM"
+OPCODE_VALUE_NAME_DICT[b"\xb7"] = "OP_RSHIFTNUM"

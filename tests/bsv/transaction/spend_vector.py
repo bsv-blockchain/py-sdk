@@ -80,7 +80,9 @@ SPEND_VALID_CASES = [
     ["5b01e40164", "a5", "test"],
     ["04ffffffff01e40164", "a591", "test"],
     ["04ffffff7f01e40164", "a591", "test"],
-    ["51", "b0b1b2b3b4b5b6b7b8b95187", "test"],
+    # Chronicle: b3-b7 are now OP_SUBSTR/LEFT/RIGHT/LSHIFTNUM/RSHIFTNUM, not NOPs
+    # Only include actual NOPs: b0(NOP1) b1(NOP2) b2(NOP3) b8(NOP9) b9(NOP10)
+    ["51", "b0b1b2b8b95187", "test"],
     ["51", "61", "Discourage NOPx flag allows OP_NOP"],
     ["00", "63b96851", "Discouraged NOPs are allowed if not executed"],
     ["00", "63ba675168", "opcodes above NOP10 invalid if executed"],

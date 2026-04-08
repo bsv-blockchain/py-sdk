@@ -118,15 +118,11 @@ class Transaction:
         # Ensure hash_type is treated as uint32
         hash_type = hash_type & 0xFFFFFFFF
 
-        # Choose algorithm based on ForkID bit
-        if hash_type & int(SIGHASH.FORKID):
-            # Use BIP143/ForkID algorithm
-            preimage = self._calc_input_preimage_bip143(input_index, hash_type, script_code, prev_satoshis)
-            return hash256(preimage)
-        else:
-            # Use legacy algorithm
+        if SIGHASH.use_otda(hash_type):
             preimage = self._calc_input_preimage_legacy(input_index, hash_type)
-            return hash256(preimage)
+        else:
+            preimage = self._calc_input_preimage_bip143(input_index, hash_type, script_code, prev_satoshis)
+        return hash256(preimage)
 
     def _calc_input_preimage_bip143(
         self, input_index: int, hash_type: int, _script_code: Script, prev_satoshis: int
@@ -311,10 +307,7 @@ class Transaction:
 
     def _serialize_modified_transaction(self, tx_copy: "Transaction", hash_type: int) -> bytes:
         """Serialize the modified transaction and append hash type."""
-        stream = BytesIO()
-        tx_copy.serialize_no_witness(stream)
-        stream.write(hash_type.to_bytes(4, "little"))
-        return stream.getvalue()
+        return tx_copy.serialize() + hash_type.to_bytes(4, "little")
 
     def sign(self, bypass: bool = True) -> "Transaction":  # pragma: no cover
         """
