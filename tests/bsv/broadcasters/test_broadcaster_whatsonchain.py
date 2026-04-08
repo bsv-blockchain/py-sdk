@@ -88,6 +88,34 @@ class TestWhatsOnChainBroadcast:
             assert result.description == "Invalid transaction"
 
     @pytest.mark.asyncio
+    async def test_broadcast_already_in_mempool_treated_as_success(self):
+        """WoC may return 500 with 'already in the mempool' for a duplicate submit."""
+        from unittest.mock import MagicMock, patch
+
+        from bsv.transaction import Transaction
+
+        tx = Transaction()
+        tx.hex = lambda: "deadbeef"
+        tx.txid = lambda: "b" * 64
+
+        broadcaster = WhatsOnChainBroadcaster(Network.MAINNET)
+
+        with patch.object(broadcaster.http_client, "fetch") as mock_fetch:
+            mock_response = MagicMock()
+            mock_response.ok = False
+            mock_response.status_code = 500
+            mock_response.json = MagicMock(
+                return_value={"data": "unexpected response code 500: Transaction already in the mempool"}
+            )
+            mock_fetch.return_value = mock_response
+
+            result = await broadcaster.broadcast(tx)
+
+            assert isinstance(result, BroadcastResponse)
+            assert result.status == "success"
+            assert result.txid == "b" * 64
+
+    @pytest.mark.asyncio
     async def test_broadcast_network_error(self):
         """Test broadcast with network error."""
         from unittest.mock import AsyncMock, patch

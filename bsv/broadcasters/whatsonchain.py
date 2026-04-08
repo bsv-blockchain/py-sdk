@@ -35,6 +35,19 @@ def _woc_parse_error_description(body) -> str:
     return str(body)
 
 
+def _woc_desc_means_already_broadcast(desc: str) -> bool:
+    """WoC sometimes returns non-2xx (e.g. 500) with a body that means accept (tx already in mempool)."""
+    d = desc.lower()
+    return (
+        "already in the mempool" in d
+        or "already in mempool" in d
+        or "txn-already-in-mempool" in d
+        or "transaction already in" in d
+        or "already known" in d
+        or "duplicate" in d
+    )
+
+
 class WhatsOnChainBroadcaster(Broadcaster):
     """
     Asynchronous WhatsOnChain broadcaster using HttpClient.
@@ -69,11 +82,14 @@ class WhatsOnChainBroadcaster(Broadcaster):
                 except ValueError as e:
                     return BroadcastFailure(status="error", code=str(response.status_code), description=str(e))
                 return BroadcastResponse(status="success", txid=txid, message="broadcast successful")
-            return BroadcastFailure(
-                status="error",
-                code=str(response.status_code),
-                description=_woc_parse_error_description(body),
-            )
+            desc = _woc_parse_error_description(body)
+            if _woc_desc_means_already_broadcast(desc):
+                return BroadcastResponse(
+                    status="success",
+                    txid=tx.txid(),
+                    message="already in mempool (WhatsOnChain)",
+                )
+            return BroadcastFailure(status="error", code=str(response.status_code), description=desc)
         except Exception as error:
             return BroadcastFailure(
                 status="error",
