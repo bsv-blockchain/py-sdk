@@ -40,7 +40,9 @@ SPEND_VALID_CASES = [
     ["00", "636a6851", "RETURN only works if executed"],
     ["5151", "69", "test"],
     ["51050100000000", "69", "values >4 bytes can be cast to boolean"],
-    ["510180", "630068", "negative 0 is false"],
+    # Dropped: ["510180", "630068", "negative 0 is false"] — for tx v1, Spend enforces BIP141
+    # MINIMALIF (empty or 0x01 only); single-byte 0x80 is rejected as non-minimal. See
+    # tests/bsv/live/test_live_malleability.py::TestMinimalIf.
     ["00", "76519351880087", "test"],
     ["0051", "77", "test"],
     ["011601150114", "7b7575011587", "test"],
