@@ -227,32 +227,6 @@ for chunk in script.chunks:
     print(chunk)  # Prints opcode name or hex data
 ```
 
-## Chronicle Update Support
-
-The SDK implements the BSV Chronicle network upgrade (MainNet block 943,816, target 07-Apr-2026).
-
-### What Changed
-
-- **10 restored opcodes**: OP_VER, OP_VERIF, OP_VERNOTIF, OP_2MUL, OP_2DIV, OP_SUBSTR, OP_LEFT, OP_RIGHT, OP_LSHIFTNUM, OP_RSHIFTNUM. No opcodes are disabled after Chronicle.
-- **SIGHASH_CHRONICLE (0x20)**: New sighash bit enabling the Original Transaction Digest Algorithm (OTDA). Routing: FORKID only → BIP143; FORKID+CHRONICLE or no FORKID → OTDA.
-- **Malleability relaxation**: Transactions with version > 1 relax 7 restrictions (minimal encoding, low-S, NULLFAIL, NULLDUMMY, MINIMALIF, clean stack, push-only unlocking scripts). Controlled by `Spend.is_relaxed()`.
-- **Script number size limit**: Increased from 750KB to 32MB (`AfterGenesisConfig.max_script_number_length()`).
-- **Opcode constants**: OP_NOP4–NOP8 are now aliases for the restored opcodes. The canonical enum names are OP_SUBSTR, OP_LEFT, etc.
-
-### Key Files
-
-- `bsv/constants.py`: SIGHASH.CHRONICLE, new OpCode entries, TRANSACTION_VERSION_CHRONICLE
-- `bsv/script/spend.py`: `is_relaxed()`, all opcode handlers, malleability gates
-- `bsv/transaction.py`: `calc_input_signature_hash()` OTDA routing
-- `bsv/transaction_preimage.py`: `_preimage_otda()`, OTDA preimage generation
-- `bsv/script/interpreter/config.py`: 32MB script number limit
-
-### Chronicle Tests
-
-```bash
-pytest tests/bsv/script/test_chronicle_*.py tests/bsv/script/interpreter/test_chronicle_*.py -v
-```
-
 ## Important Notes
 
 - The SDK uses `coincurve` for ECDSA operations (not pure Python)

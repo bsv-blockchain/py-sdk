@@ -94,7 +94,7 @@ class Spend:
             self.script_evaluation_error("This opcode is currently disabled.")
 
         if is_script_executing and OpCode.OP_0 <= current_opcode <= OpCode.OP_PUSHDATA4:
-            if not self.is_relaxed() and REQUIRE_MINIMAL_PUSH and not self.is_chunk_minimal(operation):
+            if REQUIRE_MINIMAL_PUSH and not self.is_chunk_minimal(operation):
                 self.script_evaluation_error("This data is not minimally-encoded.")
             if operation.data is None:
                 self.stack.append(b"")
@@ -123,31 +123,16 @@ class Spend:
                 n = int.from_bytes(current_opcode, "big") - (int.from_bytes(OpCode.OP_1, "big") - 1)
                 self.stack.append(self.minimally_encode(n))
 
-            elif current_opcode == OpCode.OP_VER:
-                # Push transaction version as 4-byte little-endian
-                self.stack.append(self.transaction_version.to_bytes(4, "little"))
-
-            elif current_opcode in [OpCode.OP_VERIF, OpCode.OP_VERNOTIF]:
-                if len(self.stack) < 1:
-                    self.script_evaluation_error("OP_VERIF/OP_VERNOTIF requires at least one item on the stack.")
-                buf = self.stack.pop()
-                f_value = False
-                if len(buf) == 4:
-                    ver_bytes = self.transaction_version.to_bytes(4, "little")
-                    # Greater-than-or-equal comparison: tx_version >= popped value
-                    # Compare as unsigned little-endian integers
-                    tx_ver_int = int.from_bytes(ver_bytes, "little")
-                    buf_int = int.from_bytes(buf, "little")
-                    f_value = tx_ver_int >= buf_int
-                if current_opcode == OpCode.OP_VERNOTIF:
-                    f_value = not f_value
-                self.if_stack.append(self.encode_bool(f_value))
-
             elif current_opcode in [
                 OpCode.OP_NOP,
                 OpCode.OP_NOP1,
                 OpCode.OP_NOP2,
                 OpCode.OP_NOP3,
+                OpCode.OP_NOP4,
+                OpCode.OP_NOP5,
+                OpCode.OP_NOP6,
+                OpCode.OP_NOP7,
+                OpCode.OP_NOP8,
                 OpCode.OP_NOP9,
                 OpCode.OP_NOP10,
                 OpCode.OP_NOP11,
@@ -417,9 +402,7 @@ class Spend:
                 if len(self.stack) < 1:
                     self.script_evaluation_error("OP_INVERT requires at least one item to be on the stack.")
                 x = self.stack.pop()
-                # Bug fix (independent of Chronicle): ~b produces negative ints in Python,
-                # b ^ 0xFF correctly gives the bitwise complement as unsigned bytes.
-                x = bytes([b ^ 0xFF for b in x])
+                x = bytes([~b for b in x])
                 self.stack.append(x)
 
             elif current_opcode in [OpCode.OP_LSHIFT, OpCode.OP_RSHIFT]:
@@ -475,36 +458,6 @@ class Spend:
                 else:
                     x = 1 if x != 0 else 0
                 self.stack.append(self.minimally_encode(x))
-
-            elif current_opcode in [OpCode.OP_2MUL, OpCode.OP_2DIV]:
-                _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
-                if len(self.stack) < 1:
-                    self.script_evaluation_error(f"{_codename} requires at least one item to be on the stack.")
-                x = self.bin2num(self.stack.pop())
-                if current_opcode == OpCode.OP_2MUL:
-                    x = x * 2
-                else:
-                    # Integer division truncating toward zero
-                    x = int(x / 2) if x >= 0 else -int(-x / 2)
-                self.stack.append(self.minimally_encode(x))
-
-            elif current_opcode in [OpCode.OP_LSHIFTNUM, OpCode.OP_RSHIFTNUM]:
-                _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
-                if len(self.stack) < 2:
-                    self.script_evaluation_error(f"{_codename} requires at least two items on the stack.")
-                shift = self.bin2num(self.stack.pop())
-                value = self.bin2num(self.stack.pop())
-                if shift < 0:
-                    self.script_evaluation_error(f"{_codename}: shift amount must be non-negative.")
-                if current_opcode == OpCode.OP_LSHIFTNUM:
-                    result = value << shift
-                else:
-                    # Right shift preserving sign: negate, shift, negate
-                    if value < 0:
-                        result = -((-value) >> shift)
-                    else:
-                        result = value >> shift
-                self.stack.append(self.minimally_encode(result))
 
             elif current_opcode in [
                 OpCode.OP_ADD,
@@ -628,7 +581,7 @@ class Spend:
                 # TODO
                 f = self.verify_signature(sig, pub_key, sub_script)
 
-                if not self.is_relaxed() and not f and len(sig) > 0:
+                if not f and len(sig) > 0:
                     self.script_evaluation_error(
                         f"{_codename} failed to verify the signature, "
                         "and requires an empty signature when verification fails."
@@ -724,7 +677,7 @@ class Spend:
                 # to removing it from the stack.
                 if len(self.stack) < 1:
                     self.script_evaluation_error(f"{_codename} requires an extra item to be on the stack.")
-                if not self.is_relaxed() and len(self.stacktop(-1)) > 0:
+                if len(self.stacktop(-1)) > 0:
                     self.script_evaluation_error(f"{_codename} requires the extra stack item to be empty.")
                 self.stack.pop()
 
@@ -761,38 +714,6 @@ class Spend:
                     )
                 self.stack.append(x1[:n])
                 self.stack.append(x1[n:])
-
-            elif current_opcode == OpCode.OP_SUBSTR:
-                if len(self.stack) < 3:
-                    self.script_evaluation_error("OP_SUBSTR requires at least three items on the stack.")
-                length = self.bin2num(self.stack.pop())
-                start = self.bin2num(self.stack.pop())
-                data = self.stack.pop()
-                if len(data) == 0:
-                    self.script_evaluation_error("OP_SUBSTR: source string is empty.")
-                if length < 0:
-                    self.script_evaluation_error("OP_SUBSTR: length is negative.")
-                if start < 0 or start + length > len(data):
-                    self.script_evaluation_error("OP_SUBSTR: specified range exceeds source string.")
-                self.stack.append(data[start:start + length])
-
-            elif current_opcode == OpCode.OP_LEFT:
-                if len(self.stack) < 2:
-                    self.script_evaluation_error("OP_LEFT requires at least two items on the stack.")
-                length = self.bin2num(self.stack.pop())
-                data = self.stack.pop()
-                if length < 0 or length > len(data):
-                    self.script_evaluation_error("OP_LEFT: length out of range.")
-                self.stack.append(data[:length])
-
-            elif current_opcode == OpCode.OP_RIGHT:
-                if len(self.stack) < 2:
-                    self.script_evaluation_error("OP_RIGHT requires at least two items on the stack.")
-                length = self.bin2num(self.stack.pop())
-                data = self.stack.pop()
-                if length < 0 or length > len(data):
-                    self.script_evaluation_error("OP_RIGHT: length out of range.")
-                self.stack.append(data[len(data) - length:])
 
             elif current_opcode == OpCode.OP_NUM2BIN:
                 if len(self.stack) < 2:
@@ -839,7 +760,7 @@ class Spend:
         Validates the spend action by interpreting the locking and unlocking scripts.
         Returns true if the scripts are valid and the spend is legitimate, otherwise false.
         """
-        if not self.is_relaxed() and REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS and not self.unlocking_script.is_push_only():
+        if REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS and not self.unlocking_script.is_push_only():
             self.script_evaluation_error("Unlocking scripts can only contain push operations, and no other opcodes.")
 
         while True:
@@ -850,7 +771,7 @@ class Spend:
         if len(self.if_stack) > 0:
             self.script_evaluation_error("Every OP_IF must be terminated prior to the end of the script.")
 
-        if not self.is_relaxed() and REQUIRE_CLEAN_STACK:
+        if REQUIRE_CLEAN_STACK:
             if len(self.stack) != 1:
                 self.script_evaluation_error(
                     "The clean stack rule requires exactly one item to be on the stack after script execution."
@@ -885,24 +806,15 @@ class Spend:
                 return True
         return False
 
-    def is_relaxed(self) -> bool:
-        """Chronicle: tx version > 1 relaxes malleability restrictions."""
-        return self.transaction_version > 1
-
     @classmethod
     def is_op_disabled(cls, opcode: bytes) -> bool:
-        """Check if an opcode is disabled.
-
-        After the Chronicle network upgrade (MainNet block 943,816), NO opcodes
-        are disabled for ANY transaction version. Opcode restoration is network-wide
-        at activation height — it is NOT gated by tx version. Only malleability
-        restrictions (clean stack, push-only unlocking, etc.) are version-gated
-        via is_relaxed() (tx version > 1).
-
-        This is distinct from pre-Chronicle behavior where OP_VER, OP_VERIF,
-        OP_VERNOTIF, OP_2MUL, and OP_2DIV were disabled.
-        """
-        return False
+        return (
+            opcode == OpCode.OP_2MUL
+            or opcode == OpCode.OP_2DIV
+            or opcode == OpCode.OP_VERIF
+            or opcode == OpCode.OP_VERNOTIF
+            or opcode == OpCode.OP_VER
+        )
 
     @classmethod
     def is_chunk_minimal(cls, chunk: ScriptChunk) -> bool:
@@ -958,7 +870,7 @@ class Spend:
 
         with suppress(Exception):
             _, s = deserialize_ecdsa_der(sig)
-            if not self.is_relaxed() and REQUIRE_LOW_S_SIGNATURES and s > curve.n // 2:
+            if REQUIRE_LOW_S_SIGNATURES and s > curve.n // 2:
                 self.script_evaluation_error("The signature must have a low S value.")
             return True
         self.script_evaluation_error("The signature format is invalid.")
