@@ -50,7 +50,7 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        pytest tests/ -v --cov=bsv --cov-report=term-missing --cov-report=html --cov-report=json
+        pytest tests/ -v -m "not testnet and not mainnet" --cov=bsv --cov-report=term-missing --cov-report=html --cov-report=json
 
     - name: Extract coverage percentage
       id: coverage

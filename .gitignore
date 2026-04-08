@@ -18,3 +18,4 @@ build/
 
 # Testnet UTXO pool (persisted across test runs)
 .utxo_pool.json
+.utxo_pool_mainnet.json

@@ -1,11 +1,13 @@
 """Shared fixtures and helpers for mocked live tests."""
 
+import asyncio
 import os
 
+import aiohttp
 import pytest
 
-from bsv.broadcasters.broadcaster import BroadcastResponse, Broadcaster
 from bsv.broadcasters import default_broadcaster
+from bsv.broadcasters.broadcaster import Broadcaster, BroadcastResponse
 from bsv.chaintracker import ChainTracker
 from bsv.constants import SIGHASH, OpCode
 from bsv.fee_models import SatoshisPerKilobyte
@@ -19,12 +21,20 @@ from bsv.transaction_input import TransactionInput
 from bsv.transaction_output import TransactionOutput
 from bsv.utils import encode_pushdata
 
-
 # ---------------------------------------------------------------------------
-# Testnet configuration
+# Live network configuration (testnet / mainnet broadcast tests)
 # ---------------------------------------------------------------------------
 
 FUNDED_TESTNET_WIF = os.environ.get("FUNDED_TESTNET_WIF")
+FUNDED_MAINNET_WIF = os.environ.get("FUNDED_MAINNET_WIF")
+
+_LIVE_DIR = os.path.dirname(__file__)
+WOC_API_TESTNET = "https://api.whatsonchain.com/v1/bsv/test"
+WOC_API_MAINNET = "https://api.whatsonchain.com/v1/bsv/main"
+UTXO_POOL_TESTNET_FILE = os.path.join(_LIVE_DIR, ".utxo_pool.json")
+UTXO_POOL_MAINNET_FILE = os.path.join(_LIVE_DIR, ".utxo_pool_mainnet.json")
+WOC_EXPLORER_TESTNET_TX = "https://test.whatsonchain.com/tx"
+WOC_EXPLORER_MAINNET_TX = "https://whatsonchain.com/tx"
 
 
 # ---------------------------------------------------------------------------
@@ -190,10 +200,7 @@ def build_signed_tx(
     # Distribute satoshis across outputs (leave room for fee)
     total = satoshis * num_inputs
     per_output = (total - 500) // num_outputs  # 500 sat fee buffer
-    outputs = [
-        TransactionOutput(locking_script=locking_script, satoshis=per_output)
-        for _ in range(num_outputs)
-    ]
+    outputs = [TransactionOutput(locking_script=locking_script, satoshis=per_output) for _ in range(num_outputs)]
 
     tx = Transaction(inputs, outputs, version=tx_version)
     tx.sign(bypass=False)
@@ -229,9 +236,7 @@ def build_cross_config_tx(
         )
 
     total = satoshis * len(input_configs)
-    outputs = [
-        TransactionOutput(locking_script=input_configs[0][0], satoshis=total - 500)
-    ]
+    outputs = [TransactionOutput(locking_script=input_configs[0][0], satoshis=total - 500)]
 
     tx = Transaction(inputs, outputs, version=spending_version)
     tx.sign(bypass=False)
@@ -251,10 +256,7 @@ def custom_unlock(priv_key: PrivateKey, data_prefix_script: Script = None):
         sighash = tx_input.sighash
         signature = priv_key.sign(tx.preimage(input_index))
         public_key = priv_key.public_key().serialize()
-        sig_script = Script(
-            encode_pushdata(signature + sighash.to_bytes(1, "little"))
-            + encode_pushdata(public_key)
-        )
+        sig_script = Script(encode_pushdata(signature + sighash.to_bytes(1, "little")) + encode_pushdata(public_key))
         if data_prefix_script:
             # Data goes AFTER sig+pubkey so it's on TOP of the stack
             # when the locking script starts executing
@@ -276,11 +278,7 @@ def p2pkh_lock_with_prefix(prefix_asm: str, priv_key: PrivateKey) -> Script:
     pkh = hash160(priv_key.public_key().serialize())
     prefix = Script.from_asm(prefix_asm) if prefix_asm else Script()
     p2pkh_suffix = Script(
-        OpCode.OP_DUP
-        + OpCode.OP_HASH160
-        + encode_pushdata(pkh)
-        + OpCode.OP_EQUALVERIFY
-        + OpCode.OP_CHECKSIG
+        OpCode.OP_DUP + OpCode.OP_HASH160 + encode_pushdata(pkh) + OpCode.OP_EQUALVERIFY + OpCode.OP_CHECKSIG
     )
     return Script(prefix.serialize() + p2pkh_suffix.serialize())
 
@@ -324,13 +322,42 @@ def woc_testnet_broadcaster():
     return WhatsOnChainBroadcaster(network="test")
 
 
+@pytest.fixture(scope="session")
+def funded_mainnet_key():
+    """Funded mainnet private key. Skips if FUNDED_MAINNET_WIF not set."""
+    if not FUNDED_MAINNET_WIF:
+        pytest.skip("FUNDED_MAINNET_WIF not set")
+    return PrivateKey(FUNDED_MAINNET_WIF)
+
+
+@pytest.fixture(scope="session")
+def mainnet_broadcaster():
+    """ARC broadcaster for mainnet with Chronicle-friendly script validation skip.
+
+    Same X-SkipScriptValidation header as testnet ARC: the in-path validator can
+    reject Chronicle / OTDA txs that the network still accepts.
+    """
+    from bsv.broadcasters.arc import ARC, ARCConfig
+
+    config = ARCConfig(headers={"X-SkipScriptValidation": "true"})
+    return ARC("https://arc.gorillapool.io", config)
+
+
+@pytest.fixture(scope="session")
+def woc_mainnet_broadcaster():
+    """WhatsOnChain broadcaster for mainnet — node-direct submission."""
+    from bsv.broadcasters.whatsonchain import WhatsOnChainBroadcaster
+
+    return WhatsOnChainBroadcaster(network="main")
+
+
 # ---------------------------------------------------------------------------
-# UTXO Manager for testnet chaining
+# UTXO Manager for live testnet / mainnet chaining
 # ---------------------------------------------------------------------------
 
 
 class UTXOManager:
-    """Manages a pool of UTXOs from a fan-out transaction for testnet tests.
+    """Manages a pool of UTXOs from a fan-out transaction for live network tests.
 
     UTXOs are persisted to a JSON file so they survive across test runs.
     On first run, fetches a UTXO from WoC, creates a fan-out tx, and saves
@@ -338,24 +365,37 @@ class UTXOManager:
     re-fans-out if the pool is exhausted.
 
     Flow:
-    1. Try to load persisted UTXOs from .utxo_pool.json
+    1. Try to load persisted UTXOs from the pool file
     2. If none available, fetch from WoC and fan-out
     3. Each test calls take_utxo() which also persists the updated pool
     """
 
-    WOC_TESTNET = "https://api.whatsonchain.com/v1/bsv/test"
     FEE_MODEL = SatoshisPerKilobyte(100)
-    POOL_FILE = os.path.join(os.path.dirname(__file__), ".utxo_pool.json")
 
-    def __init__(self, funded_key: PrivateKey, broadcaster):
+    def __init__(
+        self,
+        funded_key: PrivateKey,
+        broadcaster: Broadcaster,
+        *,
+        woc_api_base: str = WOC_API_TESTNET,
+        pool_file: str | None = None,
+        explorer_tx_base: str = WOC_EXPLORER_TESTNET_TX,
+        network_label: str = "testnet",
+    ):
         self.key = funded_key
         self.broadcaster = broadcaster
+        self.woc_api_base = woc_api_base.rstrip("/")
+        self.pool_file = pool_file if pool_file is not None else UTXO_POOL_TESTNET_FILE
+        self.explorer_tx_base = explorer_tx_base.rstrip("/")
+        self.network_label = network_label
         self.p2pkh = P2PKH()
         self.lock_script = self.p2pkh.lock(self.key.address())
         self.utxos: list[tuple[Transaction, int, int]] = []  # (source_tx, vout, satoshis)
         self.broadcast_count = 0
         # Cache of tx hex -> Transaction for deserialized source txs
         self._tx_cache: dict[str, Transaction] = {}
+        # WoC fan-out: cache parent txs by txid (multiple inputs may share a tx)
+        self._fetched_tx_by_id: dict[str, Transaction] = {}
 
     # --- Persistence ---
 
@@ -365,22 +405,24 @@ class UTXOManager:
 
         records = []
         for source_tx, vout, satoshis in self.utxos:
-            records.append({
-                "source_tx_hex": source_tx.hex(),
-                "vout": vout,
-                "satoshis": satoshis,
-            })
-        with open(self.POOL_FILE, "w") as f:
+            records.append(
+                {
+                    "source_tx_hex": source_tx.hex(),
+                    "vout": vout,
+                    "satoshis": satoshis,
+                }
+            )
+        with open(self.pool_file, "w") as f:
             json.dump(records, f, indent=2)
 
     def _load_pool(self) -> bool:
         """Load UTXOs from disk. Returns True if any were loaded."""
         import json
 
-        if not os.path.exists(self.POOL_FILE):
+        if not os.path.exists(self.pool_file):
             return False
         try:
-            with open(self.POOL_FILE) as f:
+            with open(self.pool_file) as f:
                 records = json.load(f)
             if not records:
                 return False
@@ -398,32 +440,58 @@ class UTXOManager:
 
     # --- Network ---
 
-    async def fetch_utxos_from_woc(self) -> list[dict]:
-        """Fetch unspent outputs from WhatsOnChain testnet API."""
-        import aiohttp
+    async def _woc_get(self, session, url: str, *, as_json: bool = False):
+        """GET with 429 retry/backoff (WhatsOnChain rate limits aggressive bursts)."""
+        backoff = 1.0
+        for _ in range(12):
+            async with session.get(url) as resp:
+                if resp.status == 429:
+                    ra = resp.headers.get("Retry-After")
+                    try:
+                        wait = float(ra) if ra else backoff
+                    except ValueError:
+                        wait = backoff
+                    wait = min(max(wait, 0.5), 90.0)
+                    await asyncio.sleep(wait)
+                    backoff = min(backoff * 1.5, 45.0)
+                    continue
+                if resp.status != 200:
+                    raise RuntimeError(f"WoC API returned {resp.status} for {url}")
+                if as_json:
+                    return await resp.json()
+                return (await resp.text()).strip()
+        raise RuntimeError(f"WoC API rate limited (429) after retries for {url}")
 
+    async def fetch_utxos_from_woc(self, session=None) -> list[dict]:
+        """Fetch unspent outputs from WhatsOnChain API."""
         address = self.key.address()
-        url = f"{self.WOC_TESTNET}/address/{address}/unspent"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    raise RuntimeError(f"WoC API returned {resp.status} for {url}")
-                return await resp.json()
+        url = f"{self.woc_api_base}/address/{address}/unspent"
+        if session is not None:
+            return await self._woc_get(session, url, as_json=True)
+        async with aiohttp.ClientSession() as http_session:
+            return await self._woc_get(http_session, url, as_json=True)
 
-    async def fetch_raw_tx(self, txid: str) -> Transaction:
+    async def fetch_raw_tx(self, txid: str, session=None) -> Transaction:
         """Fetch a raw transaction hex from WoC and parse it."""
-        import aiohttp
+        url = f"{self.woc_api_base}/tx/{txid}/hex"
 
-        url = f"{self.WOC_TESTNET}/tx/{txid}/hex"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    raise RuntimeError(f"WoC API returned {resp.status} for {url}")
-                hex_str = await resp.text()
-                tx = Transaction.from_hex(hex_str.strip())
-                if tx is None:
-                    raise RuntimeError(f"Failed to parse tx {txid}")
-                return tx
+        async def _parse(hex_str: str) -> Transaction:
+            tx = Transaction.from_hex(hex_str)
+            if tx is None:
+                raise RuntimeError(f"Failed to parse tx {txid}")
+            return tx
+
+        if session is not None:
+            hex_str = await self._woc_get(session, url, as_json=False)
+            return await _parse(hex_str)
+        async with aiohttp.ClientSession() as http_session:
+            hex_str = await self._woc_get(http_session, url, as_json=False)
+            return await _parse(hex_str)
+
+    async def _get_source_tx_by_txid(self, txid: str, session=None) -> Transaction:
+        if txid not in self._fetched_tx_by_id:
+            self._fetched_tx_by_id[txid] = await self.fetch_raw_tx(txid, session=session)
+        return self._fetched_tx_by_id[txid]
 
     # --- Fan-out ---
 
@@ -433,46 +501,59 @@ class UTXOManager:
         if not self.utxos:
             self._load_pool()
 
-        if len(self.utxos) >= min_count:
+        shortfall = min_count - len(self.utxos)
+        if shortfall <= 0:
             return
 
-        # Need to fan out
-        await self.fan_out(min_count, satoshis_each)
+        # Only mint as many new pool outputs as needed (not a full min_count every time).
+        await self.fan_out(shortfall, satoshis_each)
 
     async def fan_out(self, num_outputs: int, satoshis_each: int = 3_000):
         """Create and broadcast a fan-out transaction.
 
-        Takes the largest available UTXO and splits it into num_outputs
-        P2PKH outputs, each with satoshis_each satoshis.
+        Splits value into num_outputs P2PKH outputs of satoshis_each. Uses one
+        or more WoC UTXOs (largest first) until their combined value covers the
+        outputs plus a fee buffer.
         """
-        # Fetch UTXOs from WoC
-        woc_utxos = await self.fetch_utxos_from_woc()
-        if not woc_utxos:
-            raise RuntimeError(
-                f"No UTXOs found for address {self.key.address()} on testnet"
-            )
+        async with aiohttp.ClientSession() as http_session:
+            woc_utxos = await self.fetch_utxos_from_woc(http_session)
+            if not woc_utxos:
+                raise RuntimeError(f"No UTXOs found for address {self.key.address()} on {self.network_label}")
 
-        # Sort by value descending, pick the largest
-        woc_utxos.sort(key=lambda u: u["value"], reverse=True)
-        best = woc_utxos[0]
-        needed = num_outputs * satoshis_each + 5_000  # fee buffer
-        if best["value"] < needed:
-            raise RuntimeError(
-                f"Largest UTXO has {best['value']} sat, need at least {needed} sat "
-                f"for {num_outputs} outputs at {satoshis_each} sat each"
-            )
+            woc_utxos.sort(key=lambda u: u["value"], reverse=True)
+            needed = num_outputs * satoshis_each + 5_000  # fee buffer
 
-        # Fetch the source transaction
-        source_tx = await self.fetch_raw_tx(best["tx_hash"])
+            total = 0
+            selected: list[dict] = []
+            for u in woc_utxos:
+                selected.append(u)
+                total += u["value"]
+                if total >= needed:
+                    break
+            else:
+                raise RuntimeError(
+                    f"Total unspent {total} sat across {len(woc_utxos)} UTXO(s), need at least {needed} sat "
+                    f"for {num_outputs} outputs at {satoshis_each} sat each"
+                )
 
-        # Build the fan-out tx
-        inp = TransactionInput(
-            source_transaction=source_tx,
-            source_txid=best["tx_hash"],
-            source_output_index=best["tx_pos"],
-            unlocking_script_template=self.p2pkh.unlock(self.key),
-            sequence=0xFFFFFFFF,
-        )
+            inputs = []
+            last_parent_txid: str | None = None
+            for u in selected:
+                txid = u["tx_hash"]
+                if last_parent_txid is not None and txid != last_parent_txid:
+                    await asyncio.sleep(0.25)
+                last_parent_txid = txid
+                source_tx = await self._get_source_tx_by_txid(txid, session=http_session)
+                inputs.append(
+                    TransactionInput(
+                        source_transaction=source_tx,
+                        source_txid=txid,
+                        source_output_index=u["tx_pos"],
+                        unlocking_script_template=self.p2pkh.unlock(self.key),
+                        sequence=0xFFFFFFFF,
+                    )
+                )
+
         outputs = [
             TransactionOutput(
                 locking_script=self.lock_script,
@@ -481,23 +562,19 @@ class UTXOManager:
             for _ in range(num_outputs)
         ]
         # Add a change output for leftovers
-        outputs.append(
-            TransactionOutput(locking_script=self.lock_script, change=True)
-        )
+        outputs.append(TransactionOutput(locking_script=self.lock_script, change=True))
 
-        fan_out_tx = Transaction([inp], outputs, version=1)
+        fan_out_tx = Transaction(inputs, outputs, version=1)
         fan_out_tx.fee(self.FEE_MODEL)
         fan_out_tx.sign()
 
         # Broadcast
         result = await self.broadcaster.broadcast(fan_out_tx)
         if result.status != "success":
-            raise RuntimeError(
-                f"Fan-out broadcast failed: {getattr(result, 'description', result.status)}"
-            )
+            raise RuntimeError(f"Fan-out broadcast failed: {getattr(result, 'description', result.status)}")
         self.broadcast_count += 1
         txid = result.txid or fan_out_tx.txid()
-        print(f"\n  -> Fan-out: https://test.whatsonchain.com/tx/{txid}")
+        print(f"\n  -> Fan-out: {self.explorer_tx_base}/{txid}")
 
         # Record all non-change outputs as available UTXOs
         for i in range(num_outputs):
@@ -521,7 +598,9 @@ class UTXOManager:
         self._save_pool()
 
     async def broadcast_test_tx(
-        self, tx: Transaction, spent_utxo: tuple[Transaction, int, int] = None,
+        self,
+        tx: Transaction,
+        spent_utxo: tuple[Transaction, int, int] = None,
         broadcaster: Broadcaster = None,
     ) -> BroadcastResponse:
         """Broadcast a test transaction and track it.
@@ -539,7 +618,7 @@ class UTXOManager:
         self.broadcast_count += 1
         if result.status == "success":
             txid = result.txid or tx.txid()
-            print(f"\n  -> https://test.whatsonchain.com/tx/{txid}")
+            print(f"\n  -> {self.explorer_tx_base}/{txid}")
         if result.status != "success" and spent_utxo is not None:
             self.return_utxo(spent_utxo)
         return result

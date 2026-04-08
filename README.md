@@ -315,6 +315,15 @@ export FUNDED_TESTNET_WIF="cYourTestnetWifHere"
 pytest tests/bsv/live/test_live_testnet.py -v
 ```
 
+#### Mainnet broadcast tests (optional, real funds)
+
+Same structure as testnet, but uses mainnet APIs and `.utxo_pool_mainnet.json`. **Costs real BSV**; use a dedicated key.
+
+```bash
+export FUNDED_MAINNET_WIF="YourMainnetWifHere"
+pytest tests/bsv/live/test_live_mainnet.py -v -m mainnet
+```
+
 **How it works:**
 
 1. **UTXO Fan-out**: A single funded UTXO is split into ~130 small outputs via a fan-out transaction
