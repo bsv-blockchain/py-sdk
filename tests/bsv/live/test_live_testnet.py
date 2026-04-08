@@ -348,9 +348,9 @@ class TestTestnetStandardOpcodes:
 class TestTestnetUnlockingOpcodes:
     """v2 tx: non-push opcodes in unlocking script (review 9.4.2.1).
 
-    These tests broadcast via WoC (node-direct) because ARC rejects
-    non-push unlocking scripts (error 463) even for v2 Chronicle txs.
-    The node itself accepts them under Chronicle's malleability relaxation.
+    Step 1 (setup) uses ARC like other live tests so pool UTXOs remain spendable.
+    We then wait until WoC indexes that setup tx, and broadcast step 2 via WoC
+    because ARC rejects non-push unlocking scripts (error 463) even for v2 Chronicle txs.
     """
 
     @pytest.mark.asyncio
@@ -366,7 +366,7 @@ class TestTestnetUnlockingOpcodes:
             funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
-            setup_broadcaster=woc_testnet_broadcaster,
+            sync_setup_to_woc=True,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
@@ -384,7 +384,7 @@ class TestTestnetUnlockingOpcodes:
             funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
-            setup_broadcaster=woc_testnet_broadcaster,
+            sync_setup_to_woc=True,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
@@ -524,7 +524,7 @@ class TestTestnetCrossConfig:
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
             setup_version=1,
-            setup_broadcaster=woc_testnet_broadcaster,
+            sync_setup_to_woc=True,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"

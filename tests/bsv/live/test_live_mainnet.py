@@ -358,8 +358,11 @@ class TestMainnetStandardOpcodes:
 class TestMainnetUnlockingOpcodes:
     """v2 tx: non-push opcodes in unlocking script (review 9.4.2.1).
 
-    On mainnet, WhatsOnChain submission can reject these with scriptsig-not-pushonly;
-    ARC with X-SkipScriptValidation (see mainnet_broadcaster) matches testnet behavior.
+    Setup uses the default ARC broadcaster (same as pool fan-out). We wait until
+    mainnet WoC indexes that setup tx (sync_setup_to_woc) before step 2, matching
+    the testnet ARC→WoC split in spirit and avoiding races. Step 2 is broadcast
+    via ARC with X-SkipScriptValidation (mainnet_broadcaster); WoC direct submit
+    can still hit scriptsig-not-pushonly.
     """
 
     @pytest.mark.asyncio
@@ -375,6 +378,7 @@ class TestMainnetUnlockingOpcodes:
             funded_mainnet_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
+            sync_setup_to_woc=True,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=mainnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
@@ -392,6 +396,7 @@ class TestMainnetUnlockingOpcodes:
             funded_mainnet_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
+            sync_setup_to_woc=True,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=mainnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
@@ -531,6 +536,7 @@ class TestMainnetCrossConfig:
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
             setup_version=1,
+            sync_setup_to_woc=True,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=mainnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"

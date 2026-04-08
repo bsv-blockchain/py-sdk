@@ -95,6 +95,7 @@ async def build_two_step_live_tx(
     *,
     setup_broadcaster=None,
     setup_version: int = 1,
+    sync_setup_to_woc: bool = False,
 ):
     """Two-step tx for non-P2PKH script types (P2PK, Multisig, custom opcodes).
 
@@ -103,9 +104,12 @@ async def build_two_step_live_tx(
     Returns step2_tx for caller to broadcast.
 
     Args:
-        setup_broadcaster: Optional broadcaster for step 1 (e.g. WoC when the
-            spending node must see the parent via the same endpoint as step 2).
+        setup_broadcaster: Optional broadcaster for step 1. Default is utxo_mgr's
+            broadcaster (typically ARC). Avoid WoC here for pool UTXOs funded via ARC —
+            WoC may return missing-inputs until the fan-out is visible on its node.
         setup_version: Version of the setup (step 1) transaction (default 1).
+        sync_setup_to_woc: If True, after a successful step-1 broadcast, poll WoC until
+            the setup txid is returned by the API so a subsequent WoC broadcast can spend it.
     """
     p2pkh = P2PKH()
 
@@ -129,6 +133,10 @@ async def build_two_step_live_tx(
     result = await utxo_mgr.broadcast_test_tx(setup_tx, spent_utxo=utxo, broadcaster=setup_broadcaster)
     if result.status != "success":
         raise RuntimeError(f"Setup tx failed: {getattr(result, 'description', '')}")
+
+    if sync_setup_to_woc:
+        setup_txid = result.txid or setup_tx.txid()
+        await utxo_mgr.wait_until_woc_sees_txid(setup_txid)
 
     test_tx = Transaction(
         [

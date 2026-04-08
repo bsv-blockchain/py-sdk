@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import time
 
 import aiohttp
 import pytest
@@ -492,6 +493,43 @@ class UTXOManager:
         if txid not in self._fetched_tx_by_id:
             self._fetched_tx_by_id[txid] = await self.fetch_raw_tx(txid, session=session)
         return self._fetched_tx_by_id[txid]
+
+    async def wait_until_woc_sees_txid(
+        self,
+        txid: str,
+        *,
+        timeout_sec: float = 120.0,
+        poll_interval: float = 1.5,
+    ) -> None:
+        """Poll WoC until a tx is visible (so a follow-up WoC broadcast can spend its outputs).
+
+        Fan-out and most spends use ARC; WoC's node may lag. Call this after ARC-broadcasting
+        a setup tx when step 2 must be submitted via WhatsOnChainBroadcaster.
+        """
+        url = f"{self.woc_api_base}/tx/{txid}/hex"
+        deadline = time.monotonic() + timeout_sec
+        backoff_429 = 1.0
+        async with aiohttp.ClientSession() as session:
+            while time.monotonic() < deadline:
+                async with session.get(url) as resp:
+                    if resp.status == 200:
+                        return
+                    if resp.status == 429:
+                        ra = resp.headers.get("Retry-After")
+                        try:
+                            wait = float(ra) if ra else backoff_429
+                        except ValueError:
+                            wait = backoff_429
+                        wait = min(max(wait, 0.5), 90.0)
+                        await asyncio.sleep(wait)
+                        backoff_429 = min(backoff_429 * 1.5, 45.0)
+                        continue
+                    # Not indexed yet (or transient gateway)
+                    if resp.status in (404, 400, 502, 503):
+                        await asyncio.sleep(poll_interval)
+                        continue
+                    raise RuntimeError(f"WoC poll for tx {txid} returned {resp.status} for {url}")
+        raise RuntimeError(f"WoC did not return tx {txid} within {timeout_sec}s (needed for WoC spend)")
 
     # --- Fan-out ---
 
