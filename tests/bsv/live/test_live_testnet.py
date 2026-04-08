@@ -122,7 +122,7 @@ async def build_two_step_testnet_tx(
     funded_key,
     sighash: int = SIGHASH.ALL_FORKID,
     tx_version: int = 1,
-    step2_broadcaster=None,
+    setup_broadcaster=None,
     setup_version: int = 1,
 ):
     """Two-step tx for non-P2PKH script types (P2PK, Multisig, custom opcodes).
@@ -132,8 +132,9 @@ async def build_two_step_testnet_tx(
     Returns step2_tx for caller to broadcast.
 
     Args:
-        step2_broadcaster: Optional broadcaster for step 2 (e.g. WoC for
-            v2 txs with non-push unlocking scripts that ARC rejects).
+        setup_broadcaster: Optional broadcaster for step 1. Use the same
+            endpoint as step 2 (e.g. WoC) when step 2 cannot use ARC, so the
+            parent UTXO is visible to the node that validates the spend.
         setup_version: Version of the setup (step 1) transaction (default 1).
     """
     p2pkh = P2PKH()
@@ -154,7 +155,9 @@ async def build_two_step_testnet_tx(
     setup_tx.fee(FEE_MODEL)
     setup_tx.sign()
 
-    result = await utxo_mgr.broadcast_test_tx(setup_tx, spent_utxo=utxo)
+    result = await utxo_mgr.broadcast_test_tx(
+        setup_tx, spent_utxo=utxo, broadcaster=setup_broadcaster
+    )
     if result.status != "success":
         raise RuntimeError(f"Setup tx failed: {getattr(result, 'description', '')}")
 
@@ -516,6 +519,7 @@ class TestTestnetUnlockingOpcodes:
         tx = await build_two_step_testnet_tx(
             utxo_mgr, lock, unlock, funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
+            setup_broadcaster=woc_testnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
@@ -529,6 +533,7 @@ class TestTestnetUnlockingOpcodes:
         tx = await build_two_step_testnet_tx(
             utxo_mgr, lock, unlock, funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
+            setup_broadcaster=woc_testnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
@@ -660,6 +665,7 @@ class TestTestnetCrossConfig:
             utxo_mgr, lock, unlock, funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
             setup_version=1,
+            setup_broadcaster=woc_testnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
