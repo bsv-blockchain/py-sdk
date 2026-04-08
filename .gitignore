@@ -15,6 +15,3 @@ build/
 .env
 .env.local
 .env.*.local
-
-# Testnet UTXO pool (persisted across test runs)
-.utxo_pool.json
