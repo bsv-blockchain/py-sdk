@@ -1,3 +1,4 @@
+import json
 from abc import ABC, abstractmethod
 from typing import Dict, Optional
 
@@ -38,19 +39,18 @@ class DefaultHttpClient(HttpClient):
                 json=options.get("data"),
                 timeout=aiohttp_timeout,
             ) as response:
-                try:
-                    json_data = await response.json()
-                    return HttpResponse(
-                        ok=response.status >= 200 and response.status <= 299,
-                        status_code=response.status,
-                        json_data={"data": json_data},
-                    )
-                except Exception:
-                    return HttpResponse(
-                        ok=False,
-                        status_code=response.status,
-                        json_data={},
-                    )
+                text = await response.text()
+                ok = 200 <= response.status <= 299
+                stripped = text.strip()
+                if not stripped:
+                    payload = None
+                else:
+                    try:
+                        payload = json.loads(text)
+                    except json.JSONDecodeError:
+                        # WoC /tx/raw often returns a bare hex txid (not JSON); aiohttp.json() would fail.
+                        payload = stripped
+                return HttpResponse(ok=ok, status_code=response.status, json_data={"data": payload})
 
     async def get(
         self,

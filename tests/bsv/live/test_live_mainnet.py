@@ -358,15 +358,19 @@ class TestMainnetStandardOpcodes:
 class TestMainnetUnlockingOpcodes:
     """v2 tx: non-push opcodes in unlocking script (review 9.4.2.1).
 
-    Setup uses the default ARC broadcaster (same as pool fan-out). We wait until
-    mainnet WoC indexes that setup tx (sync_setup_to_woc) before step 2, matching
-    the testnet ARC→WoC split in spirit and avoiding races. Step 2 is broadcast
-    via ARC with X-SkipScriptValidation (mainnet_broadcaster); WoC direct submit
-    can still hit scriptsig-not-pushonly.
+    Same two-step pattern as testnet: setup on ARC with X-SkipScriptValidation
+    (mainnet_broadcaster), then parent + setup POST to WoC (relay_setup_to_woc) so
+    the shared helper does not rely on GET /tx/hex for 0-conf.
+
+    Step 2 is broadcast via ARC, not WoC: on mainnet, WhatsOnChain direct submit can
+    still hit scriptsig-not-pushonly, while ARC + X-SkipScriptValidation accepts these
+    spends. Testnet uses WoC for step 2 because ARC there returns error 463.
     """
 
     @pytest.mark.asyncio
-    async def test_v2_add_in_unlocking(self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster):
+    async def test_v2_add_in_unlocking(
+        self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster, woc_mainnet_broadcaster
+    ):
         """v2 tx with OP_1 OP_2 OP_ADD in unlocking script producing 3."""
         lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_mainnet_key)
         data = Script.from_asm("OP_1 OP_2 OP_ADD")
@@ -378,13 +382,17 @@ class TestMainnetUnlockingOpcodes:
             funded_mainnet_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
+            setup_broadcaster=mainnet_broadcaster,
             sync_setup_to_woc=True,
+            relay_setup_to_woc=woc_mainnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=mainnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
-    async def test_v2_2mul_in_unlocking(self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster):
+    async def test_v2_2mul_in_unlocking(
+        self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster, woc_mainnet_broadcaster
+    ):
         """v2 tx with Chronicle OP_2MUL in unlocking script."""
         lock = p2pkh_lock_with_prefix("OP_6 OP_NUMEQUALVERIFY", funded_mainnet_key)
         data = Script.from_asm("OP_3 OP_2MUL")
@@ -396,7 +404,9 @@ class TestMainnetUnlockingOpcodes:
             funded_mainnet_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
+            setup_broadcaster=mainnet_broadcaster,
             sync_setup_to_woc=True,
+            relay_setup_to_woc=woc_mainnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=mainnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
@@ -523,7 +533,9 @@ class TestMainnetCrossConfig:
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
-    async def test_v2_nonpush_unlock_v1_setup(self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster):
+    async def test_v2_nonpush_unlock_v1_setup(
+        self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster, woc_mainnet_broadcaster
+    ):
         """v2 tx with non-push unlocking script spending a v1-created output."""
         lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_mainnet_key)
         data = Script.from_asm("OP_1 OP_2 OP_ADD")
@@ -536,7 +548,9 @@ class TestMainnetCrossConfig:
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
             setup_version=1,
+            setup_broadcaster=mainnet_broadcaster,
             sync_setup_to_woc=True,
+            relay_setup_to_woc=woc_mainnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=mainnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"

@@ -2,6 +2,7 @@
 
 import pytest
 
+from bsv.broadcasters.broadcaster import Broadcaster
 from bsv.constants import SIGHASH
 from bsv.fee_models import SatoshisPerKilobyte
 from bsv.script.script import Script
@@ -54,6 +55,27 @@ CROSS_VERSION_COMBOS = [
     pytest.param(2, 1, id="setup_v2_spend_v1"),
 ]
 
+# WoC POST /tx/raw accepts into the node's mempool, but GET /tx/{id}/hex (used by
+# wait_until_woc_sees_txid) often stays 404 for unconfirmed txs on testnet. Treat relay
+# success or "already have this tx" as sufficient for a follow-up WoC spend.
+_WOC_RELAY_DUP_MARKERS = (
+    "already",
+    "duplicate",
+    "exists",
+    "txn-already",
+    "same txn",
+    "rejecting txn",
+    "already in mempool",
+    "already known",
+)
+
+
+def _woc_relay_ready_for_spend(relay_result) -> bool:
+    if getattr(relay_result, "status", None) == "success":
+        return True
+    desc = (getattr(relay_result, "description", None) or "").lower()
+    return any(m in desc for m in _WOC_RELAY_DUP_MARKERS)
+
 
 def build_live_tx(
     source_tx: Transaction,
@@ -96,6 +118,7 @@ async def build_two_step_live_tx(
     setup_broadcaster=None,
     setup_version: int = 1,
     sync_setup_to_woc: bool = False,
+    relay_setup_to_woc: Broadcaster | None = None,
 ):
     """Two-step tx for non-P2PKH script types (P2PK, Multisig, custom opcodes).
 
@@ -108,8 +131,11 @@ async def build_two_step_live_tx(
             broadcaster (typically ARC). Avoid WoC here for pool UTXOs funded via ARC —
             WoC may return missing-inputs until the fan-out is visible on its node.
         setup_version: Version of the setup (step 1) transaction (default 1).
-        sync_setup_to_woc: If True, after a successful step-1 broadcast, poll WoC until
-            the setup txid is returned by the API so a subsequent WoC broadcast can spend it.
+        sync_setup_to_woc: If True, ensure WoC's node can see the setup tx before step 2 is
+            broadcast there. With relay_setup_to_woc, we POST the pool parent tx then the setup
+            tx to WoC (ARC-only fan-out is often missing there) and require relay success —
+            we do not poll GET /tx/.../hex (unreliable for 0-conf). Without relay, we only poll.
+        relay_setup_to_woc: WhatsOnChain broadcaster: seed parent + setup txs after ARC.
     """
     p2pkh = P2PKH()
 
@@ -136,7 +162,17 @@ async def build_two_step_live_tx(
 
     if sync_setup_to_woc:
         setup_txid = result.txid or setup_tx.txid()
-        await utxo_mgr.wait_until_woc_sees_txid(setup_txid)
+        if relay_setup_to_woc is None:
+            await utxo_mgr.wait_until_woc_sees_txid(setup_txid)
+        else:
+            await relay_setup_to_woc.broadcast(source_tx)
+            relay_result = await relay_setup_to_woc.broadcast(setup_tx)
+            if not _woc_relay_ready_for_spend(relay_result):
+                raise RuntimeError(
+                    "WoC setup relay failed after POSTing the pool parent tx; "
+                    "GET /tx/hex is not used for 0-conf sync. "
+                    f"setup_txid={setup_txid} relay={getattr(relay_result, 'description', relay_result)!r}"
+                )
 
     test_tx = Transaction(
         [

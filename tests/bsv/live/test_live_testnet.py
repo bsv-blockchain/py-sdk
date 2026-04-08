@@ -348,13 +348,16 @@ class TestTestnetStandardOpcodes:
 class TestTestnetUnlockingOpcodes:
     """v2 tx: non-push opcodes in unlocking script (review 9.4.2.1).
 
-    Step 1 (setup) uses ARC like other live tests so pool UTXOs remain spendable.
-    We then wait until WoC indexes that setup tx, and broadcast step 2 via WoC
-    because ARC rejects non-push unlocking scripts (error 463) even for v2 Chronicle txs.
+    Step 1 (setup) is always ARC with X-SkipScriptValidation (testnet_broadcaster). The same
+    setup tx is relayed to WoC (relay_setup_to_woc) so their node has it for step 2; we do
+    not rely on GET /tx/hex for 0-conf (often 404 on testnet).
+    Step 2 is WoC because ARC rejects non-push unlocking scripts (error 463).
     """
 
     @pytest.mark.asyncio
-    async def test_v2_add_in_unlocking(self, funded_key, utxo_mgr, woc_testnet_broadcaster):
+    async def test_v2_add_in_unlocking(
+        self, funded_key, utxo_mgr, testnet_broadcaster, woc_testnet_broadcaster
+    ):
         """v2 tx with OP_1 OP_2 OP_ADD in unlocking script producing 3."""
         lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_1 OP_2 OP_ADD")
@@ -366,13 +369,17 @@ class TestTestnetUnlockingOpcodes:
             funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
+            setup_broadcaster=testnet_broadcaster,
             sync_setup_to_woc=True,
+            relay_setup_to_woc=woc_testnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
-    async def test_v2_2mul_in_unlocking(self, funded_key, utxo_mgr, woc_testnet_broadcaster):
+    async def test_v2_2mul_in_unlocking(
+        self, funded_key, utxo_mgr, testnet_broadcaster, woc_testnet_broadcaster
+    ):
         """v2 tx with Chronicle OP_2MUL in unlocking script."""
         lock = p2pkh_lock_with_prefix("OP_6 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_3 OP_2MUL")
@@ -384,7 +391,9 @@ class TestTestnetUnlockingOpcodes:
             funded_key,
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
+            setup_broadcaster=testnet_broadcaster,
             sync_setup_to_woc=True,
+            relay_setup_to_woc=woc_testnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
@@ -511,7 +520,9 @@ class TestTestnetCrossConfig:
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
-    async def test_v2_nonpush_unlock_v1_setup(self, funded_key, utxo_mgr, woc_testnet_broadcaster):
+    async def test_v2_nonpush_unlock_v1_setup(
+        self, funded_key, utxo_mgr, testnet_broadcaster, woc_testnet_broadcaster
+    ):
         """v2 tx with non-push unlocking script spending a v1-created output."""
         lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_1 OP_2 OP_ADD")
@@ -524,7 +535,9 @@ class TestTestnetCrossConfig:
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
             setup_version=1,
+            setup_broadcaster=testnet_broadcaster,
             sync_setup_to_woc=True,
+            relay_setup_to_woc=woc_testnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"

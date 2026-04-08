@@ -9,6 +9,32 @@ if TYPE_CHECKING:
     from ..transaction import Transaction
 
 
+def _woc_parse_success_txid(body) -> str:
+    """Normalize WoC /tx/raw success body to a txid string (HttpClient wraps once as {"data": ...})."""
+    if isinstance(body, str):
+        s = body.strip()
+        if s:
+            return s
+    if isinstance(body, dict):
+        inner = body.get("data")
+        if inner is not None and inner is not body:
+            return _woc_parse_success_txid(inner)
+    raise ValueError(f"cannot read txid from WoC response: {body!r}")
+
+
+def _woc_parse_error_description(body) -> str:
+    if body is None:
+        return "empty response body"
+    if isinstance(body, str):
+        return body
+    if isinstance(body, dict):
+        err = body.get("data")
+        if isinstance(err, str):
+            return err
+        return str(body.get("message") or body)
+    return str(body)
+
+
 class WhatsOnChainBroadcaster(Broadcaster):
     """
     Asynchronous WhatsOnChain broadcaster using HttpClient.
@@ -36,15 +62,18 @@ class WhatsOnChainBroadcaster(Broadcaster):
         }
         try:
             response = await self.http_client.fetch(self.URL, request_options)
+            body = response.json().get("data")
             if response.ok:
-                txid = response.json()["data"]
+                try:
+                    txid = _woc_parse_success_txid(body)
+                except ValueError as e:
+                    return BroadcastFailure(status="error", code=str(response.status_code), description=str(e))
                 return BroadcastResponse(status="success", txid=txid, message="broadcast successful")
-            else:
-                return BroadcastFailure(
-                    status="error",
-                    code=str(response.status_code),
-                    description=response.json()["data"],
-                )
+            return BroadcastFailure(
+                status="error",
+                code=str(response.status_code),
+                description=_woc_parse_error_description(body),
+            )
         except Exception as error:
             return BroadcastFailure(
                 status="error",
