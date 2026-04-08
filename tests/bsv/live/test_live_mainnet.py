@@ -96,7 +96,6 @@ class TestMainnetP2PKH:
         tx = build_mainnet_tx(
             source_tx,
             vout,
-            p2pkh.lock(funded_mainnet_key.address()),
             p2pkh.unlock(funded_mainnet_key),
             funded_mainnet_key,
             sighash=sighash,
@@ -416,7 +415,6 @@ class TestMainnetCrossConfig:
         tx = build_mainnet_tx(
             source_tx,
             vout,
-            p2pkh.lock(funded_mainnet_key.address()),
             p2pkh.unlock(funded_mainnet_key),
             funded_mainnet_key,
             sighash=SIGHASH.ALL_FORKID,

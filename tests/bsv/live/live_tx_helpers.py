@@ -58,13 +58,12 @@ CROSS_VERSION_COMBOS = [
 def build_live_tx(
     source_tx: Transaction,
     source_vout: int,
-    locking_script: Script,
     unlock_template,
     change_key,
     sighash: int = SIGHASH.ALL_FORKID,
     tx_version: int = 1,
 ) -> Transaction:
-    """Build a transaction spending a real UTXO, with fee calculation and change."""
+    """Build a tx spending a pooled P2PKH UTXO (lock is taken from source_tx), with fee and change."""
     p2pkh = P2PKH()
     inp = TransactionInput(
         source_transaction=source_tx,

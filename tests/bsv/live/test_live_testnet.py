@@ -86,7 +86,6 @@ class TestTestnetP2PKH:
         tx = build_testnet_tx(
             source_tx,
             vout,
-            p2pkh.lock(funded_key.address()),
             p2pkh.unlock(funded_key),
             funded_key,
             sighash=sighash,
@@ -409,7 +408,6 @@ class TestTestnetCrossConfig:
         tx = build_testnet_tx(
             source_tx,
             vout,
-            p2pkh.lock(funded_key.address()),
             p2pkh.unlock(funded_key),
             funded_key,
             sighash=SIGHASH.ALL_FORKID,

@@ -475,7 +475,7 @@ class UTXOManager:
         """Fetch a raw transaction hex from WoC and parse it."""
         url = f"{self.woc_api_base}/tx/{txid}/hex"
 
-        async def _parse(hex_str: str) -> Transaction:
+        def _parse(hex_str: str) -> Transaction:
             tx = Transaction.from_hex(hex_str)
             if tx is None:
                 raise RuntimeError(f"Failed to parse tx {txid}")
@@ -483,10 +483,10 @@ class UTXOManager:
 
         if session is not None:
             hex_str = await self._woc_get(session, url, as_json=False)
-            return await _parse(hex_str)
+            return _parse(hex_str)
         async with aiohttp.ClientSession() as http_session:
             hex_str = await self._woc_get(http_session, url, as_json=False)
-            return await _parse(hex_str)
+            return _parse(hex_str)
 
     async def _get_source_tx_by_txid(self, txid: str, session=None) -> Transaction:
         if txid not in self._fetched_tx_by_id:
