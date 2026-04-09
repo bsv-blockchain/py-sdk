@@ -410,14 +410,11 @@ class TestMainnetStandardOpcodes:
 class TestMainnetUnlockingOpcodes:
     """v2 tx: non-push opcodes in unlocking script (review 9.4.2.1).
 
-    Step 1 (setup) is always ARC with X-SkipScriptValidation (``mainnet_broadcaster``). The same
-    setup tx is relayed to WoC (``relay_setup_to_woc``) so their node has it for step 2; we do
-    not rely on GET /tx/hex for 0-conf.
+    Step 1 (setup) is always ARC with X-SkipScriptValidation (mainnet_broadcaster). The same
+    setup tx is relayed to WoC (relay_setup_to_woc) so their node has it for step 2; we do
+    not rely on GET /tx/hex for 0-conf (often 404 on testnet).
 
-    Step 2: this suite uses ARC for the final broadcast (same headers as other mainnet live tests).
-    Testnet uses WoC for step 2 because ARC there rejects non-push unlocking with error 463; on
-    mainnet, WhatsOnChain may return policy 64 (scriptsig-not-pushonly) for the same shape, so ARC
-    is kept for step 2 here when it accepts the tx.
+    Step 2 is WoC because ARC rejects non-push unlocking scripts (error 463).
     """
 
     @pytest.mark.asyncio
@@ -440,7 +437,7 @@ class TestMainnetUnlockingOpcodes:
             sync_setup_to_woc=True,
             relay_setup_to_woc=woc_mainnet_broadcaster,
         )
-        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=mainnet_broadcaster)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_mainnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
@@ -463,7 +460,7 @@ class TestMainnetUnlockingOpcodes:
             sync_setup_to_woc=True,
             relay_setup_to_woc=woc_mainnet_broadcaster,
         )
-        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=mainnet_broadcaster)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_mainnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
 
@@ -623,7 +620,7 @@ class TestMainnetCrossConfig:
             sync_setup_to_woc=True,
             relay_setup_to_woc=woc_mainnet_broadcaster,
         )
-        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=mainnet_broadcaster)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_mainnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
 
