@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
@@ -41,6 +42,37 @@ def default_deployment_id() -> str:
     return f"py-sdk-{random_hex(16)}"
 
 
+# ARC POST /v1/tx returns txStatus alongside txid. These mean the tx did not
+# succeed as an acceptable broadcast from the network's perspective (see also
+# categorize_transaction_status).
+ARC_TERMINAL_FAILURE_TX_STATUSES = frozenset(
+    {
+        "REJECTED",
+        "ERROR",
+        "SEEN_IN_ORPHAN_MEMPOOL",
+        "DOUBLE_SPEND_ATTEMPTED",
+    }
+)
+
+
+def arc_post_data_indicates_failure(data: Dict[str, Any]) -> Optional[str]:
+    """If ARC POST `data` means the transaction failed, return a description; else None.
+
+    Missing or unknown txStatus is treated as acceptable (backward compatible).
+    """
+    if not data.get("txid"):
+        return None
+    tx_status = data.get("txStatus")
+    if not tx_status:
+        return None
+    if tx_status in ARC_TERMINAL_FAILURE_TX_STATUSES:
+        extra = (data.get("extraInfo") or "").strip()
+        if extra:
+            return f"{tx_status}: {extra}"
+        return tx_status
+    return None
+
+
 class ARC(Broadcaster):
     def __init__(self, url: str, config: Union[str, ARCConfig] = None):
         self.URL = url
@@ -70,6 +102,9 @@ class ARC(Broadcaster):
             "headers": self.request_headers(),
             "data": {"rawTx": tx.to_ef().hex() if has_all_source_txs else tx.hex()},
         }
+        bound = self._http_timeout_for_v1_tx_post()
+        if bound is not None:
+            request_options["timeout"] = bound
         try:
             response = await self.http_client.fetch(f"{self.URL}/v1/tx", request_options)
 
@@ -79,10 +114,19 @@ class ARC(Broadcaster):
                 data = response_json["data"]
 
                 if data.get("txid"):
+                    failure_desc = arc_post_data_indicates_failure(data)
+                    if failure_desc:
+                        return BroadcastFailure(
+                            status="failure",
+                            code="ARC_TX_STATUS",
+                            description=failure_desc,
+                            txid=data.get("txid"),
+                        )
+                    msg = f"{data.get('txStatus', '')} {data.get('extraInfo', '')}".strip()
                     return BroadcastResponse(
                         status="success",
                         txid=data.get("txid"),
-                        message=f"{data.get('txStatus', '')} {data.get('extraInfo', '')}",
+                        message=msg,
                     )
                 else:
                     return BroadcastFailure(
@@ -124,6 +168,39 @@ class ARC(Broadcaster):
 
         return headers
 
+    def _http_timeout_for_v1_tx_post(self) -> Optional[int]:
+        """HTTP client timeout for POST /v1/tx when ARC may block (wait-for status).
+
+        GorillaPool uses ``X-WaitForStatus`` (8 = SEEN_ON_NETWORK), not legacy
+        ``X-WaitFor: SEEN_ON_NETWORK``. Optional ``X-MaxTimeout`` (seconds) may be
+        set for TAAL-compatible deployments; otherwise ``ARC_X_MAX_TIMEOUT`` env
+        (default 120) applies when ``X-WaitForStatus`` requests a wait.
+        """
+        if not self.headers:
+            return None
+        raw_max = self.headers.get("X-MaxTimeout")
+        if raw_max is not None:
+            try:
+                server_sec = int(str(raw_max).strip())
+            except ValueError:
+                server_sec = None
+            if server_sec is not None:
+                return max(45, server_sec + 30)
+        wfs = self.headers.get("X-WaitForStatus")
+        if wfs is None:
+            return None
+        try:
+            code = int(str(wfs).strip())
+        except ValueError:
+            return None
+        if code <= 0:
+            return None
+        try:
+            sec = int(os.environ.get("ARC_X_MAX_TIMEOUT", "120").strip() or "120")
+        except ValueError:
+            sec = 120
+        return max(45, sec + 30)
+
     def sync_broadcast(self, tx: "Transaction", timeout: int = 30) -> Union[BroadcastResponse, BroadcastFailure]:
         """
         Synchronously broadcast a transaction
@@ -135,12 +212,17 @@ class ARC(Broadcaster):
         # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
 
+        effective_timeout = timeout
+        bound = self._http_timeout_for_v1_tx_post()
+        if bound is not None:
+            effective_timeout = max(effective_timeout, bound)
+
         try:
             response = self.sync_http_client.post(
                 f"{self.URL}/v1/tx",
                 data={"rawTx": tx.to_ef().hex() if has_all_source_txs else tx.hex()},
                 headers=self.request_headers(),
-                timeout=timeout,
+                timeout=effective_timeout,
             )
 
             response_json = response.json()
@@ -148,10 +230,19 @@ class ARC(Broadcaster):
 
             if response.ok:
                 if data.get("txid"):
+                    failure_desc = arc_post_data_indicates_failure(data)
+                    if failure_desc:
+                        return BroadcastFailure(
+                            status="failure",
+                            code="ARC_TX_STATUS",
+                            description=failure_desc,
+                            txid=data.get("txid"),
+                        )
+                    msg = f"{data.get('txStatus', '')} {data.get('extraInfo', '')}".strip()
                     return BroadcastResponse(
                         status="success",
                         txid=data.get("txid"),
-                        message=f"{data.get('txStatus', '')} {data.get('extraInfo', '')}".strip(),
+                        message=msg,
                     )
                 else:
                     return BroadcastFailure(
@@ -165,7 +256,7 @@ class ARC(Broadcaster):
                     return BroadcastFailure(
                         status="failure",
                         code="408",
-                        description=f"Transaction broadcast timed out after {timeout} seconds",
+                        description=f"Transaction broadcast timed out after {effective_timeout} seconds",
                     )
 
                 if response.status_code == 503:

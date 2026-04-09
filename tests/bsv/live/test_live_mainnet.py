@@ -5,6 +5,15 @@ All test txs are funded from a single fan-out tx that splits one UTXO into many.
 
 Requires: FUNDED_MAINNET_WIF env var set to a funded mainnet private key WIF.
 Run with: pytest tests/bsv/live/test_live_mainnet.py -v -m mainnet
+
+Default guarantee — SEEN_ON_NETWORK (see test_live_testnet module docstring).
+
+Optional — wait for mined (slow):
+  LIVE_REQUIRE_MINED=1 — also poll until ARC reports MINED or WoC confirmations.
+  LIVE_TX_CONFIRM_TIMEOUT_SEC — Max seconds for that wait (default 300).
+
+The ARC broadcaster also fails the HTTP broadcast step when ARC returns a terminal
+txStatus in the POST body (e.g. REJECTED), not only on non-2xx responses.
 """
 
 import pytest

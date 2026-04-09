@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 from bsv.broadcaster import BroadcastFailure, BroadcastResponse
-from bsv.broadcasters.arc import ARC, ARCConfig
+from bsv.broadcasters.arc import ARC, ARCConfig, arc_post_data_indicates_failure
 from bsv.http_client import HttpClient, HttpResponse, SyncHttpClient
 from bsv.transaction import Transaction
 
@@ -60,6 +60,31 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result.message, "success extra")
 
+    async def test_broadcast_rejected_txstatus_returns_failure(self):
+        """HTTP 200 with txid but REJECTED must be BroadcastFailure (not success)."""
+        mock_response = HttpResponse(
+            ok=True,
+            status_code=200,
+            json_data={
+                "data": {
+                    "txid": "e64bb274027e58a5b2fff2852cabe5c2f8aebe1b70225bb37c17a9b346a97086",
+                    "txStatus": "REJECTED",
+                    "extraInfo": "double spend attempted",
+                }
+            },
+        )
+        mock_http_client = AsyncMock(HttpClient)
+        mock_http_client.fetch = AsyncMock(return_value=mock_response)
+
+        arc_config = ARCConfig(api_key=self.api_key, http_client=mock_http_client)
+        arc = ARC(self.URL, arc_config)
+        result = await arc.broadcast(self.tx)
+
+        self.assertIsInstance(result, BroadcastFailure)
+        self.assertEqual(result.code, "ARC_TX_STATUS")
+        self.assertIn("REJECTED", result.description)
+        self.assertEqual(result.txid, "e64bb274027e58a5b2fff2852cabe5c2f8aebe1b70225bb37c17a9b346a97086")
+
     async def test_broadcast_failure(self):
         mock_response = HttpResponse(
             ok=False,
@@ -88,6 +113,28 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, BroadcastFailure)
         self.assertEqual(result.code, "500")
         self.assertEqual(result.description, "Internal Error")
+
+    def test_sync_broadcast_rejected_txstatus_returns_failure(self):
+        mock_response = HttpResponse(
+            ok=True,
+            status_code=200,
+            json_data={
+                "data": {
+                    "txid": "e64bb274027e58a5b2fff2852cabe5c2f8aebe1b70225bb37c17a9b346a97086",
+                    "txStatus": "REJECTED",
+                    "extraInfo": "double spend attempted",
+                }
+            },
+        )
+        mock_sync_http_client = MagicMock(SyncHttpClient)
+        mock_sync_http_client.post = MagicMock(return_value=mock_response)
+
+        arc_config = ARCConfig(api_key=self.api_key, sync_http_client=mock_sync_http_client)
+        arc = ARC(self.URL, arc_config)
+        result = arc.sync_broadcast(self.tx)
+
+        self.assertIsInstance(result, BroadcastFailure)
+        self.assertEqual(result.code, "ARC_TX_STATUS")
 
     def test_sync_broadcast_success(self):
         mock_response = HttpResponse(
@@ -229,6 +276,18 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["status_category"], "0confirmation")
         self.assertEqual(result["tx_status"], "SEEN_ON_NETWORK")
+
+    def test_arc_post_data_indicates_failure_rejected(self):
+        d = {
+            "txid": "e64bb274027e58a5b2fff2852cabe5c2f8aebe1b70225bb37c17a9b346a97086",
+            "txStatus": "REJECTED",
+            "extraInfo": "double spend attempted",
+        }
+        self.assertIsNotNone(arc_post_data_indicates_failure(d))
+
+    def test_arc_post_data_indicates_failure_none_when_minimal_ok(self):
+        d = {"txid": "8e60c4143879918ed03b8fc67b5ac33b8187daa3b46022ee2a9e1eb67e2e46ec"}
+        self.assertIsNone(arc_post_data_indicates_failure(d))
 
 
 if __name__ == "__main__":

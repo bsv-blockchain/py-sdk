@@ -37,6 +37,115 @@ UTXO_POOL_MAINNET_FILE = os.path.join(_LIVE_DIR, ".utxo_pool_mainnet.json")
 WOC_EXPLORER_TESTNET_TX = "https://test.whatsonchain.com/tx"
 WOC_EXPLORER_MAINNET_TX = "https://whatsonchain.com/tx"
 
+# GorillaPool ARC (same hosts as testnet_broadcaster / mainnet_broadcaster fixtures)
+ARC_API_TESTNET_BASE = "https://testnet.arc.gorillapool.io"
+ARC_API_MAINNET_BASE = "https://arc.gorillapool.io"
+
+
+def live_require_mined_enabled(verify_mined: bool | None = None) -> bool:
+    """When True, live tests also poll until tx is MINED (or WoC confirms).
+
+    Default is False. Normal live runs only wait for ``SEEN_ON_NETWORK`` (ARC headers + GET
+    poll in :meth:`UTXOManager._ensure_arc_seen_on_network`). Set ``LIVE_REQUIRE_MINED=1``
+    to add an additional wait for mined settlement (slow).
+    """
+    if verify_mined is not None:
+        return verify_mined
+    v = os.environ.get("LIVE_REQUIRE_MINED", "").strip().lower()
+    return v in ("1", "true", "yes", "on")
+
+
+def live_tx_confirm_timeout_sec() -> float:
+    raw = os.environ.get("LIVE_TX_CONFIRM_TIMEOUT_SEC", "300")
+    try:
+        return float(raw)
+    except ValueError:
+        return 300.0
+
+
+def arc_seen_poll_timeout_sec() -> float:
+    """Max seconds to poll ARC GET until SEEN_ON_NETWORK / MINED after a POST that stopped early."""
+    raw = os.environ.get(
+        "ARC_SEEN_POLL_TIMEOUT_SEC",
+        os.environ.get("ARC_X_MAX_TIMEOUT", "120"),
+    )
+    try:
+        return float((raw or "120").strip() or "120")
+    except ValueError:
+        return 120.0
+
+
+def live_broadcast_arc_wait_headers() -> dict[str, str]:
+    """ARC headers so POST /v1/tx requests ``SEEN_ON_NETWORK`` (GorillaPool / BSV ARC).
+
+    Sends ``X-WaitForStatus: 8``. Some deployments still return an earlier ``txStatus`` in
+    the POST body (e.g. ``ANNOUNCED_TO_NETWORK``); :meth:`UTXOManager._ensure_arc_seen_on_network`
+    then polls GET /v1/tx until ``SEEN_ON_NETWORK`` or ``MINED``.
+
+    Env:
+      LIVE_ARC_SKIP_WAIT_FOR_SEEN=1 — omit wait headers and GET enforcement (faster).
+      ARC_SEEN_POLL_TIMEOUT_SEC — max seconds for that GET poll (default: same as ARC_X_MAX_TIMEOUT or 120).
+    """
+    if os.environ.get("LIVE_ARC_SKIP_WAIT_FOR_SEEN", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    ):
+        return {}
+    return {"X-WaitForStatus": "8"}
+
+
+def _arc_with_broadcast_test_tx_headers(bc: Broadcaster) -> Broadcaster:
+    """Merge :func:`live_broadcast_arc_wait_headers` into an ARC instance; pass through otherwise."""
+    extra = live_broadcast_arc_wait_headers()
+    if not extra:
+        return bc
+    from bsv.broadcasters.arc import ARC, ARCConfig
+
+    if not isinstance(bc, ARC):
+        return bc
+    merged = {**(bc.headers or {}), **extra}
+    config = ARCConfig(
+        api_key=bc.api_key,
+        http_client=bc.http_client,
+        sync_http_client=bc.sync_http_client,
+        deployment_id=bc.deployment_id,
+        callback_url=bc.callback_url,
+        callback_token=bc.callback_token,
+        headers=merged,
+    )
+    return ARC(bc.URL, config)
+
+
+def _print_live_broadcast_result(bc: Broadcaster, result: object, *, kind: str) -> None:
+    """Echo broadcaster return value (success message mirrors ARC POST body for ARC)."""
+    from bsv.broadcasters.arc import ARC
+
+    tag = "ARC" if isinstance(bc, ARC) else bc.__class__.__name__
+    st = getattr(result, "status", None)
+    txid = getattr(result, "txid", None)
+    if st == "success":
+        msg = (getattr(result, "message", None) or "").strip()
+        extra = f" message={msg!r}" if msg else ""
+        print(f"\n  [{tag} {kind}] status=success txid={txid}{extra}")
+        return
+    code = getattr(result, "code", "")
+    desc = getattr(result, "description", "")
+    print(f"\n  [{tag} {kind}] status={st!r} code={code!r} txid={txid!r} description={desc!r}")
+
+
+def _arc_post_first_tx_status(message: str | None) -> str | None:
+    """First token of ARC :class:`BroadcastResponse` message (txStatus from POST body)."""
+    if not message:
+        return None
+    parts = message.split()
+    return parts[0] if parts else None
+
+
+def _print_live_tx_raw_hex(tx: Transaction, *, kind: str) -> None:
+    """Print standard raw transaction hex (``tx.hex()``), not EF wire form."""
+    print(f"\n  [rawTx hex {kind}] {tx.hex()}")
+
 
 # ---------------------------------------------------------------------------
 # Mock implementations
@@ -382,10 +491,17 @@ class UTXOManager:
         pool_file: str | None = None,
         explorer_tx_base: str = WOC_EXPLORER_TESTNET_TX,
         network_label: str = "testnet",
+        arc_base_url: str | None = None,
     ):
         self.key = funded_key
         self.broadcaster = broadcaster
         self.woc_api_base = woc_api_base.rstrip("/")
+        if arc_base_url is not None:
+            self.arc_base_url = arc_base_url.rstrip("/")
+        else:
+            self.arc_base_url = (
+                ARC_API_MAINNET_BASE if network_label == "mainnet" else ARC_API_TESTNET_BASE
+            )
         self.pool_file = pool_file if pool_file is not None else UTXO_POOL_TESTNET_FILE
         self.explorer_tx_base = explorer_tx_base.rstrip("/")
         self.network_label = network_label
@@ -397,6 +513,34 @@ class UTXOManager:
         self._tx_cache: dict[str, Transaction] = {}
         # WoC fan-out: cache parent txs by txid (multiple inputs may share a tx)
         self._fetched_tx_by_id: dict[str, Transaction] = {}
+
+    async def _ensure_arc_seen_on_network(self, bc: Broadcaster, result: object, *, kind: str) -> None:
+        """When live ARC wait headers are on but POST returns an earlier txStatus, poll GET."""
+        from bsv.broadcasters.arc import ARC
+
+        if not isinstance(bc, ARC) or not live_broadcast_arc_wait_headers():
+            return
+        if getattr(result, "status", None) != "success":
+            return
+        st = _arc_post_first_tx_status(getattr(result, "message", None))
+        if st in ("SEEN_ON_NETWORK", "MINED"):
+            return
+        txid = getattr(result, "txid", None)
+        if not txid:
+            return
+        tmo = arc_seen_poll_timeout_sec()
+        print(
+            f"\n  [ARC {kind}] POST txStatus={st!r}; "
+            f"polling GET until SEEN_ON_NETWORK or MINED (timeout {tmo}s)…"
+        )
+        from .arc_verify import wait_until_arc_tx_seen_on_network
+
+        final = await wait_until_arc_tx_seen_on_network(
+            self.arc_base_url,
+            txid,
+            timeout_sec=tmo,
+        )
+        print(f"\n  [ARC {kind}] GET txStatus={final!r}")
 
     # --- Persistence ---
 
@@ -606,8 +750,12 @@ class UTXOManager:
         fan_out_tx.fee(self.FEE_MODEL)
         fan_out_tx.sign()
 
-        # Broadcast
-        result = await self.broadcaster.broadcast(fan_out_tx)
+        # Broadcast (same ARC wait-for as broadcast_test_tx so fan-out reaches network)
+        bc = _arc_with_broadcast_test_tx_headers(self.broadcaster)
+        result = await bc.broadcast(fan_out_tx)
+        _print_live_broadcast_result(bc, result, kind="fan-out")
+        _print_live_tx_raw_hex(fan_out_tx, kind="fan-out")
+        await self._ensure_arc_seen_on_network(bc, result, kind="fan-out")
         if result.status != "success":
             raise RuntimeError(f"Fan-out broadcast failed: {getattr(result, 'description', result.status)}")
         self.broadcast_count += 1
@@ -640,6 +788,8 @@ class UTXOManager:
         tx: Transaction,
         spent_utxo: tuple[Transaction, int, int] = None,
         broadcaster: Broadcaster = None,
+        *,
+        verify_mined: bool | None = None,
     ) -> BroadcastResponse:
         """Broadcast a test transaction and track it.
 
@@ -650,13 +800,60 @@ class UTXOManager:
         Args:
             broadcaster: Optional override broadcaster (e.g. WoC for txs
                 that ARC rejects due to non-push unlocking scripts).
+            verify_mined: If True, wait for ARC MINED or WoC confirmations (slow).
+                If None, use env (default: off; only SEEN_ON_NETWORK is enforced by default).
+
+        For ARC broadcasters, :func:`live_broadcast_arc_wait_headers` is merged by default
+        (``X-WaitForStatus: 8`` / SEEN_ON_NETWORK). Set ``LIVE_ARC_SKIP_WAIT_FOR_SEEN=1`` to
+        disable. Non-ARC broadcasters are unchanged.
         """
-        bc = broadcaster or self.broadcaster
+        from .arc_verify import wait_until_live_tx_confirmed
+
+        bc = _arc_with_broadcast_test_tx_headers(broadcaster or self.broadcaster)
         result = await bc.broadcast(tx)
+        _print_live_broadcast_result(bc, result, kind="tx")
+        _print_live_tx_raw_hex(tx, kind="tx")
+        await self._ensure_arc_seen_on_network(bc, result, kind="tx")
         self.broadcast_count += 1
         if result.status == "success":
             txid = result.txid or tx.txid()
             print(f"\n  -> {self.explorer_tx_base}/{txid}")
+            if live_require_mined_enabled(verify_mined):
+                await wait_until_live_tx_confirmed(
+                    self.arc_base_url,
+                    self.woc_api_base,
+                    txid,
+                    timeout_sec=live_tx_confirm_timeout_sec(),
+                )
         if result.status != "success" and spent_utxo is not None:
             self.return_utxo(spent_utxo)
         return result
+
+
+# ---------------------------------------------------------------------------
+# test_live_testnet: WoC JSON audit (xfail strict when broadcast passes)
+# ---------------------------------------------------------------------------
+
+
+def pytest_collection_modifyitems(config, items):
+    """Mark audited testnet live node IDs xfail(strict=True) — see test_live_testnet docstring."""
+    if os.environ.get("LIVE_WOC_JSON_XFAIL_AUDIT", "").strip().lower() not in (
+        "1",
+        "true",
+        "yes",
+    ):
+        return
+    try:
+        from ._testnet_woc_xfail_nodeids import TESTNET_LIVE_WOC_JSON_XFAIL_NODEIDS
+    except ImportError:
+        return
+    reason = (
+        "WhatsOnChain test JSON GET /v1/bsv/test/tx/{txid} returned 404 for a tx printed "
+        "in the Apr 2026 live audit (or body missing txid/hash). Broadcast may still succeed "
+        "via ARC; SEEN_ON_NETWORK is default, mined polling is opt-in. This marker is only applied "
+        "when LIVE_WOC_JSON_XFAIL_AUDIT=1. 404 here is not proof the tx is off-chain."
+    )
+    mark = pytest.mark.xfail(reason=reason, strict=True)
+    for item in items:
+        if item.nodeid in TESTNET_LIVE_WOC_JSON_XFAIL_NODEIDS:
+            item.add_marker(mark)

@@ -5,6 +5,33 @@ All test txs are funded from a single fan-out tx that splits one UTXO into many.
 
 Requires: FUNDED_TESTNET_WIF env var set to a funded testnet private key WIF.
 Run with: pytest tests/bsv/live/test_live_testnet.py -v -m testnet
+
+Default chain guarantee — SEEN_ON_NETWORK (not mined):
+  For each ARC broadcast (fan-out + test txs), tests use X-WaitForStatus: 8 and, if the
+  POST body still shows an earlier txStatus, poll GET until SEEN_ON_NETWORK (or MINED if
+  reached first). This is the default live wait.
+
+Optional — wait for mined (slow):
+  LIVE_REQUIRE_MINED=1 — after that, also poll until ARC reports MINED or WoC confirmations.
+  LIVE_TX_CONFIRM_TIMEOUT_SEC — Max seconds for that mined wait (default 300).
+
+ARC tuning:
+  LIVE_ARC_SKIP_WAIT_FOR_SEEN=1 — disable SEEN_ON_NETWORK headers and GET enforcement (faster, weaker).
+  ARC_X_MAX_TIMEOUT / ARC_SEEN_POLL_TIMEOUT_SEC — HTTP POST bound and GET poll timeout (default 120).
+
+The ARC broadcaster also fails the HTTP broadcast step when ARC returns a terminal
+txStatus in the POST body (e.g. REJECTED), not only on non-2xx responses.
+
+WhatsOnChain JSON audit (Apr 2026):
+  For each explorer txid printed in a full live run, GET
+  https://api.whatsonchain.com/v1/bsv/test/tx/{txid} was checked. 182/188 txids
+  returned 404 (or a body without txid/hash); six txids returned 200. Only three
+  tests had all their printed txids return 200; 104 node IDs had at least one miss
+  (see _testnet_woc_xfail_nodeids.py).   Those node IDs are listed in _testnet_woc_xfail_nodeids.py. Set
+  LIVE_WOC_JSON_XFAIL_AUDIT=1 to apply pytest.mark.xfail(strict=True) to them (a
+  successful broadcast is then reported as an XPASS failure). By default live
+  tests behave as before. A 404 on this API does not prove the tx was not mined;
+  default live wait is SEEN_ON_NETWORK only; use LIVE_REQUIRE_MINED=1 for mined polling.
 """
 
 import pytest
