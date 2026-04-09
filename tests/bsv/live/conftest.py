@@ -3,12 +3,13 @@
 import asyncio
 import os
 import time
+from collections.abc import Awaitable, Callable
 
 import aiohttp
 import pytest
 
 from bsv.broadcasters import default_broadcaster
-from bsv.broadcasters.broadcaster import Broadcaster, BroadcastResponse
+from bsv.broadcasters.broadcaster import BroadcastFailure, BroadcastResponse, Broadcaster
 from bsv.chaintracker import ChainTracker
 from bsv.constants import SIGHASH, OpCode
 from bsv.fee_models import SatoshisPerKilobyte
@@ -37,9 +38,125 @@ UTXO_POOL_MAINNET_FILE = os.path.join(_LIVE_DIR, ".utxo_pool_mainnet.json")
 WOC_EXPLORER_TESTNET_TX = "https://test.whatsonchain.com/tx"
 WOC_EXPLORER_MAINNET_TX = "https://whatsonchain.com/tx"
 
-# GorillaPool ARC (same hosts as testnet_broadcaster / mainnet_broadcaster fixtures)
+
+def live_utxo_skip_woc_prune() -> bool:
+    """When True, :meth:`UTXOManager.prune_pool_to_chain_unspent` is a no-op (offline / flaky WoC)."""
+    return os.environ.get("LIVE_UTXO_SKIP_WOC_PRUNE", "").strip().lower() in ("1", "true", "yes")
+
+
+def broadcast_failure_indicates_spent_input(result: object) -> bool:
+    """True if a failed broadcast means the input UTXO is gone (already spent or unknown on-chain).
+
+    In that case the pooled UTXO must **not** be returned to :attr:`UTXOManager.utxos` — doing so
+    would poison the pool (the previous implementation always :meth:`return_utxo` on failure).
+
+    WoC / node error text varies; we match common substrings. Duplicate / already-in-mempool
+    relay messages are excluded.
+    """
+    parts: list[str] = []
+    if isinstance(result, str):
+        parts.append(result)
+    else:
+        for attr in ("description", "message", "code"):
+            v = getattr(result, attr, None)
+            if v is not None and str(v).strip():
+                parts.append(str(v))
+    text = " ".join(parts).lower()
+    if not text.strip():
+        return False
+    if any(
+        d in text
+        for d in (
+            "already in the mempool",
+            "already in mempool",
+            "txn-already-in-mempool",
+        )
+    ):
+        return False
+    markers = (
+        "already been spent",
+        "already spent",
+        "inputs missing or spent",
+        "missingorspent",
+        "bad-txns-inputs-missingorspent",
+        "missing inputs",
+        "inputs missing",
+        "txn-mempool-conflict",
+        "missing inputs or spent",
+        "input not found",
+        "unknown utxo",
+        "utxo not found",
+        "invalid utxo",
+        "double spend",
+        "double-spend",
+        "double_spend",
+        "double_spend_attempted",
+    )
+    return any(m in text for m in markers)
+
+
+# GorillaPool ARC
 ARC_API_TESTNET_BASE = "https://testnet.arc.gorillapool.io"
 ARC_API_MAINNET_BASE = "https://arc.gorillapool.io"
+# TAAL ARC (https://docs.taal.com/core-products/transaction-processing/arc-endpoints)
+ARC_API_TESTNET_TAAL_BASE = "https://arc-test.taal.com"
+ARC_API_MAINNET_TAAL_BASE = "https://arc.taal.com"
+
+
+def live_arc_base_url(network_label: str) -> str:
+    """Base URL for ARC (no ``/v1`` suffix); must match session broadcaster host for GET polling.
+
+    Env (first match wins):
+      LIVE_ARC_BASE_URL — override for both networks
+      LIVE_ARC_BASE_URL_TESTNET / LIVE_ARC_BASE_URL_MAINNET — per-network override
+      LIVE_ARC_BACKEND — ``taal`` (default) or ``gorillapool`` (no TAAL token on public testnet).
+
+    TAAL bearer (any one): ``TEST_TAAL_API_KEY`` / ``MAIN_TAAL_API_KEY`` (wallet-toolbox names),
+    ``TAAL_TESTNET_APIKEY`` / ``TAAL_MAINNET_APIKEY``, or ``ARC_API_KEY``.
+    """
+    nl = (network_label or "testnet").strip().lower()
+    override = os.environ.get("LIVE_ARC_BASE_URL", "").strip()
+    if override:
+        return override.rstrip("/")
+    if nl == "mainnet":
+        u = os.environ.get("LIVE_ARC_BASE_URL_MAINNET", "").strip()
+        if u:
+            return u.rstrip("/")
+    else:
+        u = os.environ.get("LIVE_ARC_BASE_URL_TESTNET", "").strip()
+        if u:
+            return u.rstrip("/")
+    backend = os.environ.get("LIVE_ARC_BACKEND", "taal").strip().lower()
+    if backend in ("gorillapool", "gorilla", "gp"):
+        return ARC_API_MAINNET_BASE if nl == "mainnet" else ARC_API_TESTNET_BASE
+    return ARC_API_MAINNET_TAAL_BASE if nl == "mainnet" else ARC_API_TESTNET_TAAL_BASE
+
+
+def _live_arc_api_key_for_network(network_label: str) -> str | None:
+    """Bearer token for ARC when configured (TAAL: prefer TAAL_* or ARC_API_KEY)."""
+    nl = (network_label or "testnet").strip().lower()
+    backend = os.environ.get("LIVE_ARC_BACKEND", "taal").strip().lower()
+    if backend in ("gorillapool", "gorilla", "gp"):
+        return os.environ.get("GORILLAPOOL_ARC_API_KEY", "").strip() or None
+    raw = (
+        os.environ.get("ARC_API_KEY", "").strip()
+        or os.environ.get("TAAL_API_KEY", "").strip()
+    )
+    if raw:
+        return raw
+    if nl == "mainnet":
+        return (
+            os.environ.get("TAAL_MAINNET_APIKEY", "").strip()
+            or os.environ.get("TAAL_MAINNET_API_KEY", "").strip()
+            or os.environ.get("MAIN_TAAL_API_KEY", "").strip()
+            or None
+        )
+    return (
+        os.environ.get("TAAL_TESTNET_APIKEY", "").strip()
+        or os.environ.get("TAAL_TESTNET_API_KEY", "").strip()
+        or os.environ.get("TEST_TAAL_API_KEY", "").strip()
+        or None
+    )
 
 
 def live_require_mined_enabled(verify_mined: bool | None = None) -> bool:
@@ -73,6 +190,23 @@ def arc_seen_poll_timeout_sec() -> float:
         return float((raw or "120").strip() or "120")
     except ValueError:
         return 120.0
+
+
+def live_arc_seen_woc_fallback_enabled() -> bool:
+    """When True (default), ARC ``SEEN_ON_NETWORK`` wait also succeeds via WhatsOnChain.
+
+    Uses GET ``/tx/{txid}`` / ``/hex`` when indexed, and POST ``/tx/raw`` with the same hex when
+    WoC reports duplicate / ``txn-mempool-conflict`` (mempool visibility without confirmations).
+    Set ``LIVE_ARC_SEEN_WOC_FALLBACK=0`` for ARC-only.
+    """
+    if os.environ.get("LIVE_ARC_SEEN_WOC_FALLBACK", "").strip().lower() in (
+        "0",
+        "false",
+        "no",
+        "off",
+    ):
+        return False
+    return True
 
 
 def live_broadcast_arc_wait_headers() -> dict[str, str]:
@@ -131,7 +265,11 @@ def _print_live_broadcast_result(bc: Broadcaster, result: object, *, kind: str) 
         return
     code = getattr(result, "code", "")
     desc = getattr(result, "description", "")
-    print(f"\n  [{tag} {kind}] status={st!r} code={code!r} txid={txid!r} description={desc!r}")
+    more = getattr(result, "more", None)
+    print(f"\n  [{tag} {kind}] status={st!r} code={code!r} txid={txid!r}")
+    print(f"  [{tag} {kind}] detail: {desc}")
+    if more:
+        print(f"  [{tag} {kind}] more: {more!r}")
 
 
 def _arc_post_first_tx_status(message: str | None) -> str | None:
@@ -408,16 +546,22 @@ def funded_key():
 
 @pytest.fixture(scope="session")
 def testnet_broadcaster():
-    """ARC broadcaster pointed at testnet with Chronicle script validation skip.
+    """ARC broadcaster for testnet with Chronicle script validation skip.
 
-    Uses X-SkipScriptValidation header because the ARC testnet validator
-    doesn't support Chronicle sighash yet, even though the underlying
-    node does (txs are accepted into the network).
+    Host comes from :func:`live_arc_base_url` (default TAAL testnet). Bearer from
+    ``TEST_TAAL_API_KEY`` / ``TAAL_TESTNET_APIKEY`` / ``ARC_API_KEY``, or
+    ``LIVE_ARC_BACKEND=gorillapool`` without a TAAL token.
+
+    Uses ``X-SkipScriptValidation`` because some in-path validators reject Chronicle
+    sighash even when the network accepts the tx.
     """
     from bsv.broadcasters.arc import ARC, ARCConfig
 
-    config = ARCConfig(headers={"X-SkipScriptValidation": "true"})
-    return ARC("https://testnet.arc.gorillapool.io", config)
+    base = live_arc_base_url("testnet")
+    api_key = _live_arc_api_key_for_network("testnet")
+    h = {"X-SkipScriptValidation": "true"}
+    config = ARCConfig(api_key=api_key, headers=h) if api_key else ARCConfig(headers=h)
+    return ARC(base, config)
 
 
 @pytest.fixture(scope="session")
@@ -442,15 +586,17 @@ def funded_mainnet_key():
 
 @pytest.fixture(scope="session")
 def mainnet_broadcaster():
-    """ARC broadcaster for mainnet with Chronicle-friendly script validation skip.
+    """ARC broadcaster for mainnet; host from :func:`live_arc_base_url` (default TAAL).
 
-    Same X-SkipScriptValidation header as testnet ARC: the in-path validator can
-    reject Chronicle / OTDA txs that the network still accepts.
+    Bearer: ``MAIN_TAAL_API_KEY``, ``TAAL_MAINNET_APIKEY``, or ``ARC_API_KEY``.
     """
     from bsv.broadcasters.arc import ARC, ARCConfig
 
-    config = ARCConfig(headers={"X-SkipScriptValidation": "true"})
-    return ARC("https://arc.gorillapool.io", config)
+    base = live_arc_base_url("mainnet")
+    api_key = _live_arc_api_key_for_network("mainnet")
+    h = {"X-SkipScriptValidation": "true"}
+    config = ARCConfig(api_key=api_key, headers=h) if api_key else ARCConfig(headers=h)
+    return ARC(base, config)
 
 
 @pytest.fixture(scope="session")
@@ -476,8 +622,9 @@ class UTXOManager:
 
     Flow:
     1. Try to load persisted UTXOs from the pool file
-    2. If none available, fetch from WoC and fan-out
-    3. Each test calls take_utxo() which also persists the updated pool
+    2. :meth:`prune_pool_to_chain_unspent` — drop entries not in WoC ``/address/.../unspent``
+    3. If none available, fetch from WoC and fan-out
+    4. Each test calls take_utxo() which also persists the updated pool
     """
 
     FEE_MODEL = SatoshisPerKilobyte(100)
@@ -499,9 +646,7 @@ class UTXOManager:
         if arc_base_url is not None:
             self.arc_base_url = arc_base_url.rstrip("/")
         else:
-            self.arc_base_url = (
-                ARC_API_MAINNET_BASE if network_label == "mainnet" else ARC_API_TESTNET_BASE
-            )
+            self.arc_base_url = live_arc_base_url(network_label)
         self.pool_file = pool_file if pool_file is not None else UTXO_POOL_TESTNET_FILE
         self.explorer_tx_base = explorer_tx_base.rstrip("/")
         self.network_label = network_label
@@ -514,8 +659,15 @@ class UTXOManager:
         # WoC fan-out: cache parent txs by txid (multiple inputs may share a tx)
         self._fetched_tx_by_id: dict[str, Transaction] = {}
 
-    async def _ensure_arc_seen_on_network(self, bc: Broadcaster, result: object, *, kind: str) -> None:
-        """When live ARC wait headers are on but POST returns an earlier txStatus, poll GET."""
+    async def _ensure_arc_seen_on_network(
+        self,
+        bc: Broadcaster,
+        result: object,
+        *,
+        kind: str,
+        raw_tx_hex: str | None = None,
+    ) -> None:
+        """When live ARC wait headers are on but POST returns an earlier txStatus, poll until visible."""
         from bsv.broadcasters.arc import ARC
 
         if not isinstance(bc, ARC) or not live_broadcast_arc_wait_headers():
@@ -529,9 +681,14 @@ class UTXOManager:
         if not txid:
             return
         tmo = arc_seen_poll_timeout_sec()
+        woc_fb = live_arc_seen_woc_fallback_enabled()
+        extra = ""
+        if woc_fb:
+            extra = " + WhatsOnChain (GET and/or POST /tx/raw mempool probe)"
         print(
             f"\n  [ARC {kind}] POST txStatus={st!r}; "
-            f"polling GET until SEEN_ON_NETWORK or MINED (timeout {tmo}s)…"
+            f"polling ARC + WoC until visible (SEEN_ON_NETWORK/MINED, progressing, or mempool/indexer){extra} "
+            f"(timeout {tmo}s)…"
         )
         from .arc_verify import wait_until_arc_tx_seen_on_network
 
@@ -539,8 +696,10 @@ class UTXOManager:
             self.arc_base_url,
             txid,
             timeout_sec=tmo,
+            woc_api_base=self.woc_api_base if woc_fb else None,
+            raw_tx_hex=raw_tx_hex if woc_fb else None,
         )
-        print(f"\n  [ARC {kind}] GET txStatus={final!r}")
+        print(f"\n  [ARC {kind}] visibility={final!r}")
 
     # --- Persistence ---
 
@@ -582,6 +741,39 @@ class UTXOManager:
             return len(self.utxos) > 0
         except (json.JSONDecodeError, KeyError, OSError):
             return False
+
+    async def prune_pool_to_chain_unspent(self) -> int:
+        """Remove persisted pool entries that WhatsOnChain does not list as unspent for our address.
+
+        Survives crashes after ``take_utxo`` or external spends: the JSON pool can reference
+        outputs that are already spent. Returns the number of entries removed.
+        """
+        if live_utxo_skip_woc_prune():
+            return 0
+        if not self.utxos:
+            return 0
+        try:
+            rows = await self.fetch_utxos_from_woc()
+        except Exception as e:
+            print(f"\n  [UTXO pool] pruning skipped — WoC unspent failed ({e!r})")
+            return 0
+        unspent_set = {(r["tx_hash"].lower(), int(r["tx_pos"])) for r in rows}
+        kept: list[tuple[Transaction, int, int]] = []
+        removed = 0
+        for source_tx, vout, sat in self.utxos:
+            key = (source_tx.txid().lower(), vout)
+            if key in unspent_set:
+                kept.append((source_tx, vout, sat))
+            else:
+                removed += 1
+        if removed:
+            print(
+                f"\n  [UTXO pool] dropped {removed} stale entr(y/ies) not in WoC unspent for "
+                f"{self.key.address()}"
+            )
+            self.utxos = kept
+            self._save_pool()
+        return removed
 
     # --- Network ---
 
@@ -683,6 +875,8 @@ class UTXOManager:
         if not self.utxos:
             self._load_pool()
 
+        await self.prune_pool_to_chain_unspent()
+
         shortfall = min_count - len(self.utxos)
         if shortfall <= 0:
             return
@@ -755,7 +949,7 @@ class UTXOManager:
         result = await bc.broadcast(fan_out_tx)
         _print_live_broadcast_result(bc, result, kind="fan-out")
         _print_live_tx_raw_hex(fan_out_tx, kind="fan-out")
-        await self._ensure_arc_seen_on_network(bc, result, kind="fan-out")
+        await self._ensure_arc_seen_on_network(bc, result, kind="fan-out", raw_tx_hex=fan_out_tx.hex())
         if result.status != "success":
             raise RuntimeError(f"Fan-out broadcast failed: {getattr(result, 'description', result.status)}")
         self.broadcast_count += 1
@@ -783,6 +977,67 @@ class UTXOManager:
         self.utxos.insert(0, utxo)
         self._save_pool()
 
+    async def broadcast_test_tx_retry_on_spent(
+        self,
+        build_tx: Callable[[tuple[Transaction, int, int]], Transaction],
+        *,
+        satoshis_each: int = 3_000,
+        max_attempts: int = 3,
+        broadcaster: Broadcaster | None = None,
+        verify_mined: bool | None = None,
+    ) -> tuple[BroadcastResponse | BroadcastFailure, Transaction | None]:
+        """Take a pool UTXO, build a tx, broadcast; on spent-input failure take another UTXO and retry.
+
+        Use when the on-disk pool may still list an output another run already spent.
+
+        Returns ``(result, tx)`` where ``tx`` is the transaction that was broadcast on success, else
+        ``None``.
+        """
+        last: BroadcastResponse | BroadcastFailure | None = None
+        for _ in range(max(1, max_attempts)):
+            if not self.utxos:
+                await self.ensure_utxos(1, satoshis_each=satoshis_each)
+            utxo = self.take_utxo()
+            tx = build_tx(utxo)
+            last = await self.broadcast_test_tx(
+                tx,
+                spent_utxo=utxo,
+                broadcaster=broadcaster,
+                verify_mined=verify_mined,
+            )
+            if last.status == "success":
+                return last, tx
+            if not broadcast_failure_indicates_spent_input(last):
+                return last, None
+        assert last is not None
+        return last, None
+
+    async def broadcast_test_tx_resilient(
+        self,
+        build_tx: Callable[[], Awaitable[Transaction]],
+        *,
+        broadcaster: Broadcaster | None = None,
+        verify_mined: bool | None = None,
+        max_attempts: int = 3,
+    ) -> BroadcastResponse | BroadcastFailure:
+        """Broadcast a transaction from ``build_tx()``; on spent-input failure, build and try again.
+
+        Intended for pre-built spends that do not use :meth:`broadcast_test_tx`'s ``spent_utxo``
+        (e.g. step-2 tx after :func:`~tests.bsv.live.live_tx_helpers.build_two_step_live_tx`). If the
+        network reports the inputs are gone, ``build_tx`` is awaited again (typically re-running the
+        full two-step flow from a fresh pool UTXO). Transient errors are not retried.
+        """
+        last: BroadcastResponse | BroadcastFailure | None = None
+        for _ in range(max(1, max_attempts)):
+            tx = await build_tx()
+            last = await self.broadcast_test_tx(tx, broadcaster=broadcaster, verify_mined=verify_mined)
+            if last.status == "success":
+                return last
+            if not broadcast_failure_indicates_spent_input(last):
+                return last
+        assert last is not None
+        return last
+
     async def broadcast_test_tx(
         self,
         tx: Transaction,
@@ -790,11 +1045,12 @@ class UTXOManager:
         broadcaster: Broadcaster = None,
         *,
         verify_mined: bool | None = None,
-    ) -> BroadcastResponse:
+    ) -> BroadcastResponse | BroadcastFailure:
         """Broadcast a test transaction and track it.
 
-        If spent_utxo is provided and the broadcast fails, the UTXO is
-        returned to the pool since it was never actually spent on-chain.
+        If ``spent_utxo`` is provided and the broadcast fails with a **transient** error, the UTXO
+        is returned to the pool. If the error indicates the input was already spent or missing
+        on-chain, the UTXO is **not** re-queued (see :func:`broadcast_failure_indicates_spent_input`).
         Prints a clickable WhatsonChain link on successful broadcasts.
 
         Args:
@@ -813,7 +1069,7 @@ class UTXOManager:
         result = await bc.broadcast(tx)
         _print_live_broadcast_result(bc, result, kind="tx")
         _print_live_tx_raw_hex(tx, kind="tx")
-        await self._ensure_arc_seen_on_network(bc, result, kind="tx")
+        await self._ensure_arc_seen_on_network(bc, result, kind="tx", raw_tx_hex=tx.hex())
         self.broadcast_count += 1
         if result.status == "success":
             txid = result.txid or tx.txid()
@@ -826,7 +1082,13 @@ class UTXOManager:
                     timeout_sec=live_tx_confirm_timeout_sec(),
                 )
         if result.status != "success" and spent_utxo is not None:
-            self.return_utxo(spent_utxo)
+            if broadcast_failure_indicates_spent_input(result):
+                print(
+                    f"\n  [UTXO pool] input no longer spendable — not re-queuing "
+                    f"{spent_utxo[0].txid()}:{spent_utxo[1]}"
+                )
+            else:
+                self.return_utxo(spent_utxo)
         return result
 
 

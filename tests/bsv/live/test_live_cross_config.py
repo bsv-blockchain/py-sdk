@@ -543,10 +543,8 @@ class TestVersionOpcodeInteractions:
     @pytest.mark.parametrize("sighash,tx_version", CROSS_OPCODE_CONFIGS)
     def test_op_ver(self, priv_key, sighash, tx_version):
         """OP_VER with BIP143+v2 and OTDA+v1."""
-        expected_ver = str(tx_version)
-        lock = p2pkh_lock_with_prefix(
-            f"OP_VER OP_{expected_ver} OP_NUMEQUALVERIFY", priv_key
-        )
+        ver_le_hex = tx_version.to_bytes(4, "little").hex()
+        lock = p2pkh_lock_with_prefix(f"OP_VER {ver_le_hex} OP_EQUALVERIFY", priv_key)
         unlock = custom_unlock(priv_key)
         build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
 

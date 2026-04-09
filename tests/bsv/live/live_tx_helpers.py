@@ -1,5 +1,7 @@
 """Shared sighash matrices and tx builders for live mainnet/testnet broadcast tests."""
 
+import asyncio
+
 import pytest
 
 from bsv.broadcasters.broadcaster import Broadcaster
@@ -75,6 +77,34 @@ def _woc_relay_ready_for_spend(relay_result) -> bool:
         return True
     desc = (getattr(relay_result, "description", None) or "").lower()
     return any(m in desc for m in _WOC_RELAY_DUP_MARKERS)
+
+
+def _woc_relay_missing_inputs(relay_result) -> bool:
+    desc = (getattr(relay_result, "description", None) or "").lower()
+    return "missing input" in desc
+
+
+async def _woc_relay_parent_then_setup(
+    relay_setup_to_woc: Broadcaster,
+    source_tx: Transaction,
+    setup_tx: Transaction,
+    *,
+    max_setup_attempts: int = 15,
+    retry_delay_sec: float = 1.0,
+):
+    """POST pool parent then setup tx; retry setup when WoC node has not applied the parent yet."""
+    parent_result = await relay_setup_to_woc.broadcast(source_tx)
+    if not _woc_relay_ready_for_spend(parent_result):
+        return parent_result
+    for attempt in range(max_setup_attempts):
+        relay_result = await relay_setup_to_woc.broadcast(setup_tx)
+        if _woc_relay_ready_for_spend(relay_result):
+            return relay_result
+        if attempt + 1 < max_setup_attempts and _woc_relay_missing_inputs(relay_result):
+            await asyncio.sleep(retry_delay_sec)
+            continue
+        return relay_result
+    return relay_result
 
 
 def build_live_tx(
@@ -165,8 +195,9 @@ async def build_two_step_live_tx(
         if relay_setup_to_woc is None:
             await utxo_mgr.wait_until_woc_sees_txid(setup_txid)
         else:
-            await relay_setup_to_woc.broadcast(source_tx)
-            relay_result = await relay_setup_to_woc.broadcast(setup_tx)
+            relay_result = await _woc_relay_parent_then_setup(
+                relay_setup_to_woc, source_tx, setup_tx
+            )
             if not _woc_relay_ready_for_spend(relay_result):
                 raise RuntimeError(
                     "WoC setup relay failed after POSTing the pool parent tx; "

@@ -54,6 +54,47 @@ ARC_TERMINAL_FAILURE_TX_STATUSES = frozenset(
     }
 )
 
+# GET /v1/tx txStatus values where broadcast is accepted and ARC is still processing toward the network.
+# Some deployments rarely upgrade GET to SEEN_ON_NETWORK even when the tx is relayed; live tests treat
+# these as visible (see :func:`~tests.bsv.live.arc_verify.wait_until_arc_tx_seen_on_network`).
+ARC_PROGRESSING_TX_STATUSES = frozenset(
+    {
+        "QUEUED",
+        "RECEIVED",
+        "STORED",
+        "ANNOUNCED_TO_NETWORK",
+        "REQUESTED_BY_NETWORK",
+        "SENT_TO_NETWORK",
+        "ACCEPTED_BY_NETWORK",
+    }
+)
+
+
+def _arc_extract_http_error_detail(payload: Any) -> str:
+    """Human-readable message from ARC/HTTP error JSON (RFC 7807 and variants)."""
+    if payload is None:
+        return "Unknown error"
+    if isinstance(payload, str):
+        return payload.strip()[:8000] or "Unknown error"
+    if isinstance(payload, dict):
+        for key in ("detail", "description", "message", "title"):
+            v = payload.get(key)
+            if v is not None and str(v).strip() != "":
+                return str(v).strip()[:8000]
+        try:
+            return json.dumps(payload)[:8000]
+        except (TypeError, ValueError):
+            return str(payload)[:8000]
+    return str(payload)[:8000]
+
+
+def _arc_broadcast_failure_description(response_json: Any) -> str:
+    """Error string from :class:`~bsv.http_client.HttpResponse` ``.json()`` shape ``{\"data\": ...}``."""
+    if not isinstance(response_json, dict):
+        return _arc_extract_http_error_detail(response_json)
+    inner = response_json.get("data")
+    return _arc_extract_http_error_detail(inner)
+
 
 def arc_post_data_indicates_failure(data: Dict[str, Any]) -> Optional[str]:
     """If ARC POST `data` means the transaction failed, return a description; else None.
@@ -132,13 +173,13 @@ class ARC(Broadcaster):
                     return BroadcastFailure(
                         status="failure",
                         code=data.get("status", "ERR_UNKNOWN"),
-                        description=data.get("detail", "Unknown error"),
+                        description=_arc_extract_http_error_detail(data),
                     )
             else:
                 return BroadcastFailure(
                     status="failure",
                     code=str(response.status_code),
-                    description=response_json["data"]["detail"] if "data" in response_json else "Unknown error",
+                    description=_arc_broadcast_failure_description(response_json),
                 )
 
         except Exception as error:
@@ -269,7 +310,7 @@ class ARC(Broadcaster):
                 return BroadcastFailure(
                     status="failure",
                     code=str(response.status_code),
-                    description=data.get("detail", "Unknown error"),
+                    description=_arc_extract_http_error_detail(data),
                 )
 
         except Exception as error:

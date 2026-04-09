@@ -36,18 +36,16 @@ class TestOpVer:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_op_ver_v1(self, priv_key, sighash, tx_version):
-        """OP_VER pushes version, NUMEQUALVERIFY checks it matches expected."""
-        expected_ver = str(tx_version)
-        lock = p2pkh_lock_with_prefix(
-            f"OP_VER OP_{expected_ver} OP_NUMEQUALVERIFY", priv_key
-        )
+        """OP_VER pushes 4-byte LE nVersion; compare with OP_EQUALVERIFY (not NUMEQUAL on-node)."""
+        ver_le_hex = tx_version.to_bytes(4, "little").hex()
+        lock = p2pkh_lock_with_prefix(f"OP_VER {ver_le_hex} OP_EQUALVERIFY", priv_key)
         unlock = custom_unlock(priv_key)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
         assert tx.txid()
 
     def test_op_ver_version_2_explicit(self, priv_key):
-        """OP_VER on a v2 tx pushes 2."""
-        lock = p2pkh_lock_with_prefix("OP_VER OP_2 OP_NUMEQUALVERIFY", priv_key)
+        """OP_VER on a v2 tx pushes 02000000 LE."""
+        lock = p2pkh_lock_with_prefix("OP_VER 02000000 OP_EQUALVERIFY", priv_key)
         unlock = custom_unlock(priv_key)
         tx = build_signed_tx(
             lock, unlock,
@@ -386,7 +384,7 @@ class TestChronicleOpcodeBroadcast:
 
     @pytest.mark.asyncio
     async def test_broadcast_op_ver_tx(self, priv_key, mock_broadcaster):
-        lock = p2pkh_lock_with_prefix("OP_VER OP_2 OP_NUMEQUALVERIFY", priv_key)
+        lock = p2pkh_lock_with_prefix("OP_VER 02000000 OP_EQUALVERIFY", priv_key)
         unlock = custom_unlock(priv_key)
         tx = build_signed_tx(
             lock, unlock,

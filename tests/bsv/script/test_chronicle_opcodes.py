@@ -19,11 +19,11 @@ class TestOpVer:
     def test_pushes_version_1(self):
         # OP_VER pushes 4-byte LE tx version; version 1 = [01,00,00,00]
         # Then OP_1 pushes 1, OP_NUMEQUALVERIFY checks equality, OP_TRUE leaves true on stack
-        spend = make_spend("OP_VER OP_1 OP_NUMEQUALVERIFY OP_TRUE", tx_version=1)
+        spend = make_spend("OP_VER 01000000 OP_EQUALVERIFY OP_TRUE", tx_version=1)
         assert spend.validate()
 
     def test_pushes_version_2(self):
-        spend = make_spend("OP_VER OP_2 OP_NUMEQUALVERIFY OP_TRUE", tx_version=2)
+        spend = make_spend("OP_VER 02000000 OP_EQUALVERIFY OP_TRUE", tx_version=2)
         assert spend.validate()
 
     def test_pushes_version_0xff00(self):

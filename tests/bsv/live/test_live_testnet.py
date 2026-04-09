@@ -22,6 +22,12 @@ ARC tuning:
 The ARC broadcaster also fails the HTTP broadcast step when ARC returns a terminal
 txStatus in the POST body (e.g. REJECTED), not only on non-2xx responses.
 
+Self-healing: pooled P2PKH spends use ``UTXOManager.broadcast_test_tx_retry_on_spent``; two-step
+flows use ``broadcast_test_tx_resilient`` (re-runs the async builder when the final broadcast
+reports a spent input). The shared ``build_two_step_live_tx`` setup step retries setup broadcast via
+``broadcast_test_tx_retry_on_spent``. Mixed two-input tests retry up to three times on spent-type
+errors. WoC pool pruning and ``LIVE_UTXO_SKIP_WOC_PRUNE`` are documented in ``tests/bsv/live/conftest.py``.
+
 WhatsOnChain JSON audit (Apr 2026):
   For each explorer txid printed in a full live run, GET
   https://api.whatsonchain.com/v1/bsv/test/tx/{txid} was checked. 182/188 txids
@@ -48,6 +54,7 @@ from bsv.utils import encode_pushdata
 from .conftest import (
     FUNDED_TESTNET_WIF,
     UTXOManager,
+    broadcast_failure_indicates_spent_input,
     custom_unlock,
     p2pkh_lock_with_prefix,
     validate_all_inputs,
@@ -108,17 +115,19 @@ class TestTestnetP2PKH:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSION_COMBOS)
     async def test_p2pkh(self, funded_key, utxo_mgr, sighash, tx_version):
         p2pkh = P2PKH()
-        utxo = utxo_mgr.take_utxo()
-        source_tx, vout, _ = utxo
-        tx = build_testnet_tx(
-            source_tx,
-            vout,
-            p2pkh.unlock(funded_key),
-            funded_key,
-            sighash=sighash,
-            tx_version=tx_version,
-        )
-        result = await utxo_mgr.broadcast_test_tx(tx, spent_utxo=utxo)
+
+        def _spend(u):
+            source_tx, vout, _ = u
+            return build_testnet_tx(
+                source_tx,
+                vout,
+                p2pkh.unlock(funded_key),
+                funded_key,
+                sighash=sighash,
+                tx_version=tx_version,
+            )
+
+        result, _ = await utxo_mgr.broadcast_test_tx_retry_on_spent(_spend)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
 
@@ -134,7 +143,8 @@ class TestTestnetP2PK:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSION_COMBOS)
     async def test_p2pk(self, funded_key, utxo_mgr, sighash, tx_version):
         p2pk = P2PK()
-        tx = await build_two_step_testnet_tx(
+        async def _final():
+            return await build_two_step_testnet_tx(
             utxo_mgr,
             p2pk.lock(funded_key.public_key().serialize()),
             p2pk.unlock(funded_key),
@@ -142,7 +152,7 @@ class TestTestnetP2PK:
             sighash=sighash,
             tx_version=tx_version,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
 
@@ -168,7 +178,8 @@ class TestTestnetMultisig:
             pk2.public_key().serialize(),
             pk3.public_key().serialize(),
         ]
-        tx = await build_two_step_testnet_tx(
+        async def _final():
+            return await build_two_step_testnet_tx(
             utxo_mgr,
             multisig.lock(pubkeys, threshold=2),
             multisig.unlock([funded_key, pk2]),
@@ -176,7 +187,7 @@ class TestTestnetMultisig:
             sighash=sighash,
             tx_version=tx_version,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
 
@@ -191,11 +202,13 @@ class TestTestnetChronicleOpcodes:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
     async def test_op_ver(self, funded_key, utxo_mgr, sighash, tx_version):
-        expected_ver = str(tx_version)
-        lock = p2pkh_lock_with_prefix(f"OP_VER OP_{expected_ver} OP_NUMEQUALVERIFY", funded_key)
+        # OP_VER pushes 4-byte LE nVersion; OP_NUMEQUALVERIFY rejects non-minimal encodings on network.
+        ver_le_hex = tx_version.to_bytes(4, "little").hex()
+        lock = p2pkh_lock_with_prefix(f"OP_VER {ver_le_hex} OP_EQUALVERIFY", funded_key)
         unlock = custom_unlock(funded_key)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -204,8 +217,9 @@ class TestTestnetChronicleOpcodes:
         lock = p2pkh_lock_with_prefix("OP_2MUL OP_4 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_2")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -214,8 +228,9 @@ class TestTestnetChronicleOpcodes:
         lock = p2pkh_lock_with_prefix("OP_2DIV OP_5 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_10")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -224,8 +239,9 @@ class TestTestnetChronicleOpcodes:
         lock = p2pkh_lock_with_prefix("OP_SUBSTR 6263 OP_EQUALVERIFY", funded_key)
         data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_1 OP_2").serialize())
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -234,8 +250,9 @@ class TestTestnetChronicleOpcodes:
         lock = p2pkh_lock_with_prefix("OP_LEFT 6162 OP_EQUALVERIFY", funded_key)
         data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_2").serialize())
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -244,8 +261,9 @@ class TestTestnetChronicleOpcodes:
         lock = p2pkh_lock_with_prefix("OP_RIGHT 6465 OP_EQUALVERIFY", funded_key)
         data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_2").serialize())
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -254,8 +272,9 @@ class TestTestnetChronicleOpcodes:
         lock = p2pkh_lock_with_prefix("OP_LSHIFTNUM OP_8 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_1 OP_3")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -264,8 +283,9 @@ class TestTestnetChronicleOpcodes:
         lock = p2pkh_lock_with_prefix("OP_RSHIFTNUM OP_2 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_8 OP_2")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -276,8 +296,9 @@ class TestTestnetChronicleOpcodes:
         ver_bytes = tx_version.to_bytes(4, "little")
         data = Script(encode_pushdata(ver_bytes))
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key, sighash, tx_version)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
 
@@ -294,8 +315,9 @@ class TestTestnetStandardOpcodes:
         lock = p2pkh_lock_with_prefix("OP_ADD OP_7 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_3 OP_4")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -303,8 +325,9 @@ class TestTestnetStandardOpcodes:
         lock = p2pkh_lock_with_prefix("OP_SUB OP_4 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_7 OP_3")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -312,8 +335,9 @@ class TestTestnetStandardOpcodes:
         lock = p2pkh_lock_with_prefix("OP_MUL OP_12 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_3 OP_4")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -321,8 +345,9 @@ class TestTestnetStandardOpcodes:
         lock = p2pkh_lock_with_prefix("OP_CAT 61626364 OP_EQUALVERIFY", funded_key)
         data = Script(encode_pushdata(b"\x61\x62") + encode_pushdata(b"\x63\x64"))
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -334,8 +359,9 @@ class TestTestnetStandardOpcodes:
         lock = p2pkh_lock_with_prefix(f"OP_HASH160 {expected.hex()} OP_EQUALVERIFY", funded_key)
         data = Script(encode_pushdata(data_bytes))
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -343,8 +369,9 @@ class TestTestnetStandardOpcodes:
         lock = p2pkh_lock_with_prefix("OP_IF OP_5 OP_ELSE OP_6 OP_ENDIF OP_5 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_TRUE")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
     @pytest.mark.asyncio
@@ -362,8 +389,9 @@ class TestTestnetStandardOpcodes:
             + OpCode.OP_TRUE
         )
         unlock = custom_unlock(funded_key)
-        tx = await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        async def _final():
+            return await build_two_step_testnet_tx(utxo_mgr, lock, unlock, funded_key)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success"
 
 
@@ -389,7 +417,8 @@ class TestTestnetUnlockingOpcodes:
         lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_1 OP_2 OP_ADD")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(
+        async def _final():
+            return await build_two_step_testnet_tx(
             utxo_mgr,
             lock,
             unlock,
@@ -400,7 +429,7 @@ class TestTestnetUnlockingOpcodes:
             sync_setup_to_woc=True,
             relay_setup_to_woc=woc_testnet_broadcaster,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
@@ -411,7 +440,8 @@ class TestTestnetUnlockingOpcodes:
         lock = p2pkh_lock_with_prefix("OP_6 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_3 OP_2MUL")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(
+        async def _final():
+            return await build_two_step_testnet_tx(
             utxo_mgr,
             lock,
             unlock,
@@ -422,7 +452,7 @@ class TestTestnetUnlockingOpcodes:
             sync_setup_to_woc=True,
             relay_setup_to_woc=woc_testnet_broadcaster,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
 
@@ -439,17 +469,19 @@ class TestTestnetCrossConfig:
     async def test_p2pkh_version_transition(self, funded_key, utxo_mgr, setup_ver, spend_ver):
         """P2PKH with setup tx version != spending tx version."""
         p2pkh = P2PKH()
-        utxo = utxo_mgr.take_utxo()
-        source_tx, vout, _ = utxo
-        tx = build_testnet_tx(
-            source_tx,
-            vout,
-            p2pkh.unlock(funded_key),
-            funded_key,
-            sighash=SIGHASH.ALL_FORKID,
-            tx_version=spend_ver,
-        )
-        result = await utxo_mgr.broadcast_test_tx(tx, spent_utxo=utxo)
+
+        def _spend(u):
+            source_tx, vout, _ = u
+            return build_testnet_tx(
+                source_tx,
+                vout,
+                p2pkh.unlock(funded_key),
+                funded_key,
+                sighash=SIGHASH.ALL_FORKID,
+                tx_version=spend_ver,
+            )
+
+        result, _ = await utxo_mgr.broadcast_test_tx_retry_on_spent(_spend)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
@@ -457,7 +489,8 @@ class TestTestnetCrossConfig:
     async def test_p2pk_version_transition(self, funded_key, utxo_mgr, setup_ver, spend_ver):
         """P2PK with setup version != spend version."""
         p2pk = P2PK()
-        tx = await build_two_step_testnet_tx(
+        async def _final():
+            return await build_two_step_testnet_tx(
             utxo_mgr,
             p2pk.lock(funded_key.public_key().serialize()),
             p2pk.unlock(funded_key),
@@ -466,51 +499,61 @@ class TestTestnetCrossConfig:
             tx_version=spend_ver,
             setup_version=setup_ver,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
     async def test_mixed_sighash_inputs(self, funded_key, utxo_mgr):
         """Two-input tx: one BIP143, one OTDA, both P2PKH."""
         p2pkh = P2PKH()
-        utxo1 = utxo_mgr.take_utxo()
-        utxo2 = utxo_mgr.take_utxo()
-        src1, vout1, _ = utxo1
-        src2, vout2, _ = utxo2
+        last = None
+        for _ in range(3):
+            if len(utxo_mgr.utxos) < 2:
+                await utxo_mgr.ensure_utxos(2, satoshis_each=3_000)
+            utxo1 = utxo_mgr.take_utxo()
+            utxo2 = utxo_mgr.take_utxo()
+            src1, vout1, _ = utxo1
+            src2, vout2, _ = utxo2
 
-        inp1 = TransactionInput(
-            source_transaction=src1,
-            source_output_index=vout1,
-            unlocking_script_template=p2pkh.unlock(funded_key),
-            sequence=0xFFFFFFFF,
-            sighash=SIGHASH(SIGHASH.ALL_FORKID),
-        )
-        inp2 = TransactionInput(
-            source_transaction=src2,
-            source_output_index=vout2,
-            unlocking_script_template=p2pkh.unlock(funded_key),
-            sequence=0xFFFFFFFF,
-            sighash=SIGHASH(SIGHASH.ALL_FORKID_CHRONICLE),
-        )
-        tx = Transaction(
-            [inp1, inp2],
-            [
-                TransactionOutput(
-                    locking_script=p2pkh.lock(funded_key.address()),
-                    change=True,
-                )
-            ],
-            version=2,
-        )
-        tx.fee(FEE_MODEL)
-        tx.sign(bypass=False)
-        validate_all_inputs(tx)
+            inp1 = TransactionInput(
+                source_transaction=src1,
+                source_output_index=vout1,
+                unlocking_script_template=p2pkh.unlock(funded_key),
+                sequence=0xFFFFFFFF,
+                sighash=SIGHASH(SIGHASH.ALL_FORKID),
+            )
+            inp2 = TransactionInput(
+                source_transaction=src2,
+                source_output_index=vout2,
+                unlocking_script_template=p2pkh.unlock(funded_key),
+                sequence=0xFFFFFFFF,
+                sighash=SIGHASH(SIGHASH.ALL_FORKID_CHRONICLE),
+            )
+            tx = Transaction(
+                [inp1, inp2],
+                [
+                    TransactionOutput(
+                        locking_script=p2pkh.lock(funded_key.address()),
+                        change=True,
+                    )
+                ],
+                version=2,
+            )
+            tx.fee(FEE_MODEL)
+            tx.sign(bypass=False)
+            validate_all_inputs(tx)
 
-        result = await utxo_mgr.broadcast_test_tx(tx)
-        if result.status != "success":
-            utxo_mgr.return_utxo(utxo1)
+            last = await utxo_mgr.broadcast_test_tx(tx)
+            if last.status == "success":
+                break
+            if broadcast_failure_indicates_spent_input(last):
+                continue
             utxo_mgr.return_utxo(utxo2)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+            utxo_mgr.return_utxo(utxo1)
+            break
+        assert last is not None and last.status == "success", (
+            f"Broadcast failed: {getattr(last, 'description', '')}"
+        )
 
     @pytest.mark.asyncio
     async def test_chronicle_opcode_bip143_v2(self, funded_key, utxo_mgr):
@@ -518,7 +561,8 @@ class TestTestnetCrossConfig:
         lock = p2pkh_lock_with_prefix("OP_2MUL OP_4 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_2")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(
+        async def _final():
+            return await build_two_step_testnet_tx(
             utxo_mgr,
             lock,
             unlock,
@@ -526,7 +570,7 @@ class TestTestnetCrossConfig:
             sighash=SIGHASH.ALL_FORKID,
             tx_version=2,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
@@ -535,7 +579,8 @@ class TestTestnetCrossConfig:
         lock = p2pkh_lock_with_prefix("OP_2MUL OP_4 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_2")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(
+        async def _final():
+            return await build_two_step_testnet_tx(
             utxo_mgr,
             lock,
             unlock,
@@ -543,7 +588,7 @@ class TestTestnetCrossConfig:
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=1,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
     @pytest.mark.asyncio
@@ -554,7 +599,8 @@ class TestTestnetCrossConfig:
         lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_key)
         data = Script.from_asm("OP_1 OP_2 OP_ADD")
         unlock = custom_unlock(funded_key, data_prefix_script=data)
-        tx = await build_two_step_testnet_tx(
+        async def _final():
+            return await build_two_step_testnet_tx(
             utxo_mgr,
             lock,
             unlock,
@@ -566,7 +612,7 @@ class TestTestnetCrossConfig:
             sync_setup_to_woc=True,
             relay_setup_to_woc=woc_testnet_broadcaster,
         )
-        result = await utxo_mgr.broadcast_test_tx(tx, broadcaster=woc_testnet_broadcaster)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_testnet_broadcaster)
         assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
 
 
