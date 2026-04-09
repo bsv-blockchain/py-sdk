@@ -6,14 +6,35 @@ All test txs are funded from a single fan-out tx that splits one UTXO into many.
 Requires: FUNDED_MAINNET_WIF env var set to a funded mainnet private key WIF.
 Run with: pytest tests/bsv/live/test_live_mainnet.py -v -m mainnet
 
-Default guarantee — SEEN_ON_NETWORK (see test_live_testnet module docstring).
+Default chain guarantee — SEEN_ON_NETWORK (not mined):
+  For each ARC broadcast (fan-out + test txs), tests use X-WaitForStatus: 8 and, if the
+  POST body still shows an earlier txStatus, poll GET until SEEN_ON_NETWORK (or MINED if
+  reached first). WhatsOnChain fallbacks (GET and/or POST /tx/raw) apply when enabled;
+  see ``tests/bsv/live/conftest.py`` and ``tests/bsv/live/arc_verify.py``.
 
 Optional — wait for mined (slow):
-  LIVE_REQUIRE_MINED=1 — also poll until ARC reports MINED or WoC confirmations.
-  LIVE_TX_CONFIRM_TIMEOUT_SEC — Max seconds for that wait (default 300).
+  LIVE_REQUIRE_MINED=1 — after that, also poll until ARC reports MINED or WoC confirmations.
+  LIVE_TX_CONFIRM_TIMEOUT_SEC — Max seconds for that mined wait (default 300).
+
+ARC tuning:
+  LIVE_ARC_SKIP_WAIT_FOR_SEEN=1 — disable SEEN_ON_NETWORK headers and GET enforcement (faster, weaker).
+  ARC_X_MAX_TIMEOUT / ARC_SEEN_POLL_TIMEOUT_SEC — HTTP POST bound and GET poll timeout (default 120).
 
 The ARC broadcaster also fails the HTTP broadcast step when ARC returns a terminal
 txStatus in the POST body (e.g. REJECTED), not only on non-2xx responses.
+
+Self-healing: pooled P2PKH spends use ``UTXOManager.broadcast_test_tx_retry_on_spent``; two-step
+flows use ``broadcast_test_tx_resilient`` (re-runs the async builder when the final broadcast
+reports a spent input). The shared ``build_two_step_live_tx`` setup step retries setup broadcast via
+``broadcast_test_tx_retry_on_spent``. Mixed two-input tests retry up to three times on spent-type
+errors. WoC pool pruning and ``LIVE_UTXO_SKIP_WOC_PRUNE`` are documented in ``tests/bsv/live/conftest.py``.
+
+ARC may return ``DOUBLE_SPEND_ATTEMPTED`` on POST while WhatsOnChain still sees the tx; :meth:`UTXOManager.broadcast_test_tx` can accept success after a WoC mempool/indexer probe (see ``tests/bsv/live/conftest.py``).
+
+WhatsOnChain JSON audit (testnet reference):
+  The Apr 2026 audit and ``_testnet_woc_xfail_nodeids.py`` tooling apply to testnet runs
+  (``test_live_testnet.py``). For mainnet, the same GET pattern can be used against
+  ``https://api.whatsonchain.com/v1/bsv/main/tx/{txid}``; no bundled xfail list ships for mainnet.
 """
 
 import pytest
@@ -188,6 +209,7 @@ class TestMainnetChronicleOpcodes:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
     async def test_op_ver(self, funded_mainnet_key, utxo_mgr, sighash, tx_version):
+        # OP_VER pushes 4-byte LE nVersion; OP_NUMEQUALVERIFY rejects non-minimal encodings on network.
         ver_le_hex = tx_version.to_bytes(4, "little").hex()
         lock = p2pkh_lock_with_prefix(f"OP_VER {ver_le_hex} OP_EQUALVERIFY", funded_mainnet_key)
         unlock = custom_unlock(funded_mainnet_key)
@@ -388,10 +410,14 @@ class TestMainnetStandardOpcodes:
 class TestMainnetUnlockingOpcodes:
     """v2 tx: non-push opcodes in unlocking script (review 9.4.2.1).
 
-    Step 1 (setup) is ARC with X-SkipScriptValidation; parent + setup are relayed to WoC like
-    testnet (relay_setup_to_woc). Step 2 is also ARC + X-SkipScriptValidation: mainnet
-    WhatsOnChain returns policy 64 scriptsig-not-pushonly for these spends, while testnet uses
-    WoC for step 2 because ARC there returns 463.
+    Step 1 (setup) is always ARC with X-SkipScriptValidation (``mainnet_broadcaster``). The same
+    setup tx is relayed to WoC (``relay_setup_to_woc``) so their node has it for step 2; we do
+    not rely on GET /tx/hex for 0-conf.
+
+    Step 2: this suite uses ARC for the final broadcast (same headers as other mainnet live tests).
+    Testnet uses WoC for step 2 because ARC there rejects non-push unlocking with error 463; on
+    mainnet, WhatsOnChain may return policy 64 (scriptsig-not-pushonly) for the same shape, so ARC
+    is kept for step 2 here when it accepts the tx.
     """
 
     @pytest.mark.asyncio

@@ -28,6 +28,8 @@ reports a spent input). The shared ``build_two_step_live_tx`` setup step retries
 ``broadcast_test_tx_retry_on_spent``. Mixed two-input tests retry up to three times on spent-type
 errors. WoC pool pruning and ``LIVE_UTXO_SKIP_WOC_PRUNE`` are documented in ``tests/bsv/live/conftest.py``.
 
+ARC may return ``DOUBLE_SPEND_ATTEMPTED`` on POST while WhatsOnChain still sees the tx; :meth:`UTXOManager.broadcast_test_tx` can accept success after a WoC mempool/indexer probe (same idea as ``WOC_MEMPOOL_POST`` in ``arc_verify``).
+
 WhatsOnChain JSON audit (Apr 2026):
   For each explorer txid printed in a full live run, GET
   https://api.whatsonchain.com/v1/bsv/test/tx/{txid} was checked. 182/188 txids

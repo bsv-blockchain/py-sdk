@@ -285,6 +285,67 @@ def _print_live_tx_raw_hex(tx: Transaction, *, kind: str) -> None:
     print(f"\n  [rawTx hex {kind}] {tx.hex()}")
 
 
+async def _recover_arc_double_spend_if_visible_on_woc(
+    woc_api_base: str,
+    bc: Broadcaster,
+    tx: Transaction,
+    result: BroadcastResponse | BroadcastFailure,
+) -> BroadcastResponse | BroadcastFailure:
+    """If ARC POST failed with DOUBLE_SPEND_ATTEMPTED but WoC sees the tx, treat as success.
+
+    ARC may report a terminal double-spend while the same tx is already visible to WhatsOnChain
+    (mempool/indexer); :meth:`UTXOManager.broadcast_test_tx` uses this before printing results.
+    """
+    from bsv.broadcasters.arc import ARC
+
+    if isinstance(result, BroadcastResponse) and result.status == "success":
+        return result
+    if not isinstance(result, BroadcastFailure):
+        return result
+    if not isinstance(bc, ARC):
+        return result
+    if getattr(result, "code", None) != "ARC_TX_STATUS":
+        return result
+    desc = (getattr(result, "description", "") or "").upper()
+    if "DOUBLE_SPEND_ATTEMPTED" not in desc:
+        return result
+    rid = getattr(result, "txid", None)
+    tid = tx.txid()
+    if not rid or str(rid).lower() != tid.lower():
+        return result
+    if not live_arc_seen_woc_fallback_enabled():
+        return result
+    woc = (woc_api_base or "").strip()
+    if not woc:
+        return result
+
+    from .arc_verify import woc_post_raw_tx_mempool_probe, woc_tx_observable_via_get
+
+    async with aiohttp.ClientSession() as session:
+        if await woc_post_raw_tx_mempool_probe(session, woc, tx.hex()):
+            print(
+                "\n  [ARC tx] DOUBLE_SPEND_ATTEMPTED from ARC, but WoC mempool POST accepts / duplicate — "
+                "treating as success"
+            )
+            return BroadcastResponse(
+                status="success",
+                txid=tid,
+                message="WOC_VISIBLE_AFTER_ARC_DOUBLE_SPEND",
+            )
+        reason, ok = await woc_tx_observable_via_get(session, woc, tid)
+        if ok and reason:
+            print(
+                f"\n  [ARC tx] DOUBLE_SPEND_ATTEMPTED from ARC, but WoC sees tx ({reason}) — "
+                "treating as success"
+            )
+            return BroadcastResponse(
+                status="success",
+                txid=tid,
+                message=f"WOC_VISIBLE_AFTER_ARC_DOUBLE_SPEND {reason}",
+            )
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Mock implementations
 # ---------------------------------------------------------------------------
@@ -1067,6 +1128,9 @@ class UTXOManager:
 
         bc = _arc_with_broadcast_test_tx_headers(broadcaster or self.broadcaster)
         result = await bc.broadcast(tx)
+        result = await _recover_arc_double_spend_if_visible_on_woc(
+            self.woc_api_base, bc, tx, result
+        )
         _print_live_broadcast_result(bc, result, kind="tx")
         _print_live_tx_raw_hex(tx, kind="tx")
         await self._ensure_arc_seen_on_network(bc, result, kind="tx", raw_tx_hex=tx.hex())
