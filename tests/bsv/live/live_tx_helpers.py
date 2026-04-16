@@ -186,9 +186,27 @@ async def build_two_step_live_tx(
     setup_tx.fee(FEE_MODEL)
     setup_tx.sign()
 
-    result = await utxo_mgr.broadcast_test_tx(setup_tx, spent_utxo=utxo, broadcaster=setup_broadcaster)
-    if result.status != "success":
+    # Retry on SEEN_IN_ORPHAN_MEMPOOL — ARC may not have propagated the fan-out
+    # parent to its mempool yet; a brief wait and retry resolves it.
+    max_orphan_retries = 3
+    orphan_delay = 3.0
+    for attempt in range(max_orphan_retries):
+        result = await utxo_mgr.broadcast_test_tx(setup_tx, spent_utxo=utxo, broadcaster=setup_broadcaster)
+        if result.status == "success":
+            break
+        desc = (getattr(result, "description", "") or "").upper()
+        if "SEEN_IN_ORPHAN_MEMPOOL" in desc and attempt + 1 < max_orphan_retries:
+            print(
+                f"\n  [setup tx] SEEN_IN_ORPHAN_MEMPOOL — parent not yet propagated; "
+                f"retry {attempt + 2}/{max_orphan_retries} in {orphan_delay}s"
+            )
+            await asyncio.sleep(orphan_delay)
+            orphan_delay = min(orphan_delay * 2, 15.0)
+            continue
         raise RuntimeError(f"Setup tx failed: {getattr(result, 'description', '')}")
+    else:
+        if result.status != "success":
+            raise RuntimeError(f"Setup tx failed after {max_orphan_retries} orphan retries: {getattr(result, 'description', '')}")
 
     if sync_setup_to_woc:
         setup_txid = result.txid or setup_tx.txid()

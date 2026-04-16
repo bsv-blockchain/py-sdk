@@ -1493,7 +1493,7 @@ class UTXOManager:
 
 def pytest_configure(config):
     """Short defaults for live ARC waits unless the user set env vars explicitly."""
-    os.environ.setdefault("ARC_SEEN_POLL_TIMEOUT_SEC", "3")
+    os.environ.setdefault("ARC_SEEN_POLL_TIMEOUT_SEC", "15")
     os.environ.setdefault("ARC_X_MAX_TIMEOUT", "5")
 
 

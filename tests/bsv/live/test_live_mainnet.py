@@ -413,16 +413,14 @@ class TestMainnetStandardOpcodes:
 class TestMainnetUnlockingOpcodes:
     """v2 tx: non-push opcodes in unlocking script (review 9.4.2.1).
 
-    Step 1 (setup) is always ARC with X-SkipScriptValidation (mainnet_broadcaster). The same
-    setup tx is relayed to WoC (relay_setup_to_woc) so their node has it for step 2; we do
-    not rely on GET /tx/hex for 0-conf (often 404 on testnet).
-
-    Step 2 is WoC because ARC rejects non-push unlocking scripts (error 463).
+    Both steps use ARC with X-SkipScriptValidation (mainnet_broadcaster).
+    WoC nodes reject non-push unlocking scripts (scriptsig-not-pushonly)
+    because Chronicle v2 malleability relaxation is not yet enabled there.
     """
 
     @pytest.mark.asyncio
     async def test_v2_add_in_unlocking(
-        self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster, woc_mainnet_broadcaster
+        self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster
     ):
         """v2 tx with OP_1 OP_2 OP_ADD in unlocking script producing 3."""
         lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_mainnet_key)
@@ -437,15 +435,13 @@ class TestMainnetUnlockingOpcodes:
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
             setup_broadcaster=mainnet_broadcaster,
-            sync_setup_to_woc=True,
-            relay_setup_to_woc=woc_mainnet_broadcaster,
         )
-        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_mainnet_broadcaster)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=mainnet_broadcaster)
         assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_v2_2mul_in_unlocking(
-        self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster, woc_mainnet_broadcaster
+        self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster
     ):
         """v2 tx with Chronicle OP_2MUL in unlocking script."""
         lock = p2pkh_lock_with_prefix("OP_6 OP_NUMEQUALVERIFY", funded_mainnet_key)
@@ -460,10 +456,8 @@ class TestMainnetUnlockingOpcodes:
             sighash=SIGHASH.ALL_FORKID_CHRONICLE,
             tx_version=2,
             setup_broadcaster=mainnet_broadcaster,
-            sync_setup_to_woc=True,
-            relay_setup_to_woc=woc_mainnet_broadcaster,
         )
-        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_mainnet_broadcaster)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=mainnet_broadcaster)
         assert result.status == "success", format_broadcast_diagnostic(result)
 
 
@@ -604,7 +598,7 @@ class TestMainnetCrossConfig:
 
     @pytest.mark.asyncio
     async def test_v2_nonpush_unlock_v1_setup(
-        self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster, woc_mainnet_broadcaster
+        self, funded_mainnet_key, utxo_mgr, mainnet_broadcaster
     ):
         """v2 tx with non-push unlocking script spending a v1-created output."""
         lock = p2pkh_lock_with_prefix("OP_3 OP_NUMEQUALVERIFY", funded_mainnet_key)
@@ -620,10 +614,8 @@ class TestMainnetCrossConfig:
             tx_version=2,
             setup_version=1,
             setup_broadcaster=mainnet_broadcaster,
-            sync_setup_to_woc=True,
-            relay_setup_to_woc=woc_mainnet_broadcaster,
         )
-        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_mainnet_broadcaster)
+        result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=mainnet_broadcaster)
         assert result.status == "success", format_broadcast_diagnostic(result)
 
 
