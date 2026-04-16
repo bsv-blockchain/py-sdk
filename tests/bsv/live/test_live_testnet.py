@@ -17,7 +17,8 @@ Optional — wait for mined (slow):
 
 ARC tuning:
   LIVE_ARC_SKIP_WAIT_FOR_SEEN=1 — disable SEEN_ON_NETWORK headers and GET enforcement (faster, weaker).
-  ARC_X_MAX_TIMEOUT / ARC_SEEN_POLL_TIMEOUT_SEC — HTTP POST bound and GET poll timeout (default 120).
+  ARC_X_MAX_TIMEOUT / ARC_SEEN_POLL_TIMEOUT_SEC — HTTP POST bound (default 5s) and GET poll (default 3s).
+  LIVE_FANOUT_SEEN_POLL_TIMEOUT_SEC — fan-out visibility wait (default: max(30s, ARC_SEEN poll)); WoC POST /tx/raw accepts already-in-mempool.
 
 The ARC broadcaster also fails the HTTP broadcast step when ARC returns a terminal
 txStatus in the POST body (e.g. REJECTED), not only on non-2xx responses.

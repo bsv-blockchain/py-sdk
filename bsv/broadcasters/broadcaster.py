@@ -9,10 +9,12 @@ if TYPE_CHECKING:
 
 
 class BroadcastResponse:
-    def __init__(self, status: str, txid: str, message: str):
+    def __init__(self, status: str, txid: str, message: str, extra: Optional[dict[str, Any]] = None):
         self.status = status
         self.txid = txid
         self.message = message
+        #: Optional structured metadata (e.g. ARC POST JSON snapshot) for diagnostics / tooling.
+        self.extra = extra
 
 
 class BroadcastFailure:

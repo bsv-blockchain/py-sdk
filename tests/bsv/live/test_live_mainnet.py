@@ -18,7 +18,9 @@ Optional — wait for mined (slow):
 
 ARC tuning:
   LIVE_ARC_SKIP_WAIT_FOR_SEEN=1 — disable SEEN_ON_NETWORK headers and GET enforcement (faster, weaker).
-  ARC_X_MAX_TIMEOUT / ARC_SEEN_POLL_TIMEOUT_SEC — HTTP POST bound and GET poll timeout (default 120).
+  ARC_X_MAX_TIMEOUT / ARC_SEEN_POLL_TIMEOUT_SEC — HTTP POST bound (default 5s) and GET poll (default 3s).
+  LIVE_FANOUT_SEEN_POLL_TIMEOUT_SEC — fan-out visibility wait (default: max(30s, ARC_SEEN poll)); WoC POST /tx/raw accepts already-in-mempool.
+  LIVE_ARC_BROADCAST_RETRIES / LIVE_ARC_BROADCAST_RETRY_DELAY_SEC — retry ARC HTTP on transient DNS/connect errors (default 5 attempts, 1s base delay).
 
 The ARC broadcaster also fails the HTTP broadcast step when ARC returns a terminal
 txStatus in the POST body (e.g. REJECTED), not only on non-2xx responses.
@@ -56,6 +58,7 @@ from .conftest import (
     UTXOManager,
     broadcast_failure_indicates_spent_input,
     custom_unlock,
+    format_broadcast_diagnostic,
     p2pkh_lock_with_prefix,
     validate_all_inputs,
 )
@@ -135,7 +138,7 @@ class TestMainnetP2PKH:
             )
 
         result, _ = await utxo_mgr.broadcast_test_tx_retry_on_spent(_spend)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +163,7 @@ class TestMainnetP2PK:
             tx_version=tx_version,
         )
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +198,7 @@ class TestMainnetMultisig:
             tx_version=tx_version,
         )
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +219,7 @@ class TestMainnetChronicleOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key, sighash, tx_version)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
@@ -227,7 +230,7 @@ class TestMainnetChronicleOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key, sighash, tx_version)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
@@ -238,7 +241,7 @@ class TestMainnetChronicleOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key, sighash, tx_version)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
@@ -249,7 +252,7 @@ class TestMainnetChronicleOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key, sighash, tx_version)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
@@ -260,7 +263,7 @@ class TestMainnetChronicleOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key, sighash, tx_version)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
@@ -271,7 +274,7 @@ class TestMainnetChronicleOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key, sighash, tx_version)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
@@ -282,7 +285,7 @@ class TestMainnetChronicleOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key, sighash, tx_version)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
@@ -293,7 +296,7 @@ class TestMainnetChronicleOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key, sighash, tx_version)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("sighash,tx_version", OPCODE_SIGHASH_VERSIONS)
@@ -306,7 +309,7 @@ class TestMainnetChronicleOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key, sighash, tx_version)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +328,7 @@ class TestMainnetStandardOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_sub(self, funded_mainnet_key, utxo_mgr):
@@ -335,7 +338,7 @@ class TestMainnetStandardOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_mul(self, funded_mainnet_key, utxo_mgr):
@@ -345,7 +348,7 @@ class TestMainnetStandardOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_cat(self, funded_mainnet_key, utxo_mgr):
@@ -355,7 +358,7 @@ class TestMainnetStandardOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_hash160(self, funded_mainnet_key, utxo_mgr):
@@ -369,7 +372,7 @@ class TestMainnetStandardOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_if_else(self, funded_mainnet_key, utxo_mgr):
@@ -379,7 +382,7 @@ class TestMainnetStandardOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_checksigverify(self, funded_mainnet_key, utxo_mgr):
@@ -399,7 +402,7 @@ class TestMainnetStandardOpcodes:
         async def _final():
             return await build_two_step_mainnet_tx(utxo_mgr, lock, unlock, funded_mainnet_key)
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
 
 # ---------------------------------------------------------------------------
@@ -438,7 +441,7 @@ class TestMainnetUnlockingOpcodes:
             relay_setup_to_woc=woc_mainnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_mainnet_broadcaster)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_v2_2mul_in_unlocking(
@@ -461,7 +464,7 @@ class TestMainnetUnlockingOpcodes:
             relay_setup_to_woc=woc_mainnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_mainnet_broadcaster)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
 
 # ---------------------------------------------------------------------------
@@ -490,7 +493,7 @@ class TestMainnetCrossConfig:
             )
 
         result, _ = await utxo_mgr.broadcast_test_tx_retry_on_spent(_spend)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("setup_ver,spend_ver", CROSS_VERSION_COMBOS)
@@ -508,7 +511,7 @@ class TestMainnetCrossConfig:
             setup_version=setup_ver,
         )
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_mixed_sighash_inputs(self, funded_mainnet_key, utxo_mgr):
@@ -560,7 +563,7 @@ class TestMainnetCrossConfig:
             utxo_mgr.return_utxo(utxo1)
             break
         assert last is not None and last.status == "success", (
-            f"Broadcast failed: {getattr(last, 'description', '')}"
+            format_broadcast_diagnostic(last) if last is not None else "No broadcast attempt made"
         )
 
     @pytest.mark.asyncio
@@ -579,7 +582,7 @@ class TestMainnetCrossConfig:
             tx_version=2,
         )
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_chronicle_opcode_otda_v1(self, funded_mainnet_key, utxo_mgr):
@@ -597,7 +600,7 @@ class TestMainnetCrossConfig:
             tx_version=1,
         )
         result = await utxo_mgr.broadcast_test_tx_resilient(_final)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
     @pytest.mark.asyncio
     async def test_v2_nonpush_unlock_v1_setup(
@@ -621,7 +624,7 @@ class TestMainnetCrossConfig:
             relay_setup_to_woc=woc_mainnet_broadcaster,
         )
         result = await utxo_mgr.broadcast_test_tx_resilient(_final, broadcaster=woc_mainnet_broadcaster)
-        assert result.status == "success", f"Broadcast failed: {getattr(result, 'description', '')}"
+        assert result.status == "success", format_broadcast_diagnostic(result)
 
 
 # ---------------------------------------------------------------------------
@@ -639,5 +642,14 @@ class TestMainnetSummary:
         print("Mainnet broadcast summary:")
         print(f"  Total broadcasts: {utxo_mgr.broadcast_count}")
         print(f"  Remaining UTXOs: {remaining}")
+        if utxo_mgr._woc_visibility_results:
+            visible_count = sum(1 for _, v in utxo_mgr._woc_visibility_results if v)
+            total = len(utxo_mgr._woc_visibility_results)
+            print(f"  WoC visibility: {visible_count}/{total} txs observable after broadcast")
+            not_visible = [(txid, v) for txid, v in utxo_mgr._woc_visibility_results if not v]
+            if not_visible:
+                print(f"  Not visible on WoC ({len(not_visible)}):")
+                for txid, _ in not_visible:
+                    print(f"    {txid}")
         print(f"{'='*60}")
         assert utxo_mgr.broadcast_count > 0

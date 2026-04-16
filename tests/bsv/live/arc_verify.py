@@ -11,6 +11,12 @@ import aiohttp
 
 from bsv.broadcasters.arc import ARC_PROGRESSING_TX_STATUSES, ARC_TERMINAL_FAILURE_TX_STATUSES
 
+# ARC GET ``ANNOUNCED_TO_NETWORK`` means the tx was relayed; WoC may lag — retry probes with backoff.
+_WOC_AFTER_ANNOUNCED_INITIAL_DELAY = 0.35
+_WOC_AFTER_ANNOUNCED_BACKOFF_MULT = 1.65
+_WOC_AFTER_ANNOUNCED_DELAY_CAP = 12.0
+_WOC_AFTER_ANNOUNCED_BURST_CAP_SEC = 28.0
+
 
 def _normalize_arc_get_json(payload: dict[str, Any]) -> dict[str, Any]:
     """GorillaPool returns a flat object; some gateways wrap under `data`."""
@@ -169,35 +175,90 @@ async def woc_post_raw_tx_mempool_probe(
     return _woc_text_means_already_in_mempool(flat)
 
 
+async def woc_visibility_http_snapshot(
+    session: aiohttp.ClientSession,
+    woc_api_base: str,
+    txid: str,
+) -> tuple[str | None, bool, dict[str, Any]]:
+    """Indexer / hex GET when WoC has indexed the tx (optional; often 404 for 0-conf).
+
+    Returns ``(method_or_none, visible, http_detail)`` where ``http_detail`` records URLs,
+    HTTP status codes, and body previews for the WoC GET probes (for live reports).
+    """
+    base = woc_api_base.rstrip("/")
+    detail: dict[str, Any] = {}
+    hex_url = f"{base}/tx/{txid}/hex"
+    async with session.get(hex_url) as resp:
+        detail["woc_hex_url"] = hex_url
+        detail["woc_hex_http_status"] = resp.status
+        text = (await resp.text()).strip()
+        lim = 6000
+        detail["woc_hex_body_preview"] = (text[:lim] + ("…" if len(text) > lim else "")) if text else ""
+        if resp.status == 429:
+            return None, False, detail
+        if resp.status == 200:
+            if len(text) >= 40 and all(c in "0123456789abcdefABCDEF" for c in text):
+                return "WOC_TX_HEX", True, detail
+
+    json_url = f"{base}/tx/{txid}"
+    async with session.get(json_url) as resp:
+        detail["woc_json_url"] = json_url
+        detail["woc_json_http_status"] = resp.status
+        text = await resp.text()
+        lim = 6000
+        detail["woc_json_body_preview"] = (text[:lim] + ("…" if len(text) > lim else "")) if text else ""
+        if resp.status == 429:
+            return None, False, detail
+        if resp.status != 200:
+            return None, False, detail
+        try:
+            j = json.loads(text)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return None, False, detail
+        if _woc_json_has_txid(j, txid):
+            return "WOC_TX_JSON", True, detail
+    return None, False, detail
+
+
 async def woc_tx_observable_via_get(
     session: aiohttp.ClientSession,
     woc_api_base: str,
     txid: str,
 ) -> tuple[str | None, bool]:
     """Indexer / hex GET when WoC has indexed the tx (optional; often 404 for 0-conf)."""
-    base = woc_api_base.rstrip("/")
-    hex_url = f"{base}/tx/{txid}/hex"
-    async with session.get(hex_url) as resp:
-        if resp.status == 429:
-            return None, False
-        if resp.status == 200:
-            text = (await resp.text()).strip()
-            if len(text) >= 40 and all(c in "0123456789abcdefABCDEF" for c in text):
-                return "WOC_TX_HEX", True
+    method, visible, _ = await woc_visibility_http_snapshot(session, woc_api_base, txid)
+    return method, visible
 
-    json_url = f"{base}/tx/{txid}"
-    async with session.get(json_url) as resp:
-        if resp.status == 429:
-            return None, False
-        if resp.status != 200:
-            return None, False
-        try:
-            j = await resp.json()
-        except (json.JSONDecodeError, aiohttp.ClientError):
-            return None, False
-        if _woc_json_has_txid(j, txid):
-            return "WOC_TX_JSON", True
-    return None, False
+
+async def _woc_probes_with_backoff_when_announced(
+    session: aiohttp.ClientSession,
+    *,
+    woc_root: str | None,
+    raw_hex: str | None,
+    woc_indexer_root: str | None,
+    txid: str,
+    deadline: float,
+) -> str | None:
+    """While ARC reports ``ANNOUNCED_TO_NETWORK``, retry WoC mempool POST and indexer GET with backoff."""
+    can_mempool = bool(woc_root and raw_hex)
+    can_indexer = bool(woc_indexer_root)
+    if not can_mempool and not can_indexer:
+        return None
+    burst_end = min(deadline, time.monotonic() + _WOC_AFTER_ANNOUNCED_BURST_CAP_SEC)
+    delay = _WOC_AFTER_ANNOUNCED_INITIAL_DELAY
+    while time.monotonic() < burst_end:
+        if can_mempool and await woc_post_raw_tx_mempool_probe(session, woc_root, raw_hex):
+            return "WOC_MEMPOOL_POST"
+        if woc_indexer_root:
+            woc_reason, woc_ok = await woc_tx_observable_via_get(session, woc_indexer_root, txid)
+            if woc_ok and woc_reason:
+                return woc_reason
+        remaining = burst_end - time.monotonic()
+        if remaining <= 0:
+            break
+        await asyncio.sleep(min(delay, remaining))
+        delay = min(delay * _WOC_AFTER_ANNOUNCED_BACKOFF_MULT, _WOC_AFTER_ANNOUNCED_DELAY_CAP)
+    return None
 
 
 async def wait_until_arc_tx_seen_on_network(
@@ -208,11 +269,15 @@ async def wait_until_arc_tx_seen_on_network(
     poll_interval: float = 1.5,
     woc_api_base: str | None = None,
     raw_tx_hex: str | None = None,
+    require_arc_seen_on_network: bool = False,
 ) -> str:
     """Poll ARC until visible, with optional WoC mempool / indexer checks.
 
     ARC GET succeeds on ``MINED``, ``SEEN_ON_NETWORK``, or any :data:`~bsv.broadcasters.arc.ARC_PROGRESSING_TX_STATUSES`
     value (e.g. ``REQUESTED_BY_NETWORK``) — some gateways rarely report ``SEEN_ON_NETWORK`` on GET.
+
+    When ARC GET reports ``ANNOUNCED_TO_NETWORK`` (already relayed), WhatsOnChain probes run on a
+    **backoff/retry** burst before the next ARC poll so mempool/indexer can catch up.
 
     **WoC POST fallback** (when ``raw_tx_hex`` is set): POST ``/tx/raw`` with the same hex ARC
     already broadcast. If WoC responds with duplicate / ``txn-mempool-conflict`` (258), the tx is
@@ -221,10 +286,16 @@ async def wait_until_arc_tx_seen_on_network(
     **WoC GET fallback** (when ``woc_api_base`` is set): ``/tx/{txid}/hex`` or JSON ``/tx/{txid}``
     when the indexer has caught up.
 
-    No block confirmations are required—only relay / mempool visibility.
+    When ``require_arc_seen_on_network`` is True (fan-out UTXO pool), success requires **ARC**
+    ``SEEN_ON_NETWORK`` or ``MINED``, **or** WhatsOnChain POST ``/tx/raw`` reporting the tx is already
+    in mempool (duplicate / conflict — same as a manual rebroadcast). WoC indexer GET fallbacks and
+    ARC "progressing" early-exit stay disabled in that mode.
+
+    No block confirmations are required—only relay / mempool visibility (unless strict mode above).
     """
     woc_root = (woc_api_base or "").strip() or None
     raw_hex = (raw_tx_hex or "").strip() or None
+    woc_indexer_ok = woc_root if not require_arc_seen_on_network else None
     deadline = time.monotonic() + timeout_sec
     backoff_429 = 1.0
     async with aiohttp.ClientSession() as session:
@@ -254,24 +325,56 @@ async def wait_until_arc_tx_seen_on_network(
                         msg = f"{msg}: {extra}"
                     raise RuntimeError(f"ARC tx {txid} failed: {msg}")
 
-            # WoC before accepting ARC "progressing": seeds WoC mempool so follow-up spends work.
-            if woc_root:
-                if raw_hex and await woc_post_raw_tx_mempool_probe(session, woc_root, raw_hex):
+            announced = (
+                status == 200
+                and payload is not None
+                and tx_status == "ANNOUNCED_TO_NETWORK"
+            )
+            if announced:
+                woc_hit = await _woc_probes_with_backoff_when_announced(
+                    session,
+                    woc_root=woc_root,
+                    raw_hex=raw_hex,
+                    woc_indexer_root=woc_indexer_ok,
+                    txid=txid,
+                    deadline=deadline,
+                )
+                if woc_hit:
+                    return woc_hit
+            else:
+                # POST /tx/raw: duplicate / mempool-conflict means the tx is already known (strict or relaxed).
+                if woc_root and raw_hex and await woc_post_raw_tx_mempool_probe(session, woc_root, raw_hex):
                     return "WOC_MEMPOOL_POST"
-                woc_reason, woc_ok = await woc_tx_observable_via_get(session, woc_root, txid)
-                if woc_ok and woc_reason:
-                    return woc_reason
 
-            if status == 200 and payload is not None and tx_status in ARC_PROGRESSING_TX_STATUSES:
+                # WoC GET indexer (relaxed only): hex/json when indexed.
+                if woc_indexer_ok:
+                    woc_reason, woc_ok = await woc_tx_observable_via_get(session, woc_indexer_ok, txid)
+                    if woc_ok and woc_reason:
+                        return woc_reason
+
+            if (
+                not require_arc_seen_on_network
+                and status == 200
+                and payload is not None
+                and tx_status in ARC_PROGRESSING_TX_STATUSES
+            ):
                 return tx_status
 
             await asyncio.sleep(poll_interval)
 
-    raise RuntimeError(
-        f"Tx {txid} not visible (ARC SEEN_ON_NETWORK/MINED/progressing"
-        f"{', or WoC mempool/indexer' if woc_root else ''}) within {timeout_sec}s "
-        f"(ARC base {arc_base_url})"
-    )
+    if require_arc_seen_on_network:
+        detail = (
+            f"Tx {txid} did not reach ARC SEEN_ON_NETWORK or MINED"
+            f"{', or WoC /tx/raw already-in-mempool' if (woc_root and raw_hex) else ''} "
+            f"within {timeout_sec}s (ARC base {arc_base_url})"
+        )
+    else:
+        detail = (
+            f"Tx {txid} not visible (ARC SEEN_ON_NETWORK/MINED/progressing"
+            f"{', or WoC mempool/indexer' if woc_root else ''}) within {timeout_sec}s "
+            f"(ARC base {arc_base_url})"
+        )
+    raise RuntimeError(detail)
 
 
 async def wait_until_live_tx_confirmed(
@@ -331,3 +434,31 @@ async def wait_until_live_tx_confirmed(
         f"Tx {txid} not confirmed (ARC MINED or WoC confirmations>={min_woc_confirmations}) "
         f"within {timeout_sec}s"
     )
+
+
+async def check_woc_visibility(
+    woc_api_base: str,
+    txid: str,
+    *,
+    initial_delay: float = 3.0,
+) -> tuple[bool, str, float, dict[str, Any]]:
+    """Quick WoC GET probe after successful broadcast.
+
+    Returns ``(is_visible, method_or_reason, elapsed_seconds, http_detail)``.
+    ``http_detail`` holds WoC URLs, HTTP status codes, and response body previews for reports.
+    Does **not** raise on failure — returns ``(False, reason, elapsed, detail)``.
+    """
+    import time as _time
+
+    start = _time.monotonic()
+    await asyncio.sleep(initial_delay)
+    try:
+        async with aiohttp.ClientSession() as session:
+            method, visible, detail = await woc_visibility_http_snapshot(session, woc_api_base, txid)
+            elapsed = _time.monotonic() - start
+            if visible and method:
+                return True, method, elapsed, detail
+            return False, "GET returned 404", elapsed, detail
+    except Exception as exc:
+        elapsed = _time.monotonic() - start
+        return False, f"error: {exc}", elapsed, {"probe_exception": repr(exc)}

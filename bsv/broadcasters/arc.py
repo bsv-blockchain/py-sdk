@@ -162,24 +162,40 @@ class ARC(Broadcaster):
                             code="ARC_TX_STATUS",
                             description=failure_desc,
                             txid=data.get("txid"),
+                            more={
+                                "http_status": response.status_code,
+                                "arc_json": response_json,
+                            },
                         )
                     msg = f"{data.get('txStatus', '')} {data.get('extraInfo', '')}".strip()
                     return BroadcastResponse(
                         status="success",
                         txid=data.get("txid"),
                         message=msg,
+                        extra={
+                            "http_status": response.status_code,
+                            "arc_json": response_json,
+                        },
                     )
                 else:
                     return BroadcastFailure(
                         status="failure",
                         code=data.get("status", "ERR_UNKNOWN"),
                         description=_arc_extract_http_error_detail(data),
+                        more={
+                            "http_status": response.status_code,
+                            "arc_json": response_json,
+                        },
                     )
             else:
                 return BroadcastFailure(
                     status="failure",
                     code=str(response.status_code),
                     description=_arc_broadcast_failure_description(response_json),
+                    more={
+                        "http_status": response.status_code,
+                        "arc_json": response_json,
+                    },
                 )
 
         except Exception as error:
@@ -187,6 +203,10 @@ class ARC(Broadcaster):
                 status="failure",
                 code="500",
                 description=(str(error) if isinstance(error, Exception) else "Internal Server Error"),
+                more={
+                    "exception_type": type(error).__name__ if isinstance(error, Exception) else None,
+                    "exception": str(error) if isinstance(error, Exception) else str(error),
+                },
             )
 
     def request_headers(self) -> dict[str, str]:
@@ -278,18 +298,30 @@ class ARC(Broadcaster):
                             code="ARC_TX_STATUS",
                             description=failure_desc,
                             txid=data.get("txid"),
+                            more={
+                                "http_status": response.status_code,
+                                "arc_json": response_json,
+                            },
                         )
                     msg = f"{data.get('txStatus', '')} {data.get('extraInfo', '')}".strip()
                     return BroadcastResponse(
                         status="success",
                         txid=data.get("txid"),
                         message=msg,
+                        extra={
+                            "http_status": response.status_code,
+                            "arc_json": response_json,
+                        },
                     )
                 else:
                     return BroadcastFailure(
                         status="failure",
                         code=data.get("status", "ERR_UNKNOWN"),
                         description=data.get("detail", "Unknown error"),
+                        more={
+                            "http_status": response.status_code,
+                            "arc_json": response_json,
+                        },
                     )
             else:
                 # Handle special error cases
@@ -298,6 +330,7 @@ class ARC(Broadcaster):
                         status="failure",
                         code="408",
                         description=f"Transaction broadcast timed out after {effective_timeout} seconds",
+                        more={"http_status": response.status_code, "arc_json": response_json},
                     )
 
                 if response.status_code == 503:
@@ -305,12 +338,14 @@ class ARC(Broadcaster):
                         status="failure",
                         code="503",
                         description="Failed to connect to ARC service",
+                        more={"http_status": response.status_code, "arc_json": response_json},
                     )
 
                 return BroadcastFailure(
                     status="failure",
                     code=str(response.status_code),
                     description=_arc_extract_http_error_detail(data),
+                    more={"http_status": response.status_code, "arc_json": response_json},
                 )
 
         except Exception as error:
@@ -318,6 +353,10 @@ class ARC(Broadcaster):
                 status="failure",
                 code="500",
                 description=str(error),
+                more={
+                    "exception_type": type(error).__name__,
+                    "exception": str(error),
+                },
             )
 
     def check_transaction_status(self, txid: str, timeout: int = 5) -> dict[str, Any]:

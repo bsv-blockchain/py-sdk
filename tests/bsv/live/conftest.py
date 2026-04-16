@@ -184,12 +184,30 @@ def arc_seen_poll_timeout_sec() -> float:
     """Max seconds to poll ARC GET until SEEN_ON_NETWORK / MINED after a POST that stopped early."""
     raw = os.environ.get(
         "ARC_SEEN_POLL_TIMEOUT_SEC",
-        os.environ.get("ARC_X_MAX_TIMEOUT", "120"),
+        os.environ.get("ARC_X_MAX_TIMEOUT", "3"),
     )
     try:
-        return float((raw or "120").strip() or "120")
+        return float((raw or "3").strip() or "3")
     except ValueError:
-        return 120.0
+        return 3.0
+
+
+def arc_fanout_seen_poll_timeout_sec() -> float:
+    """Max seconds for fan-out visibility wait (ARC SEEN/MINED or WoC /tx/raw mempool probe).
+
+    If ``LIVE_FANOUT_SEEN_POLL_TIMEOUT_SEC`` is unset, uses at least 30s (and at least
+    :func:`arc_seen_poll_timeout_sec`) so large fan-outs and ARC/WoC lag can resolve; per-test
+    polls stay on ``ARC_SEEN_POLL_TIMEOUT_SEC`` only. Set ``LIVE_FANOUT_SEEN_POLL_TIMEOUT_SEC=3`` to
+    cap fan-out the same as test txs.
+    """
+    raw = os.environ.get("LIVE_FANOUT_SEEN_POLL_TIMEOUT_SEC", "").strip()
+    if raw:
+        try:
+            return float(raw)
+        except ValueError:
+            pass
+    base = arc_seen_poll_timeout_sec()
+    return max(base, 30.0)
 
 
 def live_arc_seen_woc_fallback_enabled() -> bool:
@@ -197,7 +215,8 @@ def live_arc_seen_woc_fallback_enabled() -> bool:
 
     Uses GET ``/tx/{txid}`` / ``/hex`` when indexed, and POST ``/tx/raw`` with the same hex when
     WoC reports duplicate / ``txn-mempool-conflict`` (mempool visibility without confirmations).
-    Set ``LIVE_ARC_SEEN_WOC_FALLBACK=0`` for ARC-only.
+    Fan-out strict wait still uses only POST ``/tx/raw`` for that (not indexer GET). Set
+    ``LIVE_ARC_SEEN_WOC_FALLBACK=0`` for ARC-only everywhere.
     """
     if os.environ.get("LIVE_ARC_SEEN_WOC_FALLBACK", "").strip().lower() in (
         "0",
@@ -218,7 +237,7 @@ def live_broadcast_arc_wait_headers() -> dict[str, str]:
 
     Env:
       LIVE_ARC_SKIP_WAIT_FOR_SEEN=1 — omit wait headers and GET enforcement (faster).
-      ARC_SEEN_POLL_TIMEOUT_SEC — max seconds for that GET poll (default: same as ARC_X_MAX_TIMEOUT or 120).
+      ARC_SEEN_POLL_TIMEOUT_SEC — max seconds for that GET poll (default: same as ARC_X_MAX_TIMEOUT or 3).
     """
     if os.environ.get("LIVE_ARC_SKIP_WAIT_FOR_SEEN", "").strip().lower() in (
         "1",
@@ -272,6 +291,79 @@ def _print_live_broadcast_result(bc: Broadcaster, result: object, *, kind: str) 
         print(f"  [{tag} {kind}] more: {more!r}")
 
 
+def _ledger_diagnostics_payload(
+    result: object,
+    *,
+    woc_http_detail: dict | None,
+    visibility_poll_error: str | None,
+) -> dict:
+    """Structured ARC POST / WoC GET / client-transport info for the live Markdown report."""
+    out: dict = {}
+    st = getattr(result, "status", None)
+    if st != "success":
+        code = getattr(result, "code", None)
+        desc = getattr(result, "description", None)
+        parts = [str(code) if code is not None else "", str(desc) if desc is not None else ""]
+        msg = ": ".join(p for p in parts if p).strip(": ")
+        if msg:
+            out["broadcast_error"] = msg
+    more = getattr(result, "more", None) or {}
+    extra = getattr(result, "extra", None) or {}
+    if st == "success":
+        if extra.get("arc_json") is not None:
+            out["arc_http_response"] = extra["arc_json"]
+        if extra.get("http_status") is not None:
+            out["arc_http_status"] = extra["http_status"]
+    else:
+        if more.get("arc_json") is not None:
+            out["arc_http_response"] = more["arc_json"]
+        if more.get("http_status") is not None:
+            out["arc_http_status"] = more["http_status"]
+        tran = {k: more[k] for k in ("exception_type", "exception") if more.get(k)}
+        if tran:
+            out["arc_client_transport"] = tran
+    if woc_http_detail:
+        out["woc_probe_http"] = woc_http_detail
+    if visibility_poll_error:
+        out["visibility_poll_error"] = visibility_poll_error
+    return out
+
+
+def format_broadcast_diagnostic(result: object) -> str:
+    """Rich diagnostic string for assert messages — classifies ARC rejection vs spent input vs unknown."""
+    status = getattr(result, "status", None)
+    txid = getattr(result, "txid", None)
+    code = getattr(result, "code", None)
+    desc = getattr(result, "description", None)
+    msg = getattr(result, "message", None)
+    more = getattr(result, "more", None)
+
+    if result is None:
+        return "No broadcast attempt made"
+
+    if status == "success":
+        return f"Broadcast succeeded: txid={txid} message={msg}"
+
+    if code == "ARC_TX_STATUS":
+        diagnosis = f"ARC terminal status ({(desc or '').split(':')[0].strip()})"
+    elif broadcast_failure_indicates_spent_input(result):
+        diagnosis = "spent/missing input"
+    elif code and str(code).isdigit() and int(code) >= 400:
+        diagnosis = f"ARC HTTP {code}"
+    else:
+        diagnosis = "unknown failure"
+
+    lines = [f"BROADCAST FAILED — {diagnosis}"]
+    lines.append(f"  txid={txid} code={code}")
+    if desc:
+        lines.append(f"  description: {desc}")
+    if msg:
+        lines.append(f"  message: {msg}")
+    if more:
+        lines.append(f"  more: {more}")
+    return "\n".join(lines)
+
+
 def _arc_post_first_tx_status(message: str | None) -> str | None:
     """First token of ARC :class:`BroadcastResponse` message (txStatus from POST body)."""
     if not message:
@@ -283,6 +375,71 @@ def _arc_post_first_tx_status(message: str | None) -> str | None:
 def _print_live_tx_raw_hex(tx: Transaction, *, kind: str) -> None:
     """Print standard raw transaction hex (``tx.hex()``), not EF wire form."""
     print(f"\n  [rawTx hex {kind}] {tx.hex()}")
+
+
+def _broadcast_failure_is_transient_network(result: object) -> bool:
+    """True for DNS / TCP flakiness where retrying :meth:`Broadcaster.broadcast` may succeed."""
+    if getattr(result, "status", None) == "success":
+        return False
+    desc = (getattr(result, "description", "") or "").lower()
+    more = getattr(result, "more", None)
+    if not isinstance(more, dict):
+        more = {}
+    exc_t = (more.get("exception_type") or "").lower()
+    exc_m = (more.get("exception") or "").lower()
+    blob = f"{desc} {exc_t} {exc_m}"
+    markers = (
+        "name resolution",
+        "temporary failure",
+        "cannot connect to host",
+        "connection refused",
+        "connection reset",
+        "timed out",
+        "timeout",
+        "network is unreachable",
+        "no route to host",
+        "clientconnector",
+        "server disconnected",
+        "broken pipe",
+    )
+    return any(m in blob for m in markers)
+
+
+async def _broadcast_with_transient_retries(
+    bc: Broadcaster,
+    tx: Transaction,
+    *,
+    label: str = "ARC tx",
+) -> BroadcastResponse | BroadcastFailure:
+    """Call ``bc.broadcast``; retry on transient connect/DNS errors (env-tunable)."""
+    raw_max = os.environ.get("LIVE_ARC_BROADCAST_RETRIES", "5").strip() or "5"
+    try:
+        max_r = int(raw_max)
+    except ValueError:
+        max_r = 5
+    max_r = max(1, min(max_r, 20))
+    raw_delay = os.environ.get("LIVE_ARC_BROADCAST_RETRY_DELAY_SEC", "1.0").strip() or "1.0"
+    try:
+        base_delay = float(raw_delay)
+    except ValueError:
+        base_delay = 1.0
+    last: BroadcastResponse | BroadcastFailure | None = None
+    for attempt in range(max_r):
+        last = await bc.broadcast(tx)
+        if getattr(last, "status", None) == "success":
+            return last
+        if not _broadcast_failure_is_transient_network(last):
+            return last
+        if attempt >= max_r - 1:
+            return last
+        delay = min(base_delay * (2**attempt), 30.0)
+        hint = (getattr(last, "description", None) or "")[:90]
+        if len((getattr(last, "description", None) or "")) > 90:
+            hint += "…"
+        print(f"\n  [{label}] transient network error ({hint}); retry {attempt + 2}/{max_r} in {delay:.1f}s")
+        await asyncio.sleep(delay)
+    assert last is not None
+    return last
 
 
 async def _recover_arc_double_spend_if_visible_on_woc(
@@ -719,6 +876,68 @@ class UTXOManager:
         self._tx_cache: dict[str, Transaction] = {}
         # WoC fan-out: cache parent txs by txid (multiple inputs may share a tx)
         self._fetched_tx_by_id: dict[str, Transaction] = {}
+        # WoC visibility results for post-run summary
+        self._woc_visibility_results: list[tuple[str, bool]] = []
+
+    def _append_broadcast_ledger_row(
+        self,
+        *,
+        broadcast_index: int,
+        kind: str,
+        tx: Transaction | None,
+        result: object,
+        arc_visibility: str | None,
+        woc_visible: bool | None = None,
+        woc_method: str | None = None,
+        pool_outputs: int | None = None,
+        raw_tx_hex: str | None = None,
+        woc_http_detail: dict | None = None,
+        visibility_poll_error: str | None = None,
+    ) -> None:
+        from .live_broadcast_ledger import append_row
+
+        st = getattr(result, "status", None)
+        msg = (getattr(result, "message", None) or "").strip()
+        if len(msg) > 120:
+            msg = msg[:117] + "..."
+        txid = getattr(result, "txid", None)
+        if not txid and tx is not None:
+            txid = tx.txid()
+        woc_probe = "—"
+        if woc_visible is not None:
+            woc_probe = ("yes" if woc_visible else "no") + (f" ({woc_method})" if woc_method else "")
+
+        hex_out = raw_tx_hex
+        if hex_out is None and tx is not None:
+            hex_out = tx.hex()
+
+        diag = _ledger_diagnostics_payload(
+            result,
+            woc_http_detail=woc_http_detail,
+            visibility_poll_error=visibility_poll_error,
+        )
+        fail_note = diag.get("broadcast_error") or diag.get("visibility_poll_error")
+        if not fail_note:
+            fail_note = "—"
+
+        append_row(
+            {
+                "broadcast_index": broadcast_index,
+                "kind": kind,
+                "txid": txid,
+                "result_status": st,
+                "message_summary": msg or "—",
+                "arc_visibility": arc_visibility,
+                "woc_probe": woc_probe,
+                "failure_or_poll_note": fail_note,
+                "inputs": len(tx.inputs) if tx is not None else "—",
+                "outputs": len(tx.outputs) if tx is not None else "—",
+                "pool_outputs": pool_outputs,
+                "network_label": self.network_label,
+                "raw_tx_hex": hex_out or "",
+                "diagnostics": diag,
+            }
+        )
 
     async def _ensure_arc_seen_on_network(
         self,
@@ -727,30 +946,53 @@ class UTXOManager:
         *,
         kind: str,
         raw_tx_hex: str | None = None,
-    ) -> None:
-        """When live ARC wait headers are on but POST returns an earlier txStatus, poll until visible."""
+        require_arc_seen_on_network: bool = False,
+    ) -> str | None:
+        """When live ARC wait headers are on but POST returns an earlier txStatus, poll until visible.
+
+        Returns ARC/WoC visibility token (e.g. ``SEEN_ON_NETWORK``, ``WOC_MEMPOOL_POST``), the POST
+        status when already terminal-visible, or ``None`` when polling was skipped.
+
+        Fan-out uses ``require_arc_seen_on_network=True`` so the pool is only created after ARC
+        reports ``SEEN_ON_NETWORK`` or ``MINED``, or WhatsOnChain POST ``/tx/raw`` reports the tx
+        already in mempool (ARC may lag behind a manual rebroadcast). WoC indexer GET and ARC
+        "progressing" shortcuts are still disabled for fan-out.
+        """
         from bsv.broadcasters.arc import ARC
 
         if not isinstance(bc, ARC) or not live_broadcast_arc_wait_headers():
-            return
+            return None
         if getattr(result, "status", None) != "success":
-            return
+            return None
         st = _arc_post_first_tx_status(getattr(result, "message", None))
         if st in ("SEEN_ON_NETWORK", "MINED"):
-            return
+            return st
         txid = getattr(result, "txid", None)
         if not txid:
-            return
-        tmo = arc_seen_poll_timeout_sec()
+            return None
+        if kind == "fan-out":
+            tmo = arc_fanout_seen_poll_timeout_sec()
+        else:
+            tmo = arc_seen_poll_timeout_sec()
         woc_fb = live_arc_seen_woc_fallback_enabled()
-        extra = ""
-        if woc_fb:
-            extra = " + WhatsOnChain (GET and/or POST /tx/raw mempool probe)"
-        print(
-            f"\n  [ARC {kind}] POST txStatus={st!r}; "
-            f"polling ARC + WoC until visible (SEEN_ON_NETWORK/MINED, progressing, or mempool/indexer){extra} "
-            f"(timeout {tmo}s)…"
-        )
+        if require_arc_seen_on_network:
+            if woc_fb:
+                wait_desc = (
+                    "polling ARC for SEEN_ON_NETWORK or MINED; WoC POST /tx/raw if already in mempool"
+                )
+            else:
+                wait_desc = (
+                    "polling ARC only until SEEN_ON_NETWORK or MINED "
+                    "(set LIVE_ARC_SEEN_WOC_FALLBACK=1 to allow WoC /tx/raw mempool probe)"
+                )
+        else:
+            extra = ""
+            if woc_fb:
+                extra = " + WhatsOnChain (GET and/or POST /tx/raw mempool probe)"
+            wait_desc = (
+                f"polling ARC + WoC until visible (SEEN_ON_NETWORK/MINED, progressing, or mempool/indexer){extra}"
+            )
+        print(f"\n  [ARC {kind}] POST txStatus={st!r}; {wait_desc} (timeout {tmo}s)…")
         from .arc_verify import wait_until_arc_tx_seen_on_network
 
         final = await wait_until_arc_tx_seen_on_network(
@@ -759,8 +1001,10 @@ class UTXOManager:
             timeout_sec=tmo,
             woc_api_base=self.woc_api_base if woc_fb else None,
             raw_tx_hex=raw_tx_hex if woc_fb else None,
+            require_arc_seen_on_network=require_arc_seen_on_network,
         )
         print(f"\n  [ARC {kind}] visibility={final!r}")
+        return final
 
     # --- Persistence ---
 
@@ -1005,15 +1249,50 @@ class UTXOManager:
         fan_out_tx.fee(self.FEE_MODEL)
         fan_out_tx.sign()
 
+        broadcast_ordinal = self.broadcast_count + 1
+        print(
+            f"\n  [Broadcast #{broadcast_ordinal}] kind=fan-out txs_in_broadcast=1 "
+            f"pool_outputs={num_outputs} (+change) tx_inputs={len(fan_out_tx.inputs)} "
+            f"tx_outputs={len(fan_out_tx.outputs)}"
+        )
+
         # Broadcast (same ARC wait-for as broadcast_test_tx so fan-out reaches network)
         bc = _arc_with_broadcast_test_tx_headers(self.broadcaster)
-        result = await bc.broadcast(fan_out_tx)
+        result = await _broadcast_with_transient_retries(bc, fan_out_tx, label="ARC fan-out")
         _print_live_broadcast_result(bc, result, kind="fan-out")
         _print_live_tx_raw_hex(fan_out_tx, kind="fan-out")
-        await self._ensure_arc_seen_on_network(bc, result, kind="fan-out", raw_tx_hex=fan_out_tx.hex())
+        arc_vis: str | None = None
+        try:
+            arc_vis = await self._ensure_arc_seen_on_network(
+                bc,
+                result,
+                kind="fan-out",
+                raw_tx_hex=fan_out_tx.hex(),
+                require_arc_seen_on_network=True,
+            )
+        except Exception as exc:
+            self.broadcast_count += 1
+            self._append_broadcast_ledger_row(
+                broadcast_index=broadcast_ordinal,
+                kind="fan-out",
+                tx=fan_out_tx,
+                result=result,
+                arc_visibility=f"ERROR: {exc!s}",
+                pool_outputs=num_outputs,
+                visibility_poll_error=str(exc),
+            )
+            raise
+        self.broadcast_count += 1
+        self._append_broadcast_ledger_row(
+            broadcast_index=broadcast_ordinal,
+            kind="fan-out",
+            tx=fan_out_tx,
+            result=result,
+            arc_visibility=arc_vis,
+            pool_outputs=num_outputs,
+        )
         if result.status != "success":
             raise RuntimeError(f"Fan-out broadcast failed: {getattr(result, 'description', result.status)}")
-        self.broadcast_count += 1
         txid = result.txid or fan_out_tx.txid()
         print(f"\n  -> Fan-out: {self.explorer_tx_base}/{txid}")
 
@@ -1126,18 +1405,59 @@ class UTXOManager:
         """
         from .arc_verify import wait_until_live_tx_confirmed
 
+        broadcast_ordinal = self.broadcast_count + 1
+        n_in, n_out = len(tx.inputs), len(tx.outputs)
+        print(
+            f"\n  [Broadcast #{broadcast_ordinal}] kind=tx txs_in_broadcast=1 "
+            f"inputs={n_in} outputs={n_out}"
+        )
+
         bc = _arc_with_broadcast_test_tx_headers(broadcaster or self.broadcaster)
-        result = await bc.broadcast(tx)
+        result = await _broadcast_with_transient_retries(bc, tx, label="ARC tx")
         result = await _recover_arc_double_spend_if_visible_on_woc(
             self.woc_api_base, bc, tx, result
         )
         _print_live_broadcast_result(bc, result, kind="tx")
         _print_live_tx_raw_hex(tx, kind="tx")
-        await self._ensure_arc_seen_on_network(bc, result, kind="tx", raw_tx_hex=tx.hex())
+        arc_visibility: str | None = None
+        try:
+            arc_visibility = await self._ensure_arc_seen_on_network(
+                bc, result, kind="tx", raw_tx_hex=tx.hex()
+            )
+        except Exception as exc:
+            self.broadcast_count += 1
+            self._append_broadcast_ledger_row(
+                broadcast_index=broadcast_ordinal,
+                kind="tx",
+                tx=tx,
+                result=result,
+                arc_visibility=f"ERROR: {exc!s}",
+                visibility_poll_error=str(exc),
+            )
+            raise
         self.broadcast_count += 1
+        woc_visible: bool | None = None
+        woc_method: str | None = None
+        woc_http_detail: dict | None = None
         if result.status == "success":
             txid = result.txid or tx.txid()
             print(f"\n  -> {self.explorer_tx_base}/{txid}")
+            # Non-blocking WoC visibility probe
+            try:
+                from .arc_verify import check_woc_visibility
+
+                visible, method, elapsed, woc_http_detail = await check_woc_visibility(
+                    self.woc_api_base, txid
+                )
+                if visible:
+                    print(f"  [WoC visibility] observable=yes (via {method} after {elapsed:.1f}s)")
+                else:
+                    print(f"  [WoC visibility] observable=no ({method} after {elapsed:.1f}s)")
+                self._woc_visibility_results.append((txid, visible))
+                woc_visible = visible
+                woc_method = method
+            except Exception:
+                pass  # never fail the test for a visibility check
             if live_require_mined_enabled(verify_mined):
                 await wait_until_live_tx_confirmed(
                     self.arc_base_url,
@@ -1145,6 +1465,16 @@ class UTXOManager:
                     txid,
                     timeout_sec=live_tx_confirm_timeout_sec(),
                 )
+        self._append_broadcast_ledger_row(
+            broadcast_index=broadcast_ordinal,
+            kind="tx",
+            tx=tx,
+            result=result,
+            arc_visibility=arc_visibility,
+            woc_visible=woc_visible,
+            woc_method=woc_method,
+            woc_http_detail=woc_http_detail,
+        )
         if result.status != "success" and spent_utxo is not None:
             if broadcast_failure_indicates_spent_input(result):
                 print(
@@ -1159,6 +1489,30 @@ class UTXOManager:
 # ---------------------------------------------------------------------------
 # test_live_testnet: WoC JSON audit (xfail strict when broadcast passes)
 # ---------------------------------------------------------------------------
+
+
+def pytest_configure(config):
+    """Short defaults for live ARC waits unless the user set env vars explicitly."""
+    os.environ.setdefault("ARC_SEEN_POLL_TIMEOUT_SEC", "3")
+    os.environ.setdefault("ARC_X_MAX_TIMEOUT", "5")
+
+
+def pytest_sessionstart(session):
+    try:
+        from .live_broadcast_ledger import reset as _live_broadcast_ledger_reset
+    except ImportError:
+        return
+    _live_broadcast_ledger_reset()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    try:
+        from .live_broadcast_ledger import write_markdown_report
+    except ImportError:
+        return
+    path = write_markdown_report()
+    if path:
+        print(f"\n[live tests] Broadcast report written to {path}")
 
 
 def pytest_collection_modifyitems(config, items):
