@@ -18,7 +18,6 @@ from .conftest import (
     MockBroadcaster,
 )
 
-
 # Test each opcode with both BIP143 (FORKID v1) and OTDA (FORKID+CHRONICLE v2)
 SIGHASH_VERSIONS = [
     pytest.param(SIGHASH.ALL_FORKID, 1, id="BIP143_v1"),
@@ -48,8 +47,10 @@ class TestOpVer:
         lock = p2pkh_lock_with_prefix("OP_VER 02000000 OP_EQUALVERIFY", priv_key)
         unlock = custom_unlock(priv_key)
         tx = build_signed_tx(
-            lock, unlock,
-            sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
+            lock,
+            unlock,
+            sighash=SIGHASH.ALL_FORKID_CHRONICLE,
+            tx_version=2,
         )
         assert tx.txid()
 
@@ -71,10 +72,7 @@ class TestOpVerif:
             priv_key,
         )
         # Append OP_ELSE OP_FALSE OP_ENDIF
-        lock = Script(
-            lock.serialize()
-            + Script.from_asm("OP_ELSE OP_FALSE OP_ENDIF").serialize()
-        )
+        lock = Script(lock.serialize() + Script.from_asm("OP_ELSE OP_FALSE OP_ENDIF").serialize())
         # Unlocking pushes 4-byte LE version (matching tx_version) then sig+pubkey
         ver_bytes = tx_version.to_bytes(4, "little")
         data = Script(encode_pushdata(ver_bytes))
@@ -91,11 +89,7 @@ class TestOpVerif:
 
         pkh = hash160(priv_key.public_key().serialize())
         p2pkh_script = Script(
-            OpCode.OP_DUP
-            + OpCode.OP_HASH160
-            + encode_pushdata(pkh)
-            + OpCode.OP_EQUALVERIFY
-            + OpCode.OP_CHECKSIG
+            OpCode.OP_DUP + OpCode.OP_HASH160 + encode_pushdata(pkh) + OpCode.OP_EQUALVERIFY + OpCode.OP_CHECKSIG
         )
         lock = Script(
             Script.from_asm("OP_VERIF OP_FALSE OP_ELSE").serialize()
@@ -123,10 +117,7 @@ class TestOpVernotif:
         """OP_VERNOTIF enters TRUE branch when version comparison fails."""
         # Push higher version so VERIF would be FALSE, VERNOTIF makes it TRUE
         lock = p2pkh_lock_with_prefix("OP_VERNOTIF", priv_key)
-        lock = Script(
-            lock.serialize()
-            + Script.from_asm("OP_ELSE OP_FALSE OP_ENDIF").serialize()
-        )
+        lock = Script(lock.serialize() + Script.from_asm("OP_ELSE OP_FALSE OP_ENDIF").serialize())
         high_ver = (tx_version + 1).to_bytes(4, "little")
         data = Script(encode_pushdata(high_ver))
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -163,9 +154,7 @@ class TestOp2Mul:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_2mul_negative(self, priv_key, sighash, tx_version):
         """(-1) * 2 = -2"""
-        lock = p2pkh_lock_with_prefix(
-            "OP_2MUL OP_1NEGATE OP_1SUB OP_NUMEQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix("OP_2MUL OP_1NEGATE OP_1SUB OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_1NEGATE")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
@@ -224,7 +213,7 @@ class TestOpSubstr:
         # Push order in unlock (bottom to top): data, start, length
         data = Script(
             encode_pushdata(bytes.fromhex("6162636465"))  # "abcde"
-            + Script.from_asm("OP_1 OP_2").serialize()    # start=1, length=2
+            + Script.from_asm("OP_1 OP_2").serialize()  # start=1, length=2
         )
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
@@ -243,10 +232,7 @@ class TestOpLeft:
     def test_left_basic(self, priv_key, sighash, tx_version):
         """Left 2 bytes of 'abcde' = 'ab'."""
         lock = p2pkh_lock_with_prefix("OP_LEFT 6162 OP_EQUALVERIFY", priv_key)
-        data = Script(
-            encode_pushdata(bytes.fromhex("6162636465"))
-            + Script.from_asm("OP_2").serialize()
-        )
+        data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_2").serialize())
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
         assert tx.txid()
@@ -254,13 +240,8 @@ class TestOpLeft:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_left_full_length(self, priv_key, sighash, tx_version):
         """Left 5 bytes of 'abcde' = 'abcde'."""
-        lock = p2pkh_lock_with_prefix(
-            "OP_LEFT 6162636465 OP_EQUALVERIFY", priv_key
-        )
-        data = Script(
-            encode_pushdata(bytes.fromhex("6162636465"))
-            + Script.from_asm("OP_5").serialize()
-        )
+        lock = p2pkh_lock_with_prefix("OP_LEFT 6162636465 OP_EQUALVERIFY", priv_key)
+        data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_5").serialize())
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
         assert tx.txid()
@@ -278,10 +259,7 @@ class TestOpRight:
     def test_right_basic(self, priv_key, sighash, tx_version):
         """Right 2 bytes of 'abcde' = 'de'."""
         lock = p2pkh_lock_with_prefix("OP_RIGHT 6465 OP_EQUALVERIFY", priv_key)
-        data = Script(
-            encode_pushdata(bytes.fromhex("6162636465"))
-            + Script.from_asm("OP_2").serialize()
-        )
+        data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_2").serialize())
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
         assert tx.txid()
@@ -289,13 +267,8 @@ class TestOpRight:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_right_full_length(self, priv_key, sighash, tx_version):
         """Right 5 bytes of 'abcde' = 'abcde'."""
-        lock = p2pkh_lock_with_prefix(
-            "OP_RIGHT 6162636465 OP_EQUALVERIFY", priv_key
-        )
-        data = Script(
-            encode_pushdata(bytes.fromhex("6162636465"))
-            + Script.from_asm("OP_5").serialize()
-        )
+        lock = p2pkh_lock_with_prefix("OP_RIGHT 6162636465 OP_EQUALVERIFY", priv_key)
+        data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_5").serialize())
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
         assert tx.txid()
@@ -312,9 +285,7 @@ class TestOpLshiftnum:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_lshiftnum_basic(self, priv_key, sighash, tx_version):
         """1 << 3 = 8"""
-        lock = p2pkh_lock_with_prefix(
-            "OP_LSHIFTNUM OP_8 OP_NUMEQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix("OP_LSHIFTNUM OP_8 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_1 OP_3")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
@@ -323,9 +294,7 @@ class TestOpLshiftnum:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_lshiftnum_zero_shift(self, priv_key, sighash, tx_version):
         """5 << 0 = 5"""
-        lock = p2pkh_lock_with_prefix(
-            "OP_LSHIFTNUM OP_5 OP_NUMEQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix("OP_LSHIFTNUM OP_5 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_5 OP_0")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
@@ -343,9 +312,7 @@ class TestOpRshiftnum:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_rshiftnum_basic(self, priv_key, sighash, tx_version):
         """8 >> 2 = 2"""
-        lock = p2pkh_lock_with_prefix(
-            "OP_RSHIFTNUM OP_2 OP_NUMEQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix("OP_RSHIFTNUM OP_2 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_8 OP_2")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
@@ -354,9 +321,7 @@ class TestOpRshiftnum:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_rshiftnum_truncation(self, priv_key, sighash, tx_version):
         """7 >> 1 = 3 (truncated)"""
-        lock = p2pkh_lock_with_prefix(
-            "OP_RSHIFTNUM OP_3 OP_NUMEQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix("OP_RSHIFTNUM OP_3 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_7 OP_1")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
@@ -365,9 +330,7 @@ class TestOpRshiftnum:
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_rshiftnum_zero_shift(self, priv_key, sighash, tx_version):
         """5 >> 0 = 5"""
-        lock = p2pkh_lock_with_prefix(
-            "OP_RSHIFTNUM OP_5 OP_NUMEQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix("OP_RSHIFTNUM OP_5 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_5 OP_0")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
@@ -387,8 +350,10 @@ class TestChronicleOpcodeBroadcast:
         lock = p2pkh_lock_with_prefix("OP_VER 02000000 OP_EQUALVERIFY", priv_key)
         unlock = custom_unlock(priv_key)
         tx = build_signed_tx(
-            lock, unlock,
-            sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
+            lock,
+            unlock,
+            sighash=SIGHASH.ALL_FORKID_CHRONICLE,
+            tx_version=2,
         )
         result = await tx.broadcast(broadcaster=mock_broadcaster)
         assert result.status == "success"
@@ -400,8 +365,10 @@ class TestChronicleOpcodeBroadcast:
         data = Script.from_asm("OP_3")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(
-            lock, unlock,
-            sighash=SIGHASH.ALL_FORKID_CHRONICLE, tx_version=2,
+            lock,
+            unlock,
+            sighash=SIGHASH.ALL_FORKID_CHRONICLE,
+            tx_version=2,
         )
         result = await tx.broadcast(broadcaster=mock_broadcaster)
         assert result.status == "success"

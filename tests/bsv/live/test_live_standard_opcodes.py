@@ -19,7 +19,6 @@ from .conftest import (
     p2pkh_lock_with_prefix,
 )
 
-
 # Default: BIP143 v1. A subset also tested with OTDA v2.
 SH = SIGHASH.ALL_FORKID
 SH_C = SIGHASH.ALL_FORKID_CHRONICLE
@@ -342,18 +341,14 @@ class TestBitwiseSplice:
 
     def test_op_split(self, priv_key):
         """SPLIT "abcd" at 2 -> "ab", "cd". Verify left part."""
-        lock = p2pkh_lock_with_prefix(
-            "OP_SPLIT 6364 OP_EQUALVERIFY 6162 OP_EQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix("OP_SPLIT 6364 OP_EQUALVERIFY 6162 OP_EQUALVERIFY", priv_key)
         data = Script(encode_pushdata(b"\x61\x62\x63\x64") + Script.from_asm("OP_2").serialize())
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=SH, tx_version=1)
 
     def test_op_num2bin(self, priv_key):
         """NUM2BIN: convert 5 to 4-byte representation."""
-        lock = p2pkh_lock_with_prefix(
-            "OP_NUM2BIN 05000000 OP_EQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix("OP_NUM2BIN 05000000 OP_EQUALVERIFY", priv_key)
         data = Script.from_asm("OP_5 OP_4")  # value=5, size=4
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=SH, tx_version=1)
@@ -378,9 +373,7 @@ class TestCryptoOps:
         """RIPEMD160 of known data matches expected hash."""
         data_bytes = b"hello"
         expected = ripemd160(data_bytes)
-        lock = p2pkh_lock_with_prefix(
-            f"OP_RIPEMD160 {expected.hex()} OP_EQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix(f"OP_RIPEMD160 {expected.hex()} OP_EQUALVERIFY", priv_key)
         data = Script(encode_pushdata(data_bytes))
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=SH, tx_version=1)
@@ -388,9 +381,7 @@ class TestCryptoOps:
     def test_op_sha1(self, priv_key):
         data_bytes = b"hello"
         expected = sha1(data_bytes)
-        lock = p2pkh_lock_with_prefix(
-            f"OP_SHA1 {expected.hex()} OP_EQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix(f"OP_SHA1 {expected.hex()} OP_EQUALVERIFY", priv_key)
         data = Script(encode_pushdata(data_bytes))
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=SH, tx_version=1)
@@ -398,9 +389,7 @@ class TestCryptoOps:
     def test_op_sha256(self, priv_key):
         data_bytes = b"hello"
         expected = sha256(data_bytes)
-        lock = p2pkh_lock_with_prefix(
-            f"OP_SHA256 {expected.hex()} OP_EQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix(f"OP_SHA256 {expected.hex()} OP_EQUALVERIFY", priv_key)
         data = Script(encode_pushdata(data_bytes))
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=SH, tx_version=1)
@@ -408,9 +397,7 @@ class TestCryptoOps:
     def test_op_hash160(self, priv_key):
         data_bytes = b"hello"
         expected = hash160(data_bytes)
-        lock = p2pkh_lock_with_prefix(
-            f"OP_HASH160 {expected.hex()} OP_EQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix(f"OP_HASH160 {expected.hex()} OP_EQUALVERIFY", priv_key)
         data = Script(encode_pushdata(data_bytes))
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=SH, tx_version=1)
@@ -418,9 +405,7 @@ class TestCryptoOps:
     def test_op_hash256(self, priv_key):
         data_bytes = b"hello"
         expected = hash256(data_bytes)
-        lock = p2pkh_lock_with_prefix(
-            f"OP_HASH256 {expected.hex()} OP_EQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix(f"OP_HASH256 {expected.hex()} OP_EQUALVERIFY", priv_key)
         data = Script(encode_pushdata(data_bytes))
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=SH, tx_version=1)
@@ -575,9 +560,7 @@ class TestStandardOpcodesOTDA:
     def test_hash160_otda(self, priv_key):
         data_bytes = b"hello"
         expected = hash160(data_bytes)
-        lock = p2pkh_lock_with_prefix(
-            f"OP_HASH160 {expected.hex()} OP_EQUALVERIFY", priv_key
-        )
+        lock = p2pkh_lock_with_prefix(f"OP_HASH160 {expected.hex()} OP_EQUALVERIFY", priv_key)
         data = Script(encode_pushdata(data_bytes))
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=SH_C, tx_version=2)

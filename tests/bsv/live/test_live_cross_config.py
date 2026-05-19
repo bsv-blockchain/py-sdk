@@ -31,7 +31,6 @@ from .conftest import (
     validate_spend,
 )
 
-
 # ---------------------------------------------------------------------------
 # Parametrize helpers
 # ---------------------------------------------------------------------------
@@ -308,24 +307,36 @@ class TestMixedInputSources:
 
     def test_v1_and_v2_source_inputs_v2_spend(self, priv_key):
         """Input from v1 source + input from v2 source, v2 spending tx."""
-        self._build_mixed_source_tx(priv_key, [
-            (1, SIGHASH.ALL_FORKID),
-            (2, SIGHASH.ALL_FORKID_CHRONICLE),
-        ], spending_version=2)
+        self._build_mixed_source_tx(
+            priv_key,
+            [
+                (1, SIGHASH.ALL_FORKID),
+                (2, SIGHASH.ALL_FORKID_CHRONICLE),
+            ],
+            spending_version=2,
+        )
 
     def test_v2_and_v1_source_inputs_v1_spend(self, priv_key):
         """Input from v2 source + input from v1 source, v1 spending tx."""
-        self._build_mixed_source_tx(priv_key, [
-            (2, SIGHASH.ALL_FORKID),
-            (1, SIGHASH.ALL_FORKID),
-        ], spending_version=1)
+        self._build_mixed_source_tx(
+            priv_key,
+            [
+                (2, SIGHASH.ALL_FORKID),
+                (1, SIGHASH.ALL_FORKID),
+            ],
+            spending_version=1,
+        )
 
     def test_mixed_sources_mixed_sighash_v2(self, priv_key):
         """v1 source with BIP143 + v2 source with OTDA, v2 spending tx."""
-        self._build_mixed_source_tx(priv_key, [
-            (1, SIGHASH.ALL_FORKID),
-            (2, SIGHASH.ALL_FORKID_CHRONICLE),
-        ], spending_version=2)
+        self._build_mixed_source_tx(
+            priv_key,
+            [
+                (1, SIGHASH.ALL_FORKID),
+                (2, SIGHASH.ALL_FORKID_CHRONICLE),
+            ],
+            spending_version=2,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -405,10 +416,7 @@ class TestVersionMalleabilityInteractions:
             sighash = tx_input.sighash
             signature = priv_key.sign(tx.preimage(input_index))
             public_key = priv_key.public_key().serialize()
-            sig_script = (
-                encode_pushdata(signature + sighash.to_bytes(1, "little"))
-                + encode_pushdata(public_key)
-            )
+            sig_script = encode_pushdata(signature + sighash.to_bytes(1, "little")) + encode_pushdata(public_key)
             # Non-minimal push: PUSHDATA1 0x01 0x05 instead of OP_5 (0x55)
             nonminimal_5 = OpCode.OP_PUSHDATA1 + b"\x01" + b"\x05"
             return Script(sig_script + nonminimal_5)
@@ -467,9 +475,7 @@ class TestVersionMalleabilityInteractions:
             signature = priv_key.sign(tx.preimage(input_index))
             public_key = priv_key.public_key().serialize()
             return Script(
-                OpCode.OP_NOP
-                + encode_pushdata(signature + sighash.to_bytes(1, "little"))
-                + encode_pushdata(public_key)
+                OpCode.OP_NOP + encode_pushdata(signature + sighash.to_bytes(1, "little")) + encode_pushdata(public_key)
             )
 
         return to_unlock_script_template(sign, lambda: 110)
@@ -552,10 +558,7 @@ class TestVersionOpcodeInteractions:
     def test_op_substr(self, priv_key, sighash, tx_version):
         """OP_SUBSTR with BIP143+v2 and OTDA+v1."""
         lock = p2pkh_lock_with_prefix("OP_SUBSTR 6263 OP_EQUALVERIFY", priv_key)
-        data = Script(
-            encode_pushdata(bytes.fromhex("6162636465"))
-            + Script.from_asm("OP_1 OP_2").serialize()
-        )
+        data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_1 OP_2").serialize())
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
 
@@ -563,10 +566,7 @@ class TestVersionOpcodeInteractions:
     def test_op_left(self, priv_key, sighash, tx_version):
         """OP_LEFT with BIP143+v2 and OTDA+v1."""
         lock = p2pkh_lock_with_prefix("OP_LEFT 6162 OP_EQUALVERIFY", priv_key)
-        data = Script(
-            encode_pushdata(bytes.fromhex("6162636465"))
-            + Script.from_asm("OP_2").serialize()
-        )
+        data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_2").serialize())
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
 
@@ -574,10 +574,7 @@ class TestVersionOpcodeInteractions:
     def test_op_right(self, priv_key, sighash, tx_version):
         """OP_RIGHT with BIP143+v2 and OTDA+v1."""
         lock = p2pkh_lock_with_prefix("OP_RIGHT 6465 OP_EQUALVERIFY", priv_key)
-        data = Script(
-            encode_pushdata(bytes.fromhex("6162636465"))
-            + Script.from_asm("OP_2").serialize()
-        )
+        data = Script(encode_pushdata(bytes.fromhex("6162636465")) + Script.from_asm("OP_2").serialize())
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
 
@@ -601,10 +598,7 @@ class TestVersionOpcodeInteractions:
     def test_op_verif(self, priv_key, sighash, tx_version):
         """OP_VERIF with BIP143+v2 and OTDA+v1."""
         lock = p2pkh_lock_with_prefix("OP_VERIF", priv_key)
-        lock = Script(
-            lock.serialize()
-            + Script.from_asm("OP_ELSE OP_FALSE OP_ENDIF").serialize()
-        )
+        lock = Script(lock.serialize() + Script.from_asm("OP_ELSE OP_FALSE OP_ENDIF").serialize())
         ver_bytes = tx_version.to_bytes(4, "little")
         data = Script(encode_pushdata(ver_bytes))
         unlock = custom_unlock(priv_key, data_prefix_script=data)

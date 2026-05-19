@@ -12,7 +12,6 @@ from bsv.script.type import P2PKH, P2PK, BareMultisig
 
 from .conftest import build_signed_tx, MockBroadcaster
 
-
 # ---------------------------------------------------------------------------
 # Sighash flag sets
 # ---------------------------------------------------------------------------
@@ -73,9 +72,12 @@ class TestP2PKHSighashMatrix:
         unlock = p2pkh.unlock(priv_key)
         # For SIGHASH_SINGLE, need num_outputs >= num_inputs
         tx = build_signed_tx(
-            lock, unlock,
-            sighash=sighash, tx_version=tx_version,
-            num_inputs=3, num_outputs=3,
+            lock,
+            unlock,
+            sighash=sighash,
+            tx_version=tx_version,
+            num_inputs=3,
+            num_outputs=3,
         )
         assert len(tx.inputs) == 3
         assert len(tx.outputs) == 3

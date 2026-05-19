@@ -25,7 +25,6 @@ from .conftest import (
     validate_spend,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helper: build a signed transaction and return it WITHOUT validation
 # ---------------------------------------------------------------------------
@@ -72,10 +71,7 @@ class TestNonMinimalPush:
             sighash = tx_input.sighash
             signature = priv_key.sign(tx.preimage(input_index))
             public_key = priv_key.public_key().serialize()
-            sig_script = (
-                encode_pushdata(signature + sighash.to_bytes(1, "little"))
-                + encode_pushdata(public_key)
-            )
+            sig_script = encode_pushdata(signature + sighash.to_bytes(1, "little")) + encode_pushdata(public_key)
             # Non-minimal push: PUSHDATA1 0x01 0x05 instead of OP_5 (0x55)
             nonminimal_5 = OpCode.OP_PUSHDATA1 + b"\x01" + b"\x05"
             return Script(sig_script + nonminimal_5)
@@ -85,6 +81,7 @@ class TestNonMinimalPush:
     def _make_lock_with_verify(self, priv_key):
         """Locking script: OP_5 OP_NUMEQUALVERIFY <P2PKH>"""
         from .conftest import p2pkh_lock_with_prefix
+
         return p2pkh_lock_with_prefix("OP_5 OP_NUMEQUALVERIFY", priv_key)
 
     def test_v2_allows_nonminimal_push(self, priv_key):
@@ -219,15 +216,14 @@ class TestLowSSignature:
                 s_bytes = b"\x00" + s_bytes
             sig = (
                 bytes([0x30, 2 + len(r_bytes) + 2 + len(s_bytes)])
-                + bytes([0x02, len(r_bytes)]) + r_bytes
-                + bytes([0x02, len(s_bytes)]) + s_bytes
+                + bytes([0x02, len(r_bytes)])
+                + r_bytes
+                + bytes([0x02, len(s_bytes)])
+                + s_bytes
             )
 
             public_key = priv_key.public_key().serialize()
-            return Script(
-                encode_pushdata(sig + sighash.to_bytes(1, "little"))
-                + encode_pushdata(public_key)
-            )
+            return Script(encode_pushdata(sig + sighash.to_bytes(1, "little")) + encode_pushdata(public_key))
 
         return to_unlock_script_template(sign, lambda: 107)
 
@@ -274,11 +270,7 @@ class TestNullFail:
         # Use a different key for the locking script so signature verification fails
         other_key = PrivateKey()
         other_pub = other_key.public_key().serialize()
-        lock = Script(
-            encode_pushdata(other_pub)
-            + OpCode.OP_CHECKSIG
-            + OpCode.OP_NOT  # FALSE -> TRUE
-        )
+        lock = Script(encode_pushdata(other_pub) + OpCode.OP_CHECKSIG + OpCode.OP_NOT)  # FALSE -> TRUE
         return lock
 
     def _make_nonempty_sig_unlock(self, priv_key):
@@ -289,9 +281,7 @@ class TestNullFail:
             sighash = tx_input.sighash
             # Sign with our key (but locking script checks against different key)
             sig = priv_key.sign(tx.preimage(input_index))
-            return Script(
-                encode_pushdata(sig + sighash.to_bytes(1, "little"))
-            )
+            return Script(encode_pushdata(sig + sighash.to_bytes(1, "little")))
 
         return to_unlock_script_template(sign, lambda: 73)
 
@@ -377,10 +367,7 @@ class TestMinimalIf:
             sighash = tx_input.sighash
             signature = priv_key.sign(tx.preimage(input_index))
             public_key = priv_key.public_key().serialize()
-            sig_script = (
-                encode_pushdata(signature + sighash.to_bytes(1, "little"))
-                + encode_pushdata(public_key)
-            )
+            sig_script = encode_pushdata(signature + sighash.to_bytes(1, "little")) + encode_pushdata(public_key)
             # Push 0x02 (truthy but not minimal — should be 0x01)
             nonminimal_true = encode_pushdata(b"\x02")
             return Script(sig_script + nonminimal_true)

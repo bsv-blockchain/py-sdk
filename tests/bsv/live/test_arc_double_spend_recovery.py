@@ -13,7 +13,9 @@ from tests.bsv.live.conftest import _recover_arc_double_spend_if_visible_on_woc
 def _tx_mock(txid_hex: str) -> MagicMock:
     tx = MagicMock()
     tx.txid.return_value = txid_hex
-    tx.hex.return_value = "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff00ffffffff01"
+    tx.hex.return_value = (
+        "01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff00ffffffff01"
+    )
     return tx
 
 
@@ -31,9 +33,7 @@ async def test_passthrough_success_response():
     bc = _arc_bc()
     tx = _tx_mock("aa" * 32)
     ok = BroadcastResponse(status="success", txid=tx.txid(), message="SEEN_ON_NETWORK")
-    out = await _recover_arc_double_spend_if_visible_on_woc(
-        "https://api.whatsonchain.com/v1/bsv/test", bc, tx, ok
-    )
+    out = await _recover_arc_double_spend_if_visible_on_woc("https://api.whatsonchain.com/v1/bsv/test", bc, tx, ok)
     assert out is ok
 
 
@@ -47,9 +47,7 @@ async def test_no_recovery_non_arc_broadcaster():
         description="DOUBLE_SPEND_ATTEMPTED",
         txid=tx.txid(),
     )
-    out = await _recover_arc_double_spend_if_visible_on_woc(
-        "https://api.whatsonchain.com/v1/bsv/test", bc, tx, fail
-    )
+    out = await _recover_arc_double_spend_if_visible_on_woc("https://api.whatsonchain.com/v1/bsv/test", bc, tx, fail)
     assert out is fail
 
 
@@ -63,9 +61,7 @@ async def test_no_recovery_txid_mismatch():
         description="DOUBLE_SPEND_ATTEMPTED",
         txid="bb" * 32,
     )
-    out = await _recover_arc_double_spend_if_visible_on_woc(
-        "https://api.whatsonchain.com/v1/bsv/test", bc, tx, fail
-    )
+    out = await _recover_arc_double_spend_if_visible_on_woc("https://api.whatsonchain.com/v1/bsv/test", bc, tx, fail)
     assert out is fail
 
 
@@ -89,9 +85,7 @@ async def test_recovery_when_woc_mempool_post_true(monkeypatch):
         _probe_true,
     )
 
-    out = await _recover_arc_double_spend_if_visible_on_woc(
-        "https://api.whatsonchain.com/v1/bsv/test", bc, tx, fail
-    )
+    out = await _recover_arc_double_spend_if_visible_on_woc("https://api.whatsonchain.com/v1/bsv/test", bc, tx, fail)
     assert isinstance(out, BroadcastResponse)
     assert out.status == "success"
     assert out.txid == tid
@@ -125,9 +119,7 @@ async def test_recovery_when_woc_get_observable(monkeypatch):
         _get_ok,
     )
 
-    out = await _recover_arc_double_spend_if_visible_on_woc(
-        "https://api.whatsonchain.com/v1/bsv/test", bc, tx, fail
-    )
+    out = await _recover_arc_double_spend_if_visible_on_woc("https://api.whatsonchain.com/v1/bsv/test", bc, tx, fail)
     assert isinstance(out, BroadcastResponse)
     assert out.status == "success"
     assert "WOC_TX_HEX" in out.message

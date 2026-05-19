@@ -23,19 +23,21 @@ def _create_expected_unlocking_script(data1, data2):
 
 def _validate_spend(tx, source_tx, input_index=0):
     """Helper to validate a transaction using Spend."""
-    return Spend({
-        'sourceTXID': tx.inputs[input_index].source_txid,
-        'sourceOutputIndex': tx.inputs[input_index].source_output_index,
-        'sourceSatoshis': source_tx.outputs[0].satoshis,
-        'lockingScript': source_tx.outputs[0].locking_script,
-        'transactionVersion': tx.version,
-        'otherInputs': [],
-        'inputIndex': input_index,
-        'unlockingScript': tx.inputs[input_index].unlocking_script,
-        'outputs': tx.outputs,
-        'inputSequence': tx.inputs[input_index].sequence,
-        'lockTime': tx.locktime,
-    })
+    return Spend(
+        {
+            "sourceTXID": tx.inputs[input_index].source_txid,
+            "sourceOutputIndex": tx.inputs[input_index].source_output_index,
+            "sourceSatoshis": source_tx.outputs[0].satoshis,
+            "lockingScript": source_tx.outputs[0].locking_script,
+            "transactionVersion": tx.version,
+            "otherInputs": [],
+            "inputIndex": input_index,
+            "unlockingScript": tx.inputs[input_index].unlocking_script,
+            "outputs": tx.outputs,
+            "inputSequence": tx.inputs[input_index].sequence,
+            "lockTime": tx.locktime,
+        }
+    )
 
 
 def test_op_cat_template():
@@ -83,29 +85,19 @@ def test_op_cat_end_to_end():
     expected_data = b"hello world"
     locking_script = OpCat().lock(expected_data)
 
-    source_tx = Transaction(
-        [],
-        [
-            TransactionOutput(
-                locking_script=locking_script,
-                satoshis=1000
-            )
-        ]
-    )
+    source_tx = Transaction([], [TransactionOutput(locking_script=locking_script, satoshis=1000)])
 
     # Create a spending transaction
-    tx = Transaction([
-        TransactionInput(
-            source_transaction=source_tx,
-            source_output_index=0,
-            unlocking_script_template=OpCat().unlock(b"hello ", b"world")
-        )
-    ], [
-        TransactionOutput(
-            locking_script=OpCat().lock(b"test data"),  # Change to another OP_CAT output
-            change=True
-        )
-    ])
+    tx = Transaction(
+        [
+            TransactionInput(
+                source_transaction=source_tx,
+                source_output_index=0,
+                unlocking_script_template=OpCat().unlock(b"hello ", b"world"),
+            )
+        ],
+        [TransactionOutput(locking_script=OpCat().lock(b"test data"), change=True)],  # Change to another OP_CAT output
+    )
 
     tx.fee()
     tx.sign()

@@ -288,11 +288,7 @@ class OpCat(ScriptTemplate):
         else:
             raise TypeError("unsupported type for OpCat locking script data")
 
-        return Script(
-            OpCode.OP_CAT
-            + encode_pushdata(data_bytes)
-            + OpCode.OP_EQUAL
-        )
+        return Script(OpCode.OP_CAT + encode_pushdata(data_bytes) + OpCode.OP_EQUAL)
 
     def unlock(self, data1: Union[str, bytes], data2: Union[str, bytes]):
         """
@@ -315,10 +311,7 @@ class OpCat(ScriptTemplate):
 
         def sign(tx, input_index) -> Script:
             # For OP_CAT, we don't need signatures, just push the data
-            return Script(
-                encode_pushdata(data1_bytes)
-                + encode_pushdata(data2_bytes)
-            )
+            return Script(encode_pushdata(data1_bytes) + encode_pushdata(data2_bytes))
 
         def estimated_unlocking_byte_length() -> int:
             # Two pushdata operations plus their encoded lengths

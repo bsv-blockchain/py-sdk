@@ -206,16 +206,16 @@ async def build_two_step_live_tx(
         raise RuntimeError(f"Setup tx failed: {getattr(result, 'description', '')}")
     else:
         if result.status != "success":
-            raise RuntimeError(f"Setup tx failed after {max_orphan_retries} orphan retries: {getattr(result, 'description', '')}")
+            raise RuntimeError(
+                f"Setup tx failed after {max_orphan_retries} orphan retries: {getattr(result, 'description', '')}"
+            )
 
     if sync_setup_to_woc:
         setup_txid = result.txid or setup_tx.txid()
         if relay_setup_to_woc is None:
             await utxo_mgr.wait_until_woc_sees_txid(setup_txid)
         else:
-            relay_result = await _woc_relay_parent_then_setup(
-                relay_setup_to_woc, source_tx, setup_tx
-            )
+            relay_result = await _woc_relay_parent_then_setup(relay_setup_to_woc, source_tx, setup_tx)
             if not _woc_relay_ready_for_spend(relay_result):
                 raise RuntimeError(
                     "WoC setup relay failed after POSTing the pool parent tx; "

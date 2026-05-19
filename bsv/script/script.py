@@ -79,12 +79,7 @@ class Script:
 
     def _update_conditional_depth(self, op: bytes, depth: int) -> int:
         """Update conditional block depth based on opcode."""
-        if (
-            op == OpCode.OP_IF
-            or op == OpCode.OP_NOTIF
-            or op == OpCode.OP_VERIF
-            or op == OpCode.OP_VERNOTIF
-        ):
+        if op == OpCode.OP_IF or op == OpCode.OP_NOTIF or op == OpCode.OP_VERIF or op == OpCode.OP_VERNOTIF:
             return depth + 1
         if op == OpCode.OP_ENDIF:
             return max(0, depth - 1)
@@ -124,9 +119,7 @@ class Script:
             op = reader.read_bytes(1)
             chunk = ScriptChunk(op)
 
-            in_conditional_block = self._update_conditional_depth(
-                op, in_conditional_block
-            )
+            in_conditional_block = self._update_conditional_depth(op, in_conditional_block)
 
             if op == OpCode.OP_RETURN and in_conditional_block == 0:
                 if self._handle_op_return(reader, chunk):
@@ -183,9 +176,7 @@ class Script:
     def from_chunks(cls, chunks: List[ScriptChunk]) -> "Script":
         script = b""
         for chunk in chunks:
-            script += (
-                encode_pushdata(chunk.data) if chunk.data is not None else chunk.op
-            )
+            script += encode_pushdata(chunk.data) if chunk.data is not None else chunk.op
         s = Script(script)
         s.chunks = chunks
         return s

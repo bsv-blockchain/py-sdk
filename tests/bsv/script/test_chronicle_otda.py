@@ -56,19 +56,21 @@ def test_bip143_for_forkid_without_chronicle():
     tx.sign()
 
     inp = tx.inputs[0]
-    spend = Spend({
-        "sourceTXID": inp.source_txid,
-        "sourceOutputIndex": 0,
-        "sourceSatoshis": 1000,
-        "lockingScript": source_tx.outputs[0].locking_script,
-        "transactionVersion": tx.version,
-        "otherInputs": [],
-        "outputs": tx.outputs,
-        "inputIndex": 0,
-        "unlockingScript": inp.unlocking_script,
-        "inputSequence": inp.sequence,
-        "lockTime": tx.locktime,
-    })
+    spend = Spend(
+        {
+            "sourceTXID": inp.source_txid,
+            "sourceOutputIndex": 0,
+            "sourceSatoshis": 1000,
+            "lockingScript": source_tx.outputs[0].locking_script,
+            "transactionVersion": tx.version,
+            "otherInputs": [],
+            "outputs": tx.outputs,
+            "inputIndex": 0,
+            "unlockingScript": inp.unlocking_script,
+            "inputSequence": inp.sequence,
+            "lockTime": tx.locktime,
+        }
+    )
     assert spend.validate()
 
 

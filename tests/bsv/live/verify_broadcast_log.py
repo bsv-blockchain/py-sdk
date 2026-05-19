@@ -35,12 +35,8 @@ ARC_API_MAINNET_GP = "https://arc.gorillapool.io"
 
 Network = Literal["testnet", "mainnet"]
 
-_EXPLORER_TESTNET_TX = re.compile(
-    r"https://test\.whatsonchain\.com/tx/([a-fA-F0-9]{64})\b"
-)
-_EXPLORER_MAINNET_TX = re.compile(
-    r"https://(?<!test\.)whatsonchain\.com/tx/([a-fA-F0-9]{64})\b"
-)
+_EXPLORER_TESTNET_TX = re.compile(r"https://test\.whatsonchain\.com/tx/([a-fA-F0-9]{64})\b")
+_EXPLORER_MAINNET_TX = re.compile(r"https://(?<!test\.)whatsonchain\.com/tx/([a-fA-F0-9]{64})\b")
 _SUCCESS_TXID = re.compile(r"status=success txid=([a-fA-F0-9]{64})\b")
 _RAWTX_LINE = re.compile(r"\[rawTx hex (\w+)\]\s*([0-9a-fA-F]+)")
 
@@ -181,9 +177,7 @@ def _warn_rawtx_consistency(text: str, known: dict[str, Network]) -> list[str]:
             warnings.append(f"rawTx decode failed ({m.group(1)}): {e}")
             continue
         if tid not in known:
-            warnings.append(
-                f"rawTx ({m.group(1)}) txid {tid} not among parsed explorer/success txids"
-            )
+            warnings.append(f"rawTx ({m.group(1)}) txid {tid} not among parsed explorer/success txids")
     return warnings
 
 

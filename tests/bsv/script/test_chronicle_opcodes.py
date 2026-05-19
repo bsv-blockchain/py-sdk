@@ -7,10 +7,10 @@ from bsv.script.spend import Spend
 
 from .conftest import make_spend
 
-
 # ============================================================
 # OP_VER tests
 # ============================================================
+
 
 class TestOpVer:
     def test_not_disabled(self):
@@ -36,6 +36,7 @@ class TestOpVer:
 # ============================================================
 # OP_VERIF tests
 # ============================================================
+
 
 class TestOpVerif:
     def test_not_disabled(self):
@@ -74,6 +75,7 @@ class TestOpVerif:
 # OP_VERNOTIF tests
 # ============================================================
 
+
 class TestOpVernotif:
     def test_not_disabled(self):
         assert not Spend.is_op_disabled(OpCode.OP_VERNOTIF)
@@ -92,6 +94,7 @@ class TestOpVernotif:
 # ============================================================
 # OP_2MUL tests
 # ============================================================
+
 
 class TestOp2Mul:
     def test_not_disabled(self):
@@ -113,6 +116,7 @@ class TestOp2Mul:
 # ============================================================
 # OP_2DIV tests
 # ============================================================
+
 
 class TestOp2Div:
     def test_not_disabled(self):
@@ -138,6 +142,7 @@ class TestOp2Div:
 # ============================================================
 # OP_SUBSTR tests
 # ============================================================
+
 
 class TestOpSubstr:
     def test_basic(self):
@@ -179,6 +184,7 @@ class TestOpSubstr:
 # OP_LEFT tests
 # ============================================================
 
+
 class TestOpLeft:
     def test_basic(self):
         spend = make_spend(
@@ -204,6 +210,7 @@ class TestOpLeft:
 # ============================================================
 # OP_RIGHT tests
 # ============================================================
+
 
 class TestOpRight:
     def test_basic(self):
@@ -242,6 +249,7 @@ class TestOpRight:
 # OP_LSHIFTNUM tests
 # ============================================================
 
+
 class TestOpLshiftnum:
     def test_basic(self):
         spend = make_spend("OP_3 OP_LSHIFTNUM OP_8 OP_EQUALVERIFY OP_TRUE", "OP_1")
@@ -264,6 +272,7 @@ class TestOpLshiftnum:
 # ============================================================
 # OP_RSHIFTNUM tests
 # ============================================================
+
 
 class TestOpRshiftnum:
     def test_basic(self):

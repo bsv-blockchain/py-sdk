@@ -138,10 +138,7 @@ def _live_arc_api_key_for_network(network_label: str) -> str | None:
     backend = os.environ.get("LIVE_ARC_BACKEND", "taal").strip().lower()
     if backend in ("gorillapool", "gorilla", "gp"):
         return os.environ.get("GORILLAPOOL_ARC_API_KEY", "").strip() or None
-    raw = (
-        os.environ.get("ARC_API_KEY", "").strip()
-        or os.environ.get("TAAL_API_KEY", "").strip()
-    )
+    raw = os.environ.get("ARC_API_KEY", "").strip() or os.environ.get("TAAL_API_KEY", "").strip()
     if raw:
         return raw
     if nl == "mainnet":
@@ -491,10 +488,7 @@ async def _recover_arc_double_spend_if_visible_on_woc(
             )
         reason, ok = await woc_tx_observable_via_get(session, woc, tid)
         if ok and reason:
-            print(
-                f"\n  [ARC tx] DOUBLE_SPEND_ATTEMPTED from ARC, but WoC sees tx ({reason}) — "
-                "treating as success"
-            )
+            print(f"\n  [ARC tx] DOUBLE_SPEND_ATTEMPTED from ARC, but WoC sees tx ({reason}) — " "treating as success")
             return BroadcastResponse(
                 status="success",
                 txid=tid,
@@ -977,9 +971,7 @@ class UTXOManager:
         woc_fb = live_arc_seen_woc_fallback_enabled()
         if require_arc_seen_on_network:
             if woc_fb:
-                wait_desc = (
-                    "polling ARC for SEEN_ON_NETWORK or MINED; WoC POST /tx/raw if already in mempool"
-                )
+                wait_desc = "polling ARC for SEEN_ON_NETWORK or MINED; WoC POST /tx/raw if already in mempool"
             else:
                 wait_desc = (
                     "polling ARC only until SEEN_ON_NETWORK or MINED "
@@ -1073,8 +1065,7 @@ class UTXOManager:
                 removed += 1
         if removed:
             print(
-                f"\n  [UTXO pool] dropped {removed} stale entr(y/ies) not in WoC unspent for "
-                f"{self.key.address()}"
+                f"\n  [UTXO pool] dropped {removed} stale entr(y/ies) not in WoC unspent for " f"{self.key.address()}"
             )
             self.utxos = kept
             self._save_pool()
@@ -1407,23 +1398,16 @@ class UTXOManager:
 
         broadcast_ordinal = self.broadcast_count + 1
         n_in, n_out = len(tx.inputs), len(tx.outputs)
-        print(
-            f"\n  [Broadcast #{broadcast_ordinal}] kind=tx txs_in_broadcast=1 "
-            f"inputs={n_in} outputs={n_out}"
-        )
+        print(f"\n  [Broadcast #{broadcast_ordinal}] kind=tx txs_in_broadcast=1 " f"inputs={n_in} outputs={n_out}")
 
         bc = _arc_with_broadcast_test_tx_headers(broadcaster or self.broadcaster)
         result = await _broadcast_with_transient_retries(bc, tx, label="ARC tx")
-        result = await _recover_arc_double_spend_if_visible_on_woc(
-            self.woc_api_base, bc, tx, result
-        )
+        result = await _recover_arc_double_spend_if_visible_on_woc(self.woc_api_base, bc, tx, result)
         _print_live_broadcast_result(bc, result, kind="tx")
         _print_live_tx_raw_hex(tx, kind="tx")
         arc_visibility: str | None = None
         try:
-            arc_visibility = await self._ensure_arc_seen_on_network(
-                bc, result, kind="tx", raw_tx_hex=tx.hex()
-            )
+            arc_visibility = await self._ensure_arc_seen_on_network(bc, result, kind="tx", raw_tx_hex=tx.hex())
         except Exception as exc:
             self.broadcast_count += 1
             self._append_broadcast_ledger_row(
@@ -1446,9 +1430,7 @@ class UTXOManager:
             try:
                 from .arc_verify import check_woc_visibility
 
-                visible, method, elapsed, woc_http_detail = await check_woc_visibility(
-                    self.woc_api_base, txid
-                )
+                visible, method, elapsed, woc_http_detail = await check_woc_visibility(self.woc_api_base, txid)
                 if visible:
                     print(f"  [WoC visibility] observable=yes (via {method} after {elapsed:.1f}s)")
                 else:

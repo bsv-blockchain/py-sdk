@@ -88,9 +88,7 @@ async def wait_until_arc_tx_mined(
 
             await asyncio.sleep(poll_interval)
 
-    raise RuntimeError(
-        f"ARC tx {txid} not MINED within {timeout_sec}s (last ARC base {arc_base_url})"
-    )
+    raise RuntimeError(f"ARC tx {txid} not MINED within {timeout_sec}s (last ARC base {arc_base_url})")
 
 
 def _woc_flatten_http_body_text(text: str) -> str:
@@ -325,11 +323,7 @@ async def wait_until_arc_tx_seen_on_network(
                         msg = f"{msg}: {extra}"
                     raise RuntimeError(f"ARC tx {txid} failed: {msg}")
 
-            announced = (
-                status == 200
-                and payload is not None
-                and tx_status == "ANNOUNCED_TO_NETWORK"
-            )
+            announced = status == 200 and payload is not None and tx_status == "ANNOUNCED_TO_NETWORK"
             if announced:
                 woc_hit = await _woc_probes_with_backoff_when_announced(
                     session,
@@ -431,8 +425,7 @@ async def wait_until_live_tx_confirmed(
             await asyncio.sleep(poll_interval)
 
     raise RuntimeError(
-        f"Tx {txid} not confirmed (ARC MINED or WoC confirmations>={min_woc_confirmations}) "
-        f"within {timeout_sec}s"
+        f"Tx {txid} not confirmed (ARC MINED or WoC confirmations>={min_woc_confirmations}) " f"within {timeout_sec}s"
     )
 
 

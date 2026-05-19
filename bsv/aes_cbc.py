@@ -23,8 +23,12 @@ def strip_pkcs7_padding(message: bytes) -> bytes:
 
 
 def aes_encrypt_with_iv(key: bytes, iv: bytes, message: bytes) -> bytes:
-    return AES.new(key, AES.MODE_CBC, iv).encrypt(append_pkcs7_padding(message))  # NOSONAR - CBC required for Electrum ECIES (BIE1) cross-SDK compatibility; caller applies HMAC-SHA256
+    return AES.new(key, AES.MODE_CBC, iv).encrypt(
+        append_pkcs7_padding(message)
+    )  # NOSONAR - CBC required for Electrum ECIES (BIE1) cross-SDK compatibility; caller applies HMAC-SHA256
 
 
 def aes_decrypt_with_iv(key: bytes, iv: bytes, message: bytes) -> bytes:
-    return strip_pkcs7_padding(AES.new(key, AES.MODE_CBC, iv).decrypt(message))  # NOSONAR - CBC required for Electrum ECIES (BIE1) cross-SDK compatibility; caller verifies HMAC-SHA256
+    return strip_pkcs7_padding(
+        AES.new(key, AES.MODE_CBC, iv).decrypt(message)
+    )  # NOSONAR - CBC required for Electrum ECIES (BIE1) cross-SDK compatibility; caller verifies HMAC-SHA256

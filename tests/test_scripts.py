@@ -18,12 +18,8 @@ def _create_spend_validator(tx, source_tx, input_index=0, other_inputs=None):
         {
             "sourceTXID": tx.inputs[input_index].source_txid,
             "sourceOutputIndex": tx.inputs[input_index].source_output_index,
-            "sourceSatoshis": source_tx.outputs[
-                tx.inputs[input_index].source_output_index
-            ].satoshis,
-            "lockingScript": source_tx.outputs[
-                tx.inputs[input_index].source_output_index
-            ].locking_script,
+            "sourceSatoshis": source_tx.outputs[tx.inputs[input_index].source_output_index].satoshis,
+            "lockingScript": source_tx.outputs[tx.inputs[input_index].source_output_index].locking_script,
             "transactionVersion": tx.version,
             "otherInputs": other_inputs,
             "inputIndex": input_index,
@@ -57,9 +53,7 @@ def test_p2pkh():
     assert P2PKH().lock(address) == Script(locking_script)
     assert P2PKH().lock(address_to_public_key_hash(address)) == Script(locking_script)
 
-    with pytest.raises(
-        TypeError, match=r"unsupported type to parse P2PKH locking script"
-    ):
+    with pytest.raises(TypeError, match=r"unsupported type to parse P2PKH locking script"):
         # noinspection PyTypeChecker
         P2PKH().lock(1)
 
@@ -68,9 +62,7 @@ def test_p2pkh():
     assert P2PKH().unlock(key_compressed).estimated_unlocking_byte_length() == 107
     assert P2PKH().unlock(key_uncompressed).estimated_unlocking_byte_length() == 139
 
-    source_tx = Transaction(
-        [], [TransactionOutput(locking_script=Script(locking_script), satoshis=1000)]
-    )
+    source_tx = Transaction([], [TransactionOutput(locking_script=Script(locking_script), satoshis=1000)])
     tx = Transaction(
         [
             TransactionInput(
@@ -97,13 +89,9 @@ def test_op_return():
     assert OpReturn().lock(["0" * 0x4B]) == Script("006a" + "4b" + "30" * 0x4B)
     assert OpReturn().lock(["0" * 0x4C]) == Script("006a" + "4c4c" + "30" * 0x4C)
     assert OpReturn().lock(["0" * 0x0100]) == Script("006a" + "4d0001" + "30" * 0x0100)
-    assert OpReturn().lock([b"\x31\x32", "345"]) == Script(
-        "006a" + "023132" + "03333435"
-    )
+    assert OpReturn().lock([b"\x31\x32", "345"]) == Script("006a" + "023132" + "03333435")
 
-    with pytest.raises(
-        TypeError, match=r"unsupported type to parse OP_RETURN locking script"
-    ):
+    with pytest.raises(TypeError, match=r"unsupported type to parse OP_RETURN locking script"):
         # noinspection PyTypeChecker
         OpReturn().lock([1])
 
@@ -161,19 +149,13 @@ def test_p2pk():
     public_key = private_key.public_key()
     assert P2PK().lock(public_key.hex()) == P2PK().lock(public_key.serialize())
 
-    with pytest.raises(
-        TypeError, match=r"unsupported type to parse P2PK locking script"
-    ):
+    with pytest.raises(TypeError, match=r"unsupported type to parse P2PK locking script"):
         # noinspection PyTypeChecker
         P2PK().lock(1)
 
     source_tx = Transaction(
         [],
-        [
-            TransactionOutput(
-                locking_script=P2PK().lock(public_key.hex()), satoshis=1000
-            )
-        ],
+        [TransactionOutput(locking_script=P2PK().lock(public_key.hex()), satoshis=1000)],
     )
     tx = Transaction(
         [
@@ -183,11 +165,7 @@ def test_p2pk():
                 unlocking_script_template=P2PK().unlock(private_key),
             )
         ],
-        [
-            TransactionOutput(
-                locking_script=P2PKH().lock(public_key.address()), change=True
-            )
-        ],
+        [TransactionOutput(locking_script=P2PKH().lock(public_key.address()), change=True)],
     )
 
     tx.fee()
@@ -206,16 +184,9 @@ def test_bare_multisig():
         privs[1].public_key().serialize(),
         privs[2].public_key().serialize(),
     ]
-    encoded_pks = b"".join(
-        [
-            encode_pushdata(pk if isinstance(pk, bytes) else bytes.fromhex(pk))
-            for pk in pubs
-        ]
-    )
+    encoded_pks = b"".join([encode_pushdata(pk if isinstance(pk, bytes) else bytes.fromhex(pk)) for pk in pubs])
 
-    expected_locking = (
-        encode_int(2) + encoded_pks + encode_int(3) + OpCode.OP_CHECKMULTISIG
-    )
+    expected_locking = encode_int(2) + encoded_pks + encode_int(3) + OpCode.OP_CHECKMULTISIG
     assert BareMultisig().lock(pubs, 2).serialize() == expected_locking
 
     source_tx = Transaction(
@@ -264,9 +235,7 @@ def test_to_asm():
 
 
 def test_from_asm():
-    assert (
-        Script.from_asm("OP_0 3 010203 OP_0").to_asm() == "OP_FALSE 03 010203 OP_FALSE"
-    )
+    assert Script.from_asm("OP_0 3 010203 OP_0").to_asm() == "OP_FALSE 03 010203 OP_FALSE"
 
     asms = [
         "",
@@ -304,9 +273,7 @@ def _asm_pushdata(byte_length: int):
 
 def test_find_and_delete():
     source = Script.from_asm("OP_RETURN f0f0")
-    assert (
-        Script.find_and_delete(source, Script.from_asm("f0f0")).to_asm() == "OP_RETURN"
-    )
+    assert Script.find_and_delete(source, Script.from_asm("f0f0")).to_asm() == "OP_RETURN"
 
 
 def test_r_puzzle():
@@ -324,9 +291,7 @@ def test_r_puzzle():
         [],
         [
             TransactionOutput(locking_script=RPuzzle().lock(r_bytes), satoshis=100),
-            TransactionOutput(
-                locking_script=P2PKH().lock(private_key.address()), change=True
-            ),
+            TransactionOutput(locking_script=P2PKH().lock(private_key.address()), change=True),
         ],
     )
 
@@ -342,11 +307,7 @@ def test_r_puzzle():
                 unlocking_script_template=RPuzzle().unlock(k),
             )
         ],
-        [
-            TransactionOutput(
-                locking_script=P2PKH().lock(private_key.address()), change=True
-            )
-        ],
+        [TransactionOutput(locking_script=P2PKH().lock(private_key.address()), change=True)],
     )
 
     tx.fee()
@@ -362,9 +323,7 @@ def test_p2pkh_sighash_acp():
     source_tx = Transaction(
         [],
         [
-            TransactionOutput(
-                locking_script=P2PKH().lock(key.address()), satoshis=1000
-            ),
+            TransactionOutput(locking_script=P2PKH().lock(key.address()), satoshis=1000),
             TransactionOutput(locking_script=P2PKH().lock(key.address()), satoshis=245),
         ],
     )

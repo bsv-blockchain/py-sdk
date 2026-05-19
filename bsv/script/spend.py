@@ -784,7 +784,7 @@ class Spend:
                     self.script_evaluation_error("OP_SUBSTR: length is negative.")
                 if start < 0 or start + length > len(data):
                     self.script_evaluation_error("OP_SUBSTR: specified range exceeds source string.")
-                self.stack.append(data[start:start + length])
+                self.stack.append(data[start : start + length])
 
             elif current_opcode == OpCode.OP_LEFT:
                 if len(self.stack) < 2:
@@ -802,7 +802,7 @@ class Spend:
                 data = self.stack.pop()
                 if length < 0 or length > len(data):
                     self.script_evaluation_error("OP_RIGHT: length out of range.")
-                self.stack.append(data[len(data) - length:])
+                self.stack.append(data[len(data) - length :])
 
             elif current_opcode == OpCode.OP_NUM2BIN:
                 if len(self.stack) < 2:

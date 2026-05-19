@@ -13,10 +13,10 @@ from bsv.transaction_output import TransactionOutput
 
 from .conftest import make_spend
 
-
 # ============================================================
 # Regression tests
 # ============================================================
+
 
 class TestOpVerEncoding:
     def test_4byte_le_not_script_number(self):
@@ -57,6 +57,7 @@ class TestLeftRightCatComposition:
 # Valid NOPs still work
 # ============================================================
 
+
 class TestValidNopsStillWork:
     def test_nop1(self):
         spend = make_spend("OP_NOP1 OP_TRUE")
@@ -83,6 +84,7 @@ class TestValidNopsStillWork:
 # Version 1 preserves all pre-Chronicle restrictions
 # ============================================================
 
+
 class TestVersion1PreservesRestrictions:
     def test_v1_rejects_dirty_stack(self):
         spend = make_spend("OP_TRUE", "OP_1 OP_2", tx_version=1)
@@ -106,6 +108,7 @@ class TestVersion1PreservesRestrictions:
 # ============================================================
 # Version 2 with Chronicle opcodes + relaxed rules
 # ============================================================
+
 
 class TestVersion2Integration:
     def test_v2_op_ver_with_verif(self):
@@ -141,6 +144,7 @@ class TestVersion2Integration:
 # Large number tests
 # ============================================================
 
+
 class TestLargeNumbers:
     def test_large_multiply(self):
         """Large script numbers work with OP_MUL."""
@@ -163,17 +167,20 @@ class TestLargeNumbers:
 # Mixed sighash tests (review 9.4.2.2)
 # ============================================================
 
+
 class TestMixedSighash:
     """Mix BIP143 and OTDA inputs within a single transaction."""
 
     def _build_funding_tx(self, locking_script, satoshis=10_000):
         return Transaction(
-            tx_inputs=[TransactionInput(
-                source_txid="00" * 32,
-                source_output_index=0,
-                unlocking_script=Script(),
-                sequence=0xFFFFFFFF,
-            )],
+            tx_inputs=[
+                TransactionInput(
+                    source_txid="00" * 32,
+                    source_output_index=0,
+                    unlocking_script=Script(),
+                    sequence=0xFFFFFFFF,
+                )
+            ],
             tx_outputs=[TransactionOutput(locking_script=locking_script, satoshis=satoshis)],
             version=1,
         )
@@ -211,12 +218,14 @@ class TestMixedSighash:
 
         # Validate both inputs via Spend
         from tests.bsv.live.conftest import validate_all_inputs
+
         validate_all_inputs(tx)
 
 
 # ============================================================
 # OP_CODESEPARATOR interaction tests (review 9.4.2.3)
 # ============================================================
+
 
 class TestCodeSeparatorWithChronicle:
     """Chronicle opcodes after OP_CODESEPARATOR."""
@@ -252,6 +261,7 @@ class TestCodeSeparatorWithChronicle:
 # ============================================================
 # Chronicle opcodes in unlocking scripts (review 9.4.2.4)
 # ============================================================
+
 
 class TestChronicleOpcodesInUnlocking:
     """v2 tx: Chronicle-specific opcodes execute in unlocking scripts."""
