@@ -38,7 +38,9 @@ Network = Literal["testnet", "mainnet"]
 _EXPLORER_TESTNET_TX = re.compile(
     r"https://test\.whatsonchain\.com/tx/([a-fA-F0-9]{64})\b"
 )
-_EXPLORER_MAINNET_TX = re.compile(r"https://whatsonchain\.com/tx/([a-fA-F0-9]{64})\b")
+_EXPLORER_MAINNET_TX = re.compile(
+    r"https://(?<!test\.)whatsonchain\.com/tx/([a-fA-F0-9]{64})\b"
+)
 _SUCCESS_TXID = re.compile(r"status=success txid=([a-fA-F0-9]{64})\b")
 _RAWTX_LINE = re.compile(r"\[rawTx hex (\w+)\]\s*([0-9a-fA-F]+)")
 
@@ -74,8 +76,6 @@ def parse_broadcast_log(
         for m in _EXPLORER_TESTNET_TX.finditer(line):
             by_tx[m.group(1).lower()] = "testnet"
         for m in _EXPLORER_MAINNET_TX.finditer(line):
-            if "test.whatsonchain.com" in line:
-                continue
             by_tx[m.group(1).lower()] = "mainnet"
     for line in text.splitlines():
         if "MockBroadcaster" in line:
