@@ -1,4 +1,3 @@
-import asyncio
 import math
 
 from bsv import (
@@ -75,7 +74,7 @@ class ExampleFeeModel(FeeModel):
         return fee
 
 
-async def main():
+def main():
     # Example usage of out custom broadcaster:
     private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
     public_key = private_key.public_key()
@@ -114,4 +113,4 @@ async def main():
     print("Change amount:", tx.outputs[1].satoshis)
 
 
-asyncio.run(main())
+main()
