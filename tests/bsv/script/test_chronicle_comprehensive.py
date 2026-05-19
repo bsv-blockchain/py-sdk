@@ -2,7 +2,7 @@
 
 import pytest
 
-from bsv.constants import OpCode, SIGHASH
+from bsv.constants import SIGHASH, OpCode
 from bsv.keys import PrivateKey
 from bsv.script.script import Script
 from bsv.script.spend import Spend

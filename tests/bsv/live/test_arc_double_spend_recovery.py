@@ -5,8 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from bsv.broadcasters.arc import ARC, ARCConfig
-from bsv.broadcasters.broadcaster import BroadcastFailure, BroadcastResponse, Broadcaster
-
+from bsv.broadcasters.broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
 from tests.bsv.live.conftest import _recover_arc_double_spend_if_visible_on_woc
 
 

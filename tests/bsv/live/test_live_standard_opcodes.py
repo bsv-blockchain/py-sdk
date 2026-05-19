@@ -520,10 +520,11 @@ class TestFlowControl:
         p2pkh = P2PKH()
         lock = p2pkh.lock(priv_key.address())
         unlock = p2pkh.unlock(priv_key)
-        from .conftest import build_funding_tx, validate_all_inputs
         from bsv.transaction import Transaction
         from bsv.transaction_input import TransactionInput
         from bsv.transaction_output import TransactionOutput
+
+        from .conftest import build_funding_tx, validate_all_inputs
 
         funding_tx = build_funding_tx(lock, satoshis=10_000)
         inp = TransactionInput(

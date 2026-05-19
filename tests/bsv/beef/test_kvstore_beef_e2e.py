@@ -43,7 +43,7 @@ def _patch_woc_dependencies(monkeypatch):
         def get(self, url, timeout=None):
             return _FakeWOCResponse({"data": {"merkleroot": fake_root}})
 
-    monkeypatch.setattr("bsv.http_client.default_sync_http_client", lambda: FakeClient())
+    monkeypatch.setattr("bsv.http_client.default_sync_http_client", FakeClient)
 
     class DummyTracker:
         def __init__(self, network="main"):

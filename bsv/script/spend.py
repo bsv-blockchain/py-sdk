@@ -508,12 +508,11 @@ class Spend:
                     self.script_evaluation_error(f"{_codename}: shift amount must be non-negative.")
                 if current_opcode == OpCode.OP_LSHIFTNUM:
                     result = value << shift
+                # Right shift preserving sign: negate, shift, negate
+                elif value < 0:
+                    result = -((-value) >> shift)
                 else:
-                    # Right shift preserving sign: negate, shift, negate
-                    if value < 0:
-                        result = -((-value) >> shift)
-                    else:
-                        result = value >> shift
+                    result = value >> shift
                 self.stack.append(self.minimally_encode(result))
 
             elif current_opcode in [

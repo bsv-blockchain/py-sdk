@@ -12,10 +12,10 @@ from bsv.script.script import Script
 from bsv.utils import encode_pushdata
 
 from .conftest import (
+    MockBroadcaster,
     build_signed_tx,
     custom_unlock,
     p2pkh_lock_with_prefix,
-    MockBroadcaster,
 )
 
 # Test each opcode with both BIP143 (FORKID v1) and OTDA (FORKID+CHRONICLE v2)

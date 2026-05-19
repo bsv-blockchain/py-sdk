@@ -15,7 +15,7 @@ from .bip276 import (
     encode_template,
 )
 from .script import Script, ScriptChunk
-from .type import P2PK, P2PKH, BareMultisig, OpReturn, OpCat, ScriptTemplate, Unknown, to_unlock_script_template
+from .type import P2PK, P2PKH, BareMultisig, OpCat, OpReturn, ScriptTemplate, Unknown, to_unlock_script_template
 from .unlocking_template import UnlockingScriptTemplate
 
 

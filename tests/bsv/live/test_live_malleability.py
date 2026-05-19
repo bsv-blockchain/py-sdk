@@ -7,7 +7,7 @@ is properly controlled by transaction version.
 
 import pytest
 
-from bsv.constants import SIGHASH, OpCode
+from bsv.constants import NUMBER_BYTE_LENGTH, SIGHASH, OpCode
 from bsv.curve import curve
 from bsv.hash import hash160
 from bsv.keys import PrivateKey
@@ -17,8 +17,7 @@ from bsv.script.type import P2PKH, BareMultisig, to_unlock_script_template
 from bsv.transaction import Transaction
 from bsv.transaction_input import TransactionInput
 from bsv.transaction_output import TransactionOutput
-from bsv.constants import NUMBER_BYTE_LENGTH
-from bsv.utils import encode_pushdata, deserialize_ecdsa_der
+from bsv.utils import deserialize_ecdsa_der, encode_pushdata
 
 from .conftest import (
     build_funding_tx,

@@ -1,8 +1,8 @@
 import pytest
 
 from bsv.constants import OpCode
-from bsv.script.spend import Spend
 from bsv.script.script import Script
+from bsv.script.spend import Spend
 from bsv.script.type import OpCat
 from bsv.transaction import Transaction, TransactionInput, TransactionOutput
 from bsv.utils import encode_pushdata

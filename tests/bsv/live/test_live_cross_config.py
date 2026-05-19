@@ -15,7 +15,7 @@ from bsv.constants import SIGHASH, OpCode
 from bsv.hash import hash160
 from bsv.keys import PrivateKey
 from bsv.script.script import Script
-from bsv.script.type import P2PKH, P2PK, BareMultisig, to_unlock_script_template
+from bsv.script.type import P2PK, P2PKH, BareMultisig, to_unlock_script_template
 from bsv.transaction import Transaction
 from bsv.transaction_input import TransactionInput
 from bsv.transaction_output import TransactionOutput
@@ -272,7 +272,7 @@ class TestMixedInputSources:
     """Single tx spending inputs from different-versioned source txs."""
 
     @staticmethod
-    def _build_mixed_source_tx(priv_key, source_configs, spending_version):
+    def _build_mixed_source_tx(priv_key, source_configs, spending_version) -> None:
         """Build a tx with inputs from different-versioned funding txs.
 
         Args:

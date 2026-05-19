@@ -19,6 +19,7 @@ import os
 import re
 import sys
 import time
+from pathlib import Path
 from typing import Literal
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -228,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
     here = os.path.dirname(os.path.abspath(__file__))
     default_log = os.path.join(here, ".artifacts", "last_run.log")
     path = args.log_file or default_log
-    if not os.path.isfile(path):
+    if not Path(path).is_file():
         print(f"error: log file not found: {path}", file=sys.stderr)
         return 2
 

@@ -8,9 +8,9 @@ import pytest
 
 from bsv.constants import SIGHASH
 from bsv.keys import PrivateKey
-from bsv.script.type import P2PKH, P2PK, BareMultisig
+from bsv.script.type import P2PK, P2PKH, BareMultisig
 
-from .conftest import build_signed_tx, MockBroadcaster
+from .conftest import MockBroadcaster, build_signed_tx
 
 # ---------------------------------------------------------------------------
 # Sighash flag sets

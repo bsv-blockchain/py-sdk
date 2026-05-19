@@ -9,7 +9,7 @@ import aiohttp
 import pytest
 
 from bsv.broadcasters import default_broadcaster
-from bsv.broadcasters.broadcaster import BroadcastFailure, BroadcastResponse, Broadcaster
+from bsv.broadcasters.broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
 from bsv.chaintracker import ChainTracker
 from bsv.constants import SIGHASH, OpCode
 from bsv.fee_models import SatoshisPerKilobyte
@@ -431,7 +431,7 @@ async def _broadcast_with_transient_retries(
             return last
         delay = min(base_delay * (2**attempt), 30.0)
         hint = (getattr(last, "description", None) or "")[:90]
-        if len((getattr(last, "description", None) or "")) > 90:
+        if len(getattr(last, "description", None) or "") > 90:
             hint += "…"
         print(f"\n  [{label}] transient network error ({hint}); retry {attempt + 2}/{max_r} in {delay:.1f}s")
         await asyncio.sleep(delay)

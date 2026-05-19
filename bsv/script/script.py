@@ -64,7 +64,7 @@ class Script:
         else:
             raise TypeError("unsupported script type")
         # An array of script chunks that make up the script.
-        self.chunks: List[ScriptChunk] = []
+        self.chunks: list[ScriptChunk] = []
         self._build_chunks()
 
     @property
@@ -173,7 +173,7 @@ class Script:
         return self.__str__()
 
     @classmethod
-    def from_chunks(cls, chunks: List[ScriptChunk]) -> "Script":
+    def from_chunks(cls, chunks: list[ScriptChunk]) -> "Script":
         script = b""
         for chunk in chunks:
             script += encode_pushdata(chunk.data) if chunk.data is not None else chunk.op

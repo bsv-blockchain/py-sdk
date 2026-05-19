@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 if TYPE_CHECKING:
     from ..transaction import Transaction
 
-from .broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
 from ..http_client import HttpClient, SyncHttpClient, default_http_client, default_sync_http_client
+from .broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
 
 
 def to_hex(bytes_data):
@@ -96,7 +96,7 @@ def _arc_broadcast_failure_description(response_json: Any) -> str:
     return _arc_extract_http_error_detail(inner)
 
 
-def arc_post_data_indicates_failure(data: Dict[str, Any]) -> Optional[str]:
+def arc_post_data_indicates_failure(data: dict[str, Any]) -> Optional[str]:
     """If ARC POST `data` means the transaction failed, return a description; else None.
 
     Missing or unknown txStatus is treated as acceptable (backward compatible).

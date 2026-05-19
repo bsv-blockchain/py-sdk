@@ -54,7 +54,7 @@ def serialize_sign_action_args(args: dict[str, Any]) -> bytes:
 def _serialize_spends(w: Writer, spends: dict[str, dict[str, Any]]):
     """Serialize spends map."""
     w.write_varint(len(spends))
-    for key in sorted(spends.keys(), key=lambda x: int(x)):
+    for key in sorted(spends.keys(), key=int):
         spend = spends[key]
         w.write_varint(int(key))
         w.write_int_bytes(spend.get("unlockingScript", b""))

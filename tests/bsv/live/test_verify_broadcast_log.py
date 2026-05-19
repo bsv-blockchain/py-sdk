@@ -1,7 +1,7 @@
 """Unit tests for :mod:`verify_broadcast_log` log parsing (no network)."""
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 _LIVE_DIR = Path(__file__).resolve().parent
 if str(_LIVE_DIR) not in sys.path:

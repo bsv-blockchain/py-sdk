@@ -498,7 +498,7 @@ class PushDrop:
 
         return types.SimpleNamespace(
             sign=_sign_only_sig,
-            estimateLength=lambda: unlocker.estimate_length(),
+            estimateLength=unlocker.estimate_length,
         )
 
 
