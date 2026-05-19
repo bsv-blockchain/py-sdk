@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.1.1 - 2026-05-19](#211---2026-05-19)
 - [2.1.0 - 2026-04-07](#210---2026-04-07)
 - [2.0.0b1 - 2026-01-20](#200b1---2026-01-20)
 - [1.0.11 - 2025-11-23](#1011---2025-11-23)
@@ -25,6 +26,34 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [2.1.1] - 2026-05-19
+
+### Added
+
+- Python 3.13 support — verified full test suite (5,089 tests) on Python 3.13.7
+
+### Changed
+
+- Updated all dependencies to latest stable versions:
+  - `coincurve` 20.0.0 → 21.0.0
+  - `pycryptodomex` 3.21.0 → 3.23.0
+  - `aiohttp` 3.12.14 → 3.13.5
+  - `requests` 2.32.3 → 2.34.2
+  - `pytest` 8.3.4 → 8.4.2
+  - `pytest-asyncio` 0.24.0 → 1.3.0
+  - `pytest-cov` 6.0.0 → 7.1.0
+  - `cryptography` 42.0.0 → 48.0.0
+  - `black` 24.1.0 → 26.5.1
+  - `ruff` 0.1.0 → 0.15.13
+  - `setuptools` 78.1.1 → 82.0.1
+
+### Fixed
+
+- Added missing `typing_extensions` to `install_requires` (was required at runtime but not declared)
+- Aligned version constraints between `setup.cfg` and `requirements.txt`
 
 ---
 
