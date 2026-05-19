@@ -100,6 +100,6 @@ def seed_from_mnemonic(mnemonic: str, lang: str = "en", passphrase: str = "", pr
     hash_name = "sha512"
     password = mnemonic.encode()
     salt = (prefix + passphrase).encode()
-    iterations = 2048
+    iterations = 2048  # NOSONAR - BIP39 spec mandates exactly 2048 iterations for cross-wallet interoperability
     dklen = 64
-    return pbkdf2_hmac(hash_name, password, salt, iterations, dklen)
+    return pbkdf2_hmac(hash_name, password, salt, iterations, dklen)  # NOSONAR
