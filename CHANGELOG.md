@@ -6,7 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
-- [Unreleased](#unreleased)
+- [2.1.0 - 2026-04-07](#210---2026-04-07)
 - [2.0.0b1 - 2026-01-20](#200b1---2026-01-20)
 - [1.0.11 - 2025-11-23](#1011---2025-11-23)
 - [1.0.10 - 2025-10-30](#1010---2025-10-30)
@@ -28,6 +28,30 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.1.0] - 2026-04-07
+
+Added
+
+- **Chronicle Network Upgrade Support** — Full implementation of the Chronicle consensus changes:
+  - Restored opcodes: `OP_VER`, `OP_VERIF`, `OP_VERNOTIF`, `OP_2MUL`, `OP_2DIV`, `OP_SUBSTR`, `OP_LEFT`, `OP_RIGHT`, `OP_LSHIFTNUM`, `OP_RSHIFTNUM`
+  - `SIGHASH_CHRONICLE` flag with OTDA (Output-Transaction-Digest-Algorithm) preimage support
+  - `MAX_SCRIPT_NUMBER_LENGTH` increased from 750 KB to 32 MB (network-wide at activation)
+  - Malleability relaxation for transaction version > 1 (clean-stack, push-only, etc.)
+  - `SIGHASH.use_otda()` static method for consolidated BIP143/OTDA routing
+- Comprehensive Chronicle test suite: 250+ mock tests and 98 live testnet broadcast tests covering all 12 sighash flags, P2PKH/P2PK/Multisig, Chronicle opcodes, and cross-configuration scenarios
+
+### Changed
+
+- Graduated from beta (2.0.0b1) to stable release — no breaking changes from 2.0.0b1
+
+### Fixed
+
+- `BroadcastResponse` isinstance mismatch between old and new import paths — `bsv/broadcaster.py` now re-exports from `bsv.broadcasters.broadcaster`
+- `OP_INVERT` bug fix: corrected `~b` to `b ^ 0xFF` for proper bitwise NOT behavior
+- Removed `ecdsa` dependency (unused, had unfixed vulnerability)
+
+---
+
 ## [2.0.0b1] - 2026-01-20
 
 > **⚠️ Beta Release**
@@ -36,6 +60,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 > If you are using `bsv-wallet-toolbox` or `bsv-middleware`, please use this version.
 >
 > **Installation:**
+>
 > ```bash
 > pip install bsv-sdk==2.0.0b1
 > # or to install the latest pre-release version:
@@ -50,7 +75,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Legacy tests continue to pass but have been superseded by new comprehensive test structure
 - Test organization now follows a more modular and maintainable structure under `tests/bsv/`
 - Added extensive test coverage across all modules ensuring code quality and reliability
-  
 
 ### Added
 
@@ -78,7 +102,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Updated chain trackers with block headers service integration
 - Improved transaction handling with extended BEEF support and validation
 - Reorganized entire test suite into `tests/bsv/` structure with comprehensive coverage tests (455 files changed, 74,468+ additions)
-
 
 ---
 
@@ -321,4 +344,3 @@ Achieved a 3× performance improvement in scenarios with 250 inputs, based on be
 ### Template for New Releases
 
 Replace `X.X.X` with the new version number and `YYYY-MM-DD` with the release date:
-

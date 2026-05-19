@@ -43,6 +43,8 @@ WhatsOnChain JSON audit (Apr 2026):
   default live wait is SEEN_ON_NETWORK only; use LIVE_REQUIRE_MINED=1 for mined polling.
 """
 
+import os
+
 import pytest
 import pytest_asyncio
 
@@ -101,7 +103,9 @@ async def utxo_mgr(funded_key, testnet_broadcaster):
     global _utxo_mgr_cache
     if _utxo_mgr_cache is None:
         mgr = UTXOManager(funded_key, testnet_broadcaster)
-        await mgr.ensure_utxos(min_count=TOTAL_TEST_UTXOS, satoshis_each=3_000)
+        utxo_count = int(os.environ.get("LIVE_UTXO_COUNT", str(TOTAL_TEST_UTXOS)))
+        satoshis_each = int(os.environ.get("LIVE_UTXO_SATOSHIS", "3000"))
+        await mgr.ensure_utxos(min_count=utxo_count, satoshis_each=satoshis_each)
         _utxo_mgr_cache = mgr
     return _utxo_mgr_cache
 

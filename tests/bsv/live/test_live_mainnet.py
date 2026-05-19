@@ -39,6 +39,8 @@ WhatsOnChain JSON audit (testnet reference):
   ``https://api.whatsonchain.com/v1/bsv/main/tx/{txid}``; no bundled xfail list ships for mainnet.
 """
 
+import os
+
 import pytest
 import pytest_asyncio
 
@@ -108,7 +110,9 @@ async def utxo_mgr(funded_mainnet_key, mainnet_broadcaster):
             explorer_tx_base=WOC_EXPLORER_MAINNET_TX,
             network_label="mainnet",
         )
-        await mgr.ensure_utxos(min_count=TOTAL_TEST_UTXOS, satoshis_each=3_000)
+        utxo_count = int(os.environ.get("LIVE_UTXO_COUNT", str(TOTAL_TEST_UTXOS)))
+        satoshis_each = int(os.environ.get("LIVE_UTXO_SATOSHIS", "3000"))
+        await mgr.ensure_utxos(min_count=utxo_count, satoshis_each=satoshis_each)
         _utxo_mgr_cache = mgr
     return _utxo_mgr_cache
 
