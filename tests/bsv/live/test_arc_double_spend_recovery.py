@@ -81,7 +81,7 @@ async def test_recovery_when_woc_mempool_post_true(monkeypatch):
         txid=tid,
     )
 
-    async def _probe_true(*_a, **_k):
+    async def _probe_true(*_a, **_k):  # NOSONAR - must be async to match patched coroutine signature
         return True
 
     monkeypatch.setattr(
@@ -110,10 +110,10 @@ async def test_recovery_when_woc_get_observable(monkeypatch):
         txid=tid,
     )
 
-    async def _probe_false(*_a, **_k):
+    async def _probe_false(*_a, **_k):  # NOSONAR - must be async to match patched coroutine signature
         return False
 
-    async def _get_ok(*_a, **_k):
+    async def _get_ok(*_a, **_k):  # NOSONAR - must be async to match patched coroutine signature
         return "WOC_TX_HEX", True
 
     monkeypatch.setattr(

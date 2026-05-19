@@ -202,10 +202,10 @@ class ARC(Broadcaster):
             return BroadcastFailure(
                 status="failure",
                 code="500",
-                description=(str(error) if isinstance(error, Exception) else "Internal Server Error"),
+                description=str(error),
                 more={
-                    "exception_type": type(error).__name__ if isinstance(error, Exception) else None,
-                    "exception": str(error) if isinstance(error, Exception) else str(error),
+                    "exception_type": type(error).__name__,
+                    "exception": str(error),
                 },
             )
 
