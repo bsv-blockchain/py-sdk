@@ -266,3 +266,62 @@ class RPuzzle(ScriptTemplate):
             return 108
 
         return to_unlock_script_template(sign, estimated_unlocking_byte_length)
+
+
+class OpCat(ScriptTemplate):
+
+    def __str__(self) -> str:  # pragma: no cover
+        return "<ScriptTemplate:OpCat>"
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return self.__str__()
+
+    def lock(self, expected_data: Union[str, bytes]) -> Script:
+        """
+        Create a locking script that expects data to be concatenated to match expected_data.
+        The script will be: OP_CAT <expected_data> OP_EQUAL
+        """
+        if isinstance(expected_data, str):
+            data_bytes: bytes = expected_data.encode("utf-8")
+        elif isinstance(expected_data, bytes):
+            data_bytes: bytes = expected_data
+        else:
+            raise TypeError("unsupported type for OpCat locking script data")
+
+        return Script(
+            OpCode.OP_CAT
+            + encode_pushdata(data_bytes)
+            + OpCode.OP_EQUAL
+        )
+
+    def unlock(self, data1: Union[str, bytes], data2: Union[str, bytes]):
+        """
+        Create an unlocking script that provides two pieces of data to be concatenated.
+        The unlocking script will push data1 and data2 onto the stack.
+        """
+        if isinstance(data1, str):
+            data1_bytes: bytes = data1.encode("utf-8")
+        elif isinstance(data1, bytes):
+            data1_bytes: bytes = data1
+        else:
+            raise TypeError("unsupported type for first OpCat unlocking data")
+
+        if isinstance(data2, str):
+            data2_bytes: bytes = data2.encode("utf-8")
+        elif isinstance(data2, bytes):
+            data2_bytes: bytes = data2
+        else:
+            raise TypeError("unsupported type for second OpCat unlocking data")
+
+        def sign(tx, input_index) -> Script:
+            # For OP_CAT, we don't need signatures, just push the data
+            return Script(
+                encode_pushdata(data1_bytes)
+                + encode_pushdata(data2_bytes)
+            )
+
+        def estimated_unlocking_byte_length() -> int:
+            # Two pushdata operations plus their encoded lengths
+            return len(encode_pushdata(data1_bytes)) + len(encode_pushdata(data2_bytes))
+
+        return to_unlock_script_template(sign, estimated_unlocking_byte_length)
