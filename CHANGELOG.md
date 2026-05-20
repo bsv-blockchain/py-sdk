@@ -38,7 +38,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **Dropped Python 3.9 support** — minimum version is now Python 3.10 (required by `requests>=2.34.0`)
-- Consolidated dependency management to `pyproject.toml` as single source of truth (PEP 621); removed `setup.cfg`
+- Consolidated dependency management to `pyproject.toml` as single source of truth (PEP 621):
+  - Migrated all metadata (author, description, classifiers, URLs) from `setup.cfg` → `pyproject.toml`
+  - Migrated `[options.extras_require]` (test/dev) → `[project.optional-dependencies]`
+  - Migrated `[options.package_data]` → `[tool.setuptools.package-data]`
+  - Deleted `setup.cfg`; minimized `setup.py` to bare shim
+  - `requirements.txt` is retained for CI `pip install -r` convenience
+  - Added `uv.lock` for reproducible dependency pinning
+- Updated `target-version` from `py39` → `py310` for `black` and `ruff`
 - Updated all dependencies to latest stable versions:
   - `coincurve` 20.0.0 → 21.0.0
   - `pycryptodomex` 3.21.0 → 3.23.0
