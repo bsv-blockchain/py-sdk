@@ -33,10 +33,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Python 3.13 support — verified full test suite (5,089 tests) on Python 3.13.7
+- Python 3.13 support — verified full test suite (5,413 tests) on Python 3.13
 
 ### Changed
 
+- **Dropped Python 3.9 support** — minimum version is now Python 3.10 (required by `requests>=2.34.0`)
+- Consolidated dependency management to `pyproject.toml` as single source of truth (PEP 621); removed `setup.cfg`
 - Updated all dependencies to latest stable versions:
   - `coincurve` 20.0.0 → 21.0.0
   - `pycryptodomex` 3.21.0 → 3.23.0
@@ -52,8 +54,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Added missing `typing_extensions` to `install_requires` (was required at runtime but not declared)
-- Aligned version constraints between `setup.cfg` and `requirements.txt`
+- Added missing `typing_extensions` to dependencies (was required at runtime but not declared)
+- Fixed version mismatch: `bsv/__init__.py` was `2.0.0b1`, now correctly `2.1.1`
 
 ---
 
