@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.1.2 - 2026-05-20](#212---2026-05-20)
 - [2.1.1 - 2026-05-19](#211---2026-05-19)
 - [2.1.0 - 2026-04-07](#210---2026-04-07)
 - [2.0.0b1 - 2026-01-20](#200b1---2026-01-20)
@@ -26,6 +27,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [2.1.2] - 2026-05-20
+
+### Changed
+
+- Updated README: removed beta warning, updated Python version (3.10+), test count (5,400+), badge URLs
+- Deleted `requirements.txt` — resolves Dependabot false-positive vulnerability alerts
+- Raised `pytest` lower bound to `>=9.0.3` (CVE-2025-71176)
+- Modernized type annotations: `Union[X, Y]` → `X | Y`, `zip()` strict mode (ruff UP007, B905)
+- Updated `update_coverage.py` org URL and fixed idempotency bug
 
 ---
 
