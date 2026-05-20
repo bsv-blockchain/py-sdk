@@ -50,7 +50,7 @@ class WordList:
         return words
 
     @classmethod
-    def get_word(cls, index: Union[int, bytes], lang: str = "en") -> str:
+    def get_word(cls, index: int | bytes, lang: str = "en") -> str:
         WordList.load()
         assert lang in WordList.wordlists, f"{lang} wordlist not supported"
         if isinstance(index, bytes):
@@ -67,7 +67,7 @@ class WordList:
         raise ValueError("invalid word")
 
 
-def mnemonic_from_entropy(entropy: Union[bytes, str, None] = None, lang: str = "en") -> str:
+def mnemonic_from_entropy(entropy: bytes | str | None = None, lang: str = "en") -> str:
     if entropy:
         assert type(entropy).__name__ in ["bytes", "str"], "unsupported entropy type"
         entropy_bytes = entropy if isinstance(entropy, bytes) else bytes.fromhex(entropy)

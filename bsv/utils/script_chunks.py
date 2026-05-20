@@ -8,13 +8,13 @@ class ScriptChunk:
     data: Optional[bytes]
 
 
-def read_script_chunks(script: Union[bytes, str]) -> list[ScriptChunk]:
+def read_script_chunks(script: bytes | str) -> list[ScriptChunk]:
     """Parse script bytes into chunks of opcodes and data."""
     script_bytes = _normalize_script_input(script)
     return _parse_script_bytes(script_bytes)
 
 
-def _normalize_script_input(script: Union[bytes, str]) -> bytes:
+def _normalize_script_input(script: bytes | str) -> bytes:
     """Convert script input to bytes, handling hex strings."""
     if isinstance(script, str):
         try:

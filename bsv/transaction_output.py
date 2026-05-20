@@ -32,7 +32,7 @@ class TransactionOutput:
         return self.__str__()
 
     @classmethod
-    def from_hex(cls, stream: Union[str, bytes, Reader]) -> Optional["TransactionOutput"]:
+    def from_hex(cls, stream: str | bytes | Reader) -> Optional["TransactionOutput"]:
         """Parse a transaction output from hex string, bytes, or Reader.
 
         Returns None if data is invalid or incomplete.

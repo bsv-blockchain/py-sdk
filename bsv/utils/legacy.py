@@ -276,7 +276,7 @@ def unsigned_to_bytes(num: int, byteorder: Literal["big", "little"] = "big") -> 
     return num.to_bytes(math.ceil(num.bit_length() / 8) or 1, byteorder)
 
 
-def to_bytes(msg: Union[bytes, str, list[int]], enc: Optional[str] = None) -> bytes:
+def to_bytes(msg: bytes | str | list[int], enc: Optional[str] = None) -> bytes:
     """
     Convert various message formats into a bytes object.
 

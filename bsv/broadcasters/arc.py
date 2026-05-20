@@ -115,7 +115,7 @@ def arc_post_data_indicates_failure(data: dict[str, Any]) -> Optional[str]:
 
 
 class ARC(Broadcaster):
-    def __init__(self, url: str, config: Union[str, ARCConfig] = None):
+    def __init__(self, url: str, config: str | ARCConfig = None):
         self.URL = url
         if isinstance(config, str):
             self.api_key = config
@@ -135,7 +135,7 @@ class ARC(Broadcaster):
             self.callback_token = config.callback_token
             self.headers = config.headers
 
-    async def broadcast(self, tx: "Transaction") -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, tx: "Transaction") -> BroadcastResponse | BroadcastFailure:
         # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
         request_options = {
@@ -262,7 +262,7 @@ class ARC(Broadcaster):
             sec = 120
         return max(45, sec + 30)
 
-    def sync_broadcast(self, tx: "Transaction", timeout: int = 30) -> Union[BroadcastResponse, BroadcastFailure]:
+    def sync_broadcast(self, tx: "Transaction", timeout: int = 30) -> BroadcastResponse | BroadcastFailure:
         """
         Synchronously broadcast a transaction
 

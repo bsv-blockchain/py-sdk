@@ -24,7 +24,7 @@ from .utils import (
 
 
 class PublicKey:
-    def __init__(self, public_key: Union[str, bytes, Point, CcPublicKey]):
+    def __init__(self, public_key: str | bytes | Point | CcPublicKey):
         """
         create public key from serialized hex string or bytes, or curve point, or CoinCurve public key
         """
@@ -145,9 +145,7 @@ class PublicKey:
 
 
 class PrivateKey:
-    def __init__(
-        self, private_key: Union[str, int, bytes, CcPrivateKey, None] = None, network: Optional[Network] = None
-    ):
+    def __init__(self, private_key: str | int | bytes | CcPrivateKey | None = None, network: Optional[Network] = None):
         """
         create private key from WIF (str), or int, or bytes, or CoinCurve private key
         random a new private key if None
@@ -363,17 +361,17 @@ class PrivateKey:
         return self.__str__()
 
     @classmethod
-    def from_hex(cls, octets: Union[str, bytes]) -> "PrivateKey":
+    def from_hex(cls, octets: str | bytes) -> "PrivateKey":
         b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
         return PrivateKey(CcPrivateKey(b))
 
     @classmethod
-    def from_der(cls, octets: Union[str, bytes]) -> "PrivateKey":  # pragma: no cover
+    def from_der(cls, octets: str | bytes) -> "PrivateKey":  # pragma: no cover
         b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
         return PrivateKey(CcPrivateKey.from_der(b))
 
     @classmethod
-    def from_pem(cls, octets: Union[str, bytes]) -> "PrivateKey":  # pragma: no cover
+    def from_pem(cls, octets: str | bytes) -> "PrivateKey":  # pragma: no cover
         b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
         return PrivateKey(CcPrivateKey.from_pem(b))
 

@@ -437,7 +437,7 @@ class Transaction:
         return await broadcaster.broadcast(self)
 
     @classmethod
-    def from_hex(cls, stream: Union[str, bytes, Reader]) -> Optional["Transaction"]:
+    def from_hex(cls, stream: str | bytes | Reader) -> Optional["Transaction"]:
         """Parse a transaction from hex string, bytes, or Reader.
 
         Returns None only for invalid hex format, raises exception for parse errors.
@@ -453,7 +453,7 @@ class Transaction:
             return None
 
     @classmethod
-    def from_beef(cls, stream: Union[str, bytes, Reader]) -> "Transaction":
+    def from_beef(cls, stream: str | bytes | Reader) -> "Transaction":
         if isinstance(stream, Reader):
             reader = stream
         else:
@@ -750,7 +750,7 @@ class Transaction:
         )
 
     @classmethod
-    def parse_script_offsets(cls, octets: Union[bytes, str]) -> dict[str, list[dict[str, int]]]:
+    def parse_script_offsets(cls, octets: bytes | str) -> dict[str, list[dict[str, int]]]:
         """
         Since the validation of blockchain data is atomically transaction data validation,
         any application seeking to validate data in output scripts must store the entire transaction as well.

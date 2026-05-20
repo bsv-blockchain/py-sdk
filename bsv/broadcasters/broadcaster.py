@@ -38,15 +38,15 @@ class Broadcaster(ABC):
         self.URL = None
 
     @abstractmethod
-    async def broadcast(self, transaction: "Transaction") -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, transaction: "Transaction") -> BroadcastResponse | BroadcastFailure:
         pass
 
 
-def is_broadcast_response(r: Union[BroadcastResponse, BroadcastFailure]) -> bool:
+def is_broadcast_response(r: BroadcastResponse | BroadcastFailure) -> bool:
     return r.status == "success"
 
 
-def is_broadcast_failure(r: Union[BroadcastResponse, BroadcastFailure]) -> bool:
+def is_broadcast_failure(r: BroadcastResponse | BroadcastFailure) -> bool:
     return r.status == "error"
 
 

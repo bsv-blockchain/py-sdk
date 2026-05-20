@@ -201,7 +201,7 @@ class TopicBroadcaster:
 
         return successful_hosts, host_acknowledgments
 
-    async def broadcast(self, tx: Transaction) -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, tx: Transaction) -> BroadcastResponse | BroadcastFailure:
         """Broadcast a transaction to Overlay Services via SHIP."""
         # Convert transaction to BEEF
         beef, error = self._extract_beef_from_transaction(tx)

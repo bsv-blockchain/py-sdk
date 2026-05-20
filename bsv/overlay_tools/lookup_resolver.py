@@ -256,13 +256,13 @@ class LookupResolver:
 
     async def _query_all_hosts(
         self, ranked_hosts: list[str], question: LookupQuestion
-    ) -> list[Union[LookupAnswer, Exception]]:
+    ) -> list[LookupAnswer | Exception]:
         """Query all ranked hosts in parallel."""
         return await asyncio.gather(
             *[self._lookup_host_with_tracking(host, question) for host in ranked_hosts], return_exceptions=True
         )
 
-    def _aggregate_host_responses(self, host_responses: list[Union[LookupAnswer, Exception]]) -> LookupAnswer:
+    def _aggregate_host_responses(self, host_responses: list[LookupAnswer | Exception]) -> LookupAnswer:
         """Aggregate results from successful host responses."""
         outputs_map: dict[str, LookupOutput] = {}
 

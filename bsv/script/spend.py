@@ -416,11 +416,11 @@ class Spend:
                 if len(x1) != len(x2):
                     self.script_evaluation_error(f"{_codename} requires the top two stack items to be the same size.")
                 if current_opcode == OpCode.OP_AND:
-                    sig = bytes([a & b for a, b in zip(x1, x2)])
+                    sig = bytes([a & b for a, b in zip(x1, x2, strict=True)])
                 elif current_opcode == OpCode.OP_OR:
-                    sig = bytes([a | b for a, b in zip(x1, x2)])
+                    sig = bytes([a | b for a, b in zip(x1, x2, strict=True)])
                 else:
-                    sig = bytes([a ^ b for a, b in zip(x1, x2)])
+                    sig = bytes([a ^ b for a, b in zip(x1, x2, strict=True)])
                 self.stack.append(sig)
 
             elif current_opcode == OpCode.OP_INVERT:

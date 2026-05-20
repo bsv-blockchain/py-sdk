@@ -292,7 +292,7 @@ def deserialize_decrypt_result(data: bytes) -> dict:
 # ==========================================================
 
 
-def encode_outpoint(outpoint: Union[str, bytes, dict]) -> bytes:
+def encode_outpoint(outpoint: str | bytes | dict) -> bytes:
     """Encode an outpoint into <32-byte txid LE><varint index> bytes.
 
     Supported inputs:

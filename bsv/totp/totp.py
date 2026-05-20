@@ -49,7 +49,7 @@ class TOTP:
     """
 
     @staticmethod
-    def generate(secret: bytes, options: Optional[Union[dict, TOTPOptions]] = None) -> str:
+    def generate(secret: bytes, options: Optional[dict | TOTPOptions] = None) -> str:
         """
         Generates a Time-based One-Time Password (TOTP).
 
@@ -69,7 +69,7 @@ class TOTP:
         return otp
 
     @staticmethod
-    def validate(secret: bytes, passcode: str, options: Optional[Union[dict, TOTPValidateOptions]] = None) -> bool:
+    def validate(secret: bytes, passcode: str, options: Optional[dict | TOTPValidateOptions] = None) -> bool:
         """
         Validates a Time-based One-Time Password (TOTP).
 
@@ -105,7 +105,7 @@ class TOTP:
         return counter
 
     @staticmethod
-    def _with_default_options(options: Optional[Union[dict, TOTPOptions]]) -> TOTPOptions:
+    def _with_default_options(options: Optional[dict | TOTPOptions]) -> TOTPOptions:
         """Apply default options."""
         if options is None:
             return TOTPOptions()
@@ -121,7 +121,7 @@ class TOTP:
         return options
 
     @staticmethod
-    def _with_default_validate_options(options: Optional[Union[dict, TOTPValidateOptions]]) -> TOTPValidateOptions:
+    def _with_default_validate_options(options: Optional[dict | TOTPValidateOptions]) -> TOTPValidateOptions:
         """Apply default validation options."""
         if options is None:
             return TOTPValidateOptions()

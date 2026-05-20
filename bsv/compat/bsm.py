@@ -15,7 +15,7 @@ from bsv.utils import deserialize_ecdsa_der, serialize_ecdsa_der, unsigned_to_va
 PREFIX = "Bitcoin Signed Message:\n"
 
 
-def magic_hash(message_buf: Union[bytes, list]) -> bytes:
+def magic_hash(message_buf: bytes | list) -> bytes:
     """
     Generates a SHA256 double-hash of the prefixed message.
 
@@ -40,7 +40,7 @@ def magic_hash(message_buf: Union[bytes, list]) -> bytes:
     return hash_buf
 
 
-def sign(message: Union[bytes, list], private_key: PrivateKey, mode: str = "base64") -> Union[bytes, str]:
+def sign(message: bytes | list, private_key: PrivateKey, mode: str = "base64") -> bytes | str:
     """
     Signs a BSM message using the given private key.
 
@@ -81,7 +81,7 @@ def sign(message: Union[bytes, list], private_key: PrivateKey, mode: str = "base
     return stringify_ecdsa_recoverable(recoverable_sig, compressed)
 
 
-def verify(message: Union[bytes, list], sig: Union[bytes, str], pub_key: PublicKey) -> bool:
+def verify(message: bytes | list, sig: bytes | str, pub_key: PublicKey) -> bool:
     """
     Verifies a BSM signed message using the given public key.
 

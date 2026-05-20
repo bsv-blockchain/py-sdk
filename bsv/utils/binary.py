@@ -60,7 +60,7 @@ def from_hex(hex_string: str) -> bytes:
     return bytes.fromhex(hex_string)
 
 
-def to_bytes(msg: Union[bytes, str], enc: Optional[str] = None) -> bytes:
+def to_bytes(msg: bytes | str, enc: Optional[str] = None) -> bytes:
     if isinstance(msg, bytes):
         return msg
     if not msg:
@@ -84,7 +84,7 @@ def to_utf8(arr: list[int]) -> str:
     return bytes(arr).decode("utf-8")
 
 
-def encode(arr: list[int], enc: Optional[str] = None) -> Union[str, list[int]]:
+def encode(arr: list[int], enc: Optional[str] = None) -> str | list[int]:
     if enc == "hex":
         return to_hex(bytes(arr))
     elif enc == "utf8":

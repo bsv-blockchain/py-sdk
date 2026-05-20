@@ -103,7 +103,7 @@ class BeefParty(Beef):
             kts[txid] = True
             self.merge_txid_only(txid)
 
-    def merge_beef_from_party(self, party: str, beef: Union[bytes, Beef]) -> None:
+    def merge_beef_from_party(self, party: str, beef: bytes | Beef) -> None:
         """
         Merge beef received from a specific party.
 

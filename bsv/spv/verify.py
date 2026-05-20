@@ -60,7 +60,7 @@ async def verify_scripts(tx: "Transaction") -> bool:
     return await tx.verify(chaintracker=gullible_client, scripts_only=True)
 
 
-def verify_merkle_proof(txid: bytes, merkle_root: bytes, proof: list[dict[str, Union[bytes, str]]]) -> bool:
+def verify_merkle_proof(txid: bytes, merkle_root: bytes, proof: list[dict[str, bytes | str]]) -> bool:
     """
     Verify that a transaction ID is included in a merkle tree with the given root.
 
@@ -104,7 +104,7 @@ def verify_merkle_proof(txid: bytes, merkle_root: bytes, proof: list[dict[str, U
     return current_hash == merkle_root
 
 
-def _validate_proof_element(element: dict[str, Union[bytes, str]]) -> tuple[bytes, str]:
+def _validate_proof_element(element: dict[str, bytes | str]) -> tuple[bytes, str]:
     """Validate and extract hash and side from proof element."""
     if not isinstance(element, dict):
         raise ValueError("Proof elements must be dictionaries")

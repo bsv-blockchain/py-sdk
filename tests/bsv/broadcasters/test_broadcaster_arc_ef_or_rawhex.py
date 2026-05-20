@@ -36,7 +36,7 @@ class TransactionBroadcaster:
     def request_headers(self):
         return {"Content-Type": "application/json"}
 
-    def broadcast(self, tx: "Transaction") -> Union[BroadcastResponse, BroadcastFailure]:
+    def broadcast(self, tx: "Transaction") -> BroadcastResponse | BroadcastFailure:
         # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
         request_options = {

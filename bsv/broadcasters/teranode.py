@@ -27,7 +27,7 @@ class Teranode(Broadcaster):
         """
         self.URL = url
 
-    async def broadcast(self, transaction: "Transaction") -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, transaction: "Transaction") -> BroadcastResponse | BroadcastFailure:
         """
         Broadcasts a transaction via Teranode.
 

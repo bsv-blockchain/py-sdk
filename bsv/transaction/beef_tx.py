@@ -25,7 +25,7 @@ class BeefTx:
     Supports transactions as raw bytes, parsed Transaction objects, or just txids.
     """
 
-    def __init__(self, tx: Union[Transaction, bytes, str], bump_index: Optional[int] = None):
+    def __init__(self, tx: Transaction | bytes | str, bump_index: Optional[int] = None):
         """
         Initialize BeefTx.
 

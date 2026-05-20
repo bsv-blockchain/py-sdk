@@ -25,7 +25,7 @@ def aes_gcm_decrypt(ciphertext: bytes, key: bytes, iv: bytes, tag: bytes, aad: b
 
 # --- GHASH utilities (for test vector compatibility, optional) ---
 def xor_bytes(a: bytes, b: bytes) -> bytes:
-    return bytes(x ^ y for x, y in zip(a, b))
+    return bytes(x ^ y for x, y in zip(a, b, strict=True))
 
 
 def right_shift(block: bytes) -> bytes:
@@ -51,9 +51,9 @@ def multiply(block0: bytes, block1: bytes) -> bytes:
     for i in range(16):
         for j in range(7, -1, -1):
             if check_bit(block0, i, j):
-                z = bytearray(x ^ y for x, y in zip(z, v))
+                z = bytearray(x ^ y for x, y in zip(z, v, strict=True))
             if check_bit(v, 15, 0):
-                v = bytearray(x ^ y for x, y in zip(right_shift(v), r))
+                v = bytearray(x ^ y for x, y in zip(right_shift(v), r, strict=True))
             else:
                 v = bytearray(right_shift(v))
     return bytes(z)

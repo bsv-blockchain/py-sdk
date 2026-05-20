@@ -29,7 +29,7 @@ class OverlayAdminTokenTemplate:
         self.wallet = wallet
 
     @staticmethod
-    def decode(script: Union[Script, bytes]) -> dict:
+    def decode(script: Script | bytes) -> dict:
         """
         Decodes a SHIP or SLAP advertisement from a given locking script.
 

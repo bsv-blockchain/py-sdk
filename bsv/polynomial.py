@@ -13,7 +13,7 @@ class PointInFiniteField:
     Used for implementing Shamir's Secret Sharing scheme.
     """
 
-    def __init__(self, x: Union[int, bytes], y: Union[int, bytes]):
+    def __init__(self, x: int | bytes, y: int | bytes):
         """
         Initialize a point in a finite field.
 
@@ -126,7 +126,7 @@ class Polynomial:
 
         return Polynomial(points)
 
-    def value_at(self, x: Union[int, bytes]) -> int:
+    def value_at(self, x: int | bytes) -> int:
         """
         Evaluate the polynomial at the given x coordinate using Lagrange interpolation.
 

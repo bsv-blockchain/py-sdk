@@ -54,7 +54,7 @@ class P2PKH(ScriptTemplate):
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, addr: Union[str, bytes]) -> Script:
+    def lock(self, addr: str | bytes) -> Script:
         """
         from address (str) or public key hash160 (bytes)
         """
@@ -94,7 +94,7 @@ class OpReturn(ScriptTemplate):
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, pushdatas: list[Union[str, bytes]]) -> Script:
+    def lock(self, pushdatas: list[str | bytes]) -> Script:
         script: bytes = OpCode.OP_FALSE + OpCode.OP_RETURN
         for pushdata in pushdatas:
             if isinstance(pushdata, str):
@@ -117,7 +117,7 @@ class P2PK(ScriptTemplate):
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, public_key: Union[str, bytes]) -> Script:
+    def lock(self, public_key: str | bytes) -> Script:
         """
         from public key in format str or bytes
         """
@@ -153,7 +153,7 @@ class BareMultisig(ScriptTemplate):
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, participants: list[Union[str, bytes]], threshold: int) -> Script:
+    def lock(self, participants: list[str | bytes], threshold: int) -> Script:
         assert 1 <= threshold <= len(participants), "bad threshold or number of participants"
 
         participants_parsed = []
@@ -276,7 +276,7 @@ class OpCat(ScriptTemplate):
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, expected_data: Union[str, bytes]) -> Script:
+    def lock(self, expected_data: str | bytes) -> Script:
         """
         Create a locking script that expects data to be concatenated to match expected_data.
         The script will be: OP_CAT <expected_data> OP_EQUAL
@@ -290,7 +290,7 @@ class OpCat(ScriptTemplate):
 
         return Script(OpCode.OP_CAT + encode_pushdata(data_bytes) + OpCode.OP_EQUAL)
 
-    def unlock(self, data1: Union[str, bytes], data2: Union[str, bytes]):
+    def unlock(self, data1: str | bytes, data2: str | bytes):
         """
         Create an unlocking script that provides two pieces of data to be concatenated.
         The unlocking script will push data1 and data2 onto the stack.

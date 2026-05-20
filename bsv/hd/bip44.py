@@ -23,13 +23,13 @@ def bip44_derive_xprv_from_mnemonic(
 
 def bip44_derive_xprvs_from_mnemonic(
     mnemonic: str,
-    index_start: Union[str, int],
-    index_end: Union[str, int],
+    index_start: str | int,
+    index_end: str | int,
     lang: str = "en",
     passphrase: str = "",
     prefix: str = "mnemonic",
     path: str = BIP44_DERIVATION_PATH,
-    change: Union[str, int] = 0,
+    change: str | int = 0,
     network: Network = Network.MAINNET,
 ) -> list[Xprv]:
     """
@@ -41,8 +41,8 @@ def bip44_derive_xprvs_from_mnemonic(
 
 
 def _derive_xkeys_from_xkey(
-    xkey: Union[Xprv, Xpub], index_start: Union[str, int], index_end: Union[str, int], change: Union[str, int] = 0
-) -> list[Union[Xprv, Xpub]]:
+    xkey: Xprv | Xpub, index_start: str | int, index_end: str | int, change: str | int = 0
+) -> list[Xprv | Xpub]:
     """
     this function is internal use only within bip44 module
     """
@@ -52,8 +52,8 @@ def _derive_xkeys_from_xkey(
 
 # [DEPRECATED]
 def derive_xkeys_from_xkey(
-    xkey: Union[Xprv, Xpub], index_start: Union[str, int], index_end: Union[str, int], change: Union[str, int] = 0
-) -> list[Union[Xprv, Xpub]]:
+    xkey: Xprv | Xpub, index_start: str | int, index_end: str | int, change: str | int = 0
+) -> list[Xprv | Xpub]:
     """
     [DEPRECATED] Use bip32_derive_xkeys_from_xkey instead.
       This function name is kept for backward compatibility.
@@ -82,13 +82,13 @@ def derive_xprv_from_mnemonic(
 # [DEPRECATED]
 def derive_xprvs_from_mnemonic(
     mnemonic: str,
-    index_start: Union[str, int],
-    index_end: Union[str, int],
+    index_start: str | int,
+    index_end: str | int,
     lang: str = "en",
     passphrase: str = "",
     prefix: str = "mnemonic",
     path: str = BIP44_DERIVATION_PATH,
-    change: Union[str, int] = 0,
+    change: str | int = 0,
     network: Network = Network.MAINNET,
 ) -> list[Xprv]:
     """

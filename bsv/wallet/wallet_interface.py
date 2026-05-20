@@ -92,7 +92,7 @@ class WalletProtocol(TypedDict):
 
 
 # Legacy type alias for backwards compatibility with list format
-WalletProtocolLegacy = list[Union[int, str]]
+WalletProtocolLegacy = list[int | str]
 """Legacy format: [SecurityLevel, ProtocolID]. Use WalletProtocol dict instead."""
 
 
@@ -158,7 +158,7 @@ class WalletCounterparty(TypedDict, total=False):
 
 
 # Legacy type alias for backwards compatibility with string format
-WalletCounterpartyLegacy = Union[PubKeyHex, str]
+WalletCounterpartyLegacy = PubKeyHex | str
 """Legacy format: PubKeyHex | 'self' | 'anyone'. Use WalletCounterparty dict instead."""
 
 

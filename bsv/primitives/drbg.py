@@ -17,7 +17,7 @@ class DRBG:
     Takes an initial entropy and nonce when instantiated for seeding purpose.
     """
 
-    def __init__(self, entropy: Union[str, bytes], nonce: Union[str, bytes]):
+    def __init__(self, entropy: str | bytes, nonce: str | bytes):
         """
         Initialize DRBG with entropy and nonce.
 

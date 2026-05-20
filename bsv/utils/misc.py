@@ -7,7 +7,7 @@ from secrets import randbits
 from typing import Optional, Union
 
 
-def bytes_to_bits(octets: Union[str, bytes]) -> str:
+def bytes_to_bits(octets: str | bytes) -> str:
     b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
     bits: str = bin(int.from_bytes(b, "big"))[2:]
     if len(bits) < len(b) * 8:
@@ -28,7 +28,7 @@ def reverse_hex_byte_order(hex_str: str):
     return bytes.fromhex(hex_str)[::-1].hex()
 
 
-def ensure_bytes(data: Union[str, bytes], encoding: Optional[str] = None) -> bytes:
+def ensure_bytes(data: str | bytes, encoding: Optional[str] = None) -> bytes:
     """
     Ensure data is bytes, converting if necessary.
 
@@ -53,7 +53,7 @@ def ensure_bytes(data: Union[str, bytes], encoding: Optional[str] = None) -> byt
         raise TypeError(f"Unsupported data type: {type(data)}")
 
 
-def ensure_string(data: Union[str, bytes]) -> str:
+def ensure_string(data: str | bytes) -> str:
     """
     Ensure data is string, converting if necessary.
 

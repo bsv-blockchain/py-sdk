@@ -1577,7 +1577,7 @@ def op_checkmultisig(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     return None
 
 
-def _extract_multisig_params(t: "Thread") -> Union[tuple[int, list[bytes], int, list[bytes]], Error]:
+def _extract_multisig_params(t: "Thread") -> tuple[int, list[bytes], int, list[bytes]] | Error:
     """Extract and validate multisig parameters from stack."""
     # Get number of public keys
     num_keys, err = _pop_script_int(t)
@@ -1617,7 +1617,7 @@ def _extract_multisig_params(t: "Thread") -> Union[tuple[int, list[bytes], int, 
     return num_pubkeys, pubkeys, num_signatures, sigs
 
 
-def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> Union[list[bytes], Error]:
+def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> list[bytes] | Error:
     """Extract public keys from stack."""
     pubkeys = []
     for _ in range(num_pubkeys):
@@ -1629,7 +1629,7 @@ def _extract_pubkeys(t: "Thread", num_pubkeys: int) -> Union[list[bytes], Error]
     return pubkeys
 
 
-def _extract_signatures(t: "Thread", num_signatures: int) -> Union[list[bytes], Error]:
+def _extract_signatures(t: "Thread", num_signatures: int) -> list[bytes] | Error:
     """Extract signatures from stack."""
     sigs = []
     for _ in range(num_signatures):
@@ -1668,7 +1668,7 @@ def _prepare_multisig_script(t: "Thread", sigs: list[bytes]) -> bytes:
 
 def _verify_multisig_signatures(
     t: "Thread", script_bytes: bytes, pubkeys: list[bytes], sigs: list[bytes], num_signatures: int, num_pubkeys: int
-) -> Union[bool, Error]:
+) -> bool | Error:
     """Verify multisig signatures and return success status."""
 
     def _calc_sighash(flag: SIGHASH) -> Optional[bytes]:
@@ -1715,7 +1715,7 @@ def _verify_multisig_signatures(
     return success and remaining_sigs == 0
 
 
-def _verify_single_signature(t: "Thread", raw_sig: bytes, pub_key: bytes, calc_sighash) -> Union[bool, Error]:
+def _verify_single_signature(t: "Thread", raw_sig: bytes, pub_key: bytes, calc_sighash) -> bool | Error:
     """Verify a single signature against a public key."""
     # Split signature into hash type and signature components
     shf_val = int(raw_sig[-1])
@@ -1870,7 +1870,7 @@ def op_and(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     x2 = t.dstack.pop_byte_array()
     if len(x1) != len(x2):
         return Error(ErrorCode.ERR_INVALID_INPUT_LENGTH, "OP_AND requires operands of same size")
-    result = bytes([a & b for a, b in zip(x1, x2)])
+    result = bytes([a & b for a, b in zip(x1, x2, strict=True)])
     t.dstack.push_byte_array(result)
     return None
 
@@ -1883,7 +1883,7 @@ def op_or(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     x2 = t.dstack.pop_byte_array()
     if len(x1) != len(x2):
         return Error(ErrorCode.ERR_INVALID_INPUT_LENGTH, "OP_OR requires operands of same size")
-    result = bytes([a | b for a, b in zip(x1, x2)])
+    result = bytes([a | b for a, b in zip(x1, x2, strict=True)])
     t.dstack.push_byte_array(result)
     return None
 
@@ -1896,7 +1896,7 @@ def op_xor(pop: ParsedOpcode, t: "Thread") -> Optional[Error]:
     x2 = t.dstack.pop_byte_array()
     if len(x1) != len(x2):
         return Error(ErrorCode.ERR_INVALID_INPUT_LENGTH, "OP_XOR requires operands of same size")
-    result = bytes([a ^ b for a, b in zip(x1, x2)])
+    result = bytes([a ^ b for a, b in zip(x1, x2, strict=True)])
     t.dstack.push_byte_array(result)
     return None
 

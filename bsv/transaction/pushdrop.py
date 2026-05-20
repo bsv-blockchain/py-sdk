@@ -6,7 +6,7 @@ from bsv.constants import OpCode
 from bsv.utils import encode_pushdata, read_script_chunks
 
 
-def build_pushdrop_locking_script(items: list[Union[str, bytes]]) -> str:
+def build_pushdrop_locking_script(items: list[str | bytes]) -> str:
     """
     Build a PushDrop locking script:
     <data1> OP_DROP <data2> OP_DROP ... OP_TRUE
@@ -21,7 +21,7 @@ def build_pushdrop_locking_script(items: list[Union[str, bytes]]) -> str:
     return b"".join(parts).hex()
 
 
-def parse_pushdrop_locking_script(script: Union[bytes, str]) -> list[bytes]:
+def parse_pushdrop_locking_script(script: bytes | str) -> list[bytes]:
     """
     Parse a PushDrop locking script built as: <data> OP_DROP ... OP_TRUE
     Returns the sequence of pushed data items.
@@ -235,9 +235,7 @@ def _convert_chunks_to_bytes(chunks: list[bytes]) -> list[bytes]:  # NOSONAR - C
     return byte_chunks
 
 
-def decode_lock_before_pushdrop(
-    script: Union[bytes, str], *, lock_position: str = "before"
-) -> Optional[dict[str, object]]:
+def decode_lock_before_pushdrop(script: bytes | str, *, lock_position: str = "before") -> Optional[dict[str, object]]:
     """
     Decode a lock-before (or lock-after) PushDrop script.
     Returns dict with pubkey and fields (list of bytes).

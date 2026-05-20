@@ -47,11 +47,7 @@ class CertificateDefinitionData:  # NOSONAR - camelCase matches TS/Go registry A
     registry_operator: str | None = None
 
 
-DefinitionData = Union[
-    BasketDefinitionData,
-    ProtocolDefinitionData,
-    CertificateDefinitionData,
-]
+DefinitionData = BasketDefinitionData | ProtocolDefinitionData | CertificateDefinitionData
 
 
 @dataclass
@@ -63,8 +59,4 @@ class TokenData:  # NOSONAR - camelCase matches TS/Go registry API
     beef: bytes
 
 
-RegistryRecord = Union[
-    BasketDefinitionData,
-    ProtocolDefinitionData,
-    CertificateDefinitionData,
-]  # will be merged with TokenData at runtime where needed
+RegistryRecord = BasketDefinitionData | ProtocolDefinitionData | CertificateDefinitionData

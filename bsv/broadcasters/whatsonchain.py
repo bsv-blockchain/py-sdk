@@ -53,7 +53,7 @@ class WhatsOnChainBroadcaster(Broadcaster):
     Asynchronous WhatsOnChain broadcaster using HttpClient.
     """
 
-    def __init__(self, network: Union[Network, str] = Network.MAINNET, http_client: HttpClient = None):
+    def __init__(self, network: Network | str = Network.MAINNET, http_client: HttpClient = None):
         if isinstance(network, str):
             network_str = network.lower()
             if network_str in ["main", "mainnet"]:
@@ -67,7 +67,7 @@ class WhatsOnChainBroadcaster(Broadcaster):
         self.URL = f"https://api.whatsonchain.com/v1/bsv/{self.network}/tx/raw"
         self.http_client = http_client if http_client else default_http_client()
 
-    async def broadcast(self, tx: "Transaction") -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, tx: "Transaction") -> BroadcastResponse | BroadcastFailure:
         request_options = {
             "method": "POST",
             "headers": {"Content-Type": "application/json", "Accept": "text/plain"},
