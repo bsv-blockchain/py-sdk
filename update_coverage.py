@@ -33,23 +33,21 @@ def update_readme_coverage(coverage_percentage: str):
 
     # Update the coverage badge at the top (link-wrapped format)
     badge_pattern = r"\[!\[Coverage\]\(https://img\.shields\.io/badge/coverage-[\d.]+%25-[a-z-]+\)\]\([^)]+\)"
-    new_badge = f"[![Coverage](https://img.shields.io/badge/coverage-{coverage_percentage}%25-{color})](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)"
+    new_badge = f"[![Coverage](https://img.shields.io/badge/coverage-{coverage_percentage}%25-{color})](https://github.com/bsv-blockchain/py-sdk/actions/workflows/build.yml)"
 
-    new_content = re.sub(badge_pattern, new_badge, content)
-    if new_content == content:
+    if not re.search(badge_pattern, content):
         print("Warning: Coverage badge pattern not found in README")
         return False
-    content = new_content
+    content = re.sub(badge_pattern, new_badge, content)
 
     # Update the coverage percentage in the Testing & Quality section
     coverage_text_pattern = r"\*\*(\d+(?:\.\d+)?)%\+ code coverage\*\* across the entire codebase"
     new_coverage_text = f"**{coverage_percentage}%+ code coverage** across the entire codebase"
 
-    new_content = re.sub(coverage_text_pattern, new_coverage_text, content)
-    if new_content == content:
+    if not re.search(coverage_text_pattern, content):
         print("Warning: Coverage text pattern not found in README")
         return False
-    content = new_content
+    content = re.sub(coverage_text_pattern, new_coverage_text, content)
 
     # Write the updated content back to the file
     readme_path.write_text(content, encoding="utf-8")
