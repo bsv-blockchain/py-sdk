@@ -820,7 +820,7 @@ class Peer:
     def _notify_initial_response_waiters(self, session: Any, message: Any) -> None:
         try:
             to_delete = None
-            for cb_id, info in self.on_initial_response_received_callbacks.items():
+            for cb_id, info in list(self.on_initial_response_received_callbacks.items()):
                 if info.get("session_nonce") == session.session_nonce:
                     peer_nonce = session.peer_nonce or getattr(message, "initial_nonce", None)
                     to_delete = cb_id
