@@ -46,7 +46,7 @@ contributors to adhere to.
 
 3. **Navigate to the Directory**: `cd py-sdk`
 
-4. **Install Dependencies**: Always run `pip install -r requirements.txt` after pulling to ensure tooling is up-to-date.
+4. **Install Dependencies**: Always run `pip install -e .[test,dev]` after pulling to ensure tooling is up-to-date.
 
 ## Pull Request Process
 

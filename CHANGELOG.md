@@ -43,7 +43,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - Migrated `[options.extras_require]` (test/dev) → `[project.optional-dependencies]`
   - Migrated `[options.package_data]` → `[tool.setuptools.package-data]`
   - Deleted `setup.cfg`; minimized `setup.py` to bare shim
-  - `requirements.txt` is retained for CI `pip install -r` convenience
+  - Deleted `requirements.txt` (redundant; resolved Dependabot false-positive alerts)
   - Added `uv.lock` for reproducible dependency pinning
 - Updated `target-version` from `py39` → `py310` for `black` and `ruff`
 - Updated all dependencies to latest stable versions:
