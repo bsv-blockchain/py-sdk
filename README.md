@@ -1,88 +1,9 @@
 # BSV SDK
 
-[![build](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)
+[![build](https://github.com/bsv-blockchain/py-sdk/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/bsv-blockchain/py-sdk/actions/workflows/build.yml)
+[![Coverage](https://img.shields.io/badge/coverage-84.6%25-green)](https://github.com/bsv-blockchain/py-sdk/actions/workflows/build.yml)
 [![PyPI version](https://img.shields.io/pypi/v/bsv-sdk)](https://pypi.org/project/bsv-sdk)
 [![Python versions](https://img.shields.io/pypi/pyversions/bsv-sdk)](https://pypi.org/project/bsv-sdk)
-[![Coverage](https://img.shields.io/badge/coverage-85.7%25-green)](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)
-
-> ## ⚠️ Beta Version Available (v2.0.0b1)
->
-> A **beta version** is now available for **BRC-100 compliance** support.
->
-> If you are using `bsv-wallet-toolbox` or `bsv-middleware`, please use this version:
->
-> ```bash
-> pip install bsv-sdk==2.0.0b1
-> # or to install the latest pre-release version:
-> pip install bsv-sdk --pre
-> ```
->
-> For the stable version (1.0.x): `pip install bsv-sdk`
-
-## Migration Guide (v2.0.0)
-
-**Note:** The camelCase changes described below **only apply to BRC-100 related modules** (authentication, wallet wire protocol, etc.). These changes affect **JSON wire formats** for cross-SDK interoperability with TypeScript SDK and Go SDK. Python class attributes and method parameters remain in snake_case per PEP 8 conventions.
-
-**Breaking Changes:** Version 2.0.0 introduces changes to standardize on camelCase JSON schemas and stricter AuthMessage validation for BRC-100 compliance.
-
-### Key Changes
-
-1. **AuthMessage JSON Wire Format Changes:**
-   - `payload` and `signature` fields now **only accept `number[] | null`** (arrays of integers 0-255)
-   - Previously accepted string formats (hex, base64, UTF-8) are no longer supported
-   - **Migration:** Convert string payloads/signatures to byte arrays, then to integer arrays
-
-2. **camelCase Only for SDK-Owned JSON Schemas:**
-   - All AuthMessage JSON keys: `identityKey`, `messageType`, `initialNonce`, `yourNonce`, `requestedCertificates`
-   - Certificate fields: `serialNumber`, `revocationOutpoint`
-   - Wallet API args: `protocolID`, `keyID`, `seekPermission`, `forSelf`
-   - **Migration:** Replace snake_case keys with camelCase equivalents
-
-### Migration Examples
-
-**AuthMessage JSON:**
-```json
-// Before (v1.x)
-{
-  "identity_key": "02...",
-  "message_type": "general",
-  "payload": "string_payload",
-  "signature": "hex_signature"
-}
-
-// After (v2.0)
-{
-  "identityKey": "02...",
-  "messageType": "general",
-  "payload": [115, 116, 114, 105, 110, 103],
-  "signature": [104, 101, 120, 95, 115, 105, 103]
-}
-```
-
-**Wallet API calls:**
-```python
-# Before (v1.x)
-wallet.get_public_key({
-    "protocol_id": {"securityLevel": 1, "protocol": "test"},
-    "key_id": "my_key"
-})
-
-# After (v2.0)
-wallet.get_public_key({
-    "protocolID": {"securityLevel": 1, "protocol": "test"},
-    "keyID": "my_key"
-})
-```
-
-**Certificate fields:**
-```json
-// Before (v1.x)
-{"serial_number": "123", "revocation_outpoint": {...}}
-
-// After (v2.0)
-{"serialNumber": "123", "revocationOutpoint": {...}}
-```
-
 
 Welcome to the BSV Blockchain Libraries Project, the comprehensive Python SDK designed to provide an updated and unified layer for developing scalable applications on the BSV Blockchain. This SDK addresses the limitations of previous tools by offering a fresh, peer-to-peer approach, adhering to SPV, and ensuring privacy and scalability.
 ## Table of Contents
@@ -92,7 +13,7 @@ Welcome to the BSV Blockchain Libraries Project, the comprehensive Python SDK de
 3. [Features & Deliverables](#features--deliverables)
 4. [Documentation](#documentation)
 5. [Testing & Quality](#testing--quality)
-6. [Tutorial](#Tutorial)
+6. [Tutorial](#tutorial)
 7. [Contribution Guidelines](#contribution-guidelines)
 8. [Support & Contacts](#support--contacts)
 
@@ -104,7 +25,7 @@ The BSV Blockchain Libraries Project aims to structure and maintain a middleware
 
 ### Requirements
 
-Python 3.9 or higher
+Python 3.10 or higher
 pip package manager
 
 ### Installation
@@ -115,13 +36,13 @@ pip install bsv-sdk
 
 ### Development Setup
 
-For contributors and developers, install with test dependencies:
+For contributors and developers, install with test and dev dependencies:
 
 ```bash
-pip install -e .[test]
+pip install -e .[test,dev]
 ```
 
-This installs the package in development mode along with all testing dependencies including pytest-cov for code coverage analysis.
+This installs the package in development mode along with all testing and development dependencies.
 
 ### Basic Usage
 
@@ -261,9 +182,10 @@ You can also refer to the [User Test Report](./docs/Py-SDK%20User%20Test%20Repor
 
 This project maintains high code quality standards with comprehensive test coverage:
 
-- **567+ tests** covering core functionality
-- **85.7%+ code coverage** across the entire codebase
+- **5,400+ tests** covering core functionality
+- **84.6%+ code coverage** across the entire codebase
 - Automated testing with GitHub Actions CI/CD
+- Python 3.10, 3.11, 3.12, and 3.13 supported
 
 ### Running Tests & Coverage
 
@@ -382,7 +304,7 @@ contributions are welcome.
    open htmlcov/index.html  # or xdg-open htmlcov/index.html on Linux
    ```
 
-   Current target: 64%+ code coverage. Help us improve this by adding tests for uncovered areas!
+   Help us improve coverage by adding tests for uncovered areas!
 5. **Commit**: Commit your changes and push to your fork.
 6. **Pull Request**: Open a pull request from your fork to this repository.
 
