@@ -8,12 +8,12 @@ from .transaction_output import TransactionOutput
 
 
 def _preimage(
-        tx_input: TransactionInput,
-        tx_version: int,
-        tx_locktime: int,
-        hash_prevouts: bytes,
-        hash_sequence: bytes,
-        hash_outputs: bytes,
+    tx_input: TransactionInput,
+    tx_version: int,
+    tx_locktime: int,
+    hash_prevouts: bytes,
+    hash_sequence: bytes,
+    hash_outputs: bytes,
 ) -> bytes:
     """
     BIP-143 https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
@@ -55,26 +55,19 @@ def _preimage(
 
 
 def tx_preimages(
-        inputs: List[TransactionInput],
-        outputs: List[TransactionOutput],
-        tx_version: int,
-        tx_locktime: int,
-) -> List[bytes]:
+    inputs: list[TransactionInput],
+    outputs: list[TransactionOutput],
+    tx_version: int,
+    tx_locktime: int,
+) -> list[bytes]:
     """
     :returns: the digests of unsigned transaction
     """
     _hash_prevouts = hash256(
-        b"".join(
-            bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little")
-            for _in in inputs
-        )
+        b"".join(bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little") for _in in inputs)
     )
-    _hash_sequence = hash256(
-        b"".join(_in.sequence.to_bytes(4, "little") for _in in inputs)
-    )
-    _hash_outputs = hash256(
-        b"".join(tx_output.serialize() for tx_output in outputs)
-    )
+    _hash_sequence = hash256(b"".join(_in.sequence.to_bytes(4, "little") for _in in inputs))
+    _hash_outputs = hash256(b"".join(tx_output.serialize() for tx_output in outputs))
     digests = []
     for i in range(len(inputs)):
         sighash = inputs[i].sighash
@@ -85,11 +78,7 @@ def tx_preimages(
         else:
             hash_prevouts = b"\x00" * 32
         # hash sequence
-        if (
-                not sighash & SIGHASH.ANYONECANPAY
-                and sighash & 0x1F != SIGHASH.SINGLE
-                and sighash & 0x1F != SIGHASH.NONE
-        ):
+        if not sighash & SIGHASH.ANYONECANPAY and sighash & 0x1F != SIGHASH.SINGLE and sighash & 0x1F != SIGHASH.NONE:
             # if none of anyone can pay, single, none is set
             hash_sequence = _hash_sequence
         else:
@@ -103,52 +92,142 @@ def tx_preimages(
             hash_outputs = hash256(outputs[i].serialize())
         else:
             hash_outputs = b"\x00" * 32
-        digests.append(
-            _preimage(inputs[i], tx_version, tx_locktime, hash_prevouts, hash_sequence, hash_outputs)
-        )
+        digests.append(_preimage(inputs[i], tx_version, tx_locktime, hash_prevouts, hash_sequence, hash_outputs))
     return digests
 
 
+def _otda_serialize_input(stream, inp: TransactionInput, idx: int, input_index: int, base_type: int) -> None:
+    """Serialize a single input for the OTDA preimage."""
+    # outpoint
+    stream.write(bytes.fromhex(inp.source_txid)[::-1])
+    stream.write(inp.source_output_index.to_bytes(4, "little"))
+    # scriptSig: only for the signing input
+    if idx == input_index:
+        script_bytes = inp.locking_script.serialize()
+        _write_varint(stream, len(script_bytes))
+        stream.write(script_bytes)
+    else:
+        _write_varint(stream, 0)
+    # sequence: zero for other inputs with NONE/SINGLE
+    if idx != input_index and base_type in (int(SIGHASH.NONE), int(SIGHASH.SINGLE)):
+        stream.write((0).to_bytes(4, "little"))
+    else:
+        stream.write(inp.sequence.to_bytes(4, "little"))
+
+
+def _otda_serialize_outputs(stream, outputs: list[TransactionOutput], input_index: int, base_type: int) -> None:
+    """Serialize outputs for the OTDA preimage based on sighash base type."""
+    if base_type == int(SIGHASH.NONE):
+        _write_varint(stream, 0)
+        return
+    if base_type == int(SIGHASH.SINGLE):
+        out_count = input_index + 1
+        _write_varint(stream, out_count)
+        for i in range(out_count):
+            if i < input_index:
+                stream.write((0xFFFFFFFFFFFFFFFF).to_bytes(8, "little"))
+                _write_varint(stream, 0)
+            else:
+                stream.write(outputs[i].serialize())
+        return
+    _write_varint(stream, len(outputs))
+    for out in outputs:
+        stream.write(out.serialize())
+
+
+def _preimage_otda(
+    input_index: int,
+    inputs: list[TransactionInput],
+    outputs: list[TransactionOutput],
+    tx_version: int,
+    tx_locktime: int,
+) -> bytes:
+    """
+    OTDA (Original Transaction Digest Algorithm) preimage for Chronicle.
+    This is the pre-ForkID original Bitcoin signature digest algorithm.
+    Serializes the transaction directly (no hash commitments like BIP143).
+    """
+    sighash = inputs[input_index].sighash
+    base_type = sighash & 0x1F
+
+    stream = BytesIO()
+
+    # nVersion
+    stream.write(tx_version.to_bytes(4, "little"))
+
+    # Serialize inputs (ANYONECANPAY: only include the signing input)
+    if sighash & SIGHASH.ANYONECANPAY:
+        tx_inputs = [(input_index, inputs[input_index])]
+    else:
+        tx_inputs = list(enumerate(inputs))
+
+    _write_varint(stream, len(tx_inputs))
+    for idx, inp in tx_inputs:
+        _otda_serialize_input(stream, inp, idx, input_index, base_type)
+
+    # Serialize outputs
+    _otda_serialize_outputs(stream, outputs, input_index, base_type)
+
+    # nLockTime
+    stream.write(tx_locktime.to_bytes(4, "little"))
+
+    # Sighash type (4 bytes LE)
+    stream.write(sighash.to_bytes(4, "little"))
+
+    return stream.getvalue()
+
+
+def _write_varint(stream, n: int) -> None:
+    """Write a Bitcoin varint to a stream."""
+    if n < 0xFD:
+        stream.write(n.to_bytes(1, "little"))
+    elif n <= 0xFFFF:
+        stream.write(b"\xfd")
+        stream.write(n.to_bytes(2, "little"))
+    elif n <= 0xFFFFFFFF:
+        stream.write(b"\xfe")
+        stream.write(n.to_bytes(4, "little"))
+    else:
+        stream.write(b"\xff")
+        stream.write(n.to_bytes(8, "little"))
+
+
 def tx_preimage(
-        input_index: int,
-        inputs: List[TransactionInput],
-        outputs: List[TransactionOutput],
-        tx_version: int,
-        tx_locktime: int,
+    input_index: int,
+    inputs: list[TransactionInput],
+    outputs: list[TransactionOutput],
+    tx_version: int,
+    tx_locktime: int,
 ) -> bytes:
     """
     Calculates and returns the preimage for a specific input index.
+    Routes to BIP143 or OTDA based on sighash flags.
     """
     sighash = inputs[input_index].sighash
 
+    if SIGHASH.use_otda(sighash):
+        return _preimage_otda(input_index, inputs, outputs, tx_version, tx_locktime)
+
+    # BIP143 path
     # hash previous outs
     if not sighash & SIGHASH.ANYONECANPAY:
         hash_prevouts = hash256(
             b"".join(
-                bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little")
-                for _in in inputs
+                bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little") for _in in inputs
             )
         )
     else:
         hash_prevouts = b"\x00" * 32
 
     # hash sequence
-    if (
-            not sighash & SIGHASH.ANYONECANPAY
-            and sighash & 0x1F != SIGHASH.SINGLE
-            and sighash & 0x1F != SIGHASH.NONE
-    ):
-        hash_sequence = hash256(
-            b"".join(_in.sequence.to_bytes(4, "little") for _in in inputs)
-        )
+    if not sighash & SIGHASH.ANYONECANPAY and sighash & 0x1F != SIGHASH.SINGLE and sighash & 0x1F != SIGHASH.NONE:
+        hash_sequence = hash256(b"".join(_in.sequence.to_bytes(4, "little") for _in in inputs))
     else:
         hash_sequence = b"\x00" * 32
 
     # hash outputs
     if sighash & 0x1F != SIGHASH.SINGLE and sighash & 0x1F != SIGHASH.NONE:
-        hash_outputs = hash256(
-            b"".join(tx_output.serialize() for tx_output in outputs)
-        )
+        hash_outputs = hash256(b"".join(tx_output.serialize() for tx_output in outputs))
     elif sighash & 0x1F == SIGHASH.SINGLE and input_index < len(outputs):
         hash_outputs = hash256(outputs[input_index].serialize())
     else:

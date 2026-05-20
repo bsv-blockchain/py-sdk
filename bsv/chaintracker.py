@@ -20,4 +20,16 @@ class ChainTracker(ABC):
         :param height: The block height to verify against.
         :return: A boolean indicating if the Merkle root is valid for the specified block height.
         """
-        pass
+
+    @abstractmethod
+    async def current_height(self) -> int:
+        """
+        Get the current height of the blockchain.
+
+        This method corresponds to TypeScript's currentHeight() in ChainTracker.
+
+        Reference: sdk/ts-sdk/src/transaction/ChainTracker.ts
+
+        :return: The current blockchain height as a positive integer.
+        :raises: Exception if unable to retrieve height from the blockchain.
+        """

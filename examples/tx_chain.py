@@ -1,11 +1,12 @@
 import asyncio
+
 from bsv import (
+    P2PKH,
+    BroadcastResponse,
+    PrivateKey,
     Transaction,
     TransactionInput,
     TransactionOutput,
-    PrivateKey,
-    P2PKH,
-    BroadcastResponse,
     WhatsOnChainBroadcaster,
 )
 
@@ -31,12 +32,8 @@ async def main():
             )
         ],
         [
-            TransactionOutput(
-                locking_script=P2PKH().lock(public_key_2.address()), satoshis=300
-            ),
-            TransactionOutput(
-                locking_script=P2PKH().lock(public_key.address()), change=True
-            ),
+            TransactionOutput(locking_script=P2PKH().lock(public_key_2.address()), satoshis=300),
+            TransactionOutput(locking_script=P2PKH().lock(public_key.address()), change=True),
         ],
     )
 
@@ -60,9 +57,7 @@ async def main():
             )
         ],
         [
-            TransactionOutput(
-                locking_script=P2PKH().lock(public_key.address()), change=True
-            ),
+            TransactionOutput(locking_script=P2PKH().lock(public_key.address()), change=True),
         ],
     )
 

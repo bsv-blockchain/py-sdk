@@ -1,8 +1,87 @@
 # BSV SDK
 
-[![build](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml/badge.svg)](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)
+[![build](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)
 [![PyPI version](https://img.shields.io/pypi/v/bsv-sdk)](https://pypi.org/project/bsv-sdk)
 [![Python versions](https://img.shields.io/pypi/pyversions/bsv-sdk)](https://pypi.org/project/bsv-sdk)
+[![Coverage](https://img.shields.io/badge/coverage-85.7%25-green)](https://github.com/bitcoin-sv/py-sdk/actions/workflows/build.yml)
+
+> ## ⚠️ Beta Version Available (v2.0.0b1)
+>
+> A **beta version** is now available for **BRC-100 compliance** support.
+>
+> If you are using `bsv-wallet-toolbox` or `bsv-middleware`, please use this version:
+>
+> ```bash
+> pip install bsv-sdk==2.0.0b1
+> # or to install the latest pre-release version:
+> pip install bsv-sdk --pre
+> ```
+>
+> For the stable version (1.0.x): `pip install bsv-sdk`
+
+## Migration Guide (v2.0.0)
+
+**Note:** The camelCase changes described below **only apply to BRC-100 related modules** (authentication, wallet wire protocol, etc.). These changes affect **JSON wire formats** for cross-SDK interoperability with TypeScript SDK and Go SDK. Python class attributes and method parameters remain in snake_case per PEP 8 conventions.
+
+**Breaking Changes:** Version 2.0.0 introduces changes to standardize on camelCase JSON schemas and stricter AuthMessage validation for BRC-100 compliance.
+
+### Key Changes
+
+1. **AuthMessage JSON Wire Format Changes:**
+   - `payload` and `signature` fields now **only accept `number[] | null`** (arrays of integers 0-255)
+   - Previously accepted string formats (hex, base64, UTF-8) are no longer supported
+   - **Migration:** Convert string payloads/signatures to byte arrays, then to integer arrays
+
+2. **camelCase Only for SDK-Owned JSON Schemas:**
+   - All AuthMessage JSON keys: `identityKey`, `messageType`, `initialNonce`, `yourNonce`, `requestedCertificates`
+   - Certificate fields: `serialNumber`, `revocationOutpoint`
+   - Wallet API args: `protocolID`, `keyID`, `seekPermission`, `forSelf`
+   - **Migration:** Replace snake_case keys with camelCase equivalents
+
+### Migration Examples
+
+**AuthMessage JSON:**
+```json
+// Before (v1.x)
+{
+  "identity_key": "02...",
+  "message_type": "general",
+  "payload": "string_payload",
+  "signature": "hex_signature"
+}
+
+// After (v2.0)
+{
+  "identityKey": "02...",
+  "messageType": "general",
+  "payload": [115, 116, 114, 105, 110, 103],
+  "signature": [104, 101, 120, 95, 115, 105, 103]
+}
+```
+
+**Wallet API calls:**
+```python
+# Before (v1.x)
+wallet.get_public_key({
+    "protocol_id": {"securityLevel": 1, "protocol": "test"},
+    "key_id": "my_key"
+})
+
+# After (v2.0)
+wallet.get_public_key({
+    "protocolID": {"securityLevel": 1, "protocol": "test"},
+    "keyID": "my_key"
+})
+```
+
+**Certificate fields:**
+```json
+// Before (v1.x)
+{"serial_number": "123", "revocation_outpoint": {...}}
+
+// After (v2.0)
+{"serialNumber": "123", "revocationOutpoint": {...}}
+```
 
 
 Welcome to the BSV Blockchain Libraries Project, the comprehensive Python SDK designed to provide an updated and unified layer for developing scalable applications on the BSV Blockchain. This SDK addresses the limitations of previous tools by offering a fresh, peer-to-peer approach, adhering to SPV, and ensuring privacy and scalability.
@@ -12,9 +91,10 @@ Welcome to the BSV Blockchain Libraries Project, the comprehensive Python SDK de
 2. [Getting Started](#getting-started)
 3. [Features & Deliverables](#features--deliverables)
 4. [Documentation](#documentation)
-5. [Tutorial](#Tutorial)
-5. [Contribution Guidelines](#contribution-guidelines)
-6. [Support & Contacts](#support--contacts)
+5. [Testing & Quality](#testing--quality)
+6. [Tutorial](#Tutorial)
+7. [Contribution Guidelines](#contribution-guidelines)
+8. [Support & Contacts](#support--contacts)
 
 ## Objective
 
@@ -32,6 +112,16 @@ pip package manager
 ```bash
 pip install bsv-sdk
 ```
+
+### Development Setup
+
+For contributors and developers, install with test dependencies:
+
+```bash
+pip install -e .[test]
+```
+
+This installs the package in development mode along with all testing dependencies including pytest-cov for code coverage analysis.
 
 ### Basic Usage
 
@@ -105,6 +195,59 @@ For a more detailed tutorial and advanced examples, check our [Documentation](#d
 * Support for chain tracking and verification
 
 
+### Wallet Infrastructure:
+
+* Complete wallet implementation with BIP270 payment protocols
+* Action serializers for creating, signing, and broadcasting transactions
+* Substrate support for various wallet backends (HTTP, Wire protocol)
+* Key derivation with caching for performance
+
+
+### Authentication & Security:
+
+* Peer-to-peer authentication with certificate management
+* Session handling with automatic renewal
+* Multiple transport protocols (HTTP, simplified transports)
+* Encrypted communications with AES-GCM
+
+
+### Script Interpreter:
+
+* Full Bitcoin script execution engine
+* Comprehensive opcode support (arithmetic, crypto, stack operations)
+* Configurable script flags for different validation modes
+* Thread-based execution for complex scripts
+
+
+### Storage & Overlay Services:
+
+* Upload/download interfaces with encryption support
+* Overlay network tools (SHIP broadcaster, lookup resolver)
+* Historian for tracking overlay data
+* Host reputation tracking
+* Registry client for overlay management
+
+
+### Identity & Registry:
+
+* Identity client with certificate management
+* Contacts manager for identity relationships
+* Registry services for overlay network coordination
+* Headers client for blockchain synchronization
+
+
+### Enhanced Cryptography & Protocols:
+
+* Schnorr signatures for advanced signing schemes
+* DRBG (Deterministic Random Bit Generator)
+* BSM (Bitcoin Signed Message) compatibility
+* ECIES encryption compatibility
+* TOTP (Time-based One-Time Password) 2FA support
+* BIP-276 payment destination encoding
+* PushDrop token protocol implementation
+* Teranode broadcaster support
+
+
 ## Documentation
 
 Detailed documentation of the SDK with code examples can be found at [BSV Skills Center](https://docs.bsvblockchain.org/guides/sdks/py).
@@ -113,6 +256,106 @@ Detailed documentation of the SDK with code examples can be found at [BSV Skills
 
 You can also refer to the [User Test Report](./docs/Py-SDK%20User%20Test%20Report.pdf) for insights and feedback provided by
 [Yenpoint](https://yenpoint.jp/).
+
+## Testing & Quality
+
+This project maintains high code quality standards with comprehensive test coverage:
+
+- **567+ tests** covering core functionality
+- **85.7%+ code coverage** across the entire codebase
+- Automated testing with GitHub Actions CI/CD
+
+### Running Tests & Coverage
+
+```bash
+# Install test dependencies
+pip install -e .[test]
+
+# Run all tests
+pytest
+
+# Run tests with coverage analysis (includes branch coverage)
+pytest --cov=bsv --cov-branch --cov-report=html --cov-report=term
+
+# View detailed coverage report
+xdg-open htmlcov/index.html
+```
+
+We welcome contributions that improve test coverage, especially in currently under-tested areas.
+
+### Chronicle Live Tests
+
+The SDK includes a comprehensive live test suite for the Chronicle network upgrade, located in `tests/bsv/live/`. These tests validate real transaction building, signing, script execution, and broadcasting across all sighash flag combinations and script types.
+
+#### Mock Tests (no network required)
+
+250 tests that build real `Transaction` objects, sign them with real keys, and validate every input through the `Spend` script interpreter — without touching the network:
+
+```bash
+# Run all mock live tests
+pytest tests/bsv/live/ -v -m "not testnet"
+```
+
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| `test_live_sighash_matrix.py` | 102 | All 12 sighash flags x 2 tx versions x P2PKH/P2PK/Multisig |
+| `test_live_chronicle_opcodes.py` | 43 | 10 restored opcodes (OP_VER, OP_VERIF, OP_2MUL, OP_SUBSTR, etc.) x BIP143 + OTDA |
+| `test_live_standard_opcodes.py` | 93 | Stack, arithmetic, bitwise, crypto, flow control opcodes |
+| `test_live_malleability.py` | 12 | 6 malleability restrictions x v1-rejects/v2-relaxes pairs |
+
+#### Testnet Broadcast Tests (requires funded key)
+
+98 tests that broadcast real transactions to BSV testnet via ARC, verifying end-to-end correctness:
+
+```bash
+# Set funded testnet private key
+export FUNDED_TESTNET_WIF="cYourTestnetWifHere"
+
+# Run testnet broadcast tests
+pytest tests/bsv/live/test_live_testnet.py -v
+```
+
+#### Mainnet broadcast tests (optional, real funds)
+
+Same structure as testnet, but uses mainnet APIs and `.utxo_pool_mainnet.json`. **Costs real BSV**; use a dedicated key.
+
+```bash
+export FUNDED_MAINNET_WIF="YourMainnetWifHere"
+pytest tests/bsv/live/test_live_mainnet.py -v -m mainnet
+```
+
+**How it works:**
+
+1. **UTXO Fan-out**: A single funded UTXO is split into ~130 small outputs via a fan-out transaction
+2. **Two-step transactions**: For non-P2PKH scripts (P2PK, Multisig, custom opcodes), a setup tx converts the P2PKH UTXO into the test script type, then a second tx spends it with the target sighash
+3. **Spend pre-validation**: Every test tx is validated through the `Spend` interpreter before broadcasting
+4. **UTXO persistence**: The UTXO pool is saved to `.utxo_pool.json` between test runs. Failed broadcasts automatically return UTXOs to the pool
+5. **ARC headers**: Uses `X-SkipScriptValidation` header to bypass ARC's script validator (which may lag behind the node's Chronicle support)
+
+| Test Class | Tests | Coverage |
+|------------|-------|----------|
+| `TestTestnetP2PKH` | 24 | P2PKH x 12 sighash flags x 2 tx versions |
+| `TestTestnetP2PK` | 24 | P2PK x 12 sighash flags x 2 tx versions |
+| `TestTestnetMultisig` | 24 | 2-of-3 BareMultisig x 12 sighash flags x 2 tx versions |
+| `TestTestnetChronicleOpcodes` | 20 | 10 Chronicle opcodes x BIP143 + OTDA paths |
+| `TestTestnetStandardOpcodes` | 7 | ADD, SUB, MUL, CAT, HASH160, IF/ELSE, CHECKSIGVERIFY |
+
+**Sighash flags tested** (all 12):
+
+| Flag | Value | Algorithm |
+|------|-------|-----------|
+| `ALL_FORKID` | 0x41 | BIP143 |
+| `NONE_FORKID` | 0x42 | BIP143 |
+| `SINGLE_FORKID` | 0x43 | BIP143 |
+| `ALL_ANYONECANPAY_FORKID` | 0xC1 | BIP143 |
+| `NONE_ANYONECANPAY_FORKID` | 0xC2 | BIP143 |
+| `SINGLE_ANYONECANPAY_FORKID` | 0xC3 | BIP143 |
+| `ALL_FORKID_CHRONICLE` | 0x61 | OTDA |
+| `NONE_FORKID_CHRONICLE` | 0x62 | OTDA |
+| `SINGLE_FORKID_CHRONICLE` | 0x63 | OTDA |
+| `ALL_ANYONECANPAY_FORKID_CHRONICLE` | 0xE1 | OTDA |
+| `NONE_ANYONECANPAY_FORKID_CHRONICLE` | 0xE2 | OTDA |
+| `SINGLE_ANYONECANPAY_FORKID_CHRONICLE` | 0xE3 | OTDA |
 
 ## Beginner Tutorial
 #### [Step-by-Step BSV Tutorial: Sending BSV and NFTs](./docs/beginner_tutorial.md)
@@ -125,9 +368,21 @@ We're always looking for contributors to help us improve the project. Whether it
 contributions are welcome.
 
 1. **Fork & Clone**: Fork this repository and clone it to your local machine.
-2. **Set Up**: Run `pip install -r requirements.txt` to install all dependencies.
+2. **Set Up**: Install in development mode with test dependencies:
+   ```bash
+   pip install -e .[test]
+   ```
 3. **Make Changes**: Create a new branch and make your changes.
-4. **Test**: Ensure all tests pass by running `pytest --cov=bsv --cov-report=html`.
+4. **Test**: Ensure all tests pass and check code coverage:
+   ```bash
+   # Run tests with coverage report
+   pytest --cov=bsv --cov-report=html --cov-report=term
+
+   # View detailed HTML coverage report
+   open htmlcov/index.html  # or xdg-open htmlcov/index.html on Linux
+   ```
+
+   Current target: 64%+ code coverage. Help us improve this by adding tests for uncovered areas!
 5. **Commit**: Commit your changes and push to your fork.
 6. **Pull Request**: Open a pull request from your fork to this repository.
 

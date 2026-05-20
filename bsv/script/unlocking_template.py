@@ -4,7 +4,6 @@ from .script import Script
 
 
 class UnlockingScriptTemplate(ABC):
-
     @staticmethod
     @abstractmethod
     def sign(tx, input_index) -> Script:

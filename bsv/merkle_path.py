@@ -2,7 +2,7 @@ from typing import List, Optional, TypedDict
 
 from .chaintracker import ChainTracker
 from .hash import hash256
-from .utils import Reader, Writer, to_hex, to_bytes
+from .utils import Reader, Writer, to_bytes, to_hex
 
 
 class MerkleLeaf(TypedDict, total=False):
@@ -34,43 +34,66 @@ class MerklePath:
         and verifying these proofs.
     """
 
-    def __init__(self, block_height: int, path: List[List[MerkleLeaf]]):
+    def __init__(self, block_height: int, path: list[list[MerkleLeaf]]):
         self.block_height = block_height
         self.path = path
 
-        # store all the legal offsets which we expect given the txid indices.
+        self._validate_path_structure()
+        self._validate_root_consistency()
+
+    def _validate_path_structure(self) -> None:
+        """Validate the structure and offsets of the Merkle path."""
         legal_offsets = [set() for _ in range(len(self.path))]
+
         for height, leaves in enumerate(self.path):
-            if not leaves and height == 0:
-                raise ValueError(f"Empty level at height: {height}")
+            self._validate_level_not_empty(height, leaves)
+            self._validate_level_offsets(height, leaves, legal_offsets)
 
-            offsets_at_this_height = set()
-            for leaf in leaves:
-                if leaf["offset"] in offsets_at_this_height:
-                    raise ValueError(
-                        f"Duplicate offset: {leaf['offset']}, at height: {height}"
-                    )
-                offsets_at_this_height.add(leaf["offset"])
+    def _validate_level_not_empty(self, height: int, leaves: list[MerkleLeaf]) -> None:
+        """Validate that level 0 is not empty."""
+        if not leaves and height == 0:
+            raise ValueError(f"Empty level at height: {height}")
 
-                if height == 0:
-                    if not leaf.get("duplicate"):
-                        for h in range(1, len(self.path)):
-                            legal_offsets[h].add(leaf["offset"] >> h ^ 1)
-                else:
-                    if leaf["offset"] not in legal_offsets[height]:
-                        legal_offsets_at_height = ", ".join(
-                            map(str, legal_offsets[height])
-                        )
-                        raise ValueError(
-                            f"Invalid offset: {leaf['offset']}, at height: {height}, "
-                            f"with legal offsets: {legal_offsets_at_height}"
-                        )
+    def _validate_level_offsets(self, height: int, leaves: list[MerkleLeaf], legal_offsets: list[set]) -> None:
+        """Validate offsets for a single level."""
+        offsets_at_this_height = set()
+
+        for leaf in leaves:
+            self._validate_unique_offset(leaf, height, offsets_at_this_height)
+            self._validate_legal_offset(leaf, height, legal_offsets)
+            self._update_legal_offsets_for_higher_levels(leaf, height, legal_offsets)
+
+    def _validate_unique_offset(self, leaf: MerkleLeaf, height: int, offsets_at_height: set) -> None:
+        """Validate that offset is unique within this level."""
+        if leaf["offset"] in offsets_at_height:
+            raise ValueError(f"Duplicate offset: {leaf['offset']}, at height: {height}")
+        offsets_at_height.add(leaf["offset"])
+
+    def _validate_legal_offset(self, leaf: MerkleLeaf, height: int, legal_offsets: list[set]) -> None:
+        """Validate that offset is legal for this height."""
+        if height > 0 and leaf["offset"] not in legal_offsets[height]:
+            legal_offsets_at_height = ", ".join(map(str, legal_offsets[height]))
+            raise ValueError(
+                f"Invalid offset: {leaf['offset']}, at height: {height}, with legal offsets: {legal_offsets_at_height}"
+            )
+
+    def _update_legal_offsets_for_higher_levels(self, leaf: MerkleLeaf, height: int, legal_offsets: list[set]) -> None:
+        """Update legal offsets for higher levels based on level 0 leaves."""
+        if height == 0 and not leaf.get("duplicate"):
+            for h in range(1, len(self.path)):
+                legal_offsets[h].add(leaf["offset"] >> h ^ 1)
+
+    def _validate_root_consistency(self) -> None:
+        """Validate that all level 0 leaves produce the same root."""
+        if not self.path or not self.path[0]:
+            return
 
         root = None
-        for idx, leaf in enumerate(self.path[0]):
-            if idx == 0:
-                root = self.compute_root(leaf.get("hash_str"))
-            if root != self.compute_root(leaf.get("hash_str")):
+        for leaf in self.path[0]:
+            leaf_root = self.compute_root(leaf.get("hash_str"))
+            if root is None:
+                root = leaf_root
+            elif root != leaf_root:
                 raise ValueError("Mismatched roots")
 
     @staticmethod
@@ -190,11 +213,11 @@ class MerklePath:
             ValueError: If the transaction ID is not part of the Merkle Path.
         """
         if not isinstance(txid, str):
-            txid = next(leaf['hash_str'] for leaf in self.path[0] if leaf and 'hash_str' in leaf)
+            txid = next(leaf["hash_str"] for leaf in self.path[0] if leaf and "hash_str" in leaf)
 
         # Find the index of the txid at the lowest level of the Merkle tree
         try:
-            index = next(leaf['offset'] for leaf in self.path[0] if leaf.get('hash_str') == txid)
+            index = next(leaf["offset"] for leaf in self.path[0] if leaf.get("hash_str") == txid)
         except StopIteration:
             raise ValueError(f"This proof does not contain the txid: {txid}")
 
@@ -209,12 +232,12 @@ class MerklePath:
             if not isinstance(leaf, dict):
                 raise ValueError(f"Missing hash for index {index} at height {height}")
 
-            if 'duplicate' in leaf and leaf['duplicate']:
+            if leaf.get("duplicate"):
                 working_hash = hash_fn(working_hash + working_hash)
             elif offset % 2 != 0:
-                working_hash = hash_fn(leaf['hash_str'] + working_hash)
+                working_hash = hash_fn(leaf["hash_str"] + working_hash)
             else:
-                working_hash = hash_fn(working_hash + leaf['hash_str'])
+                working_hash = hash_fn(working_hash + leaf["hash_str"])
 
         return working_hash
 
@@ -301,17 +324,17 @@ class MerklePath:
         Leaves all levels sorted by increasing offset.
         """
 
-        def push_if_new(v: int, a: List[int]) -> None:
+        def push_if_new(v: int, a: list[int]) -> None:
             if not a or a[-1] != v:
                 a.append(v)
 
-        def drop_offsets_from_level(drop_offsets: List[int], level: int) -> None:
+        def drop_offsets_from_level(drop_offsets: list[int], level: int) -> None:
             for i in reversed(drop_offsets):
                 idx = next((j for j, n in enumerate(self.path[level]) if n["offset"] == i), None)
                 if idx is not None:
                     self.path[level].pop(idx)
 
-        def next_computed_offsets(cos: List[int]) -> List[int]:
+        def next_computed_offsets(cos: list[int]) -> list[int]:
             ncos = []
             for o in cos:
                 push_if_new(o >> 1, ncos)

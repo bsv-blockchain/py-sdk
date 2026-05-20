@@ -11,13 +11,10 @@ from ..constants import HTTP_REQUEST_TIMEOUT, TRANSACTION_FEE_RATE
 from ..http_client import default_sync_http_client
 from .satoshis_per_kilobyte import SatoshisPerKilobyte
 
-
 logger = logging.getLogger(__name__)
 
 
-_DEFAULT_ARC_POLICY_URL = os.getenv(
-    "BSV_PY_SDK_ARC_POLICY_URL", "https://arc.gorillapool.io/v1/policy"
-)
+_DEFAULT_ARC_POLICY_URL = os.getenv("BSV_PY_SDK_ARC_POLICY_URL", "https://arc.gorillapool.io/v1/policy")
 _DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000
 
 
@@ -36,16 +33,16 @@ class LivePolicy(SatoshisPerKilobyte):
     offline environments still return consistent fees.
     """
 
-    _instance: Optional["LivePolicy"] = None
+    _instance: LivePolicy | None = None
     _instance_lock = threading.Lock()
 
     def __init__(
         self,
         cache_ttl_ms: int = _DEFAULT_CACHE_TTL_MS,
-        arc_policy_url: Optional[str] = None,
+        arc_policy_url: str | None = None,
         fallback_sat_per_kb: int = TRANSACTION_FEE_RATE,
-        request_timeout: Optional[int] = None,
-        api_key: Optional[str] = None,
+        request_timeout: int | None = None,
+        api_key: str | None = None,
     ) -> None:
         """Create a policy that fetches rates from ARC.
 
@@ -62,18 +59,18 @@ class LivePolicy(SatoshisPerKilobyte):
         self.fallback_sat_per_kb = max(1, int(fallback_sat_per_kb))
         self.request_timeout = request_timeout or HTTP_REQUEST_TIMEOUT
         self.api_key = api_key or os.getenv("BSV_PY_SDK_ARC_POLICY_API_KEY")
-        self._cache: Optional[_CachedRate] = None
+        self._cache: _CachedRate | None = None
         self._cache_lock = threading.Lock()
 
     @classmethod
     def get_instance(
         cls,
         cache_ttl_ms: int = _DEFAULT_CACHE_TTL_MS,
-        arc_policy_url: Optional[str] = None,
+        arc_policy_url: str | None = None,
         fallback_sat_per_kb: int = TRANSACTION_FEE_RATE,
-        request_timeout: Optional[int] = None,
-        api_key: Optional[str] = None,
-    ) -> "LivePolicy":
+        request_timeout: int | None = None,
+        api_key: str | None = None,
+    ) -> LivePolicy:
         """Return a singleton instance so callers share the cached rate."""
 
         if cls._instance is None:
@@ -126,7 +123,7 @@ class LivePolicy(SatoshisPerKilobyte):
         current_ms = time.time() * 1000
         return (current_ms - cache.fetched_at_ms) < self.cache_ttl_ms
 
-    def _get_cache(self, allow_stale: bool = False) -> Optional[_CachedRate]:
+    def _get_cache(self, allow_stale: bool = False) -> _CachedRate | None:
         """Read the cached value optionally even when the TTL has expired."""
         with self._cache_lock:
             if self._cache is None:
@@ -142,7 +139,7 @@ class LivePolicy(SatoshisPerKilobyte):
         with self._cache_lock:
             self._cache = _CachedRate(value=value, fetched_at_ms=time.time() * 1000)
 
-    def _fetch_sat_per_kb(self) -> Tuple[Optional[int], Optional[Exception]]:
+    def _fetch_sat_per_kb(self) -> tuple[int | None, Exception | None]:
         """Fetch the latest fee policy from ARC and coerce it to sat/kB."""
         try:
             headers = {"Accept": "application/json"}
@@ -169,7 +166,7 @@ class LivePolicy(SatoshisPerKilobyte):
         return rate, None
 
     @staticmethod
-    def _extract_rate(payload: dict) -> Optional[int]:
+    def _extract_rate(payload: dict) -> int | None:
         """Extract a sat/kB rate from the ARC policy payload."""
         policy = payload.get("policy") if isinstance(payload, dict) else None
         if not isinstance(policy, dict):
@@ -188,11 +185,11 @@ class LivePolicy(SatoshisPerKilobyte):
             bytes_ = mining_fee.get("bytes")
             if isinstance(satoshis, (int, float)) and isinstance(bytes_, (int, float)) and bytes_ > 0:
                 sat_per_byte = float(satoshis) / float(bytes_)
-                return max(1, int(round(sat_per_byte * 1000)))
+                return max(1, round(sat_per_byte * 1000))
 
         for key in ("satPerKb", "sat_per_kb", "satoshisPerKb"):
             value = policy.get(key)
             if isinstance(value, (int, float)) and value > 0:
-                return max(1, int(round(value)))
+                return max(1, round(value))
 
         return None

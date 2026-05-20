@@ -1,7 +1,9 @@
-from typing import Union, Optional, List
+from typing import List, Optional, Union
 
-from bsv.constants import OpCode, OPCODE_VALUE_NAME_DICT
-from bsv.utils import encode_pushdata, unsigned_to_varint, Reader
+from bsv.constants import OPCODE_VALUE_NAME_DICT, OpCode
+
+# Import from utils package that should have these functions available
+from bsv.utils import Reader, encode_pushdata, unsigned_to_varint
 
 # BRC-106 compliance: Opcode aliases for parsing
 # Build a comprehensive mapping of all opcode names (including aliases) to their byte values
@@ -10,12 +12,21 @@ OPCODE_ALIASES = {
     "OP_0": b"\x00",
     "OP_TRUE": b"\x51",
     "OP_1": b"\x51",
+    # Chronicle backward-compatible aliases
+    "OP_NOP4": b"\xb3",
+    "OP_NOP5": b"\xb4",
+    "OP_NOP6": b"\xb5",
+    "OP_NOP7": b"\xb6",
+    "OP_NOP8": b"\xb7",
 }
 
 # Build name->value mapping for all OpCodes
 OPCODE_NAME_VALUE_DICT = {item.name: item.value for item in OpCode}
 # Merge with aliases
 OPCODE_NAME_VALUE_DICT.update(OPCODE_ALIASES)
+
+# Maximum data size for OP_PUSHDATA4 (2^32 - 1 bytes)
+MAX_PUSH_DATA_SIZE = 2**32 - 1
 
 
 class ScriptChunk:
@@ -38,8 +49,7 @@ class ScriptChunk:
 
 
 class Script:
-
-    def __init__(self, script: Union[str, bytes, None] = None):
+    def __init__(self, script: str | bytes | None = None):
         """
         Create script from hex string or bytes
         """
@@ -54,17 +64,22 @@ class Script:
         else:
             raise TypeError("unsupported script type")
         # An array of script chunks that make up the script.
-        self.chunks: List[ScriptChunk] = []
+        self.chunks: list[ScriptChunk] = []
         self._build_chunks()
+
+    @property
+    def script(self) -> bytes:
+        """Backward compatibility property for script field."""
+        return self._bytes
+
+    @property
+    def script_bytes(self) -> bytes:
+        """Backward compatibility property for script_bytes field."""
+        return self._bytes
 
     def _update_conditional_depth(self, op: bytes, depth: int) -> int:
         """Update conditional block depth based on opcode."""
-        if (
-            op == OpCode.OP_IF
-            or op == OpCode.OP_NOTIF
-            or op == OpCode.OP_VERIF
-            or op == OpCode.OP_VERNOTIF
-        ):
+        if op == OpCode.OP_IF or op == OpCode.OP_NOTIF or op == OpCode.OP_VERIF or op == OpCode.OP_VERNOTIF:
             return depth + 1
         if op == OpCode.OP_ENDIF:
             return max(0, depth - 1)
@@ -104,9 +119,7 @@ class Script:
             op = reader.read_bytes(1)
             chunk = ScriptChunk(op)
 
-            in_conditional_block = self._update_conditional_depth(
-                op, in_conditional_block
-            )
+            in_conditional_block = self._update_conditional_depth(op, in_conditional_block)
 
             if op == OpCode.OP_RETURN and in_conditional_block == 0:
                 if self._handle_op_return(reader, chunk):
@@ -118,7 +131,15 @@ class Script:
             self.chunks.append(chunk)
 
     def serialize(self) -> bytes:
-        return self._bytes
+        if self._bytes:
+            return self._bytes
+        # Serialize from chunks if script bytes not set
+        result = bytearray()
+        for chunk in self.chunks:
+            result.extend(chunk.op)
+            if chunk.data is not None:
+                result.extend(chunk.data)
+        return bytes(result)
 
     def hex(self) -> str:
         return self._bytes.hex()
@@ -138,10 +159,7 @@ class Script:
         Checks if the script contains only push data operations.
         :return: True if the script is push-only, otherwise false.
         """
-        for chunk in self.chunks:
-            if chunk.op > OpCode.OP_16:
-                return False
-        return True
+        return all(chunk.op <= OpCode.OP_16 for chunk in self.chunks)
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, Script):
@@ -155,15 +173,35 @@ class Script:
         return self.__str__()
 
     @classmethod
-    def from_chunks(cls, chunks: List[ScriptChunk]) -> "Script":
+    def from_chunks(cls, chunks: list[ScriptChunk]) -> "Script":
         script = b""
         for chunk in chunks:
-            script += (
-                encode_pushdata(chunk.data) if chunk.data is not None else chunk.op
-            )
+            script += encode_pushdata(chunk.data) if chunk.data is not None else chunk.op
         s = Script(script)
         s.chunks = chunks
         return s
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> "Script":
+        """
+        Create a Script object from bytes data.
+
+        Args:
+            data: Raw script bytes
+
+        Returns:
+            Script: A new Script object
+        """
+        return cls(data)
+
+    def to_bytes(self) -> bytes:
+        """
+        Convert the Script object to bytes.
+
+        Returns:
+            bytes: The serialized script bytes
+        """
+        return self.serialize()
 
     @classmethod
     def _parse_opcode_token(cls, token: str) -> Optional[bytes]:
@@ -218,6 +256,35 @@ class Script:
                 i += 1
 
         return Script.from_chunks(chunks)
+
+    @classmethod
+    def _parse_hex_token(cls, token: str) -> ScriptChunk:
+        """Parse a hex token into a script chunk."""
+        hex_string = token
+        if len(hex_string) % 2 != 0:
+            hex_string = "0" + hex_string
+        hex_bytes = bytes.fromhex(hex_string)
+        if hex_bytes.hex() != hex_string.lower():
+            raise ValueError("invalid hex string in script")
+
+        hex_len = len(hex_bytes)
+        op_value = cls._get_push_opcode(hex_len)
+        return ScriptChunk(op_value, hex_bytes)
+
+    @classmethod
+    def _get_push_opcode(cls, data_length: int) -> bytes:
+        """Get the appropriate push opcode for the given data length."""
+        pushdata1_threshold = int.from_bytes(OpCode.OP_PUSHDATA1, "big")
+        if 0 <= data_length < pushdata1_threshold:
+            return int.to_bytes(data_length, 1, "big")
+        elif data_length < pow(2, 8):
+            return OpCode.OP_PUSHDATA1
+        elif data_length < pow(2, 16):
+            return OpCode.OP_PUSHDATA2
+        elif data_length < pow(2, 32):
+            return OpCode.OP_PUSHDATA4
+        else:
+            raise ValueError(f"data too large: {data_length} bytes (maximum allowed: {MAX_PUSH_DATA_SIZE} bytes)")
 
     def to_asm(self) -> str:
         return " ".join(str(chunk) for chunk in self.chunks)

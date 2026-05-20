@@ -1,17 +1,12 @@
-from abc import abstractmethod, ABCMeta
-from typing import Union, List, Optional
+from abc import ABCMeta, abstractmethod
+from typing import List, Optional, Union
 
+from ..constants import PUBLIC_KEY_BYTE_LENGTH_LIST, PUBLIC_KEY_HASH_BYTE_LENGTH, SIGHASH, OpCode
+from ..hash import hash256
+from ..keys import PrivateKey
+from ..utils import address_to_public_key_hash, encode_int, encode_pushdata
 from .script import Script
 from .unlocking_template import UnlockingScriptTemplate
-from ..constants import (
-    OpCode,
-    PUBLIC_KEY_HASH_BYTE_LENGTH,
-    PUBLIC_KEY_BYTE_LENGTH_LIST,
-    SIGHASH
-)
-from ..keys import PrivateKey
-from ..utils import address_to_public_key_hash, encode_pushdata, encode_int
-from ..hash import hash256
 
 
 def to_unlock_script_template(sign, estimated_unlocking_byte_length):
@@ -23,7 +18,6 @@ def to_unlock_script_template(sign, estimated_unlocking_byte_length):
 
 
 class ScriptTemplate(metaclass=ABCMeta):
-
     @abstractmethod
     def lock(self, **kwargs) -> Script:
         """
@@ -40,7 +34,6 @@ class ScriptTemplate(metaclass=ABCMeta):
 
 
 class Unknown(ScriptTemplate):  # pragma: no cover
-
     def __str__(self) -> str:
         return "<ScriptTemplate:Unknown>"
 
@@ -55,14 +48,13 @@ class Unknown(ScriptTemplate):  # pragma: no cover
 
 
 class P2PKH(ScriptTemplate):
-
     def __str__(self) -> str:  # pragma: no cover
         return "<ScriptTemplate:P2PKH>"
 
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, addr: Union[str, bytes]) -> Script:
+    def lock(self, addr: str | bytes) -> Script:
         """
         from address (str) or public key hash160 (bytes)
         """
@@ -73,16 +65,10 @@ class P2PKH(ScriptTemplate):
         else:
             raise TypeError("unsupported type to parse P2PKH locking script")
 
-        assert (
-                len(pkh) == PUBLIC_KEY_HASH_BYTE_LENGTH
-        ), "invalid byte length of public key hash"
+        assert len(pkh) == PUBLIC_KEY_HASH_BYTE_LENGTH, "invalid byte length of public key hash"
 
         return Script(
-            OpCode.OP_DUP
-            + OpCode.OP_HASH160
-            + encode_pushdata(pkh)
-            + OpCode.OP_EQUALVERIFY
-            + OpCode.OP_CHECKSIG
+            OpCode.OP_DUP + OpCode.OP_HASH160 + encode_pushdata(pkh) + OpCode.OP_EQUALVERIFY + OpCode.OP_CHECKSIG
         )
 
     def unlock(self, private_key: PrivateKey):
@@ -93,10 +79,7 @@ class P2PKH(ScriptTemplate):
             signature = private_key.sign(tx.preimage(input_index))
 
             public_key: bytes = private_key.public_key().serialize()
-            return Script(
-                encode_pushdata(signature + sighash.to_bytes(1, "little"))
-                + encode_pushdata(public_key)
-            )
+            return Script(encode_pushdata(signature + sighash.to_bytes(1, "little")) + encode_pushdata(public_key))
 
         def estimated_unlocking_byte_length() -> int:
             return 107 if private_key.compressed else 139
@@ -105,14 +88,13 @@ class P2PKH(ScriptTemplate):
 
 
 class OpReturn(ScriptTemplate):
-
     def __str__(self) -> str:  # pragma: no cover
         return "<ScriptTemplate:OP_RETURN>"
 
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, pushdatas: List[Union[str, bytes]]) -> Script:
+    def lock(self, pushdatas: list[str | bytes]) -> Script:
         script: bytes = OpCode.OP_FALSE + OpCode.OP_RETURN
         for pushdata in pushdatas:
             if isinstance(pushdata, str):
@@ -129,14 +111,13 @@ class OpReturn(ScriptTemplate):
 
 
 class P2PK(ScriptTemplate):
-
     def __str__(self) -> str:  # pragma: no cover
         return "<ScriptTemplate:P2PK>"
 
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, public_key: Union[str, bytes]) -> Script:
+    def lock(self, public_key: str | bytes) -> Script:
         """
         from public key in format str or bytes
         """
@@ -147,9 +128,7 @@ class P2PK(ScriptTemplate):
         else:
             raise TypeError("unsupported type to parse P2PK locking script")
 
-        assert (
-                len(pk) in PUBLIC_KEY_BYTE_LENGTH_LIST
-        ), "invalid byte length of public key"
+        assert len(pk) in PUBLIC_KEY_BYTE_LENGTH_LIST, "invalid byte length of public key"
 
         return Script(encode_pushdata(pk) + OpCode.OP_CHECKSIG)
 
@@ -168,17 +147,14 @@ class P2PK(ScriptTemplate):
 
 
 class BareMultisig(ScriptTemplate):
-
     def __str__(self) -> str:  # pragma: no cover
         return "<ScriptTemplate:BareMultisig>"
 
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, participants: List[Union[str, bytes]], threshold: int) -> Script:
-        assert (
-                1 <= threshold <= len(participants)
-        ), "bad threshold or number of participants"
+    def lock(self, participants: list[str | bytes], threshold: int) -> Script:
+        assert 1 <= threshold <= len(participants), "bad threshold or number of participants"
 
         participants_parsed = []
         for participant in participants:
@@ -188,40 +164,38 @@ class BareMultisig(ScriptTemplate):
             ], "unsupported public key type"
             if isinstance(participant, str):
                 participant = bytes.fromhex(participant)
-            assert (
-                    len(participant) in PUBLIC_KEY_BYTE_LENGTH_LIST
-            ), "invalid byte length of public key"
+            assert len(participant) in PUBLIC_KEY_BYTE_LENGTH_LIST, "invalid byte length of public key"
             participants_parsed.append(participant)
         script: bytes = encode_int(threshold)
         for participant in participants_parsed:
             script += encode_pushdata(participant)
         return Script(script + encode_int(len(participants)) + OpCode.OP_CHECKMULTISIG)
 
-    def unlock(self, private_keys: List[PrivateKey]):
+    def unlock(self, private_keys: list[PrivateKey]):
         def sign(tx, input_index) -> Script:
             tx_input = tx.inputs[input_index]
             sighash = tx_input.sighash
 
-            script: bytes = OpCode.OP_0 # Append 0 to satisfy SCRIPT_VERIFY_NULLDUMMY
+            script: bytes = OpCode.OP_0  # Append 0 to satisfy SCRIPT_VERIFY_NULLDUMMY
             for private_key in private_keys:
                 signature = private_key.sign(tx.preimage(input_index))
                 script += encode_pushdata(signature + sighash.to_bytes(1, "little"))
-            return Script(script) 
+            return Script(script)
 
         def estimated_unlocking_byte_length() -> int:
             return 1 + 73 * len(private_keys) + 1
 
         return to_unlock_script_template(sign, estimated_unlocking_byte_length)
-    
+
+
 class RPuzzle(ScriptTemplate):
-    
-    def __init__(self, puzzle_type: str = 'raw'):
+    def __init__(self, puzzle_type: str = "raw"):
         """
         Constructs an R Puzzle template instance for a given puzzle type.
 
         :param puzzle_type: Denotes the type of puzzle to create ('raw', 'SHA1', 'SHA256', 'HASH256', 'RIPEMD160', 'HASH160')
         """
-        assert(puzzle_type in ['raw', 'SHA1', 'SHA256', 'HASH256', 'RIPEMD160', 'HASH160'])
+        assert puzzle_type in ["raw", "SHA1", "SHA256", "HASH256", "RIPEMD160", "HASH160"]
         self.type = puzzle_type
 
     def lock(self, value: bytes) -> Script:
@@ -240,17 +214,22 @@ class RPuzzle(ScriptTemplate):
             OpCode.OP_SPLIT,
             OpCode.OP_SWAP,
             OpCode.OP_SPLIT,
-            OpCode.OP_DROP
+            OpCode.OP_DROP,
         ]
-        if self.type != 'raw':
-            chunks.append(getattr(OpCode, f'OP_{self.type}'))
+        if self.type != "raw":
+            chunks.append(getattr(OpCode, f"OP_{self.type}"))
         chunks.append(encode_pushdata(value))
         chunks.append(OpCode.OP_EQUALVERIFY)
         chunks.append(OpCode.OP_CHECKSIG)
-        return Script(b''.join(chunks))
-    
-    
-    def unlock(self, k: int, private_key: Optional[PrivateKey] = PrivateKey(), sign_outputs: str = 'all', anyone_can_pay: bool = False):
+        return Script(b"".join(chunks))
+
+    def unlock(
+        self,
+        k: int,
+        private_key: Optional[PrivateKey] = PrivateKey(),
+        sign_outputs: str = "all",
+        anyone_can_pay: bool = False,
+    ):
         """
         Creates a function that generates an R puzzle unlocking script along with its signature and length estimation.
 
@@ -260,17 +239,18 @@ class RPuzzle(ScriptTemplate):
         :param anyone_can_pay: Flag indicating if the signature allows for other inputs to be added later.
         :returns: An object containing the `sign` and `estimate_length` functions.
         """
+
         def sign(tx, input_index) -> Script:
             sighash = SIGHASH.FORKID
-            if sign_outputs == 'all':
+            if sign_outputs == "all":
                 sighash |= SIGHASH.ALL
-            elif sign_outputs == 'none':
+            elif sign_outputs == "none":
                 sighash |= SIGHASH.NONE
-            elif sign_outputs == 'single':
+            elif sign_outputs == "single":
                 sighash |= SIGHASH.SINGLE
             if anyone_can_pay:
                 sighash |= SIGHASH.ANYONECANPAY
-                
+
             tx.inputs[input_index].sighash = sighash
 
             preimage = tx.preimage(input_index)
@@ -296,7 +276,7 @@ class OpCat(ScriptTemplate):
     def __repr__(self) -> str:  # pragma: no cover
         return self.__str__()
 
-    def lock(self, expected_data: Union[str, bytes]) -> Script:
+    def lock(self, expected_data: str | bytes) -> Script:
         """
         Create a locking script that expects data to be concatenated to match expected_data.
         The script will be: OP_CAT <expected_data> OP_EQUAL
@@ -308,13 +288,9 @@ class OpCat(ScriptTemplate):
         else:
             raise TypeError("unsupported type for OpCat locking script data")
 
-        return Script(
-            OpCode.OP_CAT
-            + encode_pushdata(data_bytes)
-            + OpCode.OP_EQUAL
-        )
+        return Script(OpCode.OP_CAT + encode_pushdata(data_bytes) + OpCode.OP_EQUAL)
 
-    def unlock(self, data1: Union[str, bytes], data2: Union[str, bytes]):
+    def unlock(self, data1: str | bytes, data2: str | bytes):
         """
         Create an unlocking script that provides two pieces of data to be concatenated.
         The unlocking script will push data1 and data2 onto the stack.
@@ -335,10 +311,7 @@ class OpCat(ScriptTemplate):
 
         def sign(tx, input_index) -> Script:
             # For OP_CAT, we don't need signatures, just push the data
-            return Script(
-                encode_pushdata(data1_bytes)
-                + encode_pushdata(data2_bytes)
-            )
+            return Script(encode_pushdata(data1_bytes) + encode_pushdata(data2_bytes))
 
         def estimated_unlocking_byte_length() -> int:
             # Two pushdata operations plus their encoded lengths

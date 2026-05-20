@@ -8,6 +8,17 @@ dist/
 htmlcov/
 .coverage
 build/
-.venv/
-.env*
 .wallet
+.venv/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Testnet UTXO pool (persisted across test runs)
+.utxo_pool.json
+.utxo_pool_mainnet.json
+
+# Live test run logs (tee + verify_broadcast_log.py)
+tests/bsv/live/.artifacts/

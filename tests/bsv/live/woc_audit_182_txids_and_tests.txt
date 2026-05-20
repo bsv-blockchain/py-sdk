@@ -1,0 +1,959 @@
+WoC JSON audit (Apr 2026): txids from /tmp/testnet_live.log vs GET
+https://api.whatsonchain.com/v1/bsv/test/tx/{txid}
+
+Total unique txids in log: 188
+OK on WoC JSON (200 + txid/hash): 6 fixed ids in audit
+Not OK (counted as bad here): 182
+
+========================================================================
+SECTION A: Each NOT-OK txid → pytest node id(s) that printed it
+(Fan-out txs appear under the first test that ran after fan-out.)
+========================================================================
+
+023c9cbd81b99fbd876c3baab359222709641d461c34b1934059500559ba4b95
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+043ac01480af8620f2be76d6d60f64a93bc370701bfc10ed677fffd16c3b9a22
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_v2]
+
+049db008cc238d3e7b4bf29bead95889989e5bfbebf15ce1ee7b21b39f7ea5c9
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+05c85cce20dff4236d3c56fb00a3fa027c37760c5f169bbc0585a523f14bceae
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_left[OTDA_v2]
+
+0726ff8ce8aadaded53e796db06e63c1560d8f80c5ad9241c621c427f5c60e78
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_ver[OTDA_v2]
+
+0758c492500cb14bbaf2918f57bb54bf55c32cd71ac1cac7a9e6ef3e3b23dbc0
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_CHRONICLE_v1]
+
+08dfddd0eb306bea40341db89b92a6f947ee8d81e1f1b5a87924d1c66c5c51cf
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_ver[BIP143_v1]
+
+0908fa0997a60867d7c4740bc0077c6c445671f2b48cbc56e7c5ff3267419266
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_v2]
+
+0ef563074984abf8f2915d6c30778a6900cd1771052b16911a7d3245462f3c4a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_CHRONICLE_v2]
+
+0efbf8e3d4f2667cc5d5f0eab6eeb841617f7c3e30f0b148cdc74f7c4d180796
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_CHRONICLE_v2]
+
+109d6715b3c1e2de8f8f67e36e2151e9fa1c77b7b7c34d47bfe81be931a2ab87
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_verif[OTDA_v2]
+
+1199df15df2bfb7cb304c49bcac6beac3988192eb55f488ee846f65af4a6e475
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+157573a123e7c0b00011623a25a22115b9cc282c938378056e142be24e2621e5
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_v1]
+
+16294b98b39da8110018b82809a405b745ef00ed214643f18df5782b574ceb4b
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_v2]
+
+1942322f0c19eff21c8d0552a04cab90881714b7fa62185f789939cc2634289c
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_CHRONICLE_v1]
+
+1a441ccad609d2e1e64741efed9bbc6c9346f6949dfc81861448e0795895c7b1
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_v2]
+
+1f9f2718acb803ebba706fab970e2cb1230526f0739378bd739a9493a32b93d8
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_v1]
+
+20f8ddee0a70b3930c73e53bbe0d4ccd496cc0f24bd490b24a20482e50fb82c0
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_left[BIP143_v1]
+
+2105fc5986d21d058c87011085ba0f3994b3ee72cadf94a58333634a8d486cee
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_right[OTDA_v2]
+
+228bd194954d54ae25cabcf8197bb8205f4494fbecf2648f1898657129336969
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_v2]
+
+228de7fca27626b42e8e665eeea75cc7bcfc9f27ef0d21bc35ee6c8ee865c5f3
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_CHRONICLE_v2]
+
+256d2a92b51794a222c61b3b8e47fb7ffaf74ce5a9ed98df85fccb5e3cf589af
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_v1]
+
+26e785eb395e7a0d396dbfe2e663d9bff4efb4461bbcd2fc47306df6dcb9f9d2
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_CHRONICLE_v1]
+
+272212f8b37c8073c4463d4cfb1a014055857398fb5697bc22d38ba234eca992
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_v2]
+
+2905f4628da6a4f0310e628a6568d2fb1ce1ceda916149703f273befcc22643f
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+29dd2b4a83e57a5108cf1c471f165e7b5edab1a5a24f3e7d4641c749e3506f73
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_v1]
+
+2b9b1b6cedc7f0df5a4cafa5fc8ced9f61f695b022a2e8069afefe8491e6989d
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+2cf341c30b1f6d78706dc0fbf3093e5a18f414c9f33000660cc9c6e331a8aa72
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_CHRONICLE_v2]
+
+2dcad4904d3d06bd2cfa8ee8a5b6ca4ead9c837202092498cd259e10e2b9c6c3
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_CHRONICLE_v1]
+
+2e1d95663cccce82db4855fc6791bbb8c34ff6c88a4739d3d344b6340f9ddca1
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+2efaf8acbb6937edb3c052e439d0cdb32d17824c18f8218bc1dbbff756af4ae7
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_CHRONICLE_v1]
+
+2fafe8cb08d4b3e1167b1b3f7a1a09afdc5a958ce97a347a2cce435eed7ca665
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_v1]
+
+316152e078c8259c34b49479c80e0722613b62858729d413055c60927f609495
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+318ae289cf13d8dd88bb34932f6cf5febe280c368d49b3cd3926644188e51155
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_mixed_sighash_inputs
+
+33e8ffb74c4f29ed78c9ed2d6116ac241a35697cd3434fc5c7b9a0ddcc50154b
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2mul[OTDA_v2]
+
+347740353d0d6af1fedfdcc5e1089ba8df37e52facb65809499d64f241186c95
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+34c8b1d308ce6718bb873aecc5727ea2b47a9dfe82d7165c4ab070007b466fc7
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_CHRONICLE_v1]
+
+357d60b1459587dda3b0063b88bb9a629c70cc9e215b10b2dff0c9d7ee3c52b5
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_v1]
+
+36c3953a16db7897ffd61ab4fdeb51f317663e8a009fde4bade8986d216cad88
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_substr[BIP143_v1]
+
+378590487de72250bc666416bab485bff8821394f46c7d758ecc1eb365b60cfb
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2div[BIP143_v1]
+
+386d9cd676fadd76f5a2f79743fa3cc1b32db8e9f8bfd6bc461a21fa0e46ea3a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_verif[BIP143_v1]
+
+39d4394a26393c4cacf13f8eea472a8560cc9ebde76358073c037b67edb4d5fb
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_FORKID_CHRONICLE_v2]
+
+3ac2003ee56f515a408cbd893b03b76ea5b1c3564b1aaf35257ece1108978d51
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_FORKID_CHRONICLE_v1]
+
+3c8f58af8c347d0b126f5b57fef1a2f726c1f33ef1a77efb02778c36eacd7f71
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_FORKID_v1]
+
+3e3856f51dead1e3efd0bb7bbb45f2058279cc9678f934c3f55bd124b03f7a7c
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+4153abdcaf44beaa36f32c16c74649fdf1260a189dbc1ca715dccf721fc6e214
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2div[OTDA_v2]
+
+41980a769de3aca23fa99bc7f4f9d6474e94bd58a8ac4e081a4d0fbfb63cbb01
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_verif[OTDA_v2]
+
+434fe6806afa585c579629baee087619390db1c29934db1284bc8861a034832d
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_verif[BIP143_v1]
+
+4752a1d3778ece09fb2808b5cf2dcdfcf01dddaf687b81cd77079aa76b993e5c
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_CHRONICLE_v2]
+
+4833fe9294126a3742c1c7ca454933d4876fdecaaf1e5dc0e755108892fd7765
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_sub
+
+493a4993f656ba887b6231ee982938cbb16d1373646d921898327d88bd1ff209
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_v2]
+
+4afe33453f37f0a1a1f588b9a7058f0aba6c52a39e93548f155d41b268f0a1b1
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+4cd534cb74a244364c928ca8e82eb9a53b8342e18560a2edbc45b9cc0a4397b1
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_v1]
+
+54db219c657d9c06184a7284fe1c1fcaf68c0d85f859d4c42c81f4aa72438ba9
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_if_else
+
+56088b116725f471f95ced86094bea6942cbe0babf442fad46c5365fa806ce02
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_cat
+
+5644f563eee93d98d4144fd6322334183fa52554015dd6fa46f15d2d842f9269
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_v2]
+
+5701c48b8ffb0edad6f8a5c36afcb79817be93d1436f4c183858fd50d2a2aa73
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_if_else
+
+589e3d86ea774460bac23e640a451665113f5c70281d94398e5d89bcd25903c3
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_v1]
+
+5a5dd8f5cc703a5eb3d5f27609dc90fd7857e2a57517b46cc2ad285f2bb5940a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_add
+
+5c067ec447208f72eb1abe0df034caa3750050a84dcbfca97e1a3f93f11bee80
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pk_version_transition[setup_v1_spend_v2]
+
+5da769e917a5b1056dea50753ac9a869e17984a0bb140dc8857382a5e74879dc
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+5f032dad301136f071e32ce85e228b1518eb47868952c7e78d78666a1515b847
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_left[OTDA_v2]
+
+5ffb7775cd8c642f7028c7037d259783d74e1655139a94594301f4a2bfdd939b
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_v1]
+
+606d2450e2f1c03a910afd7201b314e56a278eeddeca21de6ba7326e521e25d0
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_chronicle_opcode_otda_v1
+
+611ef29af1a16d878694e4334b6446b0b0ce5d0f0a82c85a36f4c0f73220e303
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2div[BIP143_v1]
+
+635482dc68c57f9017e4115f2c388fdd2e7705aa5bf24336cb56b2e5cc17b8f4
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pk_version_transition[setup_v2_spend_v1]
+
+641ac85a1b3d279063dbdbc57bec9868e4f99da78bba06a1843d51cc9b834007
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_v1]
+
+659fc03c017a24155ccdef4434174080ff25e1303e829efe572a7a7524037f09
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_ANYONECANPAY_FORKID_v1]
+
+65bd36b5d31da8bb882f4ffcadad82940123b2ca61a91fe0ab038babe8075ef1
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_v2]
+
+667320cd0d8c963e9aadbab06901009887d4ac4ec4d2855a6be7a23eae4a4896
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+667bc590f56d3032bff7a09fd0170c6aab9f87c8e6f6ca5da35fb6a17fbbbb74
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_CHRONICLE_v1]
+
+67a46bfcc988cd239b259bdb8997cbe80c71cc5a00b64bf4ea6467f61aaa2837
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_CHRONICLE_v2]
+
+68bef7e189482f69aca423b1010128c95f36debf178b4fa34c44ff109fe587fb
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_rshiftnum[OTDA_v2]
+
+6a3c3009be2b217ce027f0ca265d666e670c255d4751c23d0e5125a26cc4e1d5
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_right[OTDA_v2]
+
+6b3420693e80b3703471effd1542bb691c005a3f433c7994e94413b3c771236d
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_chronicle_opcode_otda_v1
+
+6dd4b1cce82b42703f6c49cc79c09eab05ba69ceedccf8345b97c8cb0125c069
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_mul
+
+6e466869f591c970f2b42dcfbf30bc6929113972bd24d4fe19d91db34e5e0a70
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_chronicle_opcode_bip143_v2
+
+72284fef9f04e9c8b6a195dbf4d1353d514ceeeedfe48a3336f81af386441a8e
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_v1]
+
+7313235228041451cbbde74e8a16310ba788755808363c782fe8c00c9bc32dae
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+743c7589f8388597cd0114f1d7207c529504a0f45d5847b9aeb52537814c140a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_v1]
+
+746c0e09a23d26f4e65abc70c0b6bf66e2f7cf61f84589cc961bb63604ea2d77
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_v2]
+
+78742d4aa9f92bb37d4a21bf6d9c65740284d06d2e41caf6e28f889c67c0f252
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_CHRONICLE_v2]
+
+7a2f0539d98bffa58a893cb7df19ea2bcf5f506d7cea716a383ba67a4d0659ba
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_substr[OTDA_v2]
+
+7b543a953244e021532a8e8ecc6fe8af04147abcc4827773634790a44c714398
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_hash160
+
+7cd64dda785f363ff60f9f0a802fbf27745aab3650dbb80cfcab7d565ae2fc75
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_CHRONICLE_v1]
+
+7de05a067693d0fa0a8d9f118a0ff02173a1fbfebe30767e746991fd110dd8cf
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_rshiftnum[OTDA_v2]
+
+7e1acd79e21a318fc6faa0ccd07f11944ef06857b30120cc2edda1f60d9e5c56
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_rshiftnum[BIP143_v1]
+
+800509a35b3cedfe8c3cf66c3465fb678ff89c244c6fa491819693eef12cb815
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_CHRONICLE_v2]
+
+817b704a5be8986652a68f5bd284f3fdcf3c21a1ddbb261d787c6655a1815070
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_lshiftnum[BIP143_v1]
+
+83f981d190edbc6b3d6e3f4a62ec8f8861ddf54db53013c3e3310fb45fee9064
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_v1]
+
+84bc282410a44c4a4ecb07156a8d0b85500a3a9ffda410a12cfc541e0a00fa9e
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+8589373dec56e60c3ebef46927720e3062dd9b77bb3a95ab037ec58b4ff08690
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_ANYONECANPAY_FORKID_v2]
+
+871d937976bb06c580d1e97bcafc57eae526febaa8efe16aad791aa8c03eb738
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+878bf3b3c17d7309e6755d6a02f102f3ee83ecc0f550b786b17b096dd9e8e466
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_lshiftnum[BIP143_v1]
+
+882d7ba12fd24f3c30724ea00ad2d270c4b80f5ad35fdd1dd2fd4f999d968982
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2div[OTDA_v2]
+
+883f238637b6b6a852ddc5dafae5c659ea918f01f4a71e6232e1eb2c78352f32
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+89db81fd10b2bf874621c6958efdecd66de4e8712a6f4f7113c5508885d9ab42
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_checksigverify
+
+8aecf59c9fdeb67bea55598861fed3bc7af762f80d677abdaa4de7adc81eb169
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_v2]
+
+8bd42c202be5fe1a29f1eb5742d7890f7e69fc11a9b5c04a7ffc3249602f64a5
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_CHRONICLE_v1]
+
+8cced272769d63e213460d04852cac4218f711c2f08a4e18e2a426830f021df7
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_CHRONICLE_v1]
+
+8d17dbec5d96c58eff9feae4e5d6bc6728244f8a2ea06b6b6112e1a3a6dbdf6b
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+8f69392741811e5f97829f530c09cff8d2850dd17abad8f50f35c09c24b4cdc0
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pk_version_transition[setup_v1_spend_v2]
+
+9004440c98d3ff14e37bddfbd084105eb81b1ef3f994e6bf4eadcf82efc5f55a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_v1]
+
+906e575b8d0d9319adb3e41b538140a9b78d20bffc9359f4e53e6250bf5a1174
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_v2]
+
+924e0e8486722da6e8397e5057481db1ae9b963169574e9d514ba6057b5e6021
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_FORKID_v2]
+
+92fa26bf27dea61f12e1e487f3f832461f849de8b55dcca56417aa0af24ca2d2
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_v1]
+
+9385a100a6eff0706ea3a1aa591329a75c044224bfbde3fb533eba9e69fbf359
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_v2]
+
+93f7f8c1162cfaf36c43717f39a8bcea9b0539d620f4c443f6bc3d2f42273629
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_left[BIP143_v1]
+
+953b5b1166daf4694e430ac5da446a16a4861423c307f9239e6be2e28b566bf7
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_checksigverify
+
+957e6788bcef575f454985ea8934cd35589f5a4ac301f7a712b916d9e10be84d
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_right[BIP143_v1]
+
+9615dd13b93b77630a42a01ddbed42757f47413aa442181eab3c46091c7e61b7
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+96829c9cd08276119a232686cfe000c8481ae92f2f3c82400a649c5bdd2ffc2a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_CHRONICLE_v1]
+
+97fdeb97a70a29ad32503ea491a52e13c4672cd2bd503fc273fa5bc8a4f9a2d9
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+996ca19f3a4d651ab0e484793e2cc344331ed4fbd3dabaf9e875b8b66820b96f
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_v2]
+
+9ac7a588c13ebf18b4895e6ffb300eea86abe3d4fe59c01dd09968270ce7d3a9
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_sub
+
+9c771117231f29a5f935b969e33d37e15eff4a2d682296ca3d98e862b63b8572
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_lshiftnum[OTDA_v2]
+
+9e0c8e3566d75c81a9b6e3a078faa14f7f95a16be54dd16aa97b3761bde26b09
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_FORKID_CHRONICLE_v2]
+
+9f1b38333794a65d72f8029fbc1d93dd6220dc63c41bfe4bd4bd8ce4e2e701ed
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_FORKID_v1]
+
+9f3e2afa92253b8d2cf45d5045224ff6360f57298e1c101188db5e6df8c2b81e
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_hash160
+
+9fb8696c888ebe54927d3ffdc9296bb205b8b07f6c34b19f2882ddbbebf222fa
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pk_version_transition[setup_v2_spend_v1]
+
+9fd2364c8c240c2db50158cc1ebd9c76b44eeedeca49cf952d977d1ab417caa3
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_v1]
+
+a01131504458a3e4d7995de63953f6ff71ed96cc9b872b545f081415e6f198d6
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+a1e62fafaf42cb45c036b68f43e305b6dfa6ae2c1b6cb670167719fd07690485
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_lshiftnum[OTDA_v2]
+
+a2157be2e64cdf1f97024bdb931c5e1f268891ed858b583d44441cc159a6f662
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_v1]
+
+a3bf870c30c4eb432d112551f41486aa30d1c8a6fa88bf3b3a82b6642cbed0e7
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_CHRONICLE_v2]
+
+a6a933ee8b5beb5c1facc0c36c743413a56172baaa48ee69c0ee50a22ca530c1
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_CHRONICLE_v2]
+
+a8a06319edefb958414f4657042f5dcdd96968d8db9b55b535060dee3703affb
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_CHRONICLE_v2]
+
+ab1ff39f24384a1b1e5af3cbeeca2e53bfe9e6ca55a06a66750974dc8ac9816a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2mul[BIP143_v1]
+
+abd7a6a475b0d404d1a7076326f5bc8ac59c805b42646bee2eb0004b667de34a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_v1]
+
+ac798696f606d712ab189d276ec8e550f93a75ef958caedea201b6daa1dc4d7c
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_v1]
+
+ad6ea97a5e784de91cf2de6e94d1470db75d32829d6f7de6c9b451c9b8a5565b
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_substr[OTDA_v2]
+
+adc6abee617b3c4b70f789d12f70f45a239c4da8ed165da39a0c3525f36c58ce
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_right[BIP143_v1]
+
+af4c88b5205c45c87cae3864e7da7e75f399b3169a85569710ab4ade00185d09
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_v1]
+
+b00979c61a55697c62d328c0fe72a77d969d9bc3fd68329e58d0d5681f7db574
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+b0215be272da2dac813995ea1ebeb2d98166cdfc4cbacbb5dd640ea02a7d87a9
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+b39b00d03abd385c53680a8f433912964edb7bd6b8d71a974b9a404d7f98fc72
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_v1]
+
+b3d2018fe21861dd02d9f9c53c9f3adbdd5923dd429c3c2e7727250a3ede304b
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_v1]
+
+b6141a95d0c4dbb59c0af99fc3f3d37de0d612652f4b89550e54054c2dbaf3ce
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+b6e51815c54dbc513afcbf4bbfb03b309b185988342875e30ce14556443bbfed
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_rshiftnum[BIP143_v1]
+
+ba2e8f9da855d7d9976fcadceaca6179d2f0262d519e75efebc5036cdfa8c5e2
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_v2]
+
+bc0554fd6f515a935d03395e963214d592372c2672a63f52e1aaeff7eeeaa1ce
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_v2]
+
+bdf7163b167b03a973960fddf0775b7afdb86a2460b155bbf439da1acff8a987
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_v2]
+
+be9956dfc1f29b84d88e7caa8c7a082a265681e32ecfe5f9b12f605c42a5cf65
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_cat
+
+bfa4db520e211f6e33493fdcc866f3673fb3bec48cdc8812d3b6211c16887024
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_CHRONICLE_v2]
+
+c2ed0d2a9e6df64877ec5e28a6099e855aa0df871bd13af6f30abb62f559ff76
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+c3a54c14713f0d8ed79f0b5edc893bd0b89fb1d4f755418c2f1110f22b66c9a4
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_v1]
+
+c3b4ca38f10df4d29796b8379583e83fdf752c247e3c32bf1ce5c0e8ef23ca21
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_substr[BIP143_v1]
+
+c939db4b28c017e6d43a0c4a4a7e0bc739323245209edb97f7ece2747470534b
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pkh_version_transition[setup_v1_spend_v2]
+
+cb4b1dfa72560be352894dee35f55ad32043463f153fbc4279b03b215e7056a4
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_ANYONECANPAY_FORKID_v2]
+
+cb8b8f36a1aa623c7486ca2b75db5c6d5c972da5e78190749daa954a40940b27
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_v2]
+
+ccf22523c6baa25c747cca6f5be454170d8b78b22fded2a36aff16219b770d17
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+ce065dacb1a7206344b61c51e8a6ecb6a5539f650a8fae164e0ab91448608441
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_ver[BIP143_v1]
+
+ce63adba2483689325e49288a51e3c1fea1b3b82560ee2241be1619bee280e6d
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_ANYONECANPAY_FORKID_v1]
+
+cf9dc600a3cea8036b4f1d9c3abd9a313f851ec3e6ff043b33634081bcdac49b
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_add
+
+d3bc5e5c3527c84c311d61c1328d665c3d74b8caeacda5bb64c0b5314c3a14d8
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_v2]
+
+d68a606338f346e8a22fe845ae7b07b9c5e383ce116772286524425f332aa8e2
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_v2]
+
+d75333982ebc7f20dadfc7891250cff2728ac9bf01fed270ed11b286737e3e79
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_FORKID_CHRONICLE_v1]
+
+d822377eebeb8721ce6db7b64f1cf1a82745bbb39206255258694ce401e699d5
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2mul[OTDA_v2]
+
+d89e3ee05385bf619b21a1e6e7773a49f9502ace9220cde5154a407c737fdf1a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+d8dd7c364302572b4e92bfdce83a3494a589cbcaa98eeea4c51157c7ad996e6c
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_v2]
+
+da9ec1a8a78e754352172d7691b08fc52fe26c3b9087ed758ebdf96d26d7caee
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2mul[BIP143_v1]
+
+e1d45fa3c7482dd539252044f97170c4230ef440a77b250d827344bf13e282ff
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_v2]
+
+e3c66143818b1737b1b6d4c1aabf54fd79d28117d8a7c97b5ea90ad4be13ad70
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_v1]
+
+e511b66cdc55a23b9a01bbd963dbfa15d735229e03390debbfae91dfaaadfb94
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_chronicle_opcode_bip143_v2
+
+e73047c6d0f489b0e6163f43b117ecf4c6f6d8d47ae2fda61add8f5992de4d27
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_v2]
+
+e79ff369a27b9f75c161fd86ad5a68378164a49d8d18c88df879053c105c1512
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_v2]
+
+e874dadd7f81de6cb3c3275c6ec8c84029c23d4cbdca451edba329ca00f93ad2
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_FORKID_v2]
+
+ea0a26f4c7cfc8c1056c24181d80ef1263578130ac69d65b29fcc7aeb755d298
+  - tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_mul
+
+eabe7ee2e0d7c4fdb4c9fc6e003ddcc97ef3f55395405256e062d30556f0f2f7
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_CHRONICLE_v2]
+
+ebf8cf05dd3b4d4196405d92869fa6a53f8ee959ba39f255317568248b30095c
+  - tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_ver[OTDA_v2]
+
+edc7c684cf8ce2e30b5a1f2dd80154302c2bc51694413379305c6394ea8d572b
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_v1]
+
+f61854c7451c40b98c41429384ca22935a208cae909c2dd3e857bc413f64aafb
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_CHRONICLE_v1]
+
+f8c4e7eef92e26e363c38b4e36a4fbabda7a21e242994fa1c3255c3414c848e4
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_v2]
+
+f8e05ffb6c63d03c730c917464c113da443322f85b3d16e3ef6c6787e08e84c0
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_CHRONICLE_v1]
+
+fa50422095940acd070a117fbb497f832b3b43425b25e6def51388c8079517d0
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+fb6c958a2d326917a6e7e601c3feb8b17e1f7bb850ddc4e87bb05d79eba95178
+  - tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pkh_version_transition[setup_v2_spend_v1]
+
+fc51965b3dc0ab3abeffdb042a875b80f83d45b98fa95ca014149bdc3a812010
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_CHRONICLE_v2]
+
+feab36bc07a5464d773b7235e237db9c5d7a8e822cf05c3b5bdc1b6774fee48c
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+feef66ff14a255b8e35415a0d254c7d84565253955182a1f3483b1cb093ecf2d
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+
+fefba69b3f0276ef655c0d756d04ac40473446aa525d4988ec04716be129c137
+  - tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_v1]
+
+ff8a3fb3704f3f9a3ff5337f74eab97980dc119d485a7462d44f0b91dc4c620a
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_ANYONECANPAY_FORKID_v2]
+
+ffa74cc6842be5ba7d5d228fc5922061258662d0ddc59989240822ab451099fb
+  - tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_ANYONECANPAY_FORKID_v1]
+
+========================================================================
+SECTION B: Each pytest node id → NOT-OK txid(s) for that test
+========================================================================
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2div[BIP143_v1]
+  378590487de72250bc666416bab485bff8821394f46c7d758ecc1eb365b60cfb
+  611ef29af1a16d878694e4334b6446b0b0ce5d0f0a82c85a36f4c0f73220e303
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2div[OTDA_v2]
+  4153abdcaf44beaa36f32c16c74649fdf1260a189dbc1ca715dccf721fc6e214
+  882d7ba12fd24f3c30724ea00ad2d270c4b80f5ad35fdd1dd2fd4f999d968982
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2mul[BIP143_v1]
+  ab1ff39f24384a1b1e5af3cbeeca2e53bfe9e6ca55a06a66750974dc8ac9816a
+  da9ec1a8a78e754352172d7691b08fc52fe26c3b9087ed758ebdf96d26d7caee
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_2mul[OTDA_v2]
+  d822377eebeb8721ce6db7b64f1cf1a82745bbb39206255258694ce401e699d5
+  33e8ffb74c4f29ed78c9ed2d6116ac241a35697cd3434fc5c7b9a0ddcc50154b
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_left[BIP143_v1]
+  93f7f8c1162cfaf36c43717f39a8bcea9b0539d620f4c443f6bc3d2f42273629
+  20f8ddee0a70b3930c73e53bbe0d4ccd496cc0f24bd490b24a20482e50fb82c0
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_left[OTDA_v2]
+  5f032dad301136f071e32ce85e228b1518eb47868952c7e78d78666a1515b847
+  05c85cce20dff4236d3c56fb00a3fa027c37760c5f169bbc0585a523f14bceae
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_lshiftnum[BIP143_v1]
+  817b704a5be8986652a68f5bd284f3fdcf3c21a1ddbb261d787c6655a1815070
+  878bf3b3c17d7309e6755d6a02f102f3ee83ecc0f550b786b17b096dd9e8e466
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_lshiftnum[OTDA_v2]
+  9c771117231f29a5f935b969e33d37e15eff4a2d682296ca3d98e862b63b8572
+  a1e62fafaf42cb45c036b68f43e305b6dfa6ae2c1b6cb670167719fd07690485
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_right[BIP143_v1]
+  adc6abee617b3c4b70f789d12f70f45a239c4da8ed165da39a0c3525f36c58ce
+  957e6788bcef575f454985ea8934cd35589f5a4ac301f7a712b916d9e10be84d
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_right[OTDA_v2]
+  6a3c3009be2b217ce027f0ca265d666e670c255d4751c23d0e5125a26cc4e1d5
+  2105fc5986d21d058c87011085ba0f3994b3ee72cadf94a58333634a8d486cee
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_rshiftnum[BIP143_v1]
+  7e1acd79e21a318fc6faa0ccd07f11944ef06857b30120cc2edda1f60d9e5c56
+  b6e51815c54dbc513afcbf4bbfb03b309b185988342875e30ce14556443bbfed
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_rshiftnum[OTDA_v2]
+  68bef7e189482f69aca423b1010128c95f36debf178b4fa34c44ff109fe587fb
+  7de05a067693d0fa0a8d9f118a0ff02173a1fbfebe30767e746991fd110dd8cf
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_substr[BIP143_v1]
+  36c3953a16db7897ffd61ab4fdeb51f317663e8a009fde4bade8986d216cad88
+  c3b4ca38f10df4d29796b8379583e83fdf752c247e3c32bf1ce5c0e8ef23ca21
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_substr[OTDA_v2]
+  ad6ea97a5e784de91cf2de6e94d1470db75d32829d6f7de6c9b451c9b8a5565b
+  7a2f0539d98bffa58a893cb7df19ea2bcf5f506d7cea716a383ba67a4d0659ba
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_ver[BIP143_v1]
+  08dfddd0eb306bea40341db89b92a6f947ee8d81e1f1b5a87924d1c66c5c51cf
+  ce065dacb1a7206344b61c51e8a6ecb6a5539f650a8fae164e0ab91448608441
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_ver[OTDA_v2]
+  ebf8cf05dd3b4d4196405d92869fa6a53f8ee959ba39f255317568248b30095c
+  0726ff8ce8aadaded53e796db06e63c1560d8f80c5ad9241c621c427f5c60e78
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_verif[BIP143_v1]
+  434fe6806afa585c579629baee087619390db1c29934db1284bc8861a034832d
+  386d9cd676fadd76f5a2f79743fa3cc1b32db8e9f8bfd6bc461a21fa0e46ea3a
+
+tests/bsv/live/test_live_testnet.py::TestTestnetChronicleOpcodes::test_op_verif[OTDA_v2]
+  109d6715b3c1e2de8f8f67e36e2151e9fa1c77b7b7c34d47bfe81be931a2ab87
+  41980a769de3aca23fa99bc7f4f9d6474e94bd58a8ac4e081a4d0fbfb63cbb01
+
+tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_chronicle_opcode_bip143_v2
+  e511b66cdc55a23b9a01bbd963dbfa15d735229e03390debbfae91dfaaadfb94
+  6e466869f591c970f2b42dcfbf30bc6929113972bd24d4fe19d91db34e5e0a70
+
+tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_chronicle_opcode_otda_v1
+  6b3420693e80b3703471effd1542bb691c005a3f433c7994e94413b3c771236d
+  606d2450e2f1c03a910afd7201b314e56a278eeddeca21de6ba7326e521e25d0
+
+tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_mixed_sighash_inputs
+  318ae289cf13d8dd88bb34932f6cf5febe280c368d49b3cd3926644188e51155
+
+tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pk_version_transition[setup_v1_spend_v2]
+  5c067ec447208f72eb1abe0df034caa3750050a84dcbfca97e1a3f93f11bee80
+  8f69392741811e5f97829f530c09cff8d2850dd17abad8f50f35c09c24b4cdc0
+
+tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pk_version_transition[setup_v2_spend_v1]
+  635482dc68c57f9017e4115f2c388fdd2e7705aa5bf24336cb56b2e5cc17b8f4
+  9fb8696c888ebe54927d3ffdc9296bb205b8b07f6c34b19f2882ddbbebf222fa
+
+tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pkh_version_transition[setup_v1_spend_v2]
+  c939db4b28c017e6d43a0c4a4a7e0bc739323245209edb97f7ece2747470534b
+
+tests/bsv/live/test_live_testnet.py::TestTestnetCrossConfig::test_p2pkh_version_transition[setup_v2_spend_v1]
+  fb6c958a2d326917a6e7e601c3feb8b17e1f7bb850ddc4e87bb05d79eba95178
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_CHRONICLE_v1]
+  b6141a95d0c4dbb59c0af99fc3f3d37de0d612652f4b89550e54054c2dbaf3ce
+  2b9b1b6cedc7f0df5a4cafa5fc8ced9f61f695b022a2e8069afefe8491e6989d
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_CHRONICLE_v2]
+  fc51965b3dc0ab3abeffdb042a875b80f83d45b98fa95ca014149bdc3a812010
+  a01131504458a3e4d7995de63953f6ff71ed96cc9b872b545f081415e6f198d6
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_v1]
+  92fa26bf27dea61f12e1e487f3f832461f849de8b55dcca56417aa0af24ca2d2
+  c3a54c14713f0d8ed79f0b5edc893bd0b89fb1d4f755418c2f1110f22b66c9a4
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_ANYONECANPAY_FORKID_v2]
+  5644f563eee93d98d4144fd6322334183fa52554015dd6fa46f15d2d842f9269
+  746c0e09a23d26f4e65abc70c0b6bf66e2f7cf61f84589cc961bb63604ea2d77
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_CHRONICLE_v1]
+  8bd42c202be5fe1a29f1eb5742d7890f7e69fc11a9b5c04a7ffc3249602f64a5
+  7cd64dda785f363ff60f9f0a802fbf27745aab3650dbb80cfcab7d565ae2fc75
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_CHRONICLE_v2]
+  78742d4aa9f92bb37d4a21bf6d9c65740284d06d2e41caf6e28f889c67c0f252
+  228de7fca27626b42e8e665eeea75cc7bcfc9f27ef0d21bc35ee6c8ee865c5f3
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_v1]
+  589e3d86ea774460bac23e640a451665113f5c70281d94398e5d89bcd25903c3
+  9fd2364c8c240c2db50158cc1ebd9c76b44eeedeca49cf952d977d1ab417caa3
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[ALL_FORKID_v2]
+  f8c4e7eef92e26e363c38b4e36a4fbabda7a21e242994fa1c3255c3414c848e4
+  d68a606338f346e8a22fe845ae7b07b9c5e383ce116772286524425f332aa8e2
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+  7313235228041451cbbde74e8a16310ba788755808363c782fe8c00c9bc32dae
+  84bc282410a44c4a4ecb07156a8d0b85500a3a9ffda410a12cfc541e0a00fa9e
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+  316152e078c8259c34b49479c80e0722613b62858729d413055c60927f609495
+  4afe33453f37f0a1a1f588b9a7058f0aba6c52a39e93548f155d41b268f0a1b1
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_v1]
+  641ac85a1b3d279063dbdbc57bec9868e4f99da78bba06a1843d51cc9b834007
+  af4c88b5205c45c87cae3864e7da7e75f399b3169a85569710ab4ade00185d09
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_ANYONECANPAY_FORKID_v2]
+  e73047c6d0f489b0e6163f43b117ecf4c6f6d8d47ae2fda61add8f5992de4d27
+  228bd194954d54ae25cabcf8197bb8205f4494fbecf2648f1898657129336969
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_CHRONICLE_v1]
+  0758c492500cb14bbaf2918f57bb54bf55c32cd71ac1cac7a9e6ef3e3b23dbc0
+  34c8b1d308ce6718bb873aecc5727ea2b47a9dfe82d7165c4ab070007b466fc7
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_CHRONICLE_v2]
+  eabe7ee2e0d7c4fdb4c9fc6e003ddcc97ef3f55395405256e062d30556f0f2f7
+  67a46bfcc988cd239b259bdb8997cbe80c71cc5a00b64bf4ea6467f61aaa2837
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_v1]
+  a2157be2e64cdf1f97024bdb931c5e1f268891ed858b583d44441cc159a6f662
+  abd7a6a475b0d404d1a7076326f5bc8ac59c805b42646bee2eb0004b667de34a
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[NONE_FORKID_v2]
+  e79ff369a27b9f75c161fd86ad5a68378164a49d8d18c88df879053c105c1512
+  ba2e8f9da855d7d9976fcadceaca6179d2f0262d519e75efebc5036cdfa8c5e2
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+  049db008cc238d3e7b4bf29bead95889989e5bfbebf15ce1ee7b21b39f7ea5c9
+  347740353d0d6af1fedfdcc5e1089ba8df37e52facb65809499d64f241186c95
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+  8d17dbec5d96c58eff9feae4e5d6bc6728244f8a2ea06b6b6112e1a3a6dbdf6b
+  b0215be272da2dac813995ea1ebeb2d98166cdfc4cbacbb5dd640ea02a7d87a9
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_v1]
+  4cd534cb74a244364c928ca8e82eb9a53b8342e18560a2edbc45b9cc0a4397b1
+  e3c66143818b1737b1b6d4c1aabf54fd79d28117d8a7c97b5ea90ad4be13ad70
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_ANYONECANPAY_FORKID_v2]
+  bdf7163b167b03a973960fddf0775b7afdb86a2460b155bbf439da1acff8a987
+  996ca19f3a4d651ab0e484793e2cc344331ed4fbd3dabaf9e875b8b66820b96f
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_CHRONICLE_v1]
+  f61854c7451c40b98c41429384ca22935a208cae909c2dd3e857bc413f64aafb
+  f8e05ffb6c63d03c730c917464c113da443322f85b3d16e3ef6c6787e08e84c0
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_CHRONICLE_v2]
+  800509a35b3cedfe8c3cf66c3465fb678ff89c244c6fa491819693eef12cb815
+  a8a06319edefb958414f4657042f5dcdd96968d8db9b55b535060dee3703affb
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_v1]
+  5ffb7775cd8c642f7028c7037d259783d74e1655139a94594301f4a2bfdd939b
+  fefba69b3f0276ef655c0d756d04ac40473446aa525d4988ec04716be129c137
+
+tests/bsv/live/test_live_testnet.py::TestTestnetMultisig::test_multisig_2of3[SINGLE_FORKID_v2]
+  493a4993f656ba887b6231ee982938cbb16d1373646d921898327d88bd1ff209
+  0908fa0997a60867d7c4740bc0077c6c445671f2b48cbc56e7c5ff3267419266
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_CHRONICLE_v1]
+  fa50422095940acd070a117fbb497f832b3b43425b25e6def51388c8079517d0
+  2905f4628da6a4f0310e628a6568d2fb1ce1ceda916149703f273befcc22643f
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_CHRONICLE_v2]
+  5da769e917a5b1056dea50753ac9a869e17984a0bb140dc8857382a5e74879dc
+  3e3856f51dead1e3efd0bb7bbb45f2058279cc9678f934c3f55bd124b03f7a7c
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_v1]
+  29dd2b4a83e57a5108cf1c471f165e7b5edab1a5a24f3e7d4641c749e3506f73
+  743c7589f8388597cd0114f1d7207c529504a0f45d5847b9aeb52537814c140a
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_ANYONECANPAY_FORKID_v2]
+  bc0554fd6f515a935d03395e963214d592372c2672a63f52e1aaeff7eeeaa1ce
+  65bd36b5d31da8bb882f4ffcadad82940123b2ca61a91fe0ab038babe8075ef1
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_CHRONICLE_v1]
+  96829c9cd08276119a232686cfe000c8481ae92f2f3c82400a649c5bdd2ffc2a
+  2efaf8acbb6937edb3c052e439d0cdb32d17824c18f8218bc1dbbff756af4ae7
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_CHRONICLE_v2]
+  0efbf8e3d4f2667cc5d5f0eab6eeb841617f7c3e30f0b148cdc74f7c4d180796
+  0ef563074984abf8f2915d6c30778a6900cd1771052b16911a7d3245462f3c4a
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_v1]
+  83f981d190edbc6b3d6e3f4a62ec8f8861ddf54db53013c3e3310fb45fee9064
+  b39b00d03abd385c53680a8f433912964edb7bd6b8d71a974b9a404d7f98fc72
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[ALL_FORKID_v2]
+  cb8b8f36a1aa623c7486ca2b75db5c6d5c972da5e78190749daa954a40940b27
+  043ac01480af8620f2be76d6d60f64a93bc370701bfc10ed677fffd16c3b9a22
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+  feab36bc07a5464d773b7235e237db9c5d7a8e822cf05c3b5bdc1b6774fee48c
+  871d937976bb06c580d1e97bcafc57eae526febaa8efe16aad791aa8c03eb738
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+  9615dd13b93b77630a42a01ddbed42757f47413aa442181eab3c46091c7e61b7
+  b00979c61a55697c62d328c0fe72a77d969d9bc3fd68329e58d0d5681f7db574
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_v1]
+  b3d2018fe21861dd02d9f9c53c9f3adbdd5923dd429c3c2e7727250a3ede304b
+  256d2a92b51794a222c61b3b8e47fb7ffaf74ce5a9ed98df85fccb5e3cf589af
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_ANYONECANPAY_FORKID_v2]
+  8aecf59c9fdeb67bea55598861fed3bc7af762f80d677abdaa4de7adc81eb169
+  9385a100a6eff0706ea3a1aa591329a75c044224bfbde3fb533eba9e69fbf359
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_CHRONICLE_v1]
+  667bc590f56d3032bff7a09fd0170c6aab9f87c8e6f6ca5da35fb6a17fbbbb74
+  8cced272769d63e213460d04852cac4218f711c2f08a4e18e2a426830f021df7
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_CHRONICLE_v2]
+  a6a933ee8b5beb5c1facc0c36c743413a56172baaa48ee69c0ee50a22ca530c1
+  bfa4db520e211f6e33493fdcc866f3673fb3bec48cdc8812d3b6211c16887024
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_v1]
+  2fafe8cb08d4b3e1167b1b3f7a1a09afdc5a958ce97a347a2cce435eed7ca665
+  ac798696f606d712ab189d276ec8e550f93a75ef958caedea201b6daa1dc4d7c
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[NONE_FORKID_v2]
+  272212f8b37c8073c4463d4cfb1a014055857398fb5697bc22d38ba234eca992
+  e1d45fa3c7482dd539252044f97170c4230ef440a77b250d827344bf13e282ff
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+  2e1d95663cccce82db4855fc6791bbb8c34ff6c88a4739d3d344b6340f9ddca1
+  feef66ff14a255b8e35415a0d254c7d84565253955182a1f3483b1cb093ecf2d
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+  883f238637b6b6a852ddc5dafae5c659ea918f01f4a71e6232e1eb2c78352f32
+  667320cd0d8c963e9aadbab06901009887d4ac4ec4d2855a6be7a23eae4a4896
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_v1]
+  357d60b1459587dda3b0063b88bb9a629c70cc9e215b10b2dff0c9d7ee3c52b5
+  157573a123e7c0b00011623a25a22115b9cc282c938378056e142be24e2621e5
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_ANYONECANPAY_FORKID_v2]
+  16294b98b39da8110018b82809a405b745ef00ed214643f18df5782b574ceb4b
+  d3bc5e5c3527c84c311d61c1328d665c3d74b8caeacda5bb64c0b5314c3a14d8
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_CHRONICLE_v1]
+  26e785eb395e7a0d396dbfe2e663d9bff4efb4461bbcd2fc47306df6dcb9f9d2
+  2dcad4904d3d06bd2cfa8ee8a5b6ca4ead9c837202092498cd259e10e2b9c6c3
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_CHRONICLE_v2]
+  2cf341c30b1f6d78706dc0fbf3093e5a18f414c9f33000660cc9c6e331a8aa72
+  a3bf870c30c4eb432d112551f41486aa30d1c8a6fa88bf3b3a82b6642cbed0e7
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_v1]
+  1f9f2718acb803ebba706fab970e2cb1230526f0739378bd739a9493a32b93d8
+  edc7c684cf8ce2e30b5a1f2dd80154302c2bc51694413379305c6394ea8d572b
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PK::test_p2pk[SINGLE_FORKID_v2]
+  906e575b8d0d9319adb3e41b538140a9b78d20bffc9359f4e53e6250bf5a1174
+  1a441ccad609d2e1e64741efed9bbc6c9346f6949dfc81861448e0795895c7b1
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_ANYONECANPAY_FORKID_CHRONICLE_v1]
+  c2ed0d2a9e6df64877ec5e28a6099e855aa0df871bd13af6f30abb62f559ff76
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_ANYONECANPAY_FORKID_CHRONICLE_v2]
+  1199df15df2bfb7cb304c49bcac6beac3988192eb55f488ee846f65af4a6e475
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_ANYONECANPAY_FORKID_v1]
+  659fc03c017a24155ccdef4434174080ff25e1303e829efe572a7a7524037f09
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_ANYONECANPAY_FORKID_v2]
+  8589373dec56e60c3ebef46927720e3062dd9b77bb3a95ab037ec58b4ff08690
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_CHRONICLE_v1]
+  1942322f0c19eff21c8d0552a04cab90881714b7fa62185f789939cc2634289c
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_CHRONICLE_v2]
+  4752a1d3778ece09fb2808b5cf2dcdfcf01dddaf687b81cd77079aa76b993e5c
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_v1]
+  72284fef9f04e9c8b6a195dbf4d1353d514ceeeedfe48a3336f81af386441a8e
+  9004440c98d3ff14e37bddfbd084105eb81b1ef3f994e6bf4eadcf82efc5f55a
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_v2]
+  d8dd7c364302572b4e92bfdce83a3494a589cbcaa98eeea4c51157c7ad996e6c
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+  023c9cbd81b99fbd876c3baab359222709641d461c34b1934059500559ba4b95
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+  ccf22523c6baa25c747cca6f5be454170d8b78b22fded2a36aff16219b770d17
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_ANYONECANPAY_FORKID_v1]
+  ffa74cc6842be5ba7d5d228fc5922061258662d0ddc59989240822ab451099fb
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_ANYONECANPAY_FORKID_v2]
+  ff8a3fb3704f3f9a3ff5337f74eab97980dc119d485a7462d44f0b91dc4c620a
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_FORKID_CHRONICLE_v1]
+  d75333982ebc7f20dadfc7891250cff2728ac9bf01fed270ed11b286737e3e79
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_FORKID_CHRONICLE_v2]
+  39d4394a26393c4cacf13f8eea472a8560cc9ebde76358073c037b67edb4d5fb
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_FORKID_v1]
+  3c8f58af8c347d0b126f5b57fef1a2f726c1f33ef1a77efb02778c36eacd7f71
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[NONE_FORKID_v2]
+  e874dadd7f81de6cb3c3275c6ec8c84029c23d4cbdca451edba329ca00f93ad2
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v1]
+  97fdeb97a70a29ad32503ea491a52e13c4672cd2bd503fc273fa5bc8a4f9a2d9
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_ANYONECANPAY_FORKID_CHRONICLE_v2]
+  d89e3ee05385bf619b21a1e6e7773a49f9502ace9220cde5154a407c737fdf1a
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_ANYONECANPAY_FORKID_v1]
+  ce63adba2483689325e49288a51e3c1fea1b3b82560ee2241be1619bee280e6d
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_ANYONECANPAY_FORKID_v2]
+  cb4b1dfa72560be352894dee35f55ad32043463f153fbc4279b03b215e7056a4
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_FORKID_CHRONICLE_v1]
+  3ac2003ee56f515a408cbd893b03b76ea5b1c3564b1aaf35257ece1108978d51
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_FORKID_CHRONICLE_v2]
+  9e0c8e3566d75c81a9b6e3a078faa14f7f95a16be54dd16aa97b3761bde26b09
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_FORKID_v1]
+  9f1b38333794a65d72f8029fbc1d93dd6220dc63c41bfe4bd4bd8ce4e2e701ed
+
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[SINGLE_FORKID_v2]
+  924e0e8486722da6e8397e5057481db1ae9b963169574e9d514ba6057b5e6021
+
+tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_add
+  5a5dd8f5cc703a5eb3d5f27609dc90fd7857e2a57517b46cc2ad285f2bb5940a
+  cf9dc600a3cea8036b4f1d9c3abd9a313f851ec3e6ff043b33634081bcdac49b
+
+tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_cat
+  56088b116725f471f95ced86094bea6942cbe0babf442fad46c5365fa806ce02
+  be9956dfc1f29b84d88e7caa8c7a082a265681e32ecfe5f9b12f605c42a5cf65
+
+tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_checksigverify
+  953b5b1166daf4694e430ac5da446a16a4861423c307f9239e6be2e28b566bf7
+  89db81fd10b2bf874621c6958efdecd66de4e8712a6f4f7113c5508885d9ab42
+
+tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_hash160
+  9f3e2afa92253b8d2cf45d5045224ff6360f57298e1c101188db5e6df8c2b81e
+  7b543a953244e021532a8e8ecc6fe8af04147abcc4827773634790a44c714398
+
+tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_if_else
+  5701c48b8ffb0edad6f8a5c36afcb79817be93d1436f4c183858fd50d2a2aa73
+  54db219c657d9c06184a7284fe1c1fcaf68c0d85f859d4c42c81f4aa72438ba9
+
+tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_mul
+  ea0a26f4c7cfc8c1056c24181d80ef1263578130ac69d65b29fcc7aeb755d298
+  6dd4b1cce82b42703f6c49cc79c09eab05ba69ceedccf8345b97c8cb0125c069
+
+tests/bsv/live/test_live_testnet.py::TestTestnetStandardOpcodes::test_sub
+  4833fe9294126a3742c1c7ca454933d4876fdecaaf1e5dc0e755108892fd7765
+  9ac7a588c13ebf18b4895e6ffb300eea86abe3d4fe59c01dd09968270ce7d3a9
+
+========================================================================
+SECTION C: First test in log order containing any NOT-OK txid
+========================================================================
+tests/bsv/live/test_live_testnet.py::TestTestnetP2PKH::test_p2pkh[ALL_FORKID_v1]
+txids printed for that test:
+  72284fef9f04e9c8b6a195dbf4d1353d514ceeeedfe48a3336f81af386441a8e  [NOT_OK_WOC_JSON]
+  9004440c98d3ff14e37bddfbd084105eb81b1ef3f994e6bf4eadcf82efc5f55a  [NOT_OK_WOC_JSON]
