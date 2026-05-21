@@ -136,7 +136,7 @@ def _wrap_decrypt_fields_signature_compat(cls: Any) -> None:
 
 
 # Attempt to patch known Dummy class if present
-for module in sys.modules.values():
+for module in list(sys.modules.values()):  # NOSONAR - snapshot copy prevents RuntimeError in Python 3.13+
     try:
         dummy = getattr(module, "DummyVerifiableCertificate", None)
         if dummy is not None and inspect.isclass(dummy):
