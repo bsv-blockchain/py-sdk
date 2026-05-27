@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.1.4 - 2026-05-27](#214---2026-05-27)
 - [2.1.2 - 2026-05-20](#212---2026-05-20)
 - [2.1.1 - 2026-05-19](#211---2026-05-19)
 - [2.1.0 - 2026-04-07](#210---2026-04-07)
@@ -27,6 +28,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [2.1.4] - 2026-05-27
+
+### Fixed
+
+- Reclassified `SEEN_IN_ORPHAN_MEMPOOL` as progressing instead of terminal failure — orphan mempool means the parent tx has not yet propagated to the node, not that the broadcast failed. Updated `ARC_TERMINAL_FAILURE_TX_STATUSES`, `ARC_PROGRESSING_TX_STATUSES`, and `categorize_transaction_status()`.
 
 ---
 
