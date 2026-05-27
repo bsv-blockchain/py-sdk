@@ -49,7 +49,6 @@ ARC_TERMINAL_FAILURE_TX_STATUSES = frozenset(
     {
         "REJECTED",
         "ERROR",
-        "SEEN_IN_ORPHAN_MEMPOOL",
         "DOUBLE_SPEND_ATTEMPTED",
     }
 )
@@ -66,6 +65,7 @@ ARC_PROGRESSING_TX_STATUSES = frozenset(
         "REQUESTED_BY_NETWORK",
         "SENT_TO_NETWORK",
         "ACCEPTED_BY_NETWORK",
+        "SEEN_IN_ORPHAN_MEMPOOL",
     }
 )
 
@@ -466,8 +466,12 @@ class ARC(Broadcaster):
                         # Transaction is in mempool without conflicts
                         status_category = "0confirmation"
 
+                # Orphan mempool - progressing (parent tx not yet seen)
+                elif tx_status in ["SEEN_IN_ORPHAN_MEMPOOL"]:
+                    status_category = "progressing"
+
                 # Rejected transactions - failed to process
-                elif tx_status in ["ERROR", "REJECTED", "SEEN_IN_ORPHAN_MEMPOOL"]:
+                elif tx_status in ["ERROR", "REJECTED"]:
                     status_category = "rejected"
 
                 else:
