@@ -123,8 +123,8 @@ def test_output_op_return():
 
     data = (
         "On February 4th, 2020 The Return to Genesis was activated to restore the Satoshi Vision for Bitcoin. "
-        + "It is locked in irrevocably by this transaction. Bitcoin can finally be Bitcoin again and the miners can "
-        + "continue to write the Chronicle of everything. Thank you and goodnight from team SV."
+        "It is locked in irrevocably by this transaction. Bitcoin can finally be Bitcoin again and the miners can "
+        "continue to write the Chronicle of everything. Thank you and goodnight from team SV."
     )
     data_bytes = data.encode("utf-8")
 
