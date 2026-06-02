@@ -47,6 +47,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Documentation
 
+- Added [ARC Broadcasting and Transaction Status](docs/broadcasting_and_tx_status.md) guide — explains what "broadcast success" means, status categories, finality, and confirmation depth recommendations.
 - Added docstrings to `arc_post_data_indicates_failure()` explaining that warning statuses (e.g. `DOUBLE_SPEND_ATTEMPTED`) are intentionally not flagged as failure on POST.
 - Improved `check_transaction_status()` docstring to document the dual return schema (success vs failure shapes).
 - Added docstrings to `broadcast()` and `sync_broadcast()` clarifying that `status="success"` means accepted for relay, not mined.
