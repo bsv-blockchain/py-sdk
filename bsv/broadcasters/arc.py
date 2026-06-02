@@ -1,17 +1,13 @@
 import json
 import os
 import random
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from ..transaction import Transaction
 
 from ..http_client import HttpClient, SyncHttpClient, default_http_client, default_sync_http_client
 from .broadcaster import Broadcaster, BroadcastFailure, BroadcastResponse
-
-
-def to_hex(bytes_data):
-    return "".join(f"{x:02x}" for x in bytes_data)
 
 
 def random_hex(length: int) -> str:
@@ -49,7 +45,8 @@ ARC_TERMINAL_FAILURE_TX_STATUSES = frozenset(
     {
         "REJECTED",
         "ERROR",
-        "DOUBLE_SPEND_ATTEMPTED",
+        "INVALID",
+        "MALFORMED",
     }
 )
 
@@ -58,6 +55,7 @@ ARC_TERMINAL_FAILURE_TX_STATUSES = frozenset(
 # these as visible (see :func:`~tests.bsv.live.arc_verify.wait_until_arc_tx_seen_on_network`).
 ARC_PROGRESSING_TX_STATUSES = frozenset(
     {
+        "UNKNOWN",
         "QUEUED",
         "RECEIVED",
         "STORED",
@@ -65,6 +63,13 @@ ARC_PROGRESSING_TX_STATUSES = frozenset(
         "REQUESTED_BY_NETWORK",
         "SENT_TO_NETWORK",
         "ACCEPTED_BY_NETWORK",
+    }
+)
+
+ARC_WARNING_TX_STATUSES = frozenset(
+    {
+        "DOUBLE_SPEND_ATTEMPTED",
+        "MINED_IN_STALE_BLOCK",
         "SEEN_IN_ORPHAN_MEMPOOL",
     }
 )
@@ -88,18 +93,14 @@ def _arc_extract_http_error_detail(payload: Any) -> str:
     return str(payload)[:8000]
 
 
-def _arc_broadcast_failure_description(response_json: Any) -> str:
-    """Error string from :class:`~bsv.http_client.HttpResponse` ``.json()`` shape ``{\"data\": ...}``."""
-    if not isinstance(response_json, dict):
-        return _arc_extract_http_error_detail(response_json)
-    inner = response_json.get("data")
-    return _arc_extract_http_error_detail(inner)
-
-
 def arc_post_data_indicates_failure(data: dict[str, Any]) -> Optional[str]:
     """If ARC POST `data` means the transaction failed, return a description; else None.
 
-    Missing or unknown txStatus is treated as acceptable (backward compatible).
+    Only terminal failures (REJECTED, ERROR, etc.) are treated as failure here.
+    Warning statuses (DOUBLE_SPEND_ATTEMPTED, SEEN_IN_ORPHAN_MEMPOOL, etc.) are
+    NOT flagged — if ARC returned HTTP 200 with a txid, the broadcast is considered
+    accepted.  Callers should use :meth:`ARC.check_transaction_status` and
+    :meth:`ARC.categorize_transaction_status` to detect warning conditions afterward.
     """
     if not data.get("txid"):
         return None
@@ -115,7 +116,7 @@ def arc_post_data_indicates_failure(data: dict[str, Any]) -> Optional[str]:
 
 
 class ARC(Broadcaster):
-    def __init__(self, url: str, config: str | ARCConfig = None):
+    def __init__(self, url: str, config: str | ARCConfig | None = None):
         self.URL = url
         if isinstance(config, str):
             self.api_key = config
@@ -136,6 +137,13 @@ class ARC(Broadcaster):
             self.headers = config.headers
 
     async def broadcast(self, tx: "Transaction") -> BroadcastResponse | BroadcastFailure:
+        """Broadcast a transaction to the BSV network via ARC.
+
+        A BroadcastResponse with status="success" means ARC accepted the
+        transaction for relay — it does not guarantee the transaction is
+        mined or final. Use :meth:`check_transaction_status` and
+        :meth:`categorize_transaction_status` to track confirmation progress.
+        """
         # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
         request_options = {
@@ -150,10 +158,9 @@ class ARC(Broadcaster):
             response = await self.http_client.fetch(f"{self.URL}/v1/tx", request_options)
 
             response_json = response.json()
+            data = response_json.get("data", {})
 
-            if response.ok and response.status_code >= 200 and response.status_code <= 299:
-                data = response_json["data"]
-
+            if response.ok:
                 if data.get("txid"):
                     failure_desc = arc_post_data_indicates_failure(data)
                     if failure_desc:
@@ -188,10 +195,26 @@ class ARC(Broadcaster):
                         },
                     )
             else:
+                if response.status_code == 408:
+                    return BroadcastFailure(
+                        status="failure",
+                        code="408",
+                        description="Transaction broadcast timed out",
+                        more={"http_status": response.status_code, "arc_json": response_json},
+                    )
+
+                if response.status_code == 503:
+                    return BroadcastFailure(
+                        status="failure",
+                        code="503",
+                        description="Failed to connect to ARC service",
+                        more={"http_status": response.status_code, "arc_json": response_json},
+                    )
+
                 return BroadcastFailure(
                     status="failure",
                     code=str(response.status_code),
-                    description=_arc_broadcast_failure_description(response_json),
+                    description=_arc_extract_http_error_detail(data),
                     more={
                         "http_status": response.status_code,
                         "arc_json": response_json,
@@ -263,8 +286,12 @@ class ARC(Broadcaster):
         return max(45, sec + 30)
 
     def sync_broadcast(self, tx: "Transaction", timeout: int = 30) -> BroadcastResponse | BroadcastFailure:
-        """
-        Synchronously broadcast a transaction
+        """Synchronously broadcast a transaction to the BSV network via ARC.
+
+        A BroadcastResponse with status="success" means ARC accepted the
+        transaction for relay — it does not guarantee the transaction is
+        mined or final. Use :meth:`check_transaction_status` and
+        :meth:`categorize_transaction_status` to track confirmation progress.
 
         :param tx: Transaction to broadcast
         :param timeout: Timeout setting in seconds
@@ -317,7 +344,7 @@ class ARC(Broadcaster):
                     return BroadcastFailure(
                         status="failure",
                         code=data.get("status", "ERR_UNKNOWN"),
-                        description=data.get("detail", "Unknown error"),
+                        description=_arc_extract_http_error_detail(data),
                         more={
                             "http_status": response.status_code,
                             "arc_json": response_json,
@@ -360,12 +387,15 @@ class ARC(Broadcaster):
             )
 
     def check_transaction_status(self, txid: str, timeout: int = 5) -> dict[str, Any]:
-        """
-        Check transaction status synchronously
+        """Check transaction status synchronously via GET /v1/tx/{txid}.
 
         :param txid: Transaction ID to check
         :param timeout: Timeout setting in seconds
-        :returns: Dictionary containing transaction status information
+        :returns: On success ``{"txid", "txStatus", "blockHash", "blockHeight",
+            "merklePath", "extraInfo", "competingTxs", "timestamp"}``.
+            On failure ``{"status": "failure", "code", "title", "detail",
+            "txid", ...}``.  Check ``result.get("status") == "failure"``
+            to distinguish the two shapes.
         """
 
         try:
@@ -422,63 +452,42 @@ class ARC(Broadcaster):
 
     @staticmethod
     def categorize_transaction_status(response: dict[str, Any]) -> dict[str, Any]:
-        """
-        Categorize transaction status based on the ARC response
+        """Categorize a transaction's ARC status into an actionable group.
 
-        :param response: The transaction status response dictionary from ARC
-        :returns: Dictionary containing status category and transaction status
+        Returns ``{"status_category": ..., "tx_status": ...}`` where
+        ``status_category`` is one of:
+
+        - **mined** — included in a block; essentially final.
+        - **0confirmation** — seen on network with no competing txs.
+        - **progressing** — propagating; no issues detected yet.
+        - **warning** — competing txs, stale block, or orphan mempool.
+        - **rejected** — explicitly rejected by ARC.
+        - **unknown_txStatus** — unrecognized txStatus value from ARC.
+        - **error** — missing txStatus or malformed response.
+
+        See docs/broadcasting_and_tx_status.md for handling guidance.
+
+        :param response: The transaction status response from ARC
+            (as returned by :meth:`check_transaction_status`).
+        :returns: Dict with ``status_category`` and ``tx_status`` keys.
         """
         try:
             tx_status = response.get("txStatus")
+            if not tx_status:
+                return {"status_category": "error", "tx_status": "No txStatus"}
 
-            if tx_status:
-                # Processing transactions - still being handled by the network
-                if tx_status in [
-                    "UNKNOWN",
-                    "QUEUED",
-                    "RECEIVED",
-                    "STORED",
-                    "ANNOUNCED_TO_NETWORK",
-                    "REQUESTED_BY_NETWORK",
-                    "SENT_TO_NETWORK",
-                    "ACCEPTED_BY_NETWORK",
-                ]:
-                    status_category = "progressing"
-
-                # Successfully mined transactions
-                elif tx_status in ["MINED"]:
-                    status_category = "mined"
-
-                # Mined in stale block - needs attention
-                elif tx_status in ["MINED_IN_STALE_BLOCK"]:
-                    status_category = "0confirmation"
-
-                # Warning status - double spend attempted
-                elif tx_status in ["DOUBLE_SPEND_ATTEMPTED"]:
-                    status_category = "warning"
-
-                # Seen on network - check for competing transactions
-                elif tx_status in ["SEEN_ON_NETWORK"]:
-                    # Check if there are competing transactions in mempool
-                    if response.get("competingTxs"):
-                        status_category = "warning"
-                    else:
-                        # Transaction is in mempool without conflicts
-                        status_category = "0confirmation"
-
-                # Orphan mempool - progressing (parent tx not yet seen)
-                elif tx_status in ["SEEN_IN_ORPHAN_MEMPOOL"]:
-                    status_category = "progressing"
-
-                # Rejected transactions - failed to process
-                elif tx_status in ["ERROR", "REJECTED"]:
-                    status_category = "rejected"
-
-                else:
-                    status_category = f"unknown_txStatus: {tx_status}"
+            if tx_status in ARC_PROGRESSING_TX_STATUSES:
+                status_category = "progressing"
+            elif tx_status == "MINED":
+                status_category = "mined"
+            elif tx_status == "SEEN_ON_NETWORK":
+                status_category = "warning" if response.get("competingTxs") else "0confirmation"
+            elif tx_status in ARC_WARNING_TX_STATUSES:
+                status_category = "warning"
+            elif tx_status in ARC_TERMINAL_FAILURE_TX_STATUSES:
+                status_category = "rejected"
             else:
-                status_category = "error"
-                tx_status = "No txStatus"
+                status_category = "unknown_txStatus"
 
             return {"status_category": status_category, "tx_status": tx_status}
 

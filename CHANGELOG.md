@@ -35,7 +35,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Reclassified `SEEN_IN_ORPHAN_MEMPOOL` as progressing instead of terminal failure — orphan mempool means the parent tx has not yet propagated to the node, not that the broadcast failed. Updated `ARC_TERMINAL_FAILURE_TX_STATUSES`, `ARC_PROGRESSING_TX_STATUSES`, and `categorize_transaction_status()`.
+- Reclassified `SEEN_IN_ORPHAN_MEMPOOL` as warning instead of terminal failure — orphan mempool means the parent tx has not yet propagated to the node, not that the broadcast failed. Moved from `ARC_TERMINAL_FAILURE_TX_STATUSES` to `ARC_WARNING_TX_STATUSES`; `categorize_transaction_status()` now returns `"warning"` instead of `"rejected"`.
 
 ---
 

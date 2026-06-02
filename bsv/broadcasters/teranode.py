@@ -27,14 +27,14 @@ class Teranode(Broadcaster):
         """
         self.URL = url
 
-    async def broadcast(self, transaction: "Transaction") -> BroadcastResponse | BroadcastFailure:
+    async def broadcast(self, tx: "Transaction") -> BroadcastResponse | BroadcastFailure:
         """
         Broadcasts a transaction via Teranode.
 
-        :param transaction: The transaction to be broadcasted.
+        :param tx: The transaction to be broadcasted.
         :returns: BroadcastResponse on success, BroadcastFailure on failure.
         """
-        raw_tx = transaction.to_ef()
+        raw_tx = tx.to_ef()
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -42,7 +42,7 @@ class Teranode(Broadcaster):
                     self.URL, headers={"Content-Type": "application/octet-stream"}, data=raw_tx
                 ) as response:
                     if response.ok:
-                        txid = transaction.txid()
+                        txid = tx.txid()
                         return BroadcastResponse(status="success", txid=txid, message="broadcast successful")
                     else:
                         error_text = await response.text()

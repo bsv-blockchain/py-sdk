@@ -8,8 +8,8 @@ The BSV SDK is a comprehensive Python library for developing scalable applicatio
 
 **Repository**: https://github.com/bitcoin-sv/py-sdk
 **Package name**: bsv-sdk
-**Current version**: 1.0.8
-**Python requirement**: >=3.9
+**Current version**: 2.1.3
+**Python requirement**: >=3.10
 
 ## Development Commands
 

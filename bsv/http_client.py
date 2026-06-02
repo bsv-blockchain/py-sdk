@@ -8,7 +8,7 @@ import requests
 
 class HttpClient(ABC):
     @abstractmethod
-    def fetch(self, url: str, options: dict) -> "HttpResponse":
+    async def fetch(self, url: str, options: dict) -> "HttpResponse":
         pass
 
 
