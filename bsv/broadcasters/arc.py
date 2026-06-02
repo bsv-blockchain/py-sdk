@@ -66,6 +66,8 @@ ARC_PROGRESSING_TX_STATUSES = frozenset(
     }
 )
 
+_ARC_503_DESCRIPTION = "Failed to connect to ARC service"
+
 ARC_WARNING_TX_STATUSES = frozenset(
     {
         "DOUBLE_SPEND_ATTEMPTED",
@@ -207,7 +209,7 @@ class ARC(Broadcaster):
                     return BroadcastFailure(
                         status="failure",
                         code="503",
-                        description="Failed to connect to ARC service",
+                        description=_ARC_503_DESCRIPTION,
                         more={"http_status": response.status_code, "arc_json": response_json},
                     )
 
@@ -364,7 +366,7 @@ class ARC(Broadcaster):
                     return BroadcastFailure(
                         status="failure",
                         code="503",
-                        description="Failed to connect to ARC service",
+                        description=_ARC_503_DESCRIPTION,
                         more={"http_status": response.status_code, "arc_json": response_json},
                     )
 
@@ -433,7 +435,7 @@ class ARC(Broadcaster):
                         "status": "failure",
                         "code": 503,
                         "title": "Connection Error",
-                        "detail": "Failed to connect to ARC service",
+                        "detail": _ARC_503_DESCRIPTION,
                         "txid": txid,
                     }
 
