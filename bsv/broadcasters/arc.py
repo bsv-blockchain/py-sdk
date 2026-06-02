@@ -95,6 +95,34 @@ def _arc_extract_http_error_detail(payload: Any) -> str:
     return str(payload)[:8000]
 
 
+def _broadcast_non_ok_failure(
+    response_status: int,
+    response_json: dict,
+    data: Any,
+    timeout_desc: str = "Transaction broadcast timed out",
+) -> BroadcastFailure:
+    if response_status == 408:
+        return BroadcastFailure(
+            status="failure",
+            code="408",
+            description=timeout_desc,
+            more={"http_status": response_status, "arc_json": response_json},
+        )
+    if response_status == 503:
+        return BroadcastFailure(
+            status="failure",
+            code="503",
+            description=_ARC_503_DESCRIPTION,
+            more={"http_status": response_status, "arc_json": response_json},
+        )
+    return BroadcastFailure(
+        status="failure",
+        code=str(response_status),
+        description=_arc_extract_http_error_detail(data),
+        more={"http_status": response_status, "arc_json": response_json},
+    )
+
+
 def arc_post_data_indicates_failure(data: dict[str, Any]) -> Optional[str]:
     """If ARC POST `data` means the transaction failed, return a description; else None.
 
@@ -197,31 +225,7 @@ class ARC(Broadcaster):
                         },
                     )
             else:
-                if response.status_code == 408:
-                    return BroadcastFailure(
-                        status="failure",
-                        code="408",
-                        description="Transaction broadcast timed out",
-                        more={"http_status": response.status_code, "arc_json": response_json},
-                    )
-
-                if response.status_code == 503:
-                    return BroadcastFailure(
-                        status="failure",
-                        code="503",
-                        description=_ARC_503_DESCRIPTION,
-                        more={"http_status": response.status_code, "arc_json": response_json},
-                    )
-
-                return BroadcastFailure(
-                    status="failure",
-                    code=str(response.status_code),
-                    description=_arc_extract_http_error_detail(data),
-                    more={
-                        "http_status": response.status_code,
-                        "arc_json": response_json,
-                    },
-                )
+                return _broadcast_non_ok_failure(response.status_code, response_json, data)
 
         except Exception as error:
             return BroadcastFailure(
@@ -353,28 +357,11 @@ class ARC(Broadcaster):
                         },
                     )
             else:
-                # Handle special error cases
-                if response.status_code == 408:
-                    return BroadcastFailure(
-                        status="failure",
-                        code="408",
-                        description=f"Transaction broadcast timed out after {effective_timeout} seconds",
-                        more={"http_status": response.status_code, "arc_json": response_json},
-                    )
-
-                if response.status_code == 503:
-                    return BroadcastFailure(
-                        status="failure",
-                        code="503",
-                        description=_ARC_503_DESCRIPTION,
-                        more={"http_status": response.status_code, "arc_json": response_json},
-                    )
-
-                return BroadcastFailure(
-                    status="failure",
-                    code=str(response.status_code),
-                    description=_arc_extract_http_error_detail(data),
-                    more={"http_status": response.status_code, "arc_json": response_json},
+                return _broadcast_non_ok_failure(
+                    response.status_code,
+                    response_json,
+                    data,
+                    timeout_desc=f"Transaction broadcast timed out after {effective_timeout} seconds",
                 )
 
         except Exception as error:
