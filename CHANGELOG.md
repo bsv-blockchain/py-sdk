@@ -36,6 +36,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Reclassified `SEEN_IN_ORPHAN_MEMPOOL` as warning instead of terminal failure — orphan mempool means the parent tx has not yet propagated to the node, not that the broadcast failed. Moved from `ARC_TERMINAL_FAILURE_TX_STATUSES` to `ARC_WARNING_TX_STATUSES`; `categorize_transaction_status()` now returns `"warning"` instead of `"rejected"`.
+- Fixed `KeyError` risk in `ARC.broadcast()` when ARC response lacks `data` key — now uses `.get("data", {})` consistent with `sync_broadcast()`.
+- Fixed `is_broadcast_failure()` always returning `False` for ARC — now accepts both `"error"` (TeraNode/WoC/SHIP) and `"failure"` (ARC) status strings.
+- Fixed Pylance `reportGeneralTypeIssues` error — `HttpClient.fetch()` abstract method now correctly declared as `async def`.
+- Fixed Pylance `reportArgumentType` error — `ARC.__init__` config parameter now typed as `str | ARCConfig | None`.
+- Fixed Pylance `reportIncompatibleMethodOverride` — unified `broadcast()` parameter name to `tx` across `Broadcaster`, `ARC`, `Teranode`, and `WhatsOnChain`.
+- Unified error handling between `broadcast()` and `sync_broadcast()`: 408/503 special cases, helper function usage, and error description extraction are now consistent.
+- Removed dead code: unused `to_hex()` function and `_arc_broadcast_failure_description()` helper.
+- Removed unused `Dict`, `Union` imports and redundant `response.ok` + status code range check.
+
+### Documentation
+
+- Added docstrings to `arc_post_data_indicates_failure()` explaining that warning statuses (e.g. `DOUBLE_SPEND_ATTEMPTED`) are intentionally not flagged as failure on POST.
+- Improved `check_transaction_status()` docstring to document the dual return schema (success vs failure shapes).
+- Added docstrings to `broadcast()` and `sync_broadcast()` clarifying that `status="success"` means accepted for relay, not mined.
+- Added parameterized tests covering all `txStatus` values for `categorize_transaction_status()` and `arc_post_data_indicates_failure()`.
 
 ---
 
