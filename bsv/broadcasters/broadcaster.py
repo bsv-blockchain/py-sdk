@@ -38,7 +38,7 @@ class Broadcaster(ABC):
         self.URL = None
 
     @abstractmethod
-    async def broadcast(self, transaction: "Transaction") -> BroadcastResponse | BroadcastFailure:
+    async def broadcast(self, tx: "Transaction") -> BroadcastResponse | BroadcastFailure:
         pass
 
 
@@ -47,7 +47,7 @@ def is_broadcast_response(r: BroadcastResponse | BroadcastFailure) -> bool:
 
 
 def is_broadcast_failure(r: BroadcastResponse | BroadcastFailure) -> bool:
-    return r.status == "error"
+    return r.status in ("error", "failure")
 
 
 class BroadcasterInterface:

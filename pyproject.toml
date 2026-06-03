@@ -64,7 +64,7 @@ line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "UP", "ANN", "B", "A", "C4", "PIE", "T20", "SIM", "ARG", "PTH", "ERA", "PL", "RUF"]
+select = ["E", "F", "I", "N", "UP", "ANN", "B", "A", "C4", "C901", "ISC", "PIE", "T20", "SIM", "ARG", "PTH", "ERA", "PL", "RUF"]
 # Project-wide code style ignores (test-specific ignores are configured in per-file-ignores below)
 ignore = [
     "ERA001",   # commented-out-code (acceptable in tests)
@@ -151,10 +151,17 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Test files have different standards
-"tests/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "E501", "B018", "PLC0415", "F811"]
-"manual_tests/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "E501", "PLC0415"]
+"tests/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "E501", "B018", "PLC0415", "F811", "C901", "ISC001"]
+"manual_tests/**/*.py" = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "E501", "PLC0415", "C901", "ISC001"]
 # __init__.py files use star imports
+# Complex functions ported from TS/Go — complexity is inherent, not refactorable
+"bsv/script/spend.py" = ["C901"]
+"bsv/script/interpreter/thread.py" = ["C901"]
+"bsv/wallet/substrates/serializer.py" = ["C901"]
 "**/__init__.py" = ["F403"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"

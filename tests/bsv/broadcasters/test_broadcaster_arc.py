@@ -3,8 +3,17 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from bsv.broadcaster import BroadcastFailure, BroadcastResponse
-from bsv.broadcasters.arc import ARC, ARCConfig, arc_post_data_indicates_failure
+from bsv.broadcasters.arc import (
+    ARC,
+    ARC_PROGRESSING_TX_STATUSES,
+    ARC_TERMINAL_FAILURE_TX_STATUSES,
+    ARC_WARNING_TX_STATUSES,
+    ARCConfig,
+    arc_post_data_indicates_failure,
+)
 from bsv.http_client import HttpClient, HttpResponse, SyncHttpClient
 from bsv.transaction import Transaction
 
@@ -277,6 +286,13 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["status_category"], "0confirmation")
         self.assertEqual(result["tx_status"], "SEEN_ON_NETWORK")
 
+    def test_categorize_transaction_status_unknown_uses_stable_category(self):
+        response = {"txStatus": "FUTURE_STATUS"}
+        result = ARC.categorize_transaction_status(response)
+
+        self.assertEqual(result["status_category"], "unknown_txStatus")
+        self.assertEqual(result["tx_status"], "FUTURE_STATUS")
+
     def test_arc_post_data_indicates_failure_rejected(self):
         d = {
             "txid": "e64bb274027e58a5b2fff2852cabe5c2f8aebe1b70225bb37c17a9b346a97086",
@@ -288,6 +304,59 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
     def test_arc_post_data_indicates_failure_none_when_minimal_ok(self):
         d = {"txid": "8e60c4143879918ed03b8fc67b5ac33b8187daa3b46022ee2a9e1eb67e2e46ec"}
         self.assertIsNone(arc_post_data_indicates_failure(d))
+
+
+CATEGORIZE_CASES = [
+    # (txStatus, extra_fields, expected_category)
+    # --- progressing ---
+    *[(s, {}, "progressing") for s in sorted(ARC_PROGRESSING_TX_STATUSES)],
+    # --- terminal failure → rejected ---
+    *[(s, {}, "rejected") for s in sorted(ARC_TERMINAL_FAILURE_TX_STATUSES)],
+    # --- warning (plain) ---
+    *[(s, {}, "warning") for s in sorted(ARC_WARNING_TX_STATUSES)],
+    # --- SEEN_ON_NETWORK variants ---
+    ("SEEN_ON_NETWORK", {}, "0confirmation"),
+    ("SEEN_ON_NETWORK", {"competingTxs": ["abc"]}, "warning"),
+    # --- mined ---
+    ("MINED", {}, "mined"),
+]
+
+
+@pytest.mark.parametrize(
+    ("tx_status", "extra_fields", "expected_category"),
+    CATEGORIZE_CASES,
+    ids=[f"{s}-{cat}" for s, _, cat in CATEGORIZE_CASES],
+)
+def test_categorize_transaction_status_mapping(tx_status, extra_fields, expected_category):
+    response = {"txStatus": tx_status, **extra_fields}
+    result = ARC.categorize_transaction_status(response)
+    assert result["status_category"] == expected_category
+    assert result["tx_status"] == tx_status
+
+
+POST_FAILURE_CASES = [
+    # (txStatus, should_indicate_failure)
+    *[(s, True) for s in sorted(ARC_TERMINAL_FAILURE_TX_STATUSES)],
+    *[(s, False) for s in sorted(ARC_PROGRESSING_TX_STATUSES)],
+    *[(s, False) for s in sorted(ARC_WARNING_TX_STATUSES)],
+    ("SEEN_ON_NETWORK", False),
+    ("MINED", False),
+]
+
+
+@pytest.mark.parametrize(
+    ("tx_status", "should_fail"),
+    POST_FAILURE_CASES,
+    ids=[f"{s}-{'fail' if f else 'ok'}" for s, f in POST_FAILURE_CASES],
+)
+def test_arc_post_data_indicates_failure_mapping(tx_status, should_fail):
+    data = {"txid": "aabbccdd", "txStatus": tx_status}
+    result = arc_post_data_indicates_failure(data)
+    if should_fail:
+        assert result is not None
+        assert tx_status in result
+    else:
+        assert result is None
 
 
 if __name__ == "__main__":
