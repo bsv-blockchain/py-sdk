@@ -35,17 +35,12 @@ class TestVerifiableCertificateCoverage:
         except ImportError:
             pytest.skip("VerifiableCertificate dependencies not available")
 
-    def test_wallet_interface_decrypt_default(self):
-        """Test WalletInterface decrypt default implementation."""
-        try:
-            from bsv.auth.verifiable_certificate import WalletInterface
+    def test_wallet_interface_is_protocol(self):
+        """Test WalletInterface is the real Protocol from wallet_interface."""
+        from bsv.auth.verifiable_certificate import WalletInterface
+        from bsv.wallet.wallet_interface import WalletInterface as RealWalletInterface
 
-            wallet = WalletInterface()
-            result = wallet.decrypt({})
-            assert result == {}
-
-        except ImportError:
-            pytest.skip("WalletInterface not available")
+        assert WalletInterface is RealWalletInterface
 
     def test_verifiable_certificate_initialization(self):
         """Test VerifiableCertificate initialization with various parameters."""

@@ -36,14 +36,9 @@ def test_manager_init_with_wallet(mock_wallet):
 
 
 def test_manager_init_without_wallet():
-    """Test initialization without wallet creates default."""
-    # Mock the modules that are imported locally in ContactsManager.__init__
-    with patch("bsv.wallet.ProtoWallet") as mock_wallet_impl, patch("bsv.keys.PrivateKey") as mock_private_key:
-        mock_private_key.return_value = Mock()
-        mock_wallet_impl.return_value = Mock()
-        manager = ContactsManager(wallet=None)
-        assert manager.wallet is not None
-        assert mock_wallet_impl.called
+    """Test initialization without wallet raises ValueError."""
+    with pytest.raises(ValueError, match="wallet is required"):
+        ContactsManager(wallet=None)
 
 
 # ========================================================================

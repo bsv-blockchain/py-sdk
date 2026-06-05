@@ -25,21 +25,19 @@ class TestTestableIdentityClient(unittest.TestCase):
         self.assertEqual(self.client._dummy_identities[0].identity_key, "testkey1")
 
     def test_initialization_without_wallet(self):
-        """Test initialization without providing a wallet."""
-        with patch("bsv.wallet.wallet_impl.ProtoWallet"), patch("bsv.keys.PrivateKey"):
-            client = TestableIdentityClient()
-            self.assertIsNotNone(client.wallet)
-            self.assertTrue(client.record_calls)
+        """Test initialization without providing a wallet raises ValueError."""
+        with self.assertRaises(ValueError):
+            TestableIdentityClient()
 
     def test_record_calls_disabled(self):
         """Test that calls are not recorded when record_calls is False."""
-        client = TestableIdentityClient(record_calls=False)
+        client = TestableIdentityClient(wallet=Mock(), record_calls=False)
         client._record("test_method", arg1="value1")
         self.assertEqual(len(client.calls), 0)
 
     def test_record_calls_enabled(self):
         """Test that calls are recorded when record_calls is True."""
-        client = TestableIdentityClient(record_calls=True)
+        client = TestableIdentityClient(wallet=Mock(), record_calls=True)
         client._record("test_method", arg1="value1", arg2="value2")
         self.assertEqual(len(client.calls), 1)
         self.assertEqual(client.calls[0]["method"], "test_method")
