@@ -54,21 +54,41 @@ contributors to adhere to.
 
 2. **Commit Your Changes**: Make your changes and commit them. Commit messages should be clear and concise to explain what was done.
 
-3. **Run Tests**: Ensure all tests pass and check coverage: `pytest --cov=bsv --cov-branch --cov-report=html`.
+3. **Run Linter & Formatter**: `ruff check --fix . && black .` — then verify with `ruff check . && black --check .`.
 
-4. **Documentation**: All code must be fully annotated with comments.
+4. **Run Tests**: Ensure all tests pass and check coverage: `pytest --cov=bsv --cov-branch --cov-report=html`.
 
-5. **Push to Your Fork**: `git push origin your-new-branch`.
+5. **Documentation**: All code must be fully annotated with comments.
 
-6. **Open a Pull Request**: Go to your fork on GitHub and click "New Pull Request". Fill out the PR template, explaining your changes.
+6. **Push to Your Fork**: `git push origin your-new-branch`.
 
-7. **Code Review**: At least two maintainers must review and approve the PR before it's merged. Address any feedback or changes requested.
+7. **Open a Pull Request**: Go to your fork on GitHub and click "New Pull Request". Fill out the PR template, explaining your changes.
 
-8. **Merge**: Once approved, the PR will be merged into the main branch.
+8. **Code Review**: At least two maintainers must review and approve the PR before it's merged. Address any feedback or changes requested.
+
+9. **Merge**: Once approved, the PR will be merged into the main branch.
 
 ## Coding Conventions
 
-- **Code Style**: We use [PEP 8](https://peps.python.org/pep-0008/) for our Python coding style.
+- **Code Style**: We use [PEP 8](https://peps.python.org/pep-0008/) for our Python coding style, enforced by **Ruff** (linter) and **Black** (formatter).
+
+- **Linting & Formatting**: All code must pass Ruff and Black before submitting a PR. Run the following commands from the project root:
+
+  ```bash
+  # Fix auto-fixable lint issues
+  ruff check --fix .
+
+  # Format code
+  black .
+
+  # Verify no remaining lint errors
+  ruff check .
+
+  # Verify formatting is correct
+  black --check .
+  ```
+
+  Configuration for both tools is in `pyproject.toml` (`[tool.ruff]` and `[tool.black]`). Line length is 120 characters.
 
 - **Testing**: Always include tests for new code or changes. We aim for industry-standard levels of test coverage.
 

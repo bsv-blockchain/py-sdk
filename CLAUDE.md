@@ -32,6 +32,27 @@ pytest tests/test_transaction.py
 pytest tests/bsv/auth/test_auth_peer_basic.py
 ```
 
+### Linting & Formatting (Required before commit/PR)
+
+All code must pass Ruff and Black before committing. Run these commands and fix any errors before creating a commit or pull request:
+
+```bash
+# Lint with Ruff (fix auto-fixable issues)
+ruff check --fix .
+
+# Format with Black
+black .
+
+# Verify no remaining issues
+ruff check .
+```
+
+Configuration is in `pyproject.toml` under `[tool.ruff]` and `[tool.black]`. Install dev dependencies with:
+
+```bash
+pip install -e ".[dev]"
+```
+
 ### Building the Package
 
 ```bash
