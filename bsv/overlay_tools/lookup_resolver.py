@@ -152,8 +152,8 @@ class HTTPSOverlayLookupFacilitator:
                         return self._parse_binary_response(data)
                     else:
                         # JSON response format
-                        await response.json()
-                        return LookupAnswer(type="custom", outputs=[])  # Custom responses don't have outputs
+                        json_data = await response.json()
+                        return self._parse_json_response(json_data)
 
         try:
             return await _perform_lookup()
@@ -164,31 +164,110 @@ class HTTPSOverlayLookupFacilitator:
         except Exception as e:
             raise LookupError(f"Lookup failed: {e!s}")
 
+    @staticmethod
+    def _coerce_bytes(val) -> bytes:
+        """Coerce a JSON beef/context value to ``bytes``.
+
+        Accepts:
+        - ``list[int]``  — TS overlay-express wire format (``number[]``)
+        - base64 ``str`` — Go overlay-services wire format (``[]byte`` → JSON)
+        - hex ``str``    — alternate string encoding
+        - ``bytes``      — pass-through
+        - ``None``       → ``b""``
+        """
+        if val is None:
+            return b""
+        if isinstance(val, (bytes, bytearray)):
+            return bytes(val)
+        if isinstance(val, list):
+            return bytes(val)
+        if isinstance(val, str):
+            try:
+                return bytes.fromhex(val)
+            except ValueError:
+                import base64
+
+                return base64.b64decode(val)
+        return b""
+
+    @staticmethod
+    def _parse_json_response(json_data) -> LookupAnswer:
+        """Parse a JSON lookup response.
+
+        Wire shape::
+
+            {"type": "output-list",
+             "outputs": [{"beef": ..., "outputIndex": N, "context?": ...}, ...]}
+
+        ``beef`` encoding varies by server implementation:
+        - TS overlay-express: ``number[]`` (e.g. ``[222, 173, 190, 239]``)
+        - Go overlay-services: base64 string (e.g. ``"3q2+7w=="``)
+        - Other: hex string possible
+
+        A non-output-list ``type`` (e.g. ``"freeform"``) is passed through
+        with an empty output list.
+        """
+        if not isinstance(json_data, dict):
+            return LookupAnswer(type="custom", outputs=[])
+
+        answer_type = json_data.get("type", "output-list")
+
+        if answer_type == "output-list":
+            raw_outputs = json_data.get("outputs") or []
+            outputs = []
+            for raw in raw_outputs:
+                beef_val = HTTPSOverlayLookupFacilitator._coerce_bytes(raw.get("beef"))
+                output_index = int(raw.get("outputIndex", 0))
+                context_val = raw.get("context")
+                context = HTTPSOverlayLookupFacilitator._coerce_bytes(context_val) if context_val is not None else None
+                outputs.append(LookupOutput(beef=beef_val, output_index=output_index, context=context))
+            return LookupAnswer(type="output-list", outputs=outputs)
+
+        return LookupAnswer(type=answer_type, outputs=[])
+
     def _parse_binary_response(self, data: bytes) -> LookupAnswer:
-        """Parse binary response format."""
+        """Parse the binary (``application/octet-stream``) output-list format.
+
+        Wire format (matching the TypeScript SDK's ``LookupResolver``)::
+
+            varint(nOutpoints)
+            per outpoint:  txid (32 bytes) | varint(outputIndex)
+                           | varint(contextLength) | context (contextLength bytes)
+            trailing:      one combined BEEF holding every referenced transaction
+
+        Each output's BEEF is reconstructed from the trailing combined BEEF,
+        selecting the subject transaction by txid.
+        """
+        from bsv.transaction import Transaction
+        from bsv.transaction.beef import parse_beef
         from bsv.utils import Reader
 
         reader = Reader(data)
-        n_outpoints = reader.read_var_int()
+        n_outpoints = reader.read_var_int_num()
+
+        outpoints = []
+        for _ in range(n_outpoints):
+            txid = reader.read(32).hex()
+            output_index = reader.read_var_int_num()
+            context_length = reader.read_var_int_num()
+            context = reader.read(context_length) if context_length > 0 else None
+            outpoints.append((txid, output_index, context))
+
+        trailing = bytes(reader.read() or b"")  # one combined BEEF for every referenced tx
+        beef_set = parse_beef(trailing) if trailing else None
 
         outputs = []
-        for _ in range(n_outpoints):
-            reader.read(32).hex()  # txid (not used in simplified implementation)
-            output_index = reader.read_var_int()
-            context_length = reader.read_var_int()
-
-            context = None
-            if context_length > 0:
-                context = reader.read(context_length)
-
-            # For now, we'll store the txid and reconstruct BEEF later
-            # This is a simplified implementation
-            outputs.append(
-                LookupOutput(beef=b"", output_index=output_index, context=context)  # Would need full transaction data
-            )
-
-        reader.read()  # beef (not used in simplified implementation)
-        # In a full implementation, we'd reconstruct the BEEF transactions here
+        for txid, output_index, context in outpoints:
+            beef = b""
+            if beef_set is not None:
+                btx = beef_set.find_transaction(txid)
+                if btx is not None:
+                    # parse_beef populates tx_obj for V2 and tx_bytes for V1;
+                    # fall back to the raw bytes when the object is absent.
+                    tx = btx.tx_obj or (Transaction.from_hex(btx.tx_bytes.hex()) if btx.tx_bytes else None)
+                    if tx is not None:
+                        beef = tx.to_beef()
+            outputs.append(LookupOutput(beef=beef, output_index=output_index, context=context))
 
         return LookupAnswer(type="output-list", outputs=outputs)
 

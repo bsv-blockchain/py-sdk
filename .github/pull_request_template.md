@@ -20,4 +20,4 @@ Describe the tests you've added or any testing steps you've taken.
 - [ ] I have made corresponding changes to the documentation
 - [ ] My changes generate no new warnings
 - [ ] I have updated `CHANGELOG.md` with my changes
-- [ ] I have run the linter
+- [ ] I have run the linter and formatter (`ruff check . && black --check .` — both must pass with no errors)

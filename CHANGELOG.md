@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.1.5 - 2026-06-05](#215---2026-06-05)
 - [2.1.4 - 2026-05-27](#214---2026-05-27)
 - [2.1.2 - 2026-05-20](#212---2026-05-20)
 - [2.1.1 - 2026-05-19](#211---2026-05-19)
@@ -28,6 +29,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [2.1.5] - 2026-06-05
+
+### Fixed
+
+- Fixed JSON response path in `HTTPSOverlayLookupFacilitator.lookup()` discarding parsed data — `response.json()` result was being thrown away, always returning an empty `LookupAnswer`. Added `_parse_json_response()` to properly construct output-list from JSON responses.
+- Added `_coerce_bytes()` to handle `beef`/`context` encoding differences across overlay server implementations: TS overlay-express sends `number[]`, Go overlay-services sends base64 strings (Go `[]byte` JSON default), hex strings also accepted.
+- Fixed binary lookup response parser: replaced `read_var_int()` with `read_var_int_num()` and added per-output BEEF reconstruction from the trailing combined BEEF.
+
+### Documentation
+
+- Added Ruff/Black linting instructions to `CLAUDE.md`, `CONTRIBUTING.md`, and `.github/pull_request_template.md` for external contributors and AI tools.
 
 ---
 

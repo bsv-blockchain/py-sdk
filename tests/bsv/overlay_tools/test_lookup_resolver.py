@@ -143,3 +143,98 @@ class TestLookupResolver:
         config = LookupResolverConfig(additional_hosts=additional)
         resolver = LookupResolver(config)
         assert resolver.additional_hosts == additional
+
+
+class TestParseJsonResponse:
+    """Tests for HTTPSOverlayLookupFacilitator._parse_json_response."""
+
+    def test_output_list_with_hex_beef(self):
+        json_data = {
+            "type": "output-list",
+            "outputs": [
+                {"beef": "deadbeef", "outputIndex": 0},
+                {"beef": "cafebabe", "outputIndex": 2},
+            ],
+        }
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response(json_data)
+        assert answer.type == "output-list"
+        assert len(answer.outputs) == 2
+        assert answer.outputs[0].beef == bytes.fromhex("deadbeef")
+        assert answer.outputs[0].output_index == 0
+        assert answer.outputs[1].beef == bytes.fromhex("cafebabe")
+        assert answer.outputs[1].output_index == 2
+
+    def test_output_list_with_number_array_beef(self):
+        """TS overlay-express sends beef as number[] (byte array) over JSON."""
+        json_data = {
+            "type": "output-list",
+            "outputs": [
+                {"beef": [0xDE, 0xAD, 0xBE, 0xEF], "outputIndex": 0},
+            ],
+        }
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response(json_data)
+        assert answer.outputs[0].beef == b"\xde\xad\xbe\xef"
+        assert answer.outputs[0].output_index == 0
+
+    def test_output_list_with_base64_beef(self):
+        """Go overlay-services sends beef as base64 string (Go []byte JSON default)."""
+        import base64
+
+        raw = b"\xde\xad\xbe\xef"
+        b64 = base64.b64encode(raw).decode()  # "3q2+7w=="
+        json_data = {
+            "type": "output-list",
+            "outputs": [{"beef": b64, "outputIndex": 0}],
+        }
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response(json_data)
+        assert answer.outputs[0].beef == raw
+
+    def test_output_list_with_context(self):
+        json_data = {
+            "type": "output-list",
+            "outputs": [
+                {"beef": "aa", "outputIndex": 0, "context": [1, 2, 3]},
+            ],
+        }
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response(json_data)
+        assert answer.outputs[0].context == bytes([1, 2, 3])
+
+    def test_output_list_without_context_is_none(self):
+        json_data = {
+            "type": "output-list",
+            "outputs": [{"beef": "aa", "outputIndex": 0}],
+        }
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response(json_data)
+        assert answer.outputs[0].context is None
+
+    def test_output_list_implicit_type(self):
+        json_data = {
+            "outputs": [{"beef": "aa", "outputIndex": 1}],
+        }
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response(json_data)
+        assert answer.type == "output-list"
+        assert len(answer.outputs) == 1
+        assert answer.outputs[0].output_index == 1
+
+    def test_output_list_empty_outputs(self):
+        json_data = {"type": "output-list", "outputs": []}
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response(json_data)
+        assert answer.type == "output-list"
+        assert answer.outputs == []
+
+    def test_freeform_type_returns_no_outputs(self):
+        json_data = {"type": "freeform", "result": "some custom data"}
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response(json_data)
+        assert answer.type == "freeform"
+        assert answer.outputs == []
+
+    def test_non_dict_returns_custom(self):
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response([1, 2, 3])
+        assert answer.type == "custom"
+        assert answer.outputs == []
+
+    def test_missing_outputs_key(self):
+        json_data = {"type": "output-list"}
+        answer = HTTPSOverlayLookupFacilitator._parse_json_response(json_data)
+        assert answer.type == "output-list"
+        assert answer.outputs == []
