@@ -20,11 +20,7 @@ class IdentityClient:
         originator: OriginatorDomainNameStringUnder250Bytes = "",
     ):
         if wallet is None:
-            from bsv.keys import PrivateKey
-            from bsv.wallet import ProtoWallet
-
-            private_key = PrivateKey()  # Generates a random private key
-            wallet = ProtoWallet(private_key)
+            raise ValueError("wallet is required")
         self.wallet = wallet
         self.options = options or IdentityClientOptions()
         self.originator = originator

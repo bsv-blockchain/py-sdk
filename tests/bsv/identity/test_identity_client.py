@@ -25,19 +25,9 @@ class TestIdentityClientInit:
         assert client.contacts_manager is not None
 
     def test_init_without_wallet(self):
-        """Test initialization without wallet creates default wallet."""
-        # Mock the modules that are imported locally in IdentityClient.__init__
-        with patch("bsv.wallet.ProtoWallet") as mock_wallet_impl, patch("bsv.keys.PrivateKey") as mock_private_key:
-            mock_key = Mock()
-            mock_private_key.return_value = mock_key
-            mock_wallet = Mock()
-            mock_wallet_impl.return_value = mock_wallet
-
-            client = IdentityClient()
-
-            mock_private_key.assert_called_once()
-            mock_wallet_impl.assert_called_once_with(mock_key)
-            assert client.wallet == mock_wallet
+        """Test initialization without wallet raises ValueError."""
+        with pytest.raises(ValueError, match="wallet is required"):
+            IdentityClient()
 
     def test_init_with_options(self):
         """Test initialization with custom options."""
@@ -329,7 +319,8 @@ class TestResolveByIdentityKey:
 
     def test_resolve_no_wallet(self):
         """Test resolve returns empty list when wallet is None."""
-        client = IdentityClient(wallet=None)
+        client = IdentityClient(wallet=Mock())
+        client.wallet = None
         ctx = Mock()
         args = {"identityKey": "key1"}
 
@@ -429,7 +420,8 @@ class TestResolveByAttributes:
 
     def test_resolve_no_wallet(self):
         """Test resolve returns empty list when wallet is None."""
-        client = IdentityClient(wallet=None)
+        client = IdentityClient(wallet=Mock())
+        client.wallet = None
         ctx = Mock()
         args = {"attributes": {}}
 
@@ -642,7 +634,8 @@ class TestDecryptField:
 
     def test_decrypt_field_no_wallet(self):
         """Test decrypting field when wallet is None."""
-        client = IdentityClient(wallet=None)
+        client = IdentityClient(wallet=Mock())
+        client.wallet = None
         ctx = Mock()
 
         result = client._decrypt_field(ctx, "field", "enc:data")

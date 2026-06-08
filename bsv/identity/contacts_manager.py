@@ -40,10 +40,7 @@ class ContactsManager:
             wallet: Wallet interface for blockchain operations
         """
         if wallet is None:
-            from bsv.keys import PrivateKey
-            from bsv.wallet import ProtoWallet
-
-            wallet = ProtoWallet(PrivateKey())
+            raise ValueError("wallet is required")
         self.wallet = wallet
         self._cache: dict[str, str] = {}
 
