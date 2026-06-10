@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.2.0 - 2026-06-10](#220---2026-06-10)
 - [2.1.5 - 2026-06-05](#215---2026-06-05)
 - [2.1.4 - 2026-05-27](#214---2026-05-27)
 - [2.1.2 - 2026-05-20](#212---2026-05-20)
@@ -29,6 +30,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [2.2.0] - 2026-06-10
+
+### Changed
+
+- **Breaking:** Removed `WalletInterface` inheritance from `ProtoWallet` — now a standalone class with only cryptographic operations, aligning with TS/Go SDK architecture.
+- Added `DeprecationWarning` to 21 non-crypto `ProtoWallet` methods (`create_action`, `sign_action`, `internalize_action`, `list_actions`, `list_outputs`, `list_certificates`, etc.). Use `Wallet` from `py-wallet-toolbox` instead.
+- `IdentityClient` and `ContactsManager` no longer silently create a dummy `ProtoWallet` when no wallet is provided — they now raise `ValueError("wallet is required")`.
+
+### Fixed
+
+- Replaced local dummy `WalletInterface` class in `verifiable_certificate.py` with proper import from `bsv.wallet.wallet_interface`.
 
 ---
 
