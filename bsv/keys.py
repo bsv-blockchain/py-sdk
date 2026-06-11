@@ -243,11 +243,11 @@ class PrivateKey:
         if s > curve.n // 2:
             s = curve.n - s
 
-        # Convert r and s to bytes
-        r_bytes = r.to_bytes(32, "big")
-        s_bytes = s.to_bytes(32, "big")
+        # Convert r and s to minimal big-endian bytes (DER requires no leading zeros)
+        r_bytes = r.to_bytes((r.bit_length() + 7) // 8, "big")
+        s_bytes = s.to_bytes((s.bit_length() + 7) // 8, "big")
 
-        # Add prefix if the MSB is set
+        # Add prefix if the MSB is set (DER integers are signed)
         if r_bytes[0] & 0x80:
             r_bytes = b"\x00" + r_bytes
         if s_bytes[0] & 0x80:
