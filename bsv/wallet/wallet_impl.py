@@ -587,11 +587,18 @@ class ProtoWallet:
             return {"error": error_msg}
 
     def abort_action(self, *a, **k):
-        warnings.warn("ProtoWallet.abort_action() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
-        pass
+        warnings.warn(
+            "ProtoWallet.abort_action() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     def acquire_certificate(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.acquire_certificate() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.acquire_certificate() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         record = {
             "certificateBytes": args.get("type", b"") + args.get("serialNumber", b""),
             "keyring": args.get("keyringForSubject"),
@@ -762,7 +769,11 @@ class ProtoWallet:
         Build a Transaction from inputs/outputs; auto-fund with wallet UTXOs (Go-style).
         - Always calls .serialize() on Transaction object returned by _build_signable_transaction.
         """
-        warnings.warn("ProtoWallet.create_action() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.create_action() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         import binascii
 
         print(
@@ -1048,7 +1059,11 @@ class ProtoWallet:
             raise
 
     def discover_by_attributes(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.discover_by_attributes() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.discover_by_attributes() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         attrs = args.get("attributes", {}) or {}
         matches = []
         for c in self._certificates:
@@ -1065,23 +1080,43 @@ class ProtoWallet:
         return {"totalCertificates": len(matches), "certificates": matches}
 
     def discover_by_identity_key(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.discover_by_identity_key() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.discover_by_identity_key() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {"totalCertificates": 0, "certificates": []}
 
     def get_header_for_height(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.get_header_for_height() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.get_header_for_height() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {"header": b""}
 
     def get_height(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.get_height() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.get_height() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {"height": 0}
 
     def get_network(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.get_network() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.get_network() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {"network": "mocknet"}
 
     def get_version(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.get_version() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.get_version() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {"version": "0.0.0"}
 
     def internalize_action(self, args: dict = None, originator: str = None) -> dict:
@@ -1089,7 +1124,11 @@ class ProtoWallet:
         Broadcast the signed transaction to the network.
         - If outputs are empty, do not broadcast and return an error.
         """
-        warnings.warn("ProtoWallet.internalize_action() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.internalize_action() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         tx_bytes = args.get("tx")
         if not tx_bytes:
             return {"accepted": False, "error": "internalize_action: missing tx bytes"}
@@ -1302,7 +1341,11 @@ class ProtoWallet:
         self, txid: str, *, network: str = "main", api_key: Optional[str] = None, timeout: int = 10
     ) -> dict[str, Any]:
         """Check if a tx is known via injected ChainTracker or WOC."""
-        warnings.warn("ProtoWallet.query_tx_mempool() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.query_tx_mempool() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # Prefer injected tracker on the instance
         tracker = getattr(self, "_chain_tracker", None)
         if tracker and hasattr(tracker, "query_tx"):
@@ -1321,11 +1364,19 @@ class ProtoWallet:
             return {"known": False, "error": str(e)}
 
     def is_authenticated(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.is_authenticated() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.is_authenticated() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {"authenticated": True}
 
     def list_actions(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.list_actions() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.list_actions() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         labels = args.get("labels") or []
         mode = args.get("labelQueryMode", "")
 
@@ -1342,7 +1393,11 @@ class ProtoWallet:
         return {"totalActions": len(actions), "actions": actions}
 
     def list_certificates(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.list_certificates() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.list_certificates() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {"totalCertificates": len(self._certificates), "certificates": self._certificates}
 
     def list_outputs(self, args: dict = None, originator: str = None) -> dict:
@@ -1350,7 +1405,11 @@ class ProtoWallet:
         Fetch UTXOs. Priority: WOC > Mock logic
         When both WOC and ARC are enabled, WOC is preferred for UTXO fetching.
         """
-        warnings.warn("ProtoWallet.list_outputs() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.list_outputs() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # Allow cooperative cancel
         if args.get("cancel"):
             return {"outputs": []}
@@ -1625,11 +1684,19 @@ class ProtoWallet:
         return self.private_key.decrypt(ciphertext)
 
     def prove_certificate(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.prove_certificate() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.prove_certificate() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {"keyringForVerifier": {}, "verifier": args.get("verifier", b"")}
 
     def relinquish_certificate(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.relinquish_certificate() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.relinquish_certificate() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         typ = args.get("type")
         serial = args.get("serialNumber")
         certifier = args.get("certifier")
@@ -1637,7 +1704,11 @@ class ProtoWallet:
         return {}
 
     def relinquish_output(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.relinquish_output() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.relinquish_output() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {}
 
     def reveal_counterparty_key_linkage(
@@ -1935,7 +2006,11 @@ class ProtoWallet:
         Sign the provided transaction using the provided spends (unlocking scripts).
         Returns the signed transaction and txid.
         """
-        warnings.warn("ProtoWallet.sign_action() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.sign_action() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         try:
             # Extract and parse transaction
             tx_bytes = self._extract_transaction_bytes(args)
@@ -1964,7 +2039,11 @@ class ProtoWallet:
             return {"tx": b"\x00", "txid": "00" * 32, "error": f"sign_action: {e}", "traceback": tb}
 
     def wait_for_authentication(self, args: dict = None, originator: str = None) -> dict:
-        warnings.warn("ProtoWallet.wait_for_authentication() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.wait_for_authentication() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {"authenticated": True}
 
     def _determine_woc_network(self) -> str:
@@ -2177,7 +2256,11 @@ class ProtoWallet:
             return 500
 
     def check_pubkey_hash(self, private_key, target_hash_hex):
-        warnings.warn("ProtoWallet.check_pubkey_hash() is deprecated. Use Wallet from py-wallet-toolbox instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "ProtoWallet.check_pubkey_hash() is deprecated. Use Wallet from py-wallet-toolbox instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         from bsv.hash import hash160
 
         """秘密鍵から生成される公開鍵ハッシュが目標ハッシュと一致するかチェック"""

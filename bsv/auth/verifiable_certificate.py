@@ -6,13 +6,12 @@ from typing import Any, Dict, Optional
 
 from bsv.encrypted_message import EncryptedMessage
 from bsv.keys import PublicKey
+from bsv.wallet.wallet_interface import WalletInterface
 
 from .cert_encryption import get_certificate_encryption_details
 
 # Import the real Certificate implementation
 from .certificate import Certificate
-
-from bsv.wallet.wallet_interface import WalletInterface
 
 
 class VerifiableCertificate:
