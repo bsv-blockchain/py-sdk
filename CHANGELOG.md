@@ -36,11 +36,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [2.2.1] - 2026-06-12
 
-### Fixed
+Re-release of v2.2.0 for PyPI — the original v2.2.0 package was published before #166 was merged, so PyPI's v2.2.0 is missing the fixes below. This release includes no additional code changes beyond v2.2.0 (tag `adaa031`).
+
+### Fixed (included since PyPI v2.2.0)
 
 - Fixed strict DER encoding in `_sign_custom_k()` — R and S values are now encoded with minimal byte length per DER rules, fixing intermittent `ValueError: The DER-encoded signature could not be parsed` in R-puzzle signing.
-- Fixed Black formatting violations in `wallet_impl.py` (long `warnings.warn()` lines, unnecessary `pass` statement).
-- Fixed Ruff I001 import sorting in `verifiable_certificate.py`.
+- Fixed Black/Ruff lint violations in `wallet_impl.py` and `verifiable_certificate.py`.
 
 ---
 
