@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.2.1 - 2026-06-12](#221---2026-06-12)
 - [2.2.0 - 2026-06-10](#220---2026-06-10)
 - [2.1.5 - 2026-06-05](#215---2026-06-05)
 - [2.1.4 - 2026-05-27](#214---2026-05-27)
@@ -30,6 +31,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [2.2.1] - 2026-06-12
+
+### Fixed
+
+- Fixed strict DER encoding in `_sign_custom_k()` — R and S values are now encoded with minimal byte length per DER rules, fixing intermittent `ValueError: The DER-encoded signature could not be parsed` in R-puzzle signing.
+- Fixed Black formatting violations in `wallet_impl.py` (long `warnings.warn()` lines, unnecessary `pass` statement).
+- Fixed Ruff I001 import sorting in `verifiable_certificate.py`.
 
 ---
 
