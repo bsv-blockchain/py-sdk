@@ -1,8 +1,6 @@
 from collections import namedtuple
 from typing import Optional
 
-from coincurve import PublicKey as CcPublicKey
-
 from .constants import NUMBER_BYTE_LENGTH
 
 Point = namedtuple("Point", "x y")
@@ -20,6 +18,30 @@ curve = EllipticCurve(
     n=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141,
     h=1,
 )
+
+# Crypto backend: _bsv_native (direct libsecp256k1) → coincurve (CFFI) fallback
+_CRYPTO_BACKEND = None
+
+try:
+    import _bsv_native
+
+    _CRYPTO_BACKEND = "native"
+except ImportError:
+    try:
+        from coincurve import PublicKey as CcPublicKey
+
+        _CRYPTO_BACKEND = "coincurve"
+    except ImportError:
+        raise ImportError(
+            "bsv-sdk requires either _bsv_native (recommended) or coincurve. "
+            "Install with: pip install bsv-sdk  (includes pre-built binaries)"
+        )
+
+
+def _point_to_pubkey_bytes(point: Point) -> bytes:
+    x_bytes = point.x.to_bytes(32, "big")
+    y_bytes = point.y.to_bytes(32, "big")
+    return b"\x04" + x_bytes + y_bytes
 
 
 def on_curve(point: Optional[Point]) -> bool:
@@ -63,7 +85,15 @@ def curve_add(p: Optional[Point], q: Optional[Point]) -> Optional[Point]:
         # p == -q
         return None
     # p != -q
-    r = Point(*CcPublicKey.from_point(*p).combine([CcPublicKey.from_point(*q)]).point())
+    if _CRYPTO_BACKEND == "native":
+        pk_p = _point_to_pubkey_bytes(p)
+        pk_q = _point_to_pubkey_bytes(q)
+        combined = _bsv_native.pubkey_combine([pk_p, pk_q], False)
+        x = int.from_bytes(combined[1:33], "big")
+        y = int.from_bytes(combined[33:65], "big")
+        r = Point(x, y)
+    else:
+        r = Point(*CcPublicKey.from_point(*p).combine([CcPublicKey.from_point(*q)]).point())
     assert on_curve(r)
     return r
 
@@ -78,7 +108,17 @@ def curve_multiply(scalar: int, point: Optional[Point]) -> Optional[Point]:
     if scalar < 0:
         # k * point = -k * (-point)
         return curve_multiply(-scalar, curve_negative(point))
-    r = Point(*CcPublicKey.from_point(*point).multiply((scalar % curve.n).to_bytes(NUMBER_BYTE_LENGTH, "big")).point())
+    if _CRYPTO_BACKEND == "native":
+        pk = _point_to_pubkey_bytes(point)
+        scalar_bytes = (scalar % curve.n).to_bytes(NUMBER_BYTE_LENGTH, "big")
+        result = _bsv_native.pubkey_tweak_mul(pk, scalar_bytes, False)
+        x = int.from_bytes(result[1:33], "big")
+        y = int.from_bytes(result[33:65], "big")
+        r = Point(x, y)
+    else:
+        r = Point(
+            *CcPublicKey.from_point(*point).multiply((scalar % curve.n).to_bytes(NUMBER_BYTE_LENGTH, "big")).point()
+        )
     assert on_curve(r)
     return r
 

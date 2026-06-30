@@ -19,7 +19,6 @@ classifiers = [
 ]
 dependencies = [
     "pycryptodomex>=3.23.0",
-    "coincurve>=21.0.0",
     "requests>=2.34.0",
     "aiohttp>=3.13.0",
     "typing_extensions>=4.0.0",
@@ -30,6 +29,9 @@ Homepage = "https://github.com/bitcoin-sv/py-sdk"
 "Bug Tracker" = "https://github.com/bitcoin-sv/py-sdk/issues"
 
 [project.optional-dependencies]
+coincurve = [
+    "coincurve>=21.0.0",
+]
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
