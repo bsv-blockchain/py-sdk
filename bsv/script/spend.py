@@ -10,6 +10,13 @@ from ..transaction_preimage import tx_preimage
 from ..utils import deserialize_ecdsa_der, unsigned_to_bytes
 from .script import Script, ScriptChunk
 
+try:
+    import _bsv_native
+
+    _USE_NATIVE_VM = True
+except ImportError:
+    _USE_NATIVE_VM = False
+
 MAX_SCRIPT_ELEMENT_SIZE = 1024 * 1024 * 1024
 MAX_MULTISIG_KEY_COUNT = pow(2, 31) - 1
 REQUIRE_MINIMAL_PUSH = True
@@ -134,11 +141,7 @@ class Spend:
                 f_value = False
                 if len(buf) == 4:
                     ver_bytes = self.transaction_version.to_bytes(4, "little")
-                    # Greater-than-or-equal comparison: tx_version >= popped value
-                    # Compare as unsigned little-endian integers
-                    tx_ver_int = int.from_bytes(ver_bytes, "little")
-                    buf_int = int.from_bytes(buf, "little")
-                    f_value = tx_ver_int >= buf_int
+                    f_value = buf == ver_bytes
                 if current_opcode == OpCode.OP_VERNOTIF:
                     f_value = not f_value
                 self.if_stack.append(self.encode_bool(f_value))
@@ -712,7 +715,7 @@ class Spend:
                         i_sig += 1
                         sigs_count -= 1
                     i_key += 1
-                    sigs_count -= 1
+                    keys_count -= 1
 
                     # If there are more signatures left than keys left, then too many signatures have failed
                     if sigs_count > keys_count:
@@ -848,6 +851,55 @@ class Spend:
         Validates the spend action by interpreting the locking and unlocking scripts.
         Returns true if the scripts are valid and the spend is legitimate, otherwise false.
         """
+        if _USE_NATIVE_VM:
+            return self._validate_native()
+        return self._validate_python()
+
+    def _validate_native(self) -> bool:
+        unlock_chunks = [
+            (int.from_bytes(c.op, "big"), c.data) for c in self.unlocking_script.chunks
+        ]
+        lock_chunks = [
+            (int.from_bytes(c.op, "big"), c.data) for c in self.locking_script.chunks
+        ]
+
+        def checksig_cb(sig, pub_key, context_int, last_code_separator, sigs_to_remove):
+            if sig != b"":
+                sighash_byte = sig[-1]
+                if not SIGHASH.validate(sighash_byte):
+                    return -1
+                try:
+                    _, s_val = deserialize_ecdsa_der(sig[:-1])
+                    if not self.is_relaxed() and REQUIRE_LOW_S_SIGNATURES and s_val > curve.n // 2:
+                        return -3
+                except Exception:
+                    return -3
+
+            try:
+                PublicKey(pub_key)
+            except Exception:
+                return -4
+
+            if context_int == 0:
+                chunks = self.unlocking_script.chunks[last_code_separator:]
+            else:
+                chunks = self.locking_script.chunks[last_code_separator:]
+            sub_script = Script.from_chunks(chunks)
+            for s_bytes in sigs_to_remove:
+                sub_script = Script.find_and_delete(sub_script, Script.write_bin(s_bytes))
+
+            return 1 if self.verify_signature(sig, pub_key, sub_script) else 0
+
+        return _bsv_native.spend_validate(
+            unlock_chunks,
+            lock_chunks,
+            self.transaction_version,
+            self.source_txid,
+            self.source_output_index,
+            checksig_cb,
+        )
+
+    def _validate_python(self) -> bool:
         if not self.is_relaxed() and REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS and not self.unlocking_script.is_push_only():
             self.script_evaluation_error("Unlocking scripts can only contain push operations, and no other opcodes.")
 
