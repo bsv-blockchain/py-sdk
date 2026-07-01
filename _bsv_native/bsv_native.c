@@ -710,6 +710,13 @@ static PyObject* pyfn_ecdsa_recover(PyObject *self, PyObject *args) {
     const unsigned char *sigdata = (const unsigned char *)sig_buf.buf;
     int recid = sigdata[64];
 
+    if (recid < 0 || recid > 3) {
+        PyBuffer_Release(&sig_buf);
+        PyBuffer_Release(&msg_buf);
+        PyErr_SetString(PyExc_ValueError, "recovery id must be 0, 1, 2, or 3");
+        return NULL;
+    }
+
     secp256k1_ecdsa_recoverable_signature rsig;
     if (!secp256k1_ecdsa_recoverable_signature_parse_compact(
             g_ctx, &rsig, sigdata, recid)) {
