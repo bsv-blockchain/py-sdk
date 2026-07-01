@@ -2,13 +2,38 @@ import os
 import sys
 
 from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext
 
-# Allow building without the C extension (e.g. pip install --global-option="--pure-python")
+# BSV_NO_NATIVE=1  → skip C extension entirely (pure Python)
+# BSV_REQUIRE_NATIVE=1 → fail build if C extension cannot compile (for wheel CI)
 USE_C_EXTENSION = os.environ.get("BSV_NO_NATIVE", "0") != "1"
+REQUIRE_NATIVE = os.environ.get("BSV_REQUIRE_NATIVE", "0") == "1"
 
 SECP256K1_DIR = os.path.join("_bsv_native", "secp256k1")
 SECP256K1_SRC = os.path.join(SECP256K1_DIR, "src")
 SECP256K1_INC = os.path.join(SECP256K1_DIR, "include")
+
+
+class BuildExtFallback(build_ext):
+    """build_ext that falls back to pure Python on compilation failure,
+    unless BSV_REQUIRE_NATIVE=1 is set (wheel CI must not silently degrade)."""
+
+    def run(self):
+        try:
+            super().run()
+        except Exception:
+            if REQUIRE_NATIVE:
+                raise
+            print("WARNING: C extension build failed — installing pure Python fallback")
+
+    def build_extension(self, ext):
+        try:
+            super().build_extension(ext)
+        except Exception:
+            if REQUIRE_NATIVE:
+                raise
+            print(f"WARNING: Failed to build {ext.name} — skipping")
+
 
 ext_modules = []
 
@@ -24,7 +49,7 @@ if USE_C_EXTENSION:
     ]
 
     if sys.platform == "win32":
-        compile_args.append("/O2")
+        compile_args.extend(["/O2", "/std:c11"])
     else:
         compile_args.extend(
             [
@@ -51,4 +76,7 @@ if USE_C_EXTENSION:
         )
     )
 
-setup(ext_modules=ext_modules)
+setup(
+    ext_modules=ext_modules,
+    cmdclass={"build_ext": BuildExtFallback},
+)

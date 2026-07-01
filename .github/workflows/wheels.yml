@@ -1,0 +1,164 @@
+name: Build wheels & publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches: [master]
+    paths:
+      - "_bsv_native/**"
+      - "setup.py"
+      - "pyproject.toml"
+      - "MANIFEST.in"
+      - ".github/workflows/wheels.yml"
+  workflow_dispatch:
+
+jobs:
+  # ── sdist ───────────────────────────────────────────────────────────
+  sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install build
+      - run: python -m build --sdist
+
+      - name: Verify sdist contains C sources
+        run: |
+          tar tzf dist/*.tar.gz | grep bsv_native.c
+          tar tzf dist/*.tar.gz | grep secp256k1/src/secp256k1.c
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  # ── wheels (cibuildwheel) ───────────────────────────────────────────
+  wheels:
+    name: "wheel ${{ matrix.os }} ${{ matrix.arch }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            arch: x86_64
+            cibw_archs: x86_64
+          # Linux aarch64 (emulated via QEMU)
+          - os: ubuntu-latest
+            arch: aarch64
+            cibw_archs: aarch64
+          # macOS x86_64
+          - os: macos-13
+            arch: x86_64
+            cibw_archs: x86_64
+          # macOS arm64
+          - os: macos-14
+            arch: arm64
+            cibw_archs: arm64
+          # Windows x86_64
+          - os: windows-latest
+            arch: AMD64
+            cibw_archs: AMD64
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU (Linux aarch64)
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install cibuildwheel
+        run: pip install cibuildwheel==2.22.0
+
+      - name: Build wheels
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_SKIP: "*-musllinux_* *-win32 *-manylinux_i686"
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+          CIBW_ENVIRONMENT: "BSV_REQUIRE_NATIVE=1"
+          CIBW_TEST_REQUIRES: "pytest pytest-asyncio pycryptodomex"
+          CIBW_TEST_COMMAND: >-
+            python -c "import _bsv_native; print(_bsv_native.BACKEND, _bsv_native.__version__)" &&
+            pytest {project}/tests/bsv/native/ -x -q
+          CIBW_BUILD_VERBOSITY: 1
+        run: cibuildwheel --output-dir wheelhouse
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          path: wheelhouse/*.whl
+
+  # ── pure-python fallback test ───────────────────────────────────────
+  pure-python:
+    name: Pure Python fallback
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install without C extension
+        run: |
+          BSV_NO_NATIVE=1 pip install -e .[test]
+
+      - name: Verify _bsv_native is NOT available
+        run: |
+          python -c "
+          try:
+              import _bsv_native
+              raise AssertionError('_bsv_native should not be importable')
+          except ImportError:
+              print('OK: pure Python mode')
+          "
+
+      - name: Run core tests in pure Python mode
+        run: |
+          pytest tests/bsv/script/test_scripts.py tests/bsv/primitives/ -x -q
+
+  # ── publish to PyPI (tag push only) ─────────────────────────────────
+  publish:
+    name: Publish to PyPI
+    needs: [sdist, wheels, pure-python]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List distributions
+        run: ls -lh dist/
+
+      - name: Check distributions
+        run: |
+          pip install twine
+          twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
