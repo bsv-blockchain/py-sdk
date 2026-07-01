@@ -710,14 +710,27 @@ class Transaction:
             if not input_verified:
                 return False
 
-            # Use Engine-based script interpreter (matches Go SDK implementation)
-            from bsv.script.interpreter import Engine, with_after_genesis, with_fork_id, with_tx
+            other_inputs = [
+                inp for j, inp in enumerate(self.inputs) if j != i
+            ]
 
-            engine = Engine()
-            err = engine.execute(with_tx(self, i, source_output), with_after_genesis(), with_fork_id())
-
-            if err is not None:
-                # Script verification failed
+            try:
+                Spend(
+                    {
+                        "sourceTXID": tx_input.source_txid or tx_input.source_transaction.txid(),
+                        "sourceOutputIndex": tx_input.source_output_index,
+                        "sourceSatoshis": source_output.satoshis,
+                        "lockingScript": source_output.locking_script,
+                        "transactionVersion": self.version,
+                        "otherInputs": other_inputs,
+                        "inputIndex": i,
+                        "unlockingScript": tx_input.unlocking_script,
+                        "outputs": self.outputs,
+                        "inputSequence": tx_input.sequence,
+                        "lockTime": self.locktime,
+                    }
+                ).validate()
+            except RuntimeError:
                 return False
 
         # All inputs verified successfully

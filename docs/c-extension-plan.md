@@ -1459,18 +1459,18 @@ spend_vector.py の CHECKMULTISIG テストベクタは 0-key/0-sig の構造テ
 - `test_bare_multisig_2of2_wrong_signers` — 両方外部キー → 失敗
 - `test_bare_multisig_1of3_insufficient` — 有効署名不足 → 失敗
 
-#### 6. Spend クラスと Engine の二重実装
+#### 6. Spend クラスと Engine の二重実装 — 解決済み (2026-07-01)
 
-py-sdk に2つの独立したスクリプトインタープリタが存在する:
+py-sdk に2つの独立したスクリプトインタープリタが存在していた:
 - `bsv/script/spend.py` の `Spend` クラス (TS-SDK ポート)
-- `bsv/script/interpreter/` の `Engine`/`Thread` (Go-SDK ポート)
+- `bsv/script/interpreter/` の `Engine`/`Thread` (Go-SDK ポート) — **削除済み**
 
-`Transaction.verify()` は `Engine` を使い、`Spend.validate()` は `Spend` を使う。
-CHECKMULTISIG バグは `Spend` のみに存在し `Engine` は正しかった。
-C 拡張は `Spend._validate_native()` から呼ばれるため `Spend` の動作に依存する。
-
-**残課題**: 二重実装の存在自体が保守リスク。将来的にどちらかに統一するか、
-両者のクロスバリデーションテストを追加して乖離を検出する仕組みが望ましい。
+**対応完了**:
+1. `Transaction.verify()` を `Engine` → `Spend` に切替 (Phase 1)
+2. Engine テストベクターの移植評価 → 移植不要と判定 (Phase 2)
+3. `bsv/script/interpreter/` と `tests/bsv/script/interpreter/` を完全削除 (Phase 3)
+   - ソース約2,700行、テスト約6,440行を削除
+詳細は `docs/script-engine-consolidation.md` を参照。
 
 ### Phase 3b/3b+ への教訓
 
@@ -1622,7 +1622,7 @@ iter 2: sig0+key1 → FAIL, sigs_count=1→0(B), keys_count=2(不変)
 
 **軽減要因**:
 - BSV 上で最も一般的なスクリプトは P2PKH (OP_CHECKSIG)。CHECKMULTISIG は比較的少ない
-- `Transaction.verify()` は `Engine` (Go-SDK ポート) を使用し、こちらは正しい実装
+- `Transaction.verify()` は `Spend` に切替済み (2026-07-01)。旧実装は `Engine` (Go-SDK ポート) で正しい実装
   (`operations.py` の `remaining_pubkeys -= 1`)
 - `Spend.validate()` は主にユニットテスト/直接呼び出しで使用
 
