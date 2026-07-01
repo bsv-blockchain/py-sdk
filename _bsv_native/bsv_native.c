@@ -520,6 +520,60 @@ static PyObject* pyfn_ecdsa_sign(PyObject *self, PyObject *args) {
     return sig_to_der(&norm);
 }
 
+static int nonce_fn_custom_k(unsigned char *nonce32,
+                             const unsigned char *msg32,
+                             const unsigned char *key32,
+                             const unsigned char *algo16,
+                             void *data,
+                             unsigned int counter) {
+    (void)msg32; (void)key32; (void)algo16; (void)counter;
+    memcpy(nonce32, data, 32);
+    return 1;
+}
+
+static PyObject* pyfn_ecdsa_sign_with_k(PyObject *self, PyObject *args) {
+    Py_buffer msg_buf, secret_buf, k_buf;
+    if (!PyArg_ParseTuple(args, "y*y*y*", &msg_buf, &secret_buf, &k_buf))
+        return NULL;
+
+    if (msg_buf.len != 32 || secret_buf.len != 32 || k_buf.len != 32) {
+        PyBuffer_Release(&msg_buf);
+        PyBuffer_Release(&secret_buf);
+        PyBuffer_Release(&k_buf);
+        PyErr_SetString(PyExc_ValueError,
+            "msg32, secret32, and k32 must each be 32 bytes");
+        return NULL;
+    }
+
+    if (!ensure_context()) {
+        PyBuffer_Release(&msg_buf);
+        PyBuffer_Release(&secret_buf);
+        PyBuffer_Release(&k_buf);
+        return NULL;
+    }
+
+    secp256k1_ecdsa_signature sig;
+    if (!secp256k1_ecdsa_sign(g_ctx, &sig,
+            (const unsigned char *)msg_buf.buf,
+            (const unsigned char *)secret_buf.buf,
+            nonce_fn_custom_k,
+            (void *)k_buf.buf)) {
+        PyBuffer_Release(&msg_buf);
+        PyBuffer_Release(&secret_buf);
+        PyBuffer_Release(&k_buf);
+        PyErr_SetString(PyExc_ValueError, "signing with custom k failed");
+        return NULL;
+    }
+
+    secp256k1_ecdsa_signature norm;
+    secp256k1_ecdsa_signature_normalize(g_ctx, &norm, &sig);
+
+    PyBuffer_Release(&msg_buf);
+    PyBuffer_Release(&secret_buf);
+    PyBuffer_Release(&k_buf);
+    return sig_to_der(&norm);
+}
+
 static PyObject* pyfn_ecdsa_verify(PyObject *self, PyObject *args) {
     Py_buffer sig_buf, msg_buf, pk_buf;
     if (!PyArg_ParseTuple(args, "y*y*y*", &sig_buf, &msg_buf, &pk_buf))
@@ -3737,6 +3791,9 @@ static PyMethodDef bsv_native_methods[] = {
     {"ecdsa_sign", pyfn_ecdsa_sign, METH_VARARGS,
      "ecdsa_sign(msg32, secret32) -> bytes\n\n"
      "Create a DER-encoded ECDSA signature (low-S normalized)."},
+    {"ecdsa_sign_with_k", pyfn_ecdsa_sign_with_k, METH_VARARGS,
+     "ecdsa_sign_with_k(msg32, secret32, k32) -> bytes\n\n"
+     "Create a DER-encoded ECDSA signature with a custom nonce k (low-S normalized)."},
     {"ecdsa_verify", pyfn_ecdsa_verify, METH_VARARGS,
      "ecdsa_verify(sig_der, msg32, pubkey) -> bool\n\n"
      "Verify a DER-encoded ECDSA signature."},

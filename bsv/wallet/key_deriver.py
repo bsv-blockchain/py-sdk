@@ -14,6 +14,13 @@ from bsv.keys import PrivateKey, PublicKey
 # secp256k1 curve order (same as coincurve.curve.n)
 CURVE_ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 
+try:
+    import _bsv_native
+
+    _USE_NATIVE = True
+except ImportError:
+    _USE_NATIVE = False
+
 
 @dataclass
 class Protocol:  # NOSONAR - Field names match protocol specification
@@ -155,6 +162,11 @@ class KeyDeriver:
         cp_pub = counterparty.to_public_key(self._root_public_key)
         branch_k = self._branch_scalar(invoice_number, cp_pub)
 
+        if _USE_NATIVE:
+            tweak = branch_k.to_bytes(32, "big")
+            derived_secret = _bsv_native.seckey_tweak_add(self._root_private_key.serialize(), tweak)
+            return PrivateKey(derived_secret)
+
         derived_int = (self._root_private_key.int() + branch_k) % CURVE_ORDER
         return PrivateKey(derived_int)
 
@@ -181,26 +193,28 @@ class KeyDeriver:
         """
         invoice_number = self.compute_invoice_number(protocol, key_id)
 
+        cp_pub = counterparty.to_public_key(self._root_public_key)
+        delta = self._branch_scalar(invoice_number, cp_pub)
+
         if for_self:
             # forSelf=True: Derive private key first, then get public key
-            # This matches Go: privKey = rootKey.DeriveChild(counterparty, invoice); return privKey.PubKey()
-            # This matches TS: rootKey.deriveChild(counterparty, invoice).toPublicKey()
-            cp_pub = counterparty.to_public_key(self._root_public_key)
-            delta = self._branch_scalar(invoice_number, cp_pub)
+            if _USE_NATIVE:
+                tweak = delta.to_bytes(32, "big")
+                derived_secret = _bsv_native.seckey_tweak_add(self._root_private_key.serialize(), tweak)
+                return PrivateKey(derived_secret).public_key()
+
             derived_priv = PrivateKey((self._root_private_key.int() + delta) % CURVE_ORDER)
             return derived_priv.public_key()
         else:
-            # forSelf=False: derived from counterparty's perspective
-            # tweaked public = cp_pub + delta*G
-            # This computes: counterparty.deriveChild(rootKey, invoice)
-            cp_pub = counterparty.to_public_key(self._root_public_key)
+            # forSelf=False: tweaked public = cp_pub + delta*G
+            if _USE_NATIVE:
+                tweak = delta.to_bytes(32, "big")
+                derived_bytes = _bsv_native.pubkey_tweak_add(cp_pub.serialize(), tweak)
+                return PublicKey(derived_bytes)
 
-            delta = self._branch_scalar(invoice_number, cp_pub)
             delta_point = curve_multiply(delta, curve.g)
             new_point = curve_add(cp_pub.point(), delta_point)
-            derived_pub = PublicKey(new_point)
-
-            return derived_pub
+            return PublicKey(new_point)
 
     def derive_symmetric_key(self, protocol: Protocol, key_id: str, counterparty: Counterparty) -> bytes:
         """Derive a symmetric key based on protocol ID, key ID, and counterparty.
