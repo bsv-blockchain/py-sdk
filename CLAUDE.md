@@ -266,12 +266,10 @@ The SDK implements the BSV Chronicle network upgrade (MainNet block 943,816, tar
 - `bsv/script/spend.py`: `is_relaxed()`, all opcode handlers, malleability gates
 - `bsv/transaction.py`: `calc_input_signature_hash()` OTDA routing
 - `bsv/transaction_preimage.py`: `_preimage_otda()`, OTDA preimage generation
-- `bsv/script/interpreter/config.py`: 32MB script number limit
-
 ### Chronicle Tests
 
 ```bash
-pytest tests/bsv/script/test_chronicle_*.py tests/bsv/script/interpreter/test_chronicle_*.py -v
+pytest tests/bsv/script/test_chronicle_*.py -v
 ```
 
 ## Important Notes

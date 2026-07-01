@@ -2,7 +2,7 @@
 Transaction verification tests - ported from Go SDK spv/verify_test.go
 
 These tests verify that Transaction.verify() correctly validates scripts
-using the Engine-based interpreter, matching Go SDK behavior.
+using the Spend-based interpreter (with C extension acceleration).
 """
 
 import base64
@@ -30,7 +30,7 @@ class TestTransactionVerify:
         Test basic P2PKH transaction verification.
 
         This is a simpler test than the Go SDK's BEEF tests, verifying
-        that the Engine-based interpreter works correctly for a standard
+        that the Spend-based interpreter works correctly for a standard
         P2PKH spend.
         """
         # Create keys
@@ -66,7 +66,7 @@ class TestTransactionVerify:
         """
         Test that verification correctly rejects invalid signatures.
 
-        This tests that the Engine properly validates signatures and returns
+        This tests that verification properly validates signatures and returns
         False when a transaction is signed with the wrong key.
         """
         # Create keys
