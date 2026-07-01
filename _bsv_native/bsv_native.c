@@ -2104,6 +2104,34 @@ typedef struct { unsigned char *data; Py_ssize_t len; } StackElem;
 typedef struct { StackElem *items; Py_ssize_t count, capacity; } VmStack;
 typedef struct { uint8_t *flags; Py_ssize_t count, capacity; } IfStack;
 
+/* Phase 3c: preimage context for CHECKSIG C internalization */
+typedef struct {
+    unsigned char txid_le[32];
+    uint32_t vout;
+    const unsigned char *script;
+    Py_ssize_t script_len;
+    int64_t satoshis;
+    uint32_t sequence;
+    uint32_t sighash;
+} PCtxInput;
+
+typedef struct {
+    uint32_t version;
+    uint32_t locktime;
+    int32_t  input_index;
+    unsigned char cur_txid_le[32];
+    uint32_t cur_vout;
+    int64_t  cur_satoshis;
+    uint32_t cur_sequence;
+    PCtxInput *other_inputs;
+    Py_ssize_t n_other;
+    PyObject *outputs_list;
+    Py_ssize_t n_outputs;
+    unsigned char hash_prevouts[32];
+    unsigned char hash_sequence[32];
+    unsigned char hash_outputs[32];
+} PreimageCtx;
+
 typedef struct {
     VmStack     stack;
     VmStack     alt_stack;
@@ -2116,7 +2144,7 @@ typedef struct {
     int         tx_version;
     const char *source_txid;
     int         source_output_index;
-    PyObject   *checksig_cb;
+    PreimageCtx pctx;
 } VMState;
 
 /* --- VmStack helpers ---------------------------------------------------- */
@@ -2448,6 +2476,295 @@ static PyObject *c_sha1_hash(const unsigned char *in, Py_ssize_t len) {
     PyObject *digest = PyObject_CallMethod(hasher, "digest", NULL);
     Py_DECREF(hasher);
     return digest;
+}
+
+/* --- Phase 3c: CHECKSIG internalization helpers -------------------------- */
+
+static const uint8_t VALID_SIGHASH[] = {
+    0x41, 0x42, 0x43, 0xC1, 0xC2, 0xC3,
+    0x61, 0x62, 0x63, 0xE1, 0xE2, 0xE3
+};
+
+static int c_sighash_validate(uint8_t sh) {
+    for (int i = 0; i < 12; i++)
+        if (VALID_SIGHASH[i] == sh) return 1;
+    return 0;
+}
+
+static int c_sighash_use_otda(uint8_t sh) {
+    return (sh & 0x20) != 0;
+}
+
+static size_t c_encode_pushdata(const unsigned char *data, Py_ssize_t dlen,
+                                unsigned char *out) {
+    if (data == NULL || dlen == 0) {
+        out[0] = 0x00;
+        return 1;
+    }
+    if (dlen == 1 && data[0] >= 1 && data[0] <= 16) {
+        out[0] = 0x51 + data[0] - 1;
+        return 1;
+    }
+    if (dlen == 1 && data[0] == 0x81) {
+        out[0] = 0x4F;
+        return 1;
+    }
+    if (dlen <= 75) {
+        out[0] = (unsigned char)dlen;
+        memcpy(out + 1, data, dlen);
+        return 1 + (size_t)dlen;
+    }
+    if (dlen <= 255) {
+        out[0] = 0x4C;
+        out[1] = (unsigned char)dlen;
+        memcpy(out + 2, data, dlen);
+        return 2 + (size_t)dlen;
+    }
+    if (dlen <= 65535) {
+        out[0] = 0x4D;
+        out[1] = dlen & 0xFF;
+        out[2] = (dlen >> 8) & 0xFF;
+        memcpy(out + 3, data, dlen);
+        return 3 + (size_t)dlen;
+    }
+    out[0] = 0x4E;
+    out[1] = dlen & 0xFF;
+    out[2] = (dlen >> 8) & 0xFF;
+    out[3] = (dlen >> 16) & 0xFF;
+    out[4] = (dlen >> 24) & 0xFF;
+    memcpy(out + 5, data, dlen);
+    return 5 + (size_t)dlen;
+}
+
+static int c_build_subscript(VMState *st,
+                             const unsigned char **sigs, const Py_ssize_t *sig_lens,
+                             Py_ssize_t n_sigs,
+                             unsigned char **out_buf, size_t *out_len) {
+    PyObject *chunks = (st->context == VM_CTX_UNLOCK)
+                       ? st->unlock_chunks : st->lock_chunks;
+    Py_ssize_t clen = PyList_GET_SIZE(chunks);
+    Py_ssize_t start = st->last_code_separator;
+
+    size_t cap = 256;
+    unsigned char *buf = (unsigned char *)malloc(cap);
+    if (!buf) { PyErr_NoMemory(); return -1; }
+    size_t pos = 0;
+
+    for (Py_ssize_t i = start; i < clen; i++) {
+        int op; const unsigned char *data; Py_ssize_t dlen;
+        if (parse_chunk(PyList_GET_ITEM(chunks, i), &op, &data, &dlen) < 0) {
+            free(buf); return -1;
+        }
+
+        int skip = 0;
+        if (data != NULL) {
+            for (Py_ssize_t s = 0; s < n_sigs; s++) {
+                if (dlen == sig_lens[s] && (dlen == 0 ||
+                        memcmp(data, sigs[s], dlen) == 0)) {
+                    skip = 1; break;
+                }
+            }
+        }
+        if (skip) continue;
+
+        size_t need = (data != NULL) ? (size_t)dlen + 6 : 1;
+        while (pos + need > cap) {
+            cap *= 2;
+            unsigned char *nb = (unsigned char *)realloc(buf, cap);
+            if (!nb) { free(buf); PyErr_NoMemory(); return -1; }
+            buf = nb;
+        }
+
+        if (data != NULL) {
+            pos += c_encode_pushdata(data, dlen, buf + pos);
+        } else {
+            buf[pos++] = (unsigned char)op;
+        }
+    }
+
+    *out_buf = buf;
+    *out_len = pos;
+    return 0;
+}
+
+static int c_build_bip143_preimage(PreimageCtx *pctx,
+                                   const unsigned char *subscript, size_t sub_len,
+                                   uint32_t sighash,
+                                   unsigned char **out, size_t *out_len) {
+    static const unsigned char zeroes32[32] = {0};
+    uint32_t base = sighash & 0x1F;
+
+    const unsigned char *hp = (sighash & 0x80) ? zeroes32 : pctx->hash_prevouts;
+    const unsigned char *hs = ((sighash & 0x80) || base == 0x02 || base == 0x03)
+                              ? zeroes32 : pctx->hash_sequence;
+
+    unsigned char single_ho[32];
+    const unsigned char *ho;
+    if (base != 0x03 && base != 0x02) {
+        ho = pctx->hash_outputs;
+    } else if (base == 0x03 && pctx->input_index < pctx->n_outputs) {
+        PyObject *ob = PyList_GET_ITEM(pctx->outputs_list, pctx->input_index);
+        hash256_var((const unsigned char *)PyBytes_AS_STRING(ob),
+                    PyBytes_GET_SIZE(ob), single_ho);
+        ho = single_ho;
+    } else {
+        ho = zeroes32;
+    }
+
+    int vi_len = varint_size(sub_len);
+    size_t pre_len = 4 + 32 + 32 + 36 + vi_len + sub_len + 8 + 4 + 32 + 4 + 4;
+    unsigned char *pre = (unsigned char *)malloc(pre_len);
+    if (!pre) { PyErr_NoMemory(); return -1; }
+
+    size_t p = 0;
+    write_u32_le(pre + p, pctx->version); p += 4;
+    memcpy(pre + p, hp, 32); p += 32;
+    memcpy(pre + p, hs, 32); p += 32;
+    memcpy(pre + p, pctx->cur_txid_le, 32); p += 32;
+    write_u32_le(pre + p, pctx->cur_vout); p += 4;
+    p += write_varint(pre + p, sub_len);
+    memcpy(pre + p, subscript, sub_len); p += sub_len;
+    write_u64_le(pre + p, (uint64_t)pctx->cur_satoshis); p += 8;
+    write_u32_le(pre + p, pctx->cur_sequence); p += 4;
+    memcpy(pre + p, ho, 32); p += 32;
+    write_u32_le(pre + p, pctx->locktime); p += 4;
+    write_u32_le(pre + p, sighash); p += 4;
+
+    *out = pre;
+    *out_len = p;
+    return 0;
+}
+
+static int c_build_otda_preimage(PreimageCtx *pctx,
+                                 const unsigned char *subscript, size_t sub_len,
+                                 uint32_t sighash,
+                                 unsigned char **out, size_t *out_len) {
+    uint32_t base_type = sighash & 0x1F;
+    int anyonecanpay = sighash & 0x80;
+    Py_ssize_t total = pctx->n_other + 1;
+
+    size_t est = 4 + 9;
+    for (Py_ssize_t i = 0; i < total; i++) {
+        if (i == pctx->input_index) {
+            est += 36 + 9 + sub_len + 4;
+        } else {
+            est += 36 + 1 + 4;
+        }
+    }
+    est += 9;
+    for (Py_ssize_t i = 0; i < pctx->n_outputs; i++) {
+        PyObject *ob = PyList_GET_ITEM(pctx->outputs_list, i);
+        est += PyBytes_GET_SIZE(ob);
+    }
+    est += 4 + 4 + 100;
+
+    unsigned char *buf = (unsigned char *)malloc(est);
+    if (!buf) { PyErr_NoMemory(); return -1; }
+    size_t p = 0;
+
+    write_u32_le(buf + p, pctx->version); p += 4;
+
+    Py_ssize_t in_count = anyonecanpay ? 1 : total;
+    p += write_varint(buf + p, in_count);
+
+    for (Py_ssize_t i = 0; i < total; i++) {
+        if (anyonecanpay && i != pctx->input_index) continue;
+
+        if (i == pctx->input_index) {
+            memcpy(buf + p, pctx->cur_txid_le, 32); p += 32;
+            write_u32_le(buf + p, pctx->cur_vout); p += 4;
+            p += write_varint(buf + p, sub_len);
+            memcpy(buf + p, subscript, sub_len); p += sub_len;
+            write_u32_le(buf + p, pctx->cur_sequence); p += 4;
+        } else {
+            Py_ssize_t oi = (i < pctx->input_index) ? i : i - 1;
+            PCtxInput *inp = &pctx->other_inputs[oi];
+            memcpy(buf + p, inp->txid_le, 32); p += 32;
+            write_u32_le(buf + p, inp->vout); p += 4;
+            buf[p++] = 0x00;
+            if (i != pctx->input_index &&
+                (base_type == 0x02 || base_type == 0x03)) {
+                write_u32_le(buf + p, 0); p += 4;
+            } else {
+                write_u32_le(buf + p, inp->sequence); p += 4;
+            }
+        }
+    }
+
+    if (base_type == 0x02) {
+        buf[p++] = 0x00;
+    } else if (base_type == 0x03) {
+        Py_ssize_t out_count = pctx->input_index + 1;
+        p += write_varint(buf + p, out_count);
+        for (Py_ssize_t i = 0; i < out_count; i++) {
+            if (i < pctx->input_index) {
+                write_u64_le(buf + p, 0xFFFFFFFFFFFFFFFFULL); p += 8;
+                buf[p++] = 0x00;
+            } else {
+                PyObject *ob = PyList_GET_ITEM(pctx->outputs_list, i);
+                Py_ssize_t olen = PyBytes_GET_SIZE(ob);
+                memcpy(buf + p, PyBytes_AS_STRING(ob), olen); p += olen;
+            }
+        }
+    } else {
+        p += write_varint(buf + p, pctx->n_outputs);
+        for (Py_ssize_t i = 0; i < pctx->n_outputs; i++) {
+            PyObject *ob = PyList_GET_ITEM(pctx->outputs_list, i);
+            Py_ssize_t olen = PyBytes_GET_SIZE(ob);
+            memcpy(buf + p, PyBytes_AS_STRING(ob), olen); p += olen;
+        }
+    }
+
+    write_u32_le(buf + p, pctx->locktime); p += 4;
+    write_u32_le(buf + p, sighash); p += 4;
+
+    *out = buf;
+    *out_len = p;
+    return 0;
+}
+
+static int c_checksig_verify(VMState *st,
+                             const unsigned char *sig_raw, Py_ssize_t sig_len,
+                             const unsigned char *pub_raw, Py_ssize_t pub_len,
+                             const unsigned char *subscript, size_t sub_len) {
+    if (sig_len == 0) return 0;
+
+    uint8_t sighash_byte = sig_raw[sig_len - 1];
+
+    if (!c_sighash_validate(sighash_byte)) return -1;
+
+    secp256k1_ecdsa_signature parsed_sig;
+    if (!secp256k1_ecdsa_signature_parse_der(g_ctx, &parsed_sig,
+            sig_raw, sig_len - 1))
+        return -3;
+
+    secp256k1_ecdsa_signature norm_sig;
+    int was_high = secp256k1_ecdsa_signature_normalize(g_ctx, &norm_sig,
+                                                       &parsed_sig);
+    if (was_high && !(st->tx_version > 1))
+        return -2;
+
+    secp256k1_pubkey parsed_pk;
+    if (!secp256k1_ec_pubkey_parse(g_ctx, &parsed_pk, pub_raw, pub_len))
+        return -4;
+
+    unsigned char *preimage;
+    size_t pre_len;
+    int rc;
+    if (c_sighash_use_otda(sighash_byte))
+        rc = c_build_otda_preimage(&st->pctx, subscript, sub_len,
+                                   sighash_byte, &preimage, &pre_len);
+    else
+        rc = c_build_bip143_preimage(&st->pctx, subscript, sub_len,
+                                     sighash_byte, &preimage, &pre_len);
+    if (rc < 0) return -5;
+
+    unsigned char msg32[32];
+    c_hash256_hash(preimage, pre_len, msg32);
+    free(preimage);
+
+    int ok = secp256k1_ecdsa_verify(g_ctx, &norm_sig, msg32, &parsed_pk);
+    return ok ? 1 : 0;
 }
 
 /* --- vm_step: execute one opcode ---------------------------------------- */
@@ -3217,61 +3534,41 @@ static int vm_step(VMState *st) {
         st->last_code_separator = st->program_counter;
         return 0;
 
-    /* ---- CHECKSIG / CHECKMULTISIG (Phase 3b) ---------------------------- */
+    /* ---- CHECKSIG / CHECKMULTISIG (Phase 3c: C internalization) ---------- */
     case 0xAC: case 0xAD: { /* OP_CHECKSIG / OP_CHECKSIGVERIFY */
         const char *name = (op == 0xAC) ? "OP_CHECKSIG" : "OP_CHECKSIGVERIFY";
         if (st->stack.count < 2) {
             vm_errorf(st, "%s requires at least two items to be on the stack.", name);
             return -1;
         }
-        if (st->checksig_cb == NULL || st->checksig_cb == Py_None) {
-            vm_errorf(st, "%s requires signature verification callback.", name);
-            return -1;
-        }
 
         StackElem sig, pub_key;
         vms_remove(&st->stack, st->stack.count - 2, &sig);
         vms_pop(&st->stack, &pub_key);
-
         Py_ssize_t sig_len = sig.len;
 
-        PyObject *py_sig = PyBytes_FromStringAndSize((const char *)sig.data, sig.len);
-        PyObject *py_pub = PyBytes_FromStringAndSize((const char *)pub_key.data, pub_key.len);
-        PyObject *sigs_tuple = PyTuple_New(1);
-        if (!py_sig || !py_pub || !sigs_tuple) {
-            Py_XDECREF(py_sig); Py_XDECREF(py_pub); Py_XDECREF(sigs_tuple);
-            se_free(&sig); se_free(&pub_key);
-            return -1;
+        const unsigned char *sig_ptrs[1] = { sig.data };
+        Py_ssize_t sig_lens[1] = { sig.len };
+        unsigned char *subscript = NULL; size_t sub_len = 0;
+        if (c_build_subscript(st, sig_ptrs, sig_lens, 1,
+                              &subscript, &sub_len) < 0) {
+            se_free(&sig); se_free(&pub_key); return -1;
         }
-        PyObject *sig_copy = PyBytes_FromStringAndSize((const char *)sig.data, sig.len);
-        if (!sig_copy) {
-            Py_DECREF(py_sig); Py_DECREF(py_pub); Py_DECREF(sigs_tuple);
-            se_free(&sig); se_free(&pub_key);
-            return -1;
-        }
-        PyTuple_SET_ITEM(sigs_tuple, 0, sig_copy); /* steals ref */
 
+        int rv = c_checksig_verify(st, sig.data, sig.len,
+                                   pub_key.data, pub_key.len,
+                                   subscript, sub_len);
+        free(subscript);
         se_free(&sig); se_free(&pub_key);
 
-        PyObject *result = PyObject_CallFunction(st->checksig_cb, "OOinO",
-            py_sig, py_pub, st->context, st->last_code_separator, sigs_tuple);
-        Py_DECREF(py_sig); Py_DECREF(py_pub); Py_DECREF(sigs_tuple);
-
-        if (!result) return -1;
-
-        long rv = PyLong_AsLong(result);
-        Py_DECREF(result);
-        if (PyErr_Occurred()) {
-            PyErr_Clear();
-            vm_error(st, "Signature callback returned non-integer.");
-            return -1;
-        }
-
+        if (rv == -5) return -1;
         if (rv < 0) {
             switch (rv) {
                 case -1: vm_error(st, "Invalid SIGHASH flag"); break;
+                case -2: vm_error(st, "The signature must have a low S value."); break;
                 case -3: vm_error(st, "The signature format is invalid."); break;
-                case -4: vm_errorf(st, "%s requires correct encoding for the public key and signature.", name); break;
+                case -4: vm_errorf(st, "%s requires correct encoding for the "
+                                  "public key and signature.", name); break;
                 default: vm_error(st, "Unknown signature encoding error."); break;
             }
             return -1;
@@ -3309,10 +3606,6 @@ static int vm_step(VMState *st) {
 
         if (st->stack.count < ii) {
             vm_errorf(st, "%s requires at least 1 item to be on the stack.", name);
-            return -1;
-        }
-        if (st->checksig_cb == NULL || st->checksig_cb == Py_None) {
-            vm_errorf(st, "%s requires signature verification callback.", name);
             return -1;
         }
 
@@ -3364,52 +3657,52 @@ static int vm_step(VMState *st) {
             return -1;
         }
 
-        /* Build sigs_to_remove tuple */
-        PyObject *sigs_tuple = PyTuple_New((Py_ssize_t)sigs_count);
-        if (!sigs_tuple) return -1;
-        for (Py_ssize_t j = 0; j < (Py_ssize_t)sigs_count; j++) {
-            StackElem *se = vms_top(&st->stack, -(int)(i_sig + j));
-            PyObject *sb = PyBytes_FromStringAndSize((const char *)se->data, se->len);
-            if (!sb) { Py_DECREF(sigs_tuple); return -1; }
-            PyTuple_SET_ITEM(sigs_tuple, j, sb);
+        /* Collect all sigs for subscript find_and_delete */
+        const unsigned char **all_sig_ptrs = NULL;
+        Py_ssize_t *all_sig_lens = NULL;
+        if (sigs_count > 0) {
+            all_sig_ptrs = (const unsigned char **)calloc(sigs_count, sizeof(unsigned char*));
+            all_sig_lens = (Py_ssize_t *)calloc(sigs_count, sizeof(Py_ssize_t));
+            if (!all_sig_ptrs || !all_sig_lens) {
+                free(all_sig_ptrs); free(all_sig_lens);
+                PyErr_NoMemory(); return -1;
+            }
+            for (Py_ssize_t j = 0; j < (Py_ssize_t)sigs_count; j++) {
+                StackElem *se = vms_top(&st->stack, -(int)(i_sig + j));
+                all_sig_ptrs[j] = se->data;
+                all_sig_lens[j] = se->len;
+            }
         }
+
+        /* Build subscript once */
+        unsigned char *subscript = NULL; size_t sub_len = 0;
+        if (c_build_subscript(st, all_sig_ptrs, all_sig_lens,
+                              (Py_ssize_t)sigs_count,
+                              &subscript, &sub_len) < 0) {
+            free(all_sig_ptrs); free(all_sig_lens);
+            return -1;
+        }
+        free(all_sig_ptrs); free(all_sig_lens);
 
         /* Verification loop */
         int f = 1;
-        long long loop_sigs = sigs_count;
+        long long rem_sigs = sigs_count;
+        long long rem_keys = keys_count;
         Py_ssize_t loop_i_sig = i_sig;
         Py_ssize_t loop_i_key = i_key;
 
-        while (f && loop_sigs > 0) {
+        while (f && rem_sigs > 0) {
             StackElem *se_sig = vms_top(&st->stack, -(int)loop_i_sig);
             StackElem *se_key = vms_top(&st->stack, -(int)loop_i_key);
 
-            PyObject *py_sig = PyBytes_FromStringAndSize(
-                (const char *)se_sig->data, se_sig->len);
-            PyObject *py_pub = PyBytes_FromStringAndSize(
-                (const char *)se_key->data, se_key->len);
-            if (!py_sig || !py_pub) {
-                Py_XDECREF(py_sig); Py_XDECREF(py_pub);
-                Py_DECREF(sigs_tuple);
-                return -1;
-            }
+            int rv = c_checksig_verify(st,
+                se_sig->data, se_sig->len,
+                se_key->data, se_key->len,
+                subscript, sub_len);
 
-            PyObject *cb_result = PyObject_CallFunction(st->checksig_cb,
-                "OOinO", py_sig, py_pub, st->context,
-                st->last_code_separator, sigs_tuple);
-            Py_DECREF(py_sig); Py_DECREF(py_pub);
-
-            if (!cb_result) { Py_DECREF(sigs_tuple); return -1; }
-
-            long rv = PyLong_AsLong(cb_result);
-            Py_DECREF(cb_result);
-            if (PyErr_Occurred()) {
-                PyErr_Clear(); Py_DECREF(sigs_tuple);
-                vm_error(st, "Signature callback returned non-integer.");
-                return -1;
-            }
+            if (rv == -5) { free(subscript); return -1; }
             if (rv < 0) {
-                Py_DECREF(sigs_tuple);
+                free(subscript);
                 switch (rv) {
                     case -1: vm_error(st, "Invalid SIGHASH flag"); break;
                     case -2: vm_error(st, "The signature must have a low S value."); break;
@@ -3423,16 +3716,16 @@ static int vm_step(VMState *st) {
 
             if (rv > 0) {
                 loop_i_sig += 1;
-                loop_sigs -= 1;
+                rem_sigs -= 1;
             }
             loop_i_key += 1;
-            keys_count -= 1;
+            rem_keys -= 1;
 
-            if (loop_sigs > keys_count)
+            if (rem_sigs > rem_keys)
                 f = 0;
         }
 
-        Py_DECREF(sigs_tuple);
+        free(subscript);
 
         /* Clean up stack of actual arguments */
         while (ii > 1) {
@@ -3713,20 +4006,150 @@ static int vm_run(VMState *st) {
 
 /* --- Python entry point ------------------------------------------------- */
 
+static int pctx_init(PreimageCtx *pctx, uint32_t version, uint32_t locktime,
+                     int32_t input_index, const char *source_txid,
+                     uint32_t source_vout, uint32_t input_sequence,
+                     int64_t source_satoshis,
+                     PyObject *other_inputs_py, PyObject *outputs_py) {
+    memset(pctx, 0, sizeof(*pctx));
+    pctx->version = version;
+    pctx->locktime = locktime;
+    pctx->input_index = input_index;
+    pctx->cur_vout = source_vout;
+    pctx->cur_satoshis = source_satoshis;
+    pctx->cur_sequence = input_sequence;
+    pctx->outputs_list = outputs_py;
+    pctx->n_outputs = PyList_GET_SIZE(outputs_py);
+
+    if (hex_to_bytes_reversed(source_txid, pctx->cur_txid_le, 32) < 0) {
+        PyErr_SetString(PyExc_ValueError, "invalid source_txid hex");
+        return -1;
+    }
+
+    Py_ssize_t n_other = PyList_GET_SIZE(other_inputs_py);
+    pctx->n_other = n_other;
+    pctx->other_inputs = NULL;
+    if (n_other > 0) {
+        pctx->other_inputs = (PCtxInput *)calloc(n_other, sizeof(PCtxInput));
+        if (!pctx->other_inputs) { PyErr_NoMemory(); return -1; }
+    }
+
+    Py_ssize_t total = n_other + 1;
+    size_t prevouts_len = (size_t)total * 36;
+    size_t seq_len = (size_t)total * 4;
+    unsigned char *prevouts_buf = (unsigned char *)malloc(prevouts_len > 0 ? prevouts_len : 1);
+    unsigned char *seq_buf = (unsigned char *)malloc(seq_len > 0 ? seq_len : 1);
+    if (!prevouts_buf || !seq_buf) {
+        free(prevouts_buf); free(seq_buf);
+        free(pctx->other_inputs); pctx->other_inputs = NULL;
+        PyErr_NoMemory(); return -1;
+    }
+
+    for (Py_ssize_t i = 0; i < n_other; i++) {
+        const char *txid_hex;
+        uint32_t vout, seq, sh;
+        int64_t sats;
+        const unsigned char *scr;
+        Py_ssize_t scr_len;
+        if (parse_input_tuple(PyList_GET_ITEM(other_inputs_py, i),
+                &txid_hex, &vout, &scr, &scr_len, &sats, &seq, &sh) < 0) {
+            free(prevouts_buf); free(seq_buf);
+            free(pctx->other_inputs); pctx->other_inputs = NULL;
+            return -1;
+        }
+        if (hex_to_bytes_reversed(txid_hex, pctx->other_inputs[i].txid_le, 32) < 0) {
+            free(prevouts_buf); free(seq_buf);
+            free(pctx->other_inputs); pctx->other_inputs = NULL;
+            PyErr_SetString(PyExc_ValueError, "invalid txid hex in other_inputs");
+            return -1;
+        }
+        pctx->other_inputs[i].vout = vout;
+        pctx->other_inputs[i].script = scr;
+        pctx->other_inputs[i].script_len = scr_len;
+        pctx->other_inputs[i].satoshis = sats;
+        pctx->other_inputs[i].sequence = seq;
+        pctx->other_inputs[i].sighash = sh;
+    }
+
+    for (Py_ssize_t i = 0; i < total; i++) {
+        const unsigned char *txid_le;
+        uint32_t vout, seq;
+        if (i == input_index) {
+            txid_le = pctx->cur_txid_le;
+            vout = pctx->cur_vout;
+            seq = pctx->cur_sequence;
+        } else {
+            Py_ssize_t oi = (i < input_index) ? i : i - 1;
+            txid_le = pctx->other_inputs[oi].txid_le;
+            vout = pctx->other_inputs[oi].vout;
+            seq = pctx->other_inputs[oi].sequence;
+        }
+        memcpy(prevouts_buf + i * 36, txid_le, 32);
+        write_u32_le(prevouts_buf + i * 36 + 32, vout);
+        write_u32_le(seq_buf + i * 4, seq);
+    }
+
+    hash256_var(prevouts_buf, prevouts_len, pctx->hash_prevouts);
+    hash256_var(seq_buf, seq_len, pctx->hash_sequence);
+    free(prevouts_buf); free(seq_buf);
+
+    size_t total_out = 0;
+    for (Py_ssize_t i = 0; i < pctx->n_outputs; i++) {
+        PyObject *ob = PyList_GET_ITEM(outputs_py, i);
+        if (!PyBytes_Check(ob)) {
+            free(pctx->other_inputs); pctx->other_inputs = NULL;
+            PyErr_SetString(PyExc_TypeError, "output must be bytes");
+            return -1;
+        }
+        total_out += PyBytes_GET_SIZE(ob);
+    }
+    unsigned char *out_buf = (unsigned char *)malloc(total_out > 0 ? total_out : 1);
+    if (!out_buf) {
+        free(pctx->other_inputs); pctx->other_inputs = NULL;
+        PyErr_NoMemory(); return -1;
+    }
+    size_t opos = 0;
+    for (Py_ssize_t i = 0; i < pctx->n_outputs; i++) {
+        PyObject *ob = PyList_GET_ITEM(outputs_py, i);
+        Py_ssize_t olen = PyBytes_GET_SIZE(ob);
+        memcpy(out_buf + opos, PyBytes_AS_STRING(ob), olen);
+        opos += olen;
+    }
+    hash256_var(out_buf, total_out, pctx->hash_outputs);
+    free(out_buf);
+
+    return 0;
+}
+
+static void pctx_free(PreimageCtx *pctx) {
+    free(pctx->other_inputs);
+    pctx->other_inputs = NULL;
+}
+
 static PyObject *pyfn_spend_validate(PyObject *self, PyObject *args) {
-    PyObject *unlock_chunks, *lock_chunks, *checksig_cb;
-    int tx_version, source_output_index;
+    PyObject *unlock_chunks, *lock_chunks, *other_inputs_py, *outputs_py;
+    int tx_version, source_output_index, input_index;
+    unsigned int lock_time, input_sequence;
+    long long source_satoshis;
     const char *source_txid;
 
-    if (!PyArg_ParseTuple(args, "OOisiO",
-            &unlock_chunks, &lock_chunks, &tx_version,
-            &source_txid, &source_output_index, &checksig_cb))
+    if (!PyArg_ParseTuple(args, "OOisiIiILOO",
+            &unlock_chunks, &lock_chunks,
+            &tx_version, &source_txid, &source_output_index,
+            &lock_time, &input_index, &input_sequence,
+            &source_satoshis,
+            &other_inputs_py, &outputs_py))
         return NULL;
 
     if (!PyList_Check(unlock_chunks) || !PyList_Check(lock_chunks)) {
         PyErr_SetString(PyExc_TypeError, "chunks must be lists");
         return NULL;
     }
+    if (!PyList_Check(other_inputs_py) || !PyList_Check(outputs_py)) {
+        PyErr_SetString(PyExc_TypeError, "other_inputs and outputs must be lists");
+        return NULL;
+    }
+    if (!ensure_context()) return NULL;
 
     VMState st;
     memset(&st, 0, sizeof(st));
@@ -3741,10 +4164,21 @@ static PyObject *pyfn_spend_validate(PyObject *self, PyObject *args) {
     st.tx_version = tx_version;
     st.source_txid = source_txid;
     st.source_output_index = source_output_index;
-    st.checksig_cb = checksig_cb;
+
+    if (pctx_init(&st.pctx, (uint32_t)tx_version, (uint32_t)lock_time,
+                  (int32_t)input_index, source_txid,
+                  (uint32_t)source_output_index, (uint32_t)input_sequence,
+                  (int64_t)source_satoshis,
+                  other_inputs_py, outputs_py) < 0) {
+        vms_free(&st.stack);
+        vms_free(&st.alt_stack);
+        ifs_free(&st.if_stack);
+        return NULL;
+    }
 
     int result = vm_run(&st);
 
+    pctx_free(&st.pctx);
     vms_free(&st.stack);
     vms_free(&st.alt_stack);
     ifs_free(&st.if_stack);
@@ -3860,8 +4294,10 @@ static PyMethodDef bsv_native_methods[] = {
     /* Script VM */
     {"spend_validate", pyfn_spend_validate, METH_VARARGS,
      "spend_validate(unlock_chunks, lock_chunks, tx_version, source_txid, "
-     "source_output_index, checksig_callback) -> True\n\n"
-     "Run script VM. Raises RuntimeError on validation failure."},
+     "source_output_index, lock_time, input_index, input_sequence, "
+     "source_satoshis, other_inputs, outputs) -> True\n\n"
+     "Run script VM with CHECKSIG internalized in C. "
+     "Raises RuntimeError on validation failure."},
 
     {NULL, NULL, 0, NULL}
 };
