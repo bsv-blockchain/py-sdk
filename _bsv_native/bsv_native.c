@@ -1264,18 +1264,20 @@ static PyObject* pyfn_merkle_compute_root(PyObject *self, PyObject *args) {
             }
         }
 
-        /* Concatenate and hash */
+        /* Concatenate and hash.
+         * Python: hash256(to_bytes(left_hex + right_hex)[::-1])
+         * Full 64-byte reversal swaps the two halves, so display-order
+         * left||right becomes internal-order right_rev||left_rev. */
         unsigned char concat[64];
         if (is_dup) {
             memcpy(concat, working, 32);
             memcpy(concat + 32, working, 32);
         } else if (offset % 2 != 0) {
-            /* pair is on the left (odd offset means pair first) */
-            memcpy(concat, pair, 32);
-            memcpy(concat + 32, working, 32);
-        } else {
             memcpy(concat, working, 32);
             memcpy(concat + 32, pair, 32);
+        } else {
+            memcpy(concat, pair, 32);
+            memcpy(concat + 32, working, 32);
         }
 
         hash256_64(concat, working);

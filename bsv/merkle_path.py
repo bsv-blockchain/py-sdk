@@ -252,7 +252,12 @@ class MerklePath:
         return working_hash
 
     def _compute_root_native(self, txid: str, index: int) -> str:
-        """Compute root using C hash256 with Python leaf resolution."""
+        """Compute root using C extension. Full-C path for complete proofs, per-level fallback otherwise."""
+        try:
+            return _bsv_native.merkle_compute_root(txid, self.path)
+        except (ValueError, TypeError):
+            pass
+
         working_hash = txid
         for height in range(len(self.path)):
             offset = (index >> height) ^ 1
