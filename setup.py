@@ -26,13 +26,15 @@ if USE_C_EXTENSION:
     if sys.platform == "win32":
         compile_args.append("/O2")
     else:
-        compile_args.extend([
-            "-O2",
-            "-std=c99",
-            "-Wno-unused-function",
-            "-Wno-sign-compare",
-            "-Wno-implicit-fallthrough",
-        ])
+        compile_args.extend(
+            [
+                "-O2",
+                "-std=c99",
+                "-Wno-unused-function",
+                "-Wno-sign-compare",
+                "-Wno-implicit-fallthrough",
+            ]
+        )
 
     ext_modules.append(
         Extension(

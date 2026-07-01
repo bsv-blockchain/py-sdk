@@ -4,6 +4,13 @@ from .chaintracker import ChainTracker
 from .hash import hash256
 from .utils import Reader, Writer, to_bytes, to_hex
 
+try:
+    import _bsv_native
+
+    _USE_NATIVE = True
+except ImportError:
+    _USE_NATIVE = False
+
 
 class MerkleLeaf(TypedDict, total=False):
     offset: int
@@ -221,6 +228,9 @@ class MerklePath:
         except StopIteration:
             raise ValueError(f"This proof does not contain the txid: {txid}")
 
+        if _USE_NATIVE:
+            return self._compute_root_native(txid, index)
+
         # Calculate the root using the index as a way to determine which direction to concatenate.
         def hash_fn(m: str) -> str:
             return to_hex(hash256(to_bytes(m, "hex")[::-1])[::-1])
@@ -241,7 +251,30 @@ class MerklePath:
 
         return working_hash
 
+    def _compute_root_native(self, txid: str, index: int) -> str:
+        """Compute root using C hash256 with Python leaf resolution."""
+        working_hash = txid
+        for height in range(len(self.path)):
+            offset = (index >> height) ^ 1
+            leaf = self.find_or_compute_leaf(height, offset)
+            if not isinstance(leaf, dict):
+                raise ValueError(f"Missing hash for index {index} at height {height}")
+
+            if leaf.get("duplicate"):
+                working_hash = _bsv_native.merkle_hash_pair(working_hash, working_hash)
+            elif offset % 2 != 0:
+                working_hash = _bsv_native.merkle_hash_pair(leaf["hash_str"], working_hash)
+            else:
+                working_hash = _bsv_native.merkle_hash_pair(working_hash, leaf["hash_str"])
+
+        return working_hash
+
     def find_or_compute_leaf(self, height: int, offset: int) -> Optional[MerkleLeaf]:
+        if _USE_NATIVE:
+            return self._find_or_compute_leaf_native(height, offset)
+        return self._find_or_compute_leaf_py(height, offset)
+
+    def _find_or_compute_leaf_py(self, height: int, offset: int) -> Optional[MerkleLeaf]:
         def hash_fn(m: str) -> str:
             return to_hex(hash256(to_bytes(m, "hex")[::-1])[::-1])
 
@@ -255,11 +288,11 @@ class MerklePath:
         h = height - 1
         e = offset << 1
 
-        leaf0 = self.find_or_compute_leaf(h, e)
+        leaf0 = self._find_or_compute_leaf_py(h, e)
         if not leaf0 or not leaf0.get("hash_str"):
             return None
 
-        leaf1 = self.find_or_compute_leaf(h, e + 1)
+        leaf1 = self._find_or_compute_leaf_py(h, e + 1)
         if not leaf1:
             return None
 
@@ -267,6 +300,32 @@ class MerklePath:
             working_hash = hash_fn(leaf0["hash_str"] + leaf0["hash_str"])
         else:
             working_hash = hash_fn(leaf1["hash_str"] + leaf0["hash_str"])
+
+        return {"offset": offset, "hash_str": working_hash}
+
+    def _find_or_compute_leaf_native(self, height: int, offset: int) -> Optional[MerkleLeaf]:
+        leaf = next((e for e in self.path[height] if e["offset"] == offset), None)
+        if leaf:
+            return leaf
+
+        if height == 0:
+            return None
+
+        h = height - 1
+        e = offset << 1
+
+        leaf0 = self._find_or_compute_leaf_native(h, e)
+        if not leaf0 or not leaf0.get("hash_str"):
+            return None
+
+        leaf1 = self._find_or_compute_leaf_native(h, e + 1)
+        if not leaf1:
+            return None
+
+        if leaf1.get("duplicate"):
+            working_hash = _bsv_native.merkle_hash_pair(leaf0["hash_str"], leaf0["hash_str"])
+        else:
+            working_hash = _bsv_native.merkle_hash_pair(leaf1["hash_str"], leaf0["hash_str"])
 
         return {"offset": offset, "hash_str": working_hash}
 

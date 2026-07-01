@@ -2,9 +2,9 @@
 # Copyright (c) 2023 Random "Randy" Lattice and Sean Andersen
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or https://www.opensource.org/licenses/mit-license.php.
-'''
+"""
 Generate a C file with ECDSA testvectors from the Wycheproof project.
-'''
+"""
 
 import json
 import sys
@@ -14,12 +14,13 @@ filename_input = sys.argv[1]
 with open(filename_input) as f:
     doc = json.load(f)
 
-num_groups = len(doc['testGroups'])
+num_groups = len(doc["testGroups"])
+
 
 def to_c_array(x):
     if x == "":
         return ""
-    s = ',0x'.join(a+b for a,b in zip(x[::2], x[1::2]))
+    s = ",0x".join(a + b for a, b in zip(x[::2], x[1::2]))
     return "0x" + s
 
 
@@ -33,18 +34,18 @@ cache_msgs = {}
 cache_public_keys = {}
 
 for i in range(num_groups):
-    group = doc['testGroups'][i]
-    num_tests = len(group['tests'])
-    public_key = group['publicKey']
+    group = doc["testGroups"][i]
+    num_tests = len(group["tests"])
+    public_key = group["publicKey"]
     for j in range(num_tests):
-        test_vector = group['tests'][j]
+        test_vector = group["tests"][j]
         # // 2 to convert hex to byte length
-        sig_size = len(test_vector['sig']) // 2
-        msg_size = len(test_vector['msg']) // 2
+        sig_size = len(test_vector["sig"]) // 2
+        msg_size = len(test_vector["msg"]) // 2
 
-        if test_vector['result'] == "invalid":
+        if test_vector["result"] == "invalid":
             expected_verify = 0
-        elif test_vector['result'] == "valid":
+        elif test_vector["result"] == "valid":
             expected_verify = 1
         else:
             raise ValueError("invalid result field")
@@ -53,7 +54,7 @@ for i in range(num_groups):
             signatures += ",\n  "
 
         new_msg = False
-        msg = to_c_array(test_vector['msg'])
+        msg = to_c_array(test_vector["msg"])
         msg_offset = offset_msg_running
         # check for repeated msg
         if msg not in cache_msgs:
@@ -66,7 +67,7 @@ for i in range(num_groups):
             msg_offset = cache_msgs[msg]
 
         new_pk = False
-        pk = to_c_array(public_key['uncompressed'])
+        pk = to_c_array(public_key["uncompressed"])
         pk_offset = offset_pk_running
         # check for repeated pk
         if pk not in cache_public_keys:
@@ -78,9 +79,9 @@ for i in range(num_groups):
         else:
             pk_offset = cache_public_keys[pk]
 
-        signatures += to_c_array(test_vector['sig'])
+        signatures += to_c_array(test_vector["sig"])
 
-        out += "  /" + "* tcId: " + str(test_vector['tcId']) + ". " + test_vector['comment'] + " *" + "/\n"
+        out += "  /" + "* tcId: " + str(test_vector["tcId"]) + ". " + test_vector["comment"] + " *" + "/\n"
         out += f"  {{{pk_offset}, {msg_offset}, {msg_size}, {offset_sig}, {sig_size}, {expected_verify} }},\n"
         if new_msg:
             offset_msg_running += msg_size
