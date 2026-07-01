@@ -15,31 +15,34 @@ OP_CAT concatenates them, and OP_EQUAL checks if the result matches expected_dat
 """
 
 from bsv import (
+    P2PKH,
+    OpCat,
+    PrivateKey,
     Transaction,
     TransactionInput,
     TransactionOutput,
-    PrivateKey,
-    OpCat,
-    P2PKH,
 )
 
 
 def validate_transaction(tx, source_tx, input_index=0):
     """Helper function to validate a transaction using Spend."""
     from bsv import Spend
-    return Spend({
-        'sourceTXID': tx.inputs[input_index].source_txid,
-        'sourceOutputIndex': tx.inputs[input_index].source_output_index,
-        'sourceSatoshis': source_tx.outputs[0].satoshis,
-        'lockingScript': source_tx.outputs[0].locking_script,
-        'transactionVersion': tx.version,
-        'otherInputs': [],
-        'inputIndex': input_index,
-        'unlockingScript': tx.inputs[input_index].unlocking_script,
-        'outputs': tx.outputs,
-        'inputSequence': tx.inputs[input_index].sequence,
-        'lockTime': tx.locktime,
-    }).validate()
+
+    return Spend(
+        {
+            "sourceTXID": tx.inputs[input_index].source_txid,
+            "sourceOutputIndex": tx.inputs[input_index].source_output_index,
+            "sourceSatoshis": source_tx.outputs[0].satoshis,
+            "lockingScript": source_tx.outputs[0].locking_script,
+            "transactionVersion": tx.version,
+            "otherInputs": [],
+            "inputIndex": input_index,
+            "unlockingScript": tx.inputs[input_index].unlocking_script,
+            "outputs": tx.outputs,
+            "inputSequence": tx.inputs[input_index].sequence,
+            "lockTime": tx.locktime,
+        }
+    ).validate()
 
 
 def main():
@@ -70,12 +73,7 @@ def main():
     # For this example, we'll create a mock source transaction
     source_tx = Transaction(
         [],  # No inputs for coinbase-like transaction
-        [
-            TransactionOutput(
-                locking_script=locking_script,
-                satoshis=1000  # 1000 satoshis
-            )
-        ]
+        [TransactionOutput(locking_script=locking_script, satoshis=1000)],  # 1000 satoshis
     )
 
     print("Created source transaction with OP_CAT output")
@@ -92,21 +90,15 @@ def main():
                 source_transaction=source_tx,
                 source_txid=source_tx.txid(),
                 source_output_index=0,
-                unlocking_script_template=OpCat().unlock(data_piece_1, data_piece_2)
+                unlocking_script_template=OpCat().unlock(data_piece_1, data_piece_2),
             )
         ],
         [
             # Send 500 satoshis to a P2PKH address
-            TransactionOutput(
-                locking_script=P2PKH().lock(private_key.address()),
-                satoshis=500
-            ),
+            TransactionOutput(locking_script=P2PKH().lock(private_key.address()), satoshis=500),
             # Change back to another OP_CAT output with different data
-            TransactionOutput(
-                locking_script=OpCat().lock(b"new concatenated data"),
-                change=True
-            ),
-        ]
+            TransactionOutput(locking_script=OpCat().lock(b"new concatenated data"), change=True),
+        ],
     )
 
     # Calculate fees and sign the transaction
@@ -148,15 +140,16 @@ def main():
         # Create mock transaction to test
         mock_source = Transaction([], [TransactionOutput(locking_script=lock_script, satoshis=100)])
 
-        mock_tx = Transaction([
-            TransactionInput(
-                source_transaction=mock_source,
-                source_output_index=0,
-                unlocking_script_template=OpCat().unlock(data1, data2)
-            )
-        ], [
-            TransactionOutput(locking_script=P2PKH().lock(private_key.address()), change=True)
-        ])
+        mock_tx = Transaction(
+            [
+                TransactionInput(
+                    source_transaction=mock_source,
+                    source_output_index=0,
+                    unlocking_script_template=OpCat().unlock(data1, data2),
+                )
+            ],
+            [TransactionOutput(locking_script=P2PKH().lock(private_key.address()), change=True)],
+        )
 
         mock_tx.fee()
         mock_tx.sign()

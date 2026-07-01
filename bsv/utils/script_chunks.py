@@ -1,6 +1,13 @@
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
+try:
+    import _bsv_native
+
+    _USE_NATIVE = True
+except ImportError:
+    _USE_NATIVE = False
+
 
 @dataclass
 class ScriptChunk:
@@ -11,6 +18,9 @@ class ScriptChunk:
 def read_script_chunks(script: bytes | str) -> list[ScriptChunk]:
     """Parse script bytes into chunks of opcodes and data."""
     script_bytes = _normalize_script_input(script)
+    if _USE_NATIVE:
+        tuples = _bsv_native.parse_script_chunks(script_bytes)
+        return [ScriptChunk(op=t[0], data=t[1]) for t in tuples]
     return _parse_script_bytes(script_bytes)
 
 
@@ -114,6 +124,10 @@ def serialize_chunks(chunks: list[ScriptChunk]) -> bytes:
     Raises:
         ValueError: If chunk data is invalid for the opcode
     """
+    if _USE_NATIVE:
+        tuples = [(c.op, c.data) for c in chunks]
+        return _bsv_native.serialize_script_chunks(tuples)
+
     result = bytearray()
 
     for chunk in chunks:
