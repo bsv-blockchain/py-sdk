@@ -274,7 +274,7 @@ pytest tests/bsv/script/test_chronicle_*.py -v
 
 ## Important Notes
 
-- The SDK uses `coincurve` for ECDSA operations (not pure Python)
+- The SDK uses `_bsv_native` (libsecp256k1 直接統合) for ECDSA operations. `coincurve` is an optional fallback
 - Encryption uses `pycryptodomex` (not standard `pycryptodome`)
 - Network operations require `aiohttp` for async HTTP
 - Tests require `pytest-asyncio` for async test support
