@@ -863,32 +863,18 @@ class Spend:
             (int.from_bytes(c.op, "big"), c.data) for c in self.locking_script.chunks
         ]
 
-        def checksig_cb(sig, pub_key, context_int, last_code_separator, sigs_to_remove):
-            if sig != b"":
-                sighash_byte = sig[-1]
-                if not SIGHASH.validate(sighash_byte):
-                    return -1
-                try:
-                    _, s_val = deserialize_ecdsa_der(sig[:-1])
-                    if not self.is_relaxed() and REQUIRE_LOW_S_SIGNATURES and s_val > curve.n // 2:
-                        return -3
-                except Exception:
-                    return -3
-
-            try:
-                PublicKey(pub_key)
-            except Exception:
-                return -4
-
-            if context_int == 0:
-                chunks = self.unlocking_script.chunks[last_code_separator:]
-            else:
-                chunks = self.locking_script.chunks[last_code_separator:]
-            sub_script = Script.from_chunks(chunks)
-            for s_bytes in sigs_to_remove:
-                sub_script = Script.find_and_delete(sub_script, Script.write_bin(s_bytes))
-
-            return 1 if self.verify_signature(sig, pub_key, sub_script) else 0
+        other_inputs_tuples = [
+            (
+                inp.source_txid,
+                inp.source_output_index,
+                inp.locking_script.serialize() if inp.locking_script else b"",
+                inp.satoshis or 0,
+                inp.sequence,
+                int(inp.sighash),
+            )
+            for inp in self.other_inputs
+        ]
+        outputs_bytes = [out.serialize() for out in self.outputs]
 
         return _bsv_native.spend_validate(
             unlock_chunks,
@@ -896,7 +882,12 @@ class Spend:
             self.transaction_version,
             self.source_txid,
             self.source_output_index,
-            checksig_cb,
+            self.lock_time,
+            self.input_index,
+            self.input_sequence,
+            self.source_satoshis,
+            other_inputs_tuples,
+            outputs_bytes,
         )
 
     def _validate_python(self) -> bool:
