@@ -51,10 +51,10 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-exclude = ["tests*"]
+exclude = ["tests*", "_bsv_native*", "examples*"]
 
 [tool.setuptools.package-data]
-"*" = ["hd/wordlist/*.txt"]
+"bsv" = ["hd/wordlist/*.txt"]
 
 [tool.black]
 line-length = 120

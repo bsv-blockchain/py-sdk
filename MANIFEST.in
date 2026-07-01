@@ -1,0 +1,14 @@
+include setup.py
+include pyproject.toml
+include LICENSE
+include README.md
+
+# C extension source
+include _bsv_native/bsv_native.c
+
+# Vendored libsecp256k1 (required for compilation)
+recursive-include _bsv_native/secp256k1/src *.c *.h
+recursive-include _bsv_native/secp256k1/include *.h
+
+# HD wallet wordlists
+recursive-include bsv/hd/wordlist *.txt
