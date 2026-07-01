@@ -228,6 +228,73 @@ def test_bare_multisig():
     assert spend.validate()
 
 
+def _make_multisig_spend(sign_privkeys, all_privkeys, threshold):
+    """Build a multisig Spend with sign_privkeys signing a threshold-of-len(all_privkeys) lock."""
+    pubs = [pk.public_key().serialize() for pk in all_privkeys]
+    source_tx = Transaction([], [TransactionOutput(locking_script=BareMultisig().lock(pubs, threshold), satoshis=1000)])
+    tx = Transaction(
+        [
+            TransactionInput(
+                source_transaction=source_tx,
+                source_output_index=0,
+                unlocking_script_template=BareMultisig().unlock(sign_privkeys),
+            )
+        ],
+        [TransactionOutput(locking_script=P2PKH().lock("1AfxgwYJrBgriZDLryfyKuSdBsi59jeBX9"), change=True)],
+    )
+    tx.fee()
+    tx.sign()
+    return Spend(
+        {
+            "sourceTXID": tx.inputs[0].source_txid,
+            "sourceOutputIndex": tx.inputs[0].source_output_index,
+            "sourceSatoshis": source_tx.outputs[0].satoshis,
+            "lockingScript": source_tx.outputs[0].locking_script,
+            "transactionVersion": tx.version,
+            "otherInputs": [],
+            "inputIndex": 0,
+            "unlockingScript": tx.inputs[0].unlocking_script,
+            "outputs": tx.outputs,
+            "inputSequence": tx.inputs[0].sequence,
+            "lockTime": tx.locktime,
+        }
+    )
+
+
+def test_bare_multisig_2of3_valid():
+    """2-of-3: two correct signatures should succeed."""
+    privs = [PrivateKey(), PrivateKey(), PrivateKey()]
+    spend = _make_multisig_spend(privs[:2], privs, 2)
+    assert spend.validate()
+
+
+def test_bare_multisig_2of3_wrong_signer():
+    """2-of-3: signing with a key not in the pubkey set should fail."""
+    privs = [PrivateKey(), PrivateKey(), PrivateKey()]
+    outsider = PrivateKey()
+    spend = _make_multisig_spend([privs[0], outsider], privs, 2)
+    with pytest.raises(RuntimeError):
+        spend.validate()
+
+
+def test_bare_multisig_2of2_wrong_signers():
+    """2-of-2: both signatures from outside keys should fail."""
+    privs = [PrivateKey(), PrivateKey()]
+    outsiders = [PrivateKey(), PrivateKey()]
+    spend = _make_multisig_spend(outsiders, privs, 2)
+    with pytest.raises(RuntimeError):
+        spend.validate()
+
+
+def test_bare_multisig_1of3_insufficient():
+    """2-of-3: only one valid signature is insufficient."""
+    privs = [PrivateKey(), PrivateKey(), PrivateKey()]
+    outsider = PrivateKey()
+    spend = _make_multisig_spend([privs[0], outsider], privs, 2)
+    with pytest.raises(RuntimeError):
+        spend.validate()
+
+
 def test_is_push_only():
     assert Script("00").is_push_only()  # OP_0
     assert not Script("006a").is_push_only()  # OP_0 OP_RETURN
