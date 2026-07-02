@@ -137,10 +137,33 @@ CI ───── CI/wheel パイプライン                                  
   │         MANIFEST.in, BuildExtFallback, BSV_REQUIRE_NATIVE
   │         wheel から C ソース除外、純 Python フォールバックテスト
   │
+F8 ────── Python 3.13/3.14 対応 (私的API廃止)                       ✅ 完了 (2026-07-02)
+  │         → _PyLong_FromByteArray/_AsByteArray (私的API) を公開 API
+  │           PyLong_FromUnsignedNativeBytes/AsNativeBytes へ移行 (≥3.13)。≤3.12 は従来 API
+  │           x86_64/arm64 の Py3.13 で native ビルド + 159 テスト通過。3.11 回帰なし
+  │
+3.14 ──── Python 3.14 対応                       🔶 標準ビルド検証済み / CI・freethreading 残
+  │         → 標準(GIL)ビルド: arm64 Py3.14.6 で native ビルド + 159 テスト通過、
+  │           ヘッダ実コンパイル エラー0・非推奨警告0、依存も cp314 wheel 有り (実測 2026-07-02)
+  │           残: [CI] cp314 を wheels.yml に追加 + cibuildwheel bump、
+  │              [free-threading] cp314t 対応 (Py_mod_gil + g_ctx スレッド安全化)
+  │           詳細は末尾「Python 3.14 対応」セクション参照
+  │
 監査 ──── ドキュメント整合性チェック                                 ✅ 完了
               → c-extension-plan.md 全 2,121 行の監査
               チェックボックス未更新 4件、事実矛盾 2件、
               musllinux 記述不整合 3箇所、古い情報 2件を修正
+  │
+レビュー ── コードレビュー + アドバーサリアル検証                     ✅ 完了 (2026-07-02)
+  │         → 16 指摘を実測検証。P0 リーク (tx_from_bytes 202B/call) 修正
+  │         格上げ2/格下げ5/棄却2/新規発見1。検証済みアクションプラン策定
+  │
+全面監査 ─ 全29関数リーク/クラッシュ監査                              ✅ 完了 (2026-07-02)
+              → 実測52ケース + 静的9領域。リーク残存なしを確認
+              クラッシュ級2件を新規発見・修正:
+                ① ecdsa_sign_with_k(k=0) 無限ハング (DoS)
+                ② OTDA SIGHASH_SINGLE 範囲外 SIGSEGV (OTDA実装2系統)
+              回帰テスト44件追加 (crash/hang subprocess隔離 + 全関数memory scan)
 ```
 
 ---
@@ -275,7 +298,8 @@ def from_reader(cls, reader):
 - [x] `pip install -e .` で `_bsv_native` がビルドされる（libsecp256k1 含む） ✅ 2026-06-30
 - [x] coincurve なしで既存テストスイート全体が通る（5466件全パス） ✅ 2026-06-30
 - [x] coincurve フォールバック時も既存テスト全件通過 ✅ 2026-06-30
-- [x] CI で manylinux / macOS / Windows の wheel ビルド成功 ✅ 2026-07-01 (wheels.yml, musllinux はスキップ)
+- [x] CI で manylinux / macOS / Windows の wheel ビルド成功 (cp310-313) ✅ 2026-07-01 (wheels.yml, musllinux はスキップ)
+  - cp313 は当初 F8 (`_PyLong_AsByteArray` の 6 引数化) で native ビルド不能だったが、2026-07-02 に F8 を修正 (公開 API へ移行) し cp313 も native ビルド可能に
 
 ### 実装メモ (2026-06-30)
 
@@ -960,16 +984,20 @@ libsecp256k1 統合済みの場合:
 | **4** | 2〜3週間 | ✅ 4.1-4.3 完了 | seckey/pubkey_tweak_add 直接利用、ecdsa_sign_with_k で純Python ECDSA 排除 |
 | **品質** | — | ✅ 完了 | ファズ46件 + ASAN + ecdsa_recover バグ修正 |
 | **CI** | — | ✅ 完了 | cibuildwheel 5プラットフォーム × Py3.10-3.13、sdist、純Python フォールバック |
+| **F8** | — | ✅ 完了 | Python 3.13/3.14 対応: 私的API `_PyLong_*` を公開 `PyLong_*NativeBytes` へ移行。x86_64/arm64 の 3.13 で検証 |
+| **3.14** | — | 🔶 標準検証済 | 標準ビルド: arm64 3.14.6 で native ビルド + 159 テスト通過。残: CI 組込 (cibuildwheel bump) + cp314t (freethreading) |
 | **監査** | — | ✅ 完了 | c-extension-plan.md 全量監査、11箇所修正 |
 | **等価性** | — | ✅ 完了 | 65テスト9カテゴリ、C⇔Python全関数の出力一致検証 |
 | **ベンチマーク** | — | ✅ 完了 | 31ベンチマーク、C vs Python 全 dispatch ポイントの速度計測 |
 | **lazy chunks** | — | ✅ 完了 | Script.chunks 遅延初期化。Tx parse 5.3x / Spend VM 2.1x の絶対速度改善 |
 | **merkle 改修** | — | ✅ 完了 | merkle_compute_root バイトオーダーバグ修正 + 全 C 完結パス活用。14.3x (9.5x→) |
+| **レビュー** | — | ✅ 完了 | コードレビュー 16 指摘 → アドバーサリアル検証 → P0 リーク (tx_from_bytes 202B/call) 修正 |
+| **全面監査** | — | ✅ 完了 | 全29関数リーク/クラッシュ監査。リーク残存なし。クラッシュ級2件 (sign_with_k ハング, OTDA SINGLE SIGSEGV) 修正 + 回帰44件 |
 
 **合計: 約 14〜20週間** (3.5〜5ヶ月)
-**進捗: Phase 0-4 + SE統合 + 品質テスト + CI/wheel + 監査 + 等価性 + ベンチマーク + lazy chunks + merkle 改修 完了 (2026-07-01)**
-**テスト: 3,572 passed (等価性65 + ファズ46 + ベンチマーク31 含む), 259 skipped**
-**残り: Phase 4.4 (context_randomize)、4.5 (Schnorr API)、musllinux — いずれも任意**
+**進捗: Phase 0-4 + SE統合 + 品質テスト + CI/wheel + 監査 + 等価性 + ベンチマーク + lazy chunks + merkle 改修 + レビュー検証 + 全面リーク/クラッシュ監査 完了 (2026-07-02)**
+**テスト: 3,589 passed (等価性65 + ファズ46 + crash/hang回帰4 + 全関数memory scan40 + メモリ増加4 含む), 259 skipped, ベンチ31 別途**
+**残り (優先順): ~~① Py3.13 コンパイル修正 (F8)~~ ✅ 完了 (2026-07-02) → ① Transaction.sign() O(N²)解消 (F11/ordinalx直結) → ② tx_to_bytes 入力検証 (F4) → 以降は「残タスク一覧」参照**
 
 ---
 
@@ -1097,8 +1125,10 @@ def test_script_chunks_roundtrip(data):
 Python 3.10         ✓              ✓              ✓
 Python 3.11         ✓              ✓              ✓
 Python 3.12         ✓              ✓              ✓
-Python 3.13         ✓              ✓              ✓
+Python 3.13         ✓ (F8修正)     ✓              ✓
 ```
+※ Python 3.13 の `_bsv_native` (native) は F8 修正 (2026-07-02、公開 API へ移行) により
+x86_64/arm64 ともビルド・動作する。Python 3.14 も安定公開 API のみ使用のため対応見込み (3.14 実機は未検証)。
 
 ```
                   Linux          Linux          macOS        macOS       Windows
@@ -2077,6 +2107,11 @@ cibuildwheel を使ったマルチプラットフォーム wheel ビルドパイ
 各プラットフォーム × Python 3.10/3.11/3.12/3.13 = 最大 20 wheel。
 musllinux, win32, manylinux_i686 はスキップ。
 
+> ℹ️ **cp313 の経緯**: 一時期 F8 (`_PyLong_AsByteArray` が Python 3.13 で 6 引数化) により
+> cp313 native wheel がビルド不能だった (2026-07-02 に Py3.13 ヘッダで確認)。同日 F8 を修正
+> (私的 API → 公開 `PyLong_*NativeBytes`) し、x86_64/arm64 の Python 3.13 で native ビルド +
+> 159 テスト通過を確認。cp313 wheel 提供可能。
+
 ### 変更ファイル
 
 | ファイル | 変更内容 |
@@ -2183,7 +2218,12 @@ CLAUDE.md は c-extension-plan.md の管轄外だが、SDK の実態と乖離し
 
 #### 3. 残存する未実施タスク
 
-以下は全て任意だが、やる場合の優先度順:
+> ⚠️ この表は 2026-07-01 時点の任意タスクのみを列挙していた。2026-07-02 のレビュー・全面監査で
+> 非任意の未着手項目 (F8/F11/F4 等) が追加された (F8 は同日修正済み)。最新の完全な残タスクは
+> 末尾の「残タスク一覧 (PM バックログ)」を正とすること。以下は当時の記録として残す
+> (「全て任意」は現在は誤り)。
+
+当時の記録 (2026-07-01, 優先度順):
 
 | タスク | 優先度 | 理由 |
 |--------|--------|------|
@@ -2533,3 +2573,449 @@ def _compute_root_native(self, txid, index):
 
 3. **hex⇔bytes + reverse の問題は再発する**: Phase 1 課題 #1 と同根。内部バイト表現と
    display hex 表現の変換は Bitcoin 特有の罠であり、新しい関数ごとに中間値照合テストが必要
+
+---
+
+## コードレビュー + アドバーサリアル検証記録 (2026-07-02)
+
+### 実施内容
+
+C拡張全体 (`bsv_native.c` 4,346行 + Python 統合層 6ファイル) のコードレビューを実施し、
+16件の指摘を抽出。**各指摘を独立の検証エージェントが実測を含めてアドバーサリアル検証**
+(tracemalloc リーク計測、subprocess での segfault 再現、timeit ベンチマーク、
+Python 3.13 ヘッダでの実コンパイル) し、P0/P1 確定項目は第二検証者が再反証を試みた。
+
+### 検証結果サマリ
+
+| ID | 指摘 | レビュー時 | 検証後 | 判定根拠 (実測) |
+|----|------|-----------|--------|----------------|
+| F1 | tx_from_bytes 参照リーク | P0 | **P0 確定** → ✅ 修正済み | 202 B/call の線形増加、GC 回収不能 |
+| F2 | parse_script_chunks 参照リーク | P0 | P3 に格下げ → ✅ 修正済み | 小整数キャッシュのためメモリ増加ゼロ (refcount 膨張のみ) |
+| F3 | pubkey_point デッドストア | P1 | P3 に格下げ → ✅ 修正済み | 同上 (キャッシュ済み int 0)、デッドコード2行 |
+| F4 | tx_to_bytes NULL deref | P0 | P1 (一部過大、新規発見あり) | source_txid 経由の SIGSEGV 実証 (exit=139)。int 系3キーは SystemError で crash せず。**新規発見: 非 hex txid で未初期化ヒープメモリ流出 + ~62B OOB read**。SDK 本体からは未使用 (テストのみ) |
+| F5 | PUSHDATA4 符号拡張 | P2 | **棄却** | 64bit では `(Py_ssize_t)` キャストがシフト前のため符号拡張なし。32bit ビルド限定の潜在 UB (未出荷) のみ |
+| F6 | RIPEMD160 毎回 import | P2 | P2 確定 (修正方針は変更) | import 自体は ~0.3µs で無害。Cryptodome ハッシャー生成込みで 3.2µs/回 = P2PKH validate の ~10%。修正はモジュールキャッシュではなく **C 実装 RIPEMD160 の組み込み** が必要 |
+| F7 | g_ctx スレッド安全性 | P1 | P3 に格下げ | `Py_BEGIN_ALLOW_THREADS` が 0 件 = 拡張全体が GIL 保持下で動作、race は現状発生不可能。free-threaded Python / GIL 解放最適化導入時の注意点として記録 |
+| F8 | `_PyLong_*` 私的 API | P3 | **P2 に格上げ → ✅ 修正済み (2026-07-02)** | 3.13 で `_PyLong_AsByteArray` が 6 引数化 → cp313 native ビルド不能を実測確認。**同日修正**: 私的 API を公開 `PyLong_FromUnsignedNativeBytes`/`AsNativeBytes` へ移行 (≥3.13)、≤3.12 は従来 API を `#if PY_VERSION_HEX` で維持。x86_64/arm64 の 3.13 で native ビルド + 159 テスト通過、3.11 回帰なし。詳細は末尾「F8 完了記録」参照 |
+| F10 | PublicKey 冗長パース | P2 | P2 確定 | `pubkey_parse` は完全冗長 (構築コストの ~48%)。CHECKSIG ホットパスで公開鍵が6回パースされる |
+| F11 | tx_preimage 全件計算 | P2 | **P2 確定 + 深刻度は過小評価だった** | `Transaction.sign()` が O(N²): テンプレート sign() が入力ごとに `tx.preimage(i)` → 毎回全入力分を計算。実測 N=1000 で sign() 344.8ms 中 **~320ms (93%) が無駄なプリイメージ計算** (ECDSA 本体は ~25ms)。Spend VM ネイティブパスは C 内単一計算のため影響なし |
+| F12 | Tx raw bytes キャッシュ | P2 | P3 に格下げ (却下推奨) | 効果は小 tx で 1.6µs と軽微。ネスト変更 (`inp.unlocking_script = ...`) を検知できず**誤った txid を返す正当性リスクの方が大きい** |
+| F13 | merkle try/except フロー制御 | P3 | P3 確定 | 例外オーバーヘッド実測 1.2µs/回 (~7%)。「複合パスで常に失敗」は誇張 (trim 済み複合パスのみ)。~50行の重複は事実 |
+| F14 | spend マーシャリング | P2 | P3 に格下げ | validate 全体の ~4.4% (1.3µs/29µs)。「再シリアライズ」は実際はキャッシュ済みバイト返却でほぼゼロコスト |
+| F15 | key_deriver 2回呼び出し | P2 | **棄却 — 提案の方が遅い** | 数学的等価性は正しいが、提案の `pubkey_tweak_add` 一本化は実測 **1.37倍遅い** (tweak_add は内部で乗算+加算、現行は scalar 加算+1回の gen 乗算)。現行コードが既に最速経路 |
+| F16 | テストがリークを見逃した原因 | — | 確定 | TestRefcountStress は全6テストで **assert 文ゼロ** (クラッシュ検出のみ)、tx_from_bytes はエラー経路のみ実行。ASAN は `detect_leaks=0`。計画書テスト戦略の `test_no_memory_leak` (tracemalloc) は**未実装だった** — 実装していれば 20MB リークとして即検出できた (実測確認) |
+
+### 教訓: レビュー指摘はアドバーサリアル検証が必須
+
+16件中、レビュー時の重大度がそのまま確定したのは 5件のみ。
+
+- **2件棄却** (F5, F15): F15 は提案実装の方が 1.37倍遅いことを実測で確認 — 「改善提案」の性能検証なしの採用は危険
+- **5件格下げ** (F2, F3, F7, F12, F14): CPython の小整数キャッシュ・GIL の考慮漏れが主因
+- **2件格上げ** (F8, F11): 「将来リスク」とされた F8 は現在進行形のビルド障害、F11 は O(N²) の発見
+- **1件で新規発見** (F4): 検証過程で未初期化ヒープメモリ流出という指摘外のバグを発見
+
+### P0 修正記録: tx_from_bytes メモリリーク (✅ 2026-07-02 修正済み)
+
+**原因**: `PyDict_SetItemString` は参照を**スティールしない** (INCREF する) が、
+インライン生成した値 (`PyUnicode_FromString(txid_hex)` 等) を DECREF していなかった。
+実リーク対象は source_txid 文字列 (113B/入力)、sequence (0xFFFFFFFF は小整数キャッシュ外、
+32B/入力)、satoshis (28-32B/出力)、bytes_read。vout=0 / version=1 / locktime=0 は
+キャッシュ済み小整数のため refcount 膨張のみでメモリは増えない。
+
+**修正**: `dict_set_steal()` ヘルパー (値を consume する SetItemString) を導入し 7箇所を置換。
+`PyDict_New()` の NULL チェックも追加。あわせて F2 (parse_script_chunks 5箇所を
+`Py_BuildValue` 化 + data NULL チェック) と F3 (デッドストア2行削除) も修正。
+
+**実測結果**:
+
+| 計測 | 修正前 | 修正後 |
+|------|--------|--------|
+| tx_from_bytes 200,000回 | 40.4MB リーク (202 B/call 線形) | 増分ゼロ (残留 207KB は反復数に依存しない一回きりのアロケータ確保) |
+| parse_script_chunks: int 118 refcount | +200,000 / 200k回 | **+0** |
+| pubkey_point: int 0 refcount | +200,000 / 100k回 | **+0** |
+| 出力の等価性 | — | 修正前後で同一 (スポットチェック + 等価性テスト65件パス) |
+
+### 回帰テスト: TestMemoryGrowth (オラクル設計の注意点)
+
+`tests/bsv/native/test_fuzz_native.py` に成功パスのメモリ増加テスト4件を追加。
+オラクル設計で2つの罠に遭遇したため記録する:
+
+1. **バイト数閾値は pytest 環境で偽陽性**: pytest 下では tracemalloc が
+   アロケータ (arena) レベルの一回きりの大型確保 (計 ~1.9MB、4ブロック) を
+   ループ行に帰属させる。standalone では発生しない。
+   → オラクルを「新規**ライブブロック数**」に変更: 本物の per-call リークは
+   反復回数分のブロック (20k回 → 20,005個を実測) を残すが、アロケータノイズは
+   数個のみ。閾値 2,000 で確実に分離できる。
+
+2. **自己検証の定数畳み込みの罠**: オラクル検証用の「故意リーク」を
+   `list.append("x" * 50)` で書くと、定数畳み込みで同一オブジェクトの参照追加になり
+   リークにならない (検出 5ブロックのみ)。`object()` や実行時生成の str では
+   正しく 20,005 ブロックを検出。
+
+### 検証済みアクションプラン (改訂版)
+
+当初レビューのアクションプランを検証結果で改訂。ordinalx (大量 ECDSA) の観点を含む。
+
+| 優先 | 項目 | 根拠 (検証済み) | 工数 |
+|------|------|----------------|------|
+| ✅ | F1/F2/F3: メモリリーク + 参照衛生修正 | 実施済み (2026-07-02) | — |
+| ✅ | F8: Python 3.13 コンパイル修正 | **完了 (2026-07-02)**。`#if PY_VERSION_HEX >= 0x030D0000` で公開 `PyLong_*NativeBytes` へ移行、≤3.12 は従来 API。x86_64/arm64 の 3.13 で検証。3.14 も安定 API のみで対応見込み | 実績 ~1h |
+| **2** | F11: Transaction.sign() の O(N²) 解消 | **ordinalx 大量署名に直結**。sign() 内で `tx_preimages()` を1回だけ呼ぶバッチキャッシュ方式で O(N) 化 (単一 index C 関数の追加だけではタプル変換 O(N) が残るため不十分)。N=1000 で 345ms → ~25ms 見込み | 半日 |
+| **3** | F4: tx_to_bytes 入力検証 | segfault + 未初期化ヒープ流出。SDK 未使用だが公開シンボル。NULL/型/hex 検証 ~40-50行。あわせて「未使用関数を Transaction.serialize() に接続するか削除するか」の方針判断 | 30-60分 |
+| **4** | F16: メモリ増加テストの拡充 + CI | TestMemoryGrowth 4件は追加済み。全エクスポート関数へのパラメトライズ展開 + Linux CI での `detect_leaks=1` ASAN | 1日 |
+| **5** | F6: C 実装 RIPEMD160 組み込み | P2PKH validate の ~10% (3.2µs/回)。OP_HASH160 は最頻 opcode | 半日-1日 |
+| **6** | F10: PublicKey 冗長パース除去 | 構築コストの ~48%、CHECKSIG パスで6回パース | 半日 |
+| 却下 | F12 (raw bytes キャッシュ) | 正当性リスク > 効果 1.6µs | — |
+| 却下 | F15 (key_deriver 一本化) | 提案の方が 1.37倍遅い | — |
+
+**ordinalx 向け補足**: 大量 ECDSA のボトルネックは検証の結果、署名パイプラインでは
+F11 (O(N²)) が支配的。検証パイプライン (Spend VM) は Phase 3c で C 内完結済みのため
+影響なし。F11 修正後になお不足する場合の次の一手は「バッチ検証 API」(複数 tx を
+1回の C 呼び出しで検証、Python↔C 境界越えを N回→1回に削減) と multiprocessing 並列化。
+
+---
+
+## 全面リーク/クラッシュ監査 (2026-07-02)
+
+### 動機
+
+「メモリリークはもうないか、C拡張全部を検証するテストがあるか」という問いに答えるため、
+全 29 エクスポート関数 + VM を対象に、二方向から網羅監査を実施した:
+
+1. **実測スキャン**: 全関数を成功パス + エラーパス (計 52 ケース) でブロック数オラクルに
+   かける (`scratchpad/leak_scan_all.py` → 後に `TestFullSurfaceMemoryScan` として恒久化)
+2. **静的監査**: `bsv_native.c` 全 4,356 行を 8 領域 + Py_buffer 専任に分割し 9 エージェント
+   並列で精査 → P0/P2 候補を第二段階で実測再検証
+
+### 結論
+
+**参照/メモリリークは残っていない** (F1-F3 修正後、全 52 ケースでブロック増加ゼロ)。
+ただし監査の過程で**リークとは別種の重大バグ 2 件 (プロセスを殺す)** を新規発見・修正した。
+
+### 新規発見バグ 1: `ecdsa_sign_with_k(k=0)` の無限ハング (DoS) — ✅ 修正済み
+
+**症状**: `ecdsa_sign_with_k` に無効な k (ゼロ、または曲線位数 n の倍数) を渡すと
+**プロセスが無限ループでハング**する。単一呼び出しで再現 (実測: 5秒 timeout で復帰せず)。
+
+**原因**: `nonce_fn_custom_k` (bsv_native.c L519) が `counter` 引数を無視し、常に同じ k を
+返していた。libsecp256k1 の `secp256k1_ecdsa_sign` は nonce が無効 (0 / ≥n / r==0 を生成) の
+とき `counter` を増やして nonce 関数を**再呼び出しするループ**を回すが、この関数は counter に
+関係なく同じ無効 nonce を返し続けるため、ループが永久に終わらない。
+
+**到達経路**: `PrivateKey.sign(k=...)` (keys.py L269) は `k_bytes = (k % curve.n)` を計算するため、
+k が n の倍数 (k=0, k=n, ...) だと k_bytes がゼロになりハング。R-puzzle 署名 (type.py L258) 経由でも
+到達しうる。**当初の C レビューはこの counter 問題を指摘したが「secp256k1 がリトライ制限するので
+無限ループしない」と誤って却下していた** — 実測でハングを確認。
+
+**修正**: `nonce_fn_custom_k` に `if (counter > 0) return 0;` を追加。カスタム k 署名は
+「指定された k を使うか失敗するか」であるべきで、勝手に別 nonce へ置換してはならない。
+0 を返すと `secp256k1_ecdsa_sign` が失敗を返し、クリーンに `ValueError("signing with custom k
+failed")` になる。正常な k の署名・検証は従来通り (回帰確認済み)。
+
+### 新規発見バグ 2: OTDA SIGHASH_SINGLE 範囲外の配列外アクセス (SIGSEGV) — ✅ 修正済み
+
+**症状**: SIGHASH_SINGLE + OTDA ルーティング (sighash 末尾バイト 0x63 / 0xE3) で
+`input_index >= 出力数` のとき、`outputs_list` を配列外参照して **SIGSEGV** (実測 exit=139)。
+
+**原因と影響範囲**: 同じ SINGLE-bug の欠落ガードが **2 つの独立した OTDA 実装**に存在した:
+- `c_build_otda_preimage` (bsv_native.c L2666) — CHECKSIG/Script VM 経由。**untrusted tx の
+  検証 (SPV) で攻撃者制御の入力から到達可能** = 実質的な DoS/crash ベクタ。`PyList_GET_ITEM` の
+  境界外読み取り + `est` バッファの過少見積もりによるオーバーフロー
+- `pyfn_tx_preimage_otda` (bsv_native.c L1961) — 署名時の `tx_preimage()` 経由。同型の OOB
+
+BIP143 側 (`c_build_bip143_preimage` L2633) は `input_index < n_outputs` を正しくガードしており
+無傷。SIGSEGV は OTDA 経路のみ。
+
+**修正**:
+- `c_build_otda_preimage`: SINGLE + 範囲外のとき preimage を `0x01||0x00*31` にする。呼び出し側の
+  hash256 を経て、pure-Python の `Transaction._calc_input_preimage_legacy` (Bitcoin の SIGHASH_SINGLE
+  バグ挙動そのもの) と**digest が完全一致**することを実測確認 (正しい署名で CHECKSIG が True)
+- `pyfn_tx_preimage_otda`: 範囲外で `IndexError` を送出。こちらの pure-Python フォールバック
+  `transaction_preimage._preimage_otda` は `outputs[i]` で IndexError を投げるため、それに合わせた
+
+**発見した py-sdk 内の不整合**: OTDA preimage 実装が 2 系統あり、SIGHASH_SINGLE 範囲外の扱いが
+**食い違っている** — `transaction.py::_calc_input_preimage_legacy` は `0x01||0x00*31` を返す
+(Bitcoin consensus 準拠) が、`transaction_preimage.py::_preimage_otda` は IndexError を投げる。
+将来的にどちらかへ統一すべき (consensus 準拠なら前者)。今回は各々のフォールバックに合わせて
+C を修正し、クラッシュだけは確実に排除した。
+
+### 静的監査で確認した既知/軽微な項目 (修正不要または低優先)
+
+| 項目 | 関数 | 重大度 | 判定 |
+|------|------|--------|------|
+| `ensure_context` が os/urandom 失敗時に例外を握りつぶし成功を返す | L44-56 | P3 | randomization は best-effort。`PyErr_Clear()` 追加が望ましい |
+| `g_ctx` がモジュールアンロード時に未破棄 | L30 | P3 | プロセス寿命の一回きり確保。crypto 拡張の標準的パターン |
+| `tx_from_bytes` / `parse_script_chunks` の OOM 時 NULL 参照 | L1469 等 | P3 | `PyBytes_FromStringAndSize` 失敗 (メモリ枯渇時のみ) で NULL deref。通常入力では到達不能 |
+| `pctx_init` が負/範囲外 `input_index` を未検証 | L4093 | P3 | Python ラッパーは常に整合値を渡す。直接誤用時のみ |
+| `tx_to_bytes` の NULL deref (F4、前回記録) | L1594 | P1 | 別途 F4 として記録済み。SDK 本体からは未使用 |
+
+Py_buffer ライフサイクル監査 (全 `y*` パース関数の `PyBuffer_Release` 網羅): **全経路クリーン**。
+
+### 恒久回帰テスト (再発防止)
+
+`tests/bsv/native/test_fuzz_native.py` に 2 クラス追加:
+
+- **`TestCrashHangRegression`** (4 テスト): **サブプロセス隔離 + timeout** で実行。既存の
+  `TestFuzz*` / `TestRefcountStress` は同一プロセスで例外を許容するだけなので、ハングや
+  SIGSEGV を捕捉できない (だから 2 バグを見逃していた)。本クラスは subprocess の exit code /
+  timeout で crash・hang を検出:
+  - `test_sign_with_k_zero_does_not_hang` — k=0 が ValueError (timeout=8s、ハングなら fail)
+  - `test_spend_validate_otda_single_out_of_range_no_crash` — SIGSEGV しないこと
+  - `test_spend_validate_otda_single_bug_digest` — SINGLE-bug digest が Python パスと一致
+  - `test_tx_preimage_otda_single_out_of_range_raises` — IndexError を送出
+- **`TestFullSurfaceMemoryScan`** (40 テスト): 全 29 関数 + エラーパスをブロック数オラクルで
+  パラメトライズ。`tx_from_bytes` 型のリーク再発を全関数で防ぐ
+
+**テスト結果**: 新規 44 テスト (crash/hang 4 + full-surface scan 40) 全パス。
+全体 3,589 passed, 259 skipped, 0 failed (ベンチ 31 を除く)。
+
+### 教訓
+
+1. **「クラッシュしない」テストと「ハング/クラッシュを捕捉する」テストは別物**: 既存の
+   in-process 例外許容テストは、無限ループも segfault も検出できない。crash/hang 回帰は
+   **subprocess 隔離 + timeout** が必須。F16 (メモリ計測なし) と同根の構造的欠陥
+2. **エラーパスのファジングが 2 バグとも鍵**: ハングは `k=0`、OOB は `input_index >= n_outputs`
+   という「異常入力」でのみ発現。成功パスしか叩かないテストでは永久に見つからない
+3. **同一ロジックの二重実装は二重のバグ**: OTDA preimage が 2 系統あり、両方に同じ SINGLE-bug
+   OOB があった。F14 で指摘された「マーシャリングの三重複」と同様、実装の重複は監査コストと
+   バグ面積を増やす。ScriptEngine 統合 ([[project_script-engine-consolidation]]) と同じ方向で
+   OTDA も一本化を検討すべき
+4. **レビュー指摘の「却下」も検証が必要**: 当初 C レビューは nonce counter 問題を「無限ループ
+   しない」と却下したが、実測ではハングした。棄却判断こそ実測で裏を取る
+
+---
+
+## 残タスク一覧 (PM バックログ, 2026-07-02 時点)
+
+Phase 0-4 + 全付随作業は完了。以下が全残タスクの統合リスト (レビュー・監査で確定した検証済み
+優先順)。散在していた項目をここに集約する。**修正済みのクラッシュ級バグ (P0 リーク、
+sign_with_k ハング、OTDA SIGSEGV) はすべて対応完了済み**。
+
+### 未着手タスク
+
+| 優先 | ID | タスク | 分類 | 根拠/効果 | 工数 |
+|------|----|--------|------|-----------|------|
+| **1** | F11 | `Transaction.sign()` の O(N²) 解消 (sign() 内で `tx_preimages()` を1回だけ呼ぶバッチキャッシュ) | 性能 | **ordinalx 大量署名に直結**。N=1000 で 345ms→~25ms 見込み | 半日 |
+| **2** | F4 | `tx_to_bytes` 入力検証 (NULL/型/hex チェック) + 未使用関数の去就判断 | 堅牢性 | segfault + 未初期化ヒープ流出。SDK 未使用だが公開シンボル | 30-60分 |
+| 3 | F6 | C 実装 RIPEMD160 の組み込み (Python import 経由を排除) | 性能 | P2PKH validate の ~10% (3.2µs/回)。OP_HASH160 は最頻 opcode | 半日-1日 |
+| 4 | F10 | `PublicKey.__init__` の冗長 `pubkey_parse` 除去 | 性能 | 構築コストの ~48%、CHECKSIG パスで6回パース | 半日 |
+| 5 | F16b | crash/hang 回帰を Linux CI に組込 + `detect_leaks=1` ASAN | テスト基盤 | 今回の subprocess 回帰は追加済み。CI での常時実行が未整備 | 半日 |
+| 6 | 3.14-CI | 3.14 標準ビルドを CI に組込: cibuildwheel 2.22.0 → ≥3.2.1、`cp314-*` 追加、`skip=cp3??t-*`、フルスイートを `-W error::DeprecationWarning` で実行 | 互換/CI | 標準ビルドは arm64 3.14.6 で検証済 (159 テスト)。CI 化と SDK レベル非推奨(asyncio等)の洗い出しが残 | 半日 |
+| 7 | 3.14-FT | フリースレッド cp314t 対応: `PyUnstable_Module_SetGIL(Py_MOD_GIL_NOT_USED)` + `g_ctx` を init 時一括生成で不変化 (スレッド安全) | 互換/正当性 | PEP779 で 3.14 FT 正式化。g_ctx 安全化は監査 R1/R7 指摘の解消も兼ねる。wheel 配布は依存(pycryptodomex/coincurve)の cp314t 整備待ち | 1-2日 |
+| 8 | 4.4 | `context_randomize` 定期呼び出し | セキュリティ | 初期化時のみ実行中。定期化は任意 | 小 |
+| 9 | 4.5 | Schnorr 署名 API 公開 | 機能準備 | BSV で現在未使用。将来のプロトコル拡張用 | 小 |
+| 10 | — | musllinux wheel | 配布 | Alpine 対応。需要次第 | 小 |
+
+### 完了 (2026-07-02)
+
+| ID | タスク | 結果 |
+|----|--------|------|
+| F8 | Python 3.13/3.14 コンパイル対応 | 私的 API `_PyLong_*` → 公開 `PyLong_*NativeBytes` へ移行 (`#if PY_VERSION_HEX >= 0x030D0000`)。x86_64/arm64 の Python 3.13 で native ビルド + 159 テスト通過、3.11 全 3,589 テスト回帰なし |
+
+### 却下 (検証で「やらない」と確定)
+
+| ID | タスク | 却下理由 |
+|----|--------|----------|
+| F5 | PUSHDATA4 符号拡張修正 | 64bit 出荷対象では符号拡張なし。32bit 限定の潜在 UB のみ (P3) |
+| F12 | Transaction raw bytes キャッシュ | 効果 1.6µs 軽微 vs ネスト変更で誤 txid を返す正当性リスク大 |
+| F15 | key_deriver の pubkey_tweak_add 一本化 | 提案実装が実測 1.37倍遅い。現行が既に最速経路 |
+
+---
+
+## 今回セッションで顕在化した課題・技術的負債 (2026-07-02)
+
+即時のバグではないが、放置すると再発・保守コスト増につながる構造的課題。将来のリファクタ
+判断材料として記録する。
+
+### 1. OTDA preimage 実装が 2 系統あり、SIGHASH_SINGLE の扱いが食い違う 【要一本化】
+
+- `transaction.py::_calc_input_preimage_legacy` → 範囲外 SINGLE で `0x01||0x00*31` (Bitcoin
+  consensus 準拠)。CHECKSIG/Script VM 経路
+- `transaction_preimage.py::_preimage_otda` → 範囲外 SINGLE で IndexError。署名経路
+- C 側も対応して 2 実装 (`c_build_otda_preimage` / `pyfn_tx_preimage_otda`) に分かれ、**両方に
+  同一の OOB クラッシュが潜んでいた**。今回はクラッシュ排除のため各々のフォールバックに
+  合わせたが、**本質的には consensus 準拠 (前者) へ統一すべき**。ScriptEngine 統合
+  ([[project_script-engine-consolidation]]) と同じ「二重実装の一本化」方針
+- 影響: 署名経路で範囲外 SINGLE を使うと py-sdk は署名を作れない (IndexError)。実運用で
+  そのような tx を作ることは稀だが、consensus 準拠にすれば作成・検証が一貫する
+
+### 2. マーシャリングコードの三重複 (F14 で既出、未解消)
+
+`_inputs_to_tuples` / `_outputs_to_bytes` 相当が `transaction_preimage.py`・`transaction.py`
+(`_calc_input_preimage_bip143_native`)・`spend.py` (`_validate_native`) の 3 箇所にインライン
+散在。性能影響は小 (validate の ~4.4%) だがバグ面積を増やす。共通ユーティリティへ集約推奨
+
+### 3. テスト戦略の構造的ギャップ (F16 で既出、一部解消)
+
+- **crash/hang は subprocess 隔離必須**: in-process の例外許容テストでは無限ループも SIGSEGV も
+  捕捉不能。今回 `TestCrashHangRegression` で補填したが、この設計原則を新規 C 関数追加時の
+  チェックリストに入れるべき
+- **成功パスのみのテストはリークもクラッシュも見逃す**: F1 リーク・今回の 2 クラッシュとも
+  「異常入力 / エラーパス」でのみ発現。等価性テスト・ファズは成功パス偏重だった
+- **ASAN が macOS で detect_leaks=0**: C レベルの malloc リーク検出が無効。Linux CI で
+  detect_leaks=1 の常時実行が未整備
+
+### 4. 公開 API の使いにくさ (等価性テストで既出)
+
+- `Spend.__init__` が camelCase dict (`sourceTXID` 等) を要求 (TS/Go 互換のため維持)
+- `PrivateKey._secret` (内部属性) でしか raw 32 バイトを取得できない
+- `BareMultisig.lock()` が `PublicKey` オブジェクトを受け付けない (hex 変換必須)
+- いずれも P3。TS/Go SDK 互換制約とのトレードオフで現状維持だが、Python 利用者向けの
+  薄いヘルパーがあると DX 改善
+
+### 5. `_PyLong_FromByteArray` / `_AsByteArray` 私的 API 依存 — ✅ 解消済み (2026-07-02)
+
+F8 として即日修正。恒久対応 (公開 API 移行) まで一括で実施した。詳細は下記「F8 完了記録」参照。
+
+---
+
+## F8 完了記録: Python 3.13/3.14 対応 (2026-07-02)
+
+### 背景
+
+`_bsv_native` は Python 整数 ⇔ バイト列変換に CPython の**私的 API** `_PyLong_FromByteArray` /
+`_PyLong_AsByteArray` を使っていた。Python 3.13 で `_PyLong_AsByteArray` のシグネチャが変わり
+(第 6 引数 `with_exceptions` 追加)、**cp313 では native ビルドがコンパイルエラー**になっていた。
+
+これは皮肉な状況だった: coincurve を optional 化した動機が「外部依存が新 Python 追従に遅れる
+リスクの排除」だったのに、同じ「私的/不安定 API への依存が新 Python で壊れる」問題が、依存先
+(coincurve) から**自分たちの native コードに移動**していた。実際 coincurve 21.0.0 は既に cp313
+wheel を提供しており (PyPI 実測)、置き換え元の方が先に 3.13 対応を済ませていた。
+
+### 修正内容
+
+私的 API を **公開の安定 API** へ移行した (Python 3.13 で追加された `PyLong_*NativeBytes` 系):
+
+```c
+#if PY_VERSION_HEX >= 0x030D0000   /* 3.13+ : 公開 API (3.14 以降もこれで安定) */
+    PyLong_FromUnsignedNativeBytes(bytes, n, endian_flag);
+    PyLong_AsNativeBytes(v, bytes, n, endian_flag | Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
+#else                              /* <=3.12 : 従来の私的 API (公開版が存在しない) */
+    _PyLong_FromByteArray(bytes, n, little_endian, 0);
+    _PyLong_AsByteArray((PyLongObject*)v, bytes, n, little_endian, 0);
+#endif
+```
+
+- ヘルパー `bsv_long_from_unsigned_bytes` / `bsv_long_as_unsigned_bytes` を 1 箇所に定義し、
+  4 つの呼び出し箇所 (pubkey_point の X/Y 復元 = big-endian、`c_bin2num`/`c_min_encode` の
+  Script 数値変換 = little-endian) を置換
+- `PyLong_AsNativeBytes` は「必要バイト数」を返す新セマンティクスのため、`< 0` (例外) と
+  `> n` (バッファ不足) の両方を検査。呼び出し側は常に正確なサイズを渡すため後者は発生しない
+- **他の私的/削除 API は不使用**を grep で確認 (`_Py*` は上記 2 つのみ)。3.14 でも安定 API のみ
+
+### 検証結果
+
+| 環境 | 結果 |
+|------|------|
+| Python 3.11 (universal2) | リビルド成功、全 3,589 テスト回帰なし。pubkey_point/VM 算術の値等価性確認 |
+| Python 3.13.13 (x86_64) | native ビルド成功、import + 暗号 + VM + 既存 2 バグ修正すべて動作 |
+| Python 3.13.14 (arm64/M2) | `setup.py build_ext` 経路でビルド成功、native テスト **159 件パス** |
+| Python 3.14.6 (arm64/M2) | ✅ 検証済み (同日追検証): native ビルド成功、159 テスト通過、エラー0・非推奨警告0。詳細は「Python 3.14 対応」セクション参照 |
+
+### 開発環境メモ (arm64 Python)
+
+作業機は M2 (arm64) だが `/usr/local` の python3.13 は Intel Homebrew の x86_64 版だった。
+arm64 ネイティブ検証のため `/opt/homebrew` (arm64 Homebrew) で `python@3.13` を導入
+(→ `/opt/homebrew/opt/python@3.13/bin/python3.13`、Python 3.13.14 arm64)。
+PATH では `/usr/local` の x86_64 版が優先される (shadowed) ため、arm64 版を使うにはフルパス指定
+または PATH 調整が必要。
+
+### 3.13 ユーザーへの影響 (修正前後)
+
+- **修正前**: cp313 で `pip install bsv-sdk` → native wheel なし → sdist ビルドも失敗 →
+  純 Python フォールバックには暗号がなく `bsv.keys` import 時に ImportError。回避策は
+  `pip install bsv-sdk[coincurve]` (coincurve は cp313 対応済み)
+- **修正後**: cp313 native wheel をビルド可能。coincurve なしで default install が動作
+
+---
+
+## Python 3.14 対応 (2026-07-02)
+
+### 現状サマリ
+
+| トラック | 状態 | 根拠 |
+|---------|------|------|
+| **標準 (GIL) ビルド** | 🟢 **検証済み・動作** | arm64 Py3.14.6 で native ビルド + 159 テスト通過。ヘッダ実コンパイル エラー0・非推奨警告0 |
+| **CI/wheel への組込** | 🔶 残 | wheels.yml に cp314 追加 + cibuildwheel bump が必要 |
+| **フリースレッド (cp314t)** | 🔶 残 (別トラック) | `Py_mod_gil` 宣言 + `g_ctx` スレッド安全化 + 依存の cp314t 未整備 |
+
+**F8 (私的 API → 公開 `PyLong_*NativeBytes` 移行) が 3.14 対応の実質的な地ならしになっていた。**
+標準ビルドは追加のコード変更なしで動作する。
+
+### 実測検証結果 (2026-07-02, arm64 Python 3.14.6)
+
+- **コンパイル**: 3.14 ヘッダに対し `bsv_native.c` が **エラー 0 件・Py 系非推奨警告 0 件**
+- **ビルド**: `setup.py build_ext` (BSV_REQUIRE_NATIVE=1) で cp314 arm64 `.so` 生成成功
+- **テスト**: native テスト **159 件パス** (fuzz46 + 等価性65 + crash/hang4 + memory scan40 + growth4)
+- **機能**: pubkey_point (big-endian 変換)・ECDSA sign/verify・VM 算術 (little-endian 変換)・
+  前回修正の 2 バグ (sign_with_k ハング / OTDA SIGSEGV) すべて 3.14 で正常
+- **`-W error::DeprecationWarning`**: C 拡張レベルで警告なし
+
+### API 互換性の裏付け (一次情報)
+
+使用 API のうち 3.14 で破壊的変更があったのは `_PyLong_AsByteArray` (3.13 で 6 引数化) **のみ**で、
+F8 で公開 API へ移行済み。他の使用 API は 3.14 で不変または問題なし:
+
+- `PyBytes_*` / `PyDict_*` / `PyList_*` / `PyTuple_*` / `PyUnicode_AsUTF8` / `Py_buffer` (`y*`) / `PyImport_ImportModule` / `PyObject_CallMethod`: 3.14 で変更なし
+- モジュール初期化は `PyModule_Create` + `PyModule_AddStringConstant` を使用 (ソフト非推奨の
+  `PyModule_AddObject` は**不使用** — 対応不要)
+- `PyArg_ParseTuple` は `I/i/O/y*/s/p/L` のみ使用 (`k`/`K` の 3.14 `__index__` 化は無関係)
+- 公開 `PyLong_FromUnsignedNativeBytes`/`AsNativeBytes` は 3.14 で **Stable ABI 入り**、フラグ不変
+
+### 依存パッケージの 3.14 対応状況 (PyPI 実測 + 一次情報)
+
+| パッケージ | cp314 wheel | 備考 |
+|-----------|:-----------:|------|
+| pycryptodomex | ✅ (abi3) | `cp37-abi3` 安定 ABI wheel が 3.14 標準ビルドで動作 |
+| aiohttp | ✅ (cp314) | yarl/multidict/frozenlist も cp314 完備 |
+| requests + deps | ✅ | charset-normalizer が cp314、他は pure Python |
+| typing_extensions | ✅ | pure Python |
+| **coincurve** (optional) | ❌ **未提供** | 最新 21.0.0 は 3.14 非対応 (master のみ)。[ofek/coincurve#219] |
+
+**重要**: coincurve が 3.14 wheel を出していないため、**3.14 では `_bsv_native` が唯一の暗号
+バックエンド**になる (純 Python フォールバックに暗号はない)。F8 修正済みなので native が動き問題
+ないが、「coincurve が新 Python 追従に遅れる」という当初の廃止動機がまさに 3.14 でも再現している。
+
+### 残タスク (標準ビルドの正式サポート)
+
+- **[CI]** `wheels.yml` の `cibuildwheel==2.22.0` を **≥3.2.1** に更新 (3.14.0 final + macOS
+  deployment target 修正を含む最初のバージョン)。`CIBW_BUILD` に `cp314-*` を追加
+- **[CI]** cibuildwheel 3.1+ は **cp314t (フリースレッド) をデフォルトでビルド**する。当面 FT を
+  サポートしないなら `skip = "cp3??t-*"` を明示 (でないと cp314t ビルドで失敗/警告)
+- **[CI]** cibuildwheel 3.0 でデフォルト manylinux イメージが `manylinux2014` → `manylinux_2_28`
+  (glibc 2.28) に変更。古い glibc を維持するなら `manylinux-x86_64-image` を明示ピン
+- **[verify]** **フル**テストスイートを 3.14 で実行 (今回は native サブセット + スモークのみ)。
+  特に `-W error::DeprecationWarning` で **SDK レベル**の非推奨を洗う。py-sdk は asyncio/aiohttp を
+  使うため注意対象:
+  - asyncio イベントループポリシー系 (3.14 で DeprecationWarning、3.16 削除)
+  - `asyncio.get_event_loop()` の no-loop が 3.14 で **RuntimeError** 化 (警告でなく即エラー)
+  - `datetime.utcnow()` / マルチスレッドでの `os.fork()` (DeprecationWarning)
+- **[build]** setup.py に 3.14 特有の対応は不要 (現状のフラグで通る)
+
+### 残タスク (フリースレッド cp314t — 別トラック)
+
+3.14 で **PEP 779 によりフリースレッドが正式サポート**に (実験扱いから昇格、GIL ビルドは依然
+デフォルト)。cp314t 対応には以下が必要:
+
+- **[free-threading] GIL 不要の宣言**: 単一フェーズ init (`PyModule_Create`) のままでよい。
+  `PyInit__bsv_native` 内で `#ifdef Py_GIL_DISABLED` ガード付きで
+  `PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED)` を呼ぶ。宣言しないと python3.14t で
+  import 時に **GIL が自動再有効化 + RuntimeWarning** (動くが並列性なし)
+- **[free-threading] `g_ctx` のスレッド安全化** (全面監査 R1/R7 の指摘が顕在化):
+  - **推奨**: `g_ctx` を**モジュール init 時に一度だけ生成 + randomize** し、以降は不変にする。
+    libsecp256k1 は「randomize しない読み取り専用コンテキストの並行 sign/verify」は安全なので、
+    これで lock 不要。遅延 init の TOCTOU も同時に解消
+    ([[project_proto-wallet-deprecation]] とは無関係、純粋に本 C 拡張の課題)
+  - 代替: `PyMutex` で遅延 init と `context_randomize` を保護
+- **[free-threading] wheel は cp314t 専用が別途必要**: フリースレッドビルドは 3.14 では
+  **Limited API/abi3 非対応** (abi3t は 3.15/PEP 803)。pycryptodomex は cp314t wheel を出して
+  いない (RIPEMD160 が source build 必要) ため、cp314t はエコシステム側がまだ未整備
+- **[判断]** 依存 (pycryptodomex/coincurve) の cp314t 未整備を踏まえ、**当面は「GIL 不要宣言 +
+  g_ctx 安全化」までを実施** (どちらも正当性の改善でもある) し、**cp314t wheel の配布は依存が
+  揃うまで保留**するのが現実的
+
+### 検証環境メモ
+
+arm64 Python 3.14.6 は `/opt/homebrew` (arm64 Homebrew) の `python@3.14` で導入
+(→ `/opt/homebrew/opt/python@3.14/bin/python3.14`)。フリースレッド版 (`python3.14t`) は標準
+formula に含まれず、`python-freethreading` formula が別途必要 (cp314t 検証時に導入する)。
