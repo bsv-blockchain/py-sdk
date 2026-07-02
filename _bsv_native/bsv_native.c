@@ -57,6 +57,48 @@ static int ensure_context(void) {
     return 1;
 }
 
+/* ================= PyLong <-> byte-array (version portable) ==============
+ * CPython 3.13 changed the private _PyLong_AsByteArray signature (added a
+ * `with_exceptions` parameter) and introduced the public, stable
+ * PyLong_*NativeBytes API. Use the public API on >=3.13 (also covers 3.14+);
+ * fall back to the private API on <=3.12 where the public one is absent.
+ * All call sites here handle non-negative magnitudes (unsigned). */
+#if PY_VERSION_HEX >= 0x030D0000
+static PyObject *bsv_long_from_unsigned_bytes(const unsigned char *bytes,
+                                              size_t n, int little_endian) {
+    return PyLong_FromUnsignedNativeBytes(
+        bytes, n,
+        little_endian ? Py_ASNATIVEBYTES_LITTLE_ENDIAN
+                      : Py_ASNATIVEBYTES_BIG_ENDIAN);
+}
+static int bsv_long_as_unsigned_bytes(PyObject *v, unsigned char *bytes,
+                                      size_t n, int little_endian) {
+    Py_ssize_t r = PyLong_AsNativeBytes(
+        v, bytes, (Py_ssize_t)n,
+        (little_endian ? Py_ASNATIVEBYTES_LITTLE_ENDIAN
+                       : Py_ASNATIVEBYTES_BIG_ENDIAN)
+        | Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
+    if (r < 0)
+        return -1; /* exception already set */
+    if ((size_t)r > n) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "integer does not fit in the requested byte count");
+        return -1;
+    }
+    return 0;
+}
+#else
+static PyObject *bsv_long_from_unsigned_bytes(const unsigned char *bytes,
+                                              size_t n, int little_endian) {
+    return _PyLong_FromByteArray(bytes, n, little_endian, 0 /* unsigned */);
+}
+static int bsv_long_as_unsigned_bytes(PyObject *v, unsigned char *bytes,
+                                      size_t n, int little_endian) {
+    return _PyLong_AsByteArray((PyLongObject *)v, bytes, n,
+                               little_endian, 0 /* unsigned */);
+}
+#endif
+
 /* ========================= SHA256 / hash256 ============================== */
 
 static PyObject* pyfn_sha256(PyObject *self, PyObject *args) {
@@ -265,12 +307,8 @@ static PyObject* pyfn_pubkey_point(PyObject *self, PyObject *args) {
         SECP256K1_EC_UNCOMPRESSED);
 
     /* out[0] = 0x04, out[1..32] = x, out[33..64] = y */
-    PyObject *x = PyLong_FromUnsignedLongLong(0);
-    PyObject *y = PyLong_FromUnsignedLongLong(0);
-
-    /* Build big integers from bytes */
-    x = _PyLong_FromByteArray(out + 1, 32, 0 /* big-endian */, 0 /* unsigned */);
-    y = _PyLong_FromByteArray(out + 33, 32, 0 /* big-endian */, 0 /* unsigned */);
+    PyObject *x = bsv_long_from_unsigned_bytes(out + 1, 32, 0 /* big-endian */);
+    PyObject *y = bsv_long_from_unsigned_bytes(out + 33, 32, 0 /* big-endian */);
 
     PyBuffer_Release(&buf);
 
@@ -526,7 +564,16 @@ static int nonce_fn_custom_k(unsigned char *nonce32,
                              const unsigned char *algo16,
                              void *data,
                              unsigned int counter) {
-    (void)msg32; (void)key32; (void)algo16; (void)counter;
+    (void)msg32; (void)key32; (void)algo16;
+    /* libsecp256k1 re-invokes the nonce function with an incrementing
+     * counter whenever the returned nonce is unusable (zero, >= curve
+     * order, or yields r == 0). Since we must sign with EXACTLY the
+     * caller-supplied k, we cannot offer an alternative: return 0 on any
+     * retry so secp256k1_ecdsa_sign fails cleanly instead of looping
+     * forever (a bad k such as 0 or a multiple of the curve order would
+     * otherwise hang the process). */
+    if (counter > 0)
+        return 0;
     memcpy(nonce32, data, 32);
     return 1;
 }
@@ -963,8 +1010,8 @@ static PyObject* pyfn_parse_script_chunks(PyObject *self, PyObject *args) {
             /* Direct push: op bytes of data follow */
             if (i + op > n) break;
             PyObject *data = PyBytes_FromStringAndSize((const char *)(s + i), op);
-            chunk = PyTuple_Pack(2, PyLong_FromLong(op), data);
-            Py_DECREF(data);
+            chunk = data ? Py_BuildValue("(iO)", (int)op, data) : NULL;
+            Py_XDECREF(data);
             i += op;
         } else if (op == 0x4C) {
             /* OP_PUSHDATA1 */
@@ -972,8 +1019,8 @@ static PyObject* pyfn_parse_script_chunks(PyObject *self, PyObject *args) {
             Py_ssize_t ln = s[i]; i++;
             if (i + ln > n) break;
             PyObject *data = PyBytes_FromStringAndSize((const char *)(s + i), ln);
-            chunk = PyTuple_Pack(2, PyLong_FromLong(0x4C), data);
-            Py_DECREF(data);
+            chunk = data ? Py_BuildValue("(iO)", 0x4C, data) : NULL;
+            Py_XDECREF(data);
             i += ln;
         } else if (op == 0x4D) {
             /* OP_PUSHDATA2 */
@@ -982,8 +1029,8 @@ static PyObject* pyfn_parse_script_chunks(PyObject *self, PyObject *args) {
             i += 2;
             if (i + ln > n) break;
             PyObject *data = PyBytes_FromStringAndSize((const char *)(s + i), ln);
-            chunk = PyTuple_Pack(2, PyLong_FromLong(0x4D), data);
-            Py_DECREF(data);
+            chunk = data ? Py_BuildValue("(iO)", 0x4D, data) : NULL;
+            Py_XDECREF(data);
             i += ln;
         } else if (op == 0x4E) {
             /* OP_PUSHDATA4 */
@@ -992,12 +1039,12 @@ static PyObject* pyfn_parse_script_chunks(PyObject *self, PyObject *args) {
             i += 4;
             if (i + ln > n) break;
             PyObject *data = PyBytes_FromStringAndSize((const char *)(s + i), ln);
-            chunk = PyTuple_Pack(2, PyLong_FromLong(0x4E), data);
-            Py_DECREF(data);
+            chunk = data ? Py_BuildValue("(iO)", 0x4E, data) : NULL;
+            Py_XDECREF(data);
             i += ln;
         } else {
             /* Non-push opcode */
-            chunk = PyTuple_Pack(2, PyLong_FromLong(op), Py_None);
+            chunk = Py_BuildValue("(iO)", (int)op, Py_None);
         }
 
         if (!chunk) {
@@ -1401,6 +1448,17 @@ static int varint_size(uint64_t n) {
     return 9;
 }
 
+/* Internal: PyDict_SetItemString does NOT steal the value reference.
+ * This helper consumes it, so inline-created values are not leaked. */
+static int dict_set_steal(PyObject *d, const char *key, PyObject *v) {
+    int r;
+    if (v == NULL)
+        return -1;
+    r = PyDict_SetItemString(d, key, v);
+    Py_DECREF(v);
+    return r;
+}
+
 /*
  * tx_from_bytes(raw_bytes) -> dict
  *
@@ -1469,10 +1527,11 @@ static PyObject* pyfn_tx_from_bytes(PyObject *self, PyObject *args) {
         pos += 4;
 
         PyObject *inp = PyDict_New();
-        PyDict_SetItemString(inp, "source_txid", PyUnicode_FromString(txid_hex));
-        PyDict_SetItemString(inp, "source_output_index", PyLong_FromUnsignedLong(vout));
+        if (!inp) { Py_DECREF(script); goto parse_err; }
+        dict_set_steal(inp, "source_txid", PyUnicode_FromString(txid_hex));
+        dict_set_steal(inp, "source_output_index", PyLong_FromUnsignedLong(vout));
         PyDict_SetItemString(inp, "unlocking_script", script);
-        PyDict_SetItemString(inp, "sequence", PyLong_FromUnsignedLong(seq));
+        dict_set_steal(inp, "sequence", PyLong_FromUnsignedLong(seq));
         Py_DECREF(script);
 
         PyList_Append(inputs, inp);
@@ -1501,7 +1560,8 @@ static PyObject* pyfn_tx_from_bytes(PyObject *self, PyObject *args) {
         pos += script_len;
 
         PyObject *outp = PyDict_New();
-        PyDict_SetItemString(outp, "satoshis", PyLong_FromUnsignedLongLong(sats));
+        if (!outp) { Py_DECREF(script); Py_DECREF(outputs); goto parse_err; }
+        dict_set_steal(outp, "satoshis", PyLong_FromUnsignedLongLong(sats));
         PyDict_SetItemString(outp, "locking_script", script);
         Py_DECREF(script);
 
@@ -1517,11 +1577,12 @@ static PyObject* pyfn_tx_from_bytes(PyObject *self, PyObject *args) {
 
     /* Build result dict */
     PyObject *result = PyDict_New();
-    PyDict_SetItemString(result, "version", PyLong_FromUnsignedLong(version));
-    PyDict_SetItemString(result, "locktime", PyLong_FromUnsignedLong(locktime));
+    if (!result) { Py_DECREF(outputs); goto parse_err; }
+    dict_set_steal(result, "version", PyLong_FromUnsignedLong(version));
+    dict_set_steal(result, "locktime", PyLong_FromUnsignedLong(locktime));
     PyDict_SetItemString(result, "inputs", inputs);
     PyDict_SetItemString(result, "outputs", outputs);
-    PyDict_SetItemString(result, "bytes_read", PyLong_FromSsize_t(pos));
+    dict_set_steal(result, "bytes_read", PyLong_FromSsize_t(pos));
     Py_DECREF(inputs);
     Py_DECREF(outputs);
 
@@ -2055,7 +2116,20 @@ static PyObject* pyfn_tx_preimage_otda(PyObject *self, PyObject *args) {
         /* SIGHASH_NONE: no outputs */
         buf[p++] = 0x00;
     } else if (base_type == 0x03) {
-        /* SIGHASH_SINGLE: outputs up to input_index */
+        /* SIGHASH_SINGLE: outputs up to input_index. If there is no output at
+         * input_index, the loop would read outputs_list out of bounds and the
+         * null-output writes (unbudgeted in `est`) would overflow buf. The
+         * pure-Python _preimage_otda raises IndexError here; mirror that
+         * instead of crashing. (Note: Transaction._calc_input_preimage_legacy
+         * — the CHECKSIG/script-VM path — instead uses the 0x01||0x00*31
+         * digest for this case; the two OTDA implementations differ and
+         * should be reconciled.) */
+        if (input_index >= n_out) {
+            free(buf);
+            PyErr_SetString(PyExc_IndexError,
+                "SIGHASH_SINGLE: input_index has no corresponding output");
+            return NULL;
+        }
         Py_ssize_t out_count = input_index + 1;
         p += write_varint(buf + p, out_count);
         for (Py_ssize_t i = 0; i < out_count; i++) {
@@ -2263,7 +2337,7 @@ static PyObject *c_bin2num(const unsigned char *data, Py_ssize_t len) {
     if (!tmp) { PyErr_NoMemory(); return NULL; }
     memcpy(tmp, data, len);
     tmp[len - 1] &= 0x7F;
-    PyObject *n = _PyLong_FromByteArray(tmp, (size_t)len, 1, 0);
+    PyObject *n = bsv_long_from_unsigned_bytes(tmp, (size_t)len, 1 /* little-endian */);
     PyMem_Free(tmp);
     if (!n) return NULL;
     if (negative) {
@@ -2299,7 +2373,7 @@ static int c_min_encode(PyObject *num, unsigned char **out, Py_ssize_t *out_len)
     unsigned char *buf = (unsigned char *)PyMem_Malloc(nb + 1);
     if (!buf) { Py_DECREF(abs_num); PyErr_NoMemory(); return -1; }
 
-    if (_PyLong_AsByteArray((PyLongObject *)abs_num, buf, (size_t)nb, 1, 0) < 0) {
+    if (bsv_long_as_unsigned_bytes(abs_num, buf, (size_t)nb, 1 /* little-endian */) < 0) {
         PyMem_Free(buf); Py_DECREF(abs_num); return -1;
     }
     Py_DECREF(abs_num);
@@ -2651,6 +2725,22 @@ static int c_build_otda_preimage(PreimageCtx *pctx,
     uint32_t base_type = sighash & 0x1F;
     int anyonecanpay = sighash & 0x80;
     Py_ssize_t total = pctx->n_other + 1;
+
+    /* SIGHASH_SINGLE out-of-range bug: when signing input i and there is no
+     * output i, the original Bitcoin algorithm uses the preimage 0x01 padded
+     * with 31 zero bytes. Without this guard the SINGLE branch below would
+     * read outputs_list past its end (PyList_GET_ITEM does no bounds check)
+     * and under-budget `est`, crashing the process. Matches the pure-Python
+     * Transaction._calc_input_preimage_legacy path. */
+    if (base_type == 0x03 && pctx->input_index >= pctx->n_outputs) {
+        unsigned char *one = (unsigned char *)malloc(32);
+        if (!one) { PyErr_NoMemory(); return -1; }
+        memset(one, 0, 32);
+        one[0] = 0x01;
+        *out = one;
+        *out_len = 32;
+        return 0;
+    }
 
     size_t est = 4 + 9;
     for (Py_ssize_t i = 0; i < total; i++) {

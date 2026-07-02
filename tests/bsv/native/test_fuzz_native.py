@@ -10,6 +10,7 @@ Run:
     pytest tests/bsv/native/test_fuzz_native.py -x -v  # random seed
 """
 
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -756,3 +757,284 @@ class TestRefcountStress:
         for _ in range(10000):
             chunks = _bsv_native.parse_script_chunks(data)
             _bsv_native.serialize_script_chunks(chunks)
+
+
+# ---------------------------------------------------------------------------
+# Memory growth — detect unbounded per-call leaks (tracemalloc oracle)
+# ---------------------------------------------------------------------------
+
+
+class TestMemoryGrowth:
+    """Assert that repeated success-path calls do not grow traced memory.
+
+    TestRefcountStress above only detects crashes. A per-call reference
+    leak (e.g. passing an inline-created object to PyDict_SetItemString,
+    which does NOT steal references) passes those tests while leaking
+    unboundedly. 20,000 iterations leaking even ~30 bytes/call exceed
+    500 KB, while a leak-free function stays within allocator noise.
+    """
+
+    ITERATIONS = 20_000
+    # A per-call reference leak keeps >= ITERATIONS blocks alive (one per
+    # leaked object per call); allocator noise (arena growth under pytest)
+    # keeps only a handful of large blocks alive. Block count separates
+    # the two reliably where a byte threshold cannot.
+    MAX_NEW_BLOCKS = 2_000
+
+    TX_1IN_2OUT = bytes.fromhex(
+        "010000000193a35408b6068499e0d5abd799d3e827d9bfe70c9b75ebe209c91d2507232651"
+        "0000000000ffffffff02404b4c00000000001976a91404ff367be719efa79d76e4416ffb07"
+        "2cd53b208888acde94a905000000001976a91404d03f746652cfcb6cb55119ab473a045137"
+        "d26588ac00000000"
+    )
+
+    def _assert_no_growth(self, fn):
+        import tracemalloc
+
+        tracemalloc.start()
+        for _ in range(2000):
+            fn()  # in-session warmup: free-lists, interned strings
+        snap1 = tracemalloc.take_snapshot()
+        for _ in range(self.ITERATIONS):
+            fn()
+        snap2 = tracemalloc.take_snapshot()
+        tracemalloc.stop()
+        new_blocks = sum(
+            stat.count_diff
+            for stat in snap2.compare_to(snap1, "lineno")
+            if stat.count_diff > 0
+        )
+        assert new_blocks < self.MAX_NEW_BLOCKS, (
+            f"leaked ~{new_blocks / self.ITERATIONS:.2f} blocks/call "
+            f"({new_blocks:,} new live blocks over {self.ITERATIONS:,} iterations)"
+        )
+
+    def test_tx_from_bytes_success_path_no_growth(self):
+        raw = self.TX_1IN_2OUT
+        self._assert_no_growth(lambda: _bsv_native.tx_from_bytes(raw))
+
+    def test_tx_to_bytes_no_growth(self):
+        parsed = _bsv_native.tx_from_bytes(self.TX_1IN_2OUT)
+        self._assert_no_growth(
+            lambda: _bsv_native.tx_to_bytes(
+                parsed["version"], parsed["inputs"], parsed["outputs"], parsed["locktime"]
+            )
+        )
+
+    def test_parse_script_chunks_success_path_no_growth(self):
+        script = b"\x76\xa9\x14" + b"\x00" * 20 + b"\x88\xac"
+        self._assert_no_growth(lambda: _bsv_native.parse_script_chunks(script))
+
+    def test_pubkey_point_no_growth(self):
+        pk = _bsv_native.pubkey_from_secret(b"\x01" * 32)
+        self._assert_no_growth(lambda: _bsv_native.pubkey_point(pk))
+
+
+# ---------------------------------------------------------------------------
+# Full-surface memory scan — every exported function, success + error paths
+# ---------------------------------------------------------------------------
+
+
+def _all_export_cases():
+    """(id, callable) for every exported function. Error-path cases raise
+    per call and exercise cleanup on the exception path."""
+    N = _bsv_native
+    tx = bytes.fromhex(TestMemoryGrowth.TX_1IN_2OUT.hex())
+    txid = "93a35408b6068499e0d5abd799d3e827d9bfe70c9b75ebe209c91d2507232651"
+    p2pkh = bytes.fromhex("76a9146a176cd51593e00542b8e1958b7da2be97452d0588ac")
+    sec, sec2 = b"\x01" * 32, b"\x02" * 32
+    pk, pk2 = N.pubkey_from_secret(sec), N.pubkey_from_secret(sec2)
+    msg = N.hash256(b"msg")
+    sig = N.ecdsa_sign(msg, sec)
+    rsig = N.ecdsa_sign_recoverable(msg, sec)
+    k = b"\x03" * 31 + b"\x07"
+    tweak = b"\x00" * 31 + b"\x05"
+    parsed = N.tx_from_bytes(tx)
+    chunks = N.parse_script_chunks(p2pkh)
+    in_tuples = [(txid, 0, p2pkh, 100_000_000, 0xFFFFFFFF, 0x41)]
+    out_bytes = [(50_000).to_bytes(8, "little") + bytes([len(p2pkh)]) + p2pkh]
+    mpath = [
+        [{"offset": 0, "hash_str": txid}, {"offset": 1, "hash_str": "bb" * 32}],
+        [{"offset": 1, "hash_str": "cc" * 32}],
+    ]
+
+    def swallow(f):
+        def run():
+            try:
+                f()
+            except Exception:
+                pass
+        return run
+
+    return [
+        ("sha256", lambda: N.sha256(b"x" * 64)),
+        ("hash256", lambda: N.hash256(b"x" * 64)),
+        ("hmac_sha256", lambda: N.hmac_sha256(b"key", b"data")),
+        ("pubkey_from_secret", lambda: N.pubkey_from_secret(sec)),
+        ("pubkey_parse", lambda: N.pubkey_parse(pk)),
+        ("pubkey_serialize", lambda: N.pubkey_serialize(pk, True)),
+        ("pubkey_serialize_unc", lambda: N.pubkey_serialize(pk, False)),
+        ("pubkey_point", lambda: N.pubkey_point(pk)),
+        ("pubkey_tweak_add", lambda: N.pubkey_tweak_add(pk, tweak)),
+        ("pubkey_tweak_mul", lambda: N.pubkey_tweak_mul(pk, tweak)),
+        ("pubkey_combine", lambda: N.pubkey_combine([pk, pk2])),
+        ("seckey_verify", lambda: N.seckey_verify(sec)),
+        ("seckey_tweak_add", lambda: N.seckey_tweak_add(sec, tweak)),
+        ("ecdsa_sign", lambda: N.ecdsa_sign(msg, sec)),
+        ("ecdsa_verify", lambda: N.ecdsa_verify(sig, msg, pk)),
+        ("ecdsa_sign_recoverable", lambda: N.ecdsa_sign_recoverable(msg, sec)),
+        ("ecdsa_recover", lambda: N.ecdsa_recover(rsig, msg)),
+        ("ecdsa_sign_with_k", lambda: N.ecdsa_sign_with_k(msg, sec, k)),
+        ("ecdh", lambda: N.ecdh(sec, pk2)),
+        ("tx_from_bytes", lambda: N.tx_from_bytes(tx)),
+        ("tx_to_bytes", lambda: N.tx_to_bytes(
+            parsed["version"], parsed["inputs"], parsed["outputs"], parsed["locktime"])),
+        ("tx_txid", lambda: N.tx_txid(tx)),
+        ("tx_preimages", lambda: N.tx_preimages(1, 0, in_tuples, out_bytes)),
+        ("tx_preimage_otda", lambda: N.tx_preimage_otda(0, 1, 0, in_tuples, out_bytes)),
+        ("parse_script_chunks", lambda: N.parse_script_chunks(p2pkh)),
+        ("serialize_script_chunks", lambda: N.serialize_script_chunks(chunks)),
+        ("merkle_hash_pair", lambda: N.merkle_hash_pair("aa" * 32, "bb" * 32)),
+        ("merkle_compute_root", lambda: N.merkle_compute_root(txid, mpath)),
+        ("context_randomize", lambda: N.context_randomize(b"\x42" * 32)),
+        # error paths
+        ("ERR_pubkey_parse", swallow(lambda: N.pubkey_parse(b"\xff" * 33))),
+        ("ERR_pubkey_tweak_add", swallow(lambda: N.pubkey_tweak_add(b"\xff" * 33, tweak))),
+        ("ERR_pubkey_combine", swallow(lambda: N.pubkey_combine([b"\xff" * 33, pk]))),
+        ("ERR_seckey_tweak_add", swallow(lambda: N.seckey_tweak_add(b"\x00" * 32, tweak))),
+        ("ERR_ecdsa_sign", swallow(lambda: N.ecdsa_sign(msg, b"\x00" * 32))),
+        ("ERR_ecdsa_recover_recid", swallow(lambda: N.ecdsa_recover(rsig[:64] + b"\x09", msg))),
+        ("ERR_ecdh", swallow(lambda: N.ecdh(b"\x00" * 32, pk))),
+        ("ERR_tx_from_bytes", swallow(lambda: N.tx_from_bytes(b"\x01\x00"))),
+        ("ERR_serialize_chunks", swallow(lambda: N.serialize_script_chunks([(0x4C, b"x" * 300)]))),
+        ("ERR_merkle_hash_pair", swallow(lambda: N.merkle_hash_pair("zz" * 32, "bb" * 32))),
+        ("ERR_tx_preimage_otda_single", swallow(lambda: N.tx_preimage_otda(
+            0, 2, 0, [(txid, 0, b"", 1, 0xFFFFFFFF, 0x63)], []))),
+    ]
+
+
+class TestFullSurfaceMemoryScan:
+    """Every exported function, checked for per-call leaks via block-count
+    oracle. Guards against the tx_from_bytes-style leak recurring in any
+    function. Error-path cases confirm cleanup runs on the exception path."""
+
+    ITERATIONS = 8_000
+    MAX_NEW_BLOCKS = 1_000
+
+    @pytest.mark.parametrize("label,fn", _all_export_cases(), ids=lambda v: v if isinstance(v, str) else "")
+    def test_no_per_call_leak(self, label, fn):
+        import tracemalloc
+
+        fn()
+        tracemalloc.start()
+        for _ in range(1000):
+            fn()
+        snap1 = tracemalloc.take_snapshot()
+        for _ in range(self.ITERATIONS):
+            fn()
+        snap2 = tracemalloc.take_snapshot()
+        tracemalloc.stop()
+        new_blocks = sum(
+            s.count_diff for s in snap2.compare_to(snap1, "lineno") if s.count_diff > 0
+        )
+        assert new_blocks < self.MAX_NEW_BLOCKS, (
+            f"{label}: leaked ~{new_blocks / self.ITERATIONS:.2f} blocks/call"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Crash / hang regression — must run in a subprocess so a SIGSEGV or infinite
+# loop is caught as a nonzero/timeout exit instead of killing the test runner.
+# In-process fuzz tests (which merely tolerate exceptions) cannot catch these.
+# ---------------------------------------------------------------------------
+
+
+class TestCrashHangRegression:
+    def _run(self, body: str, timeout: float = 8.0):
+        import subprocess
+        import sys
+        import textwrap
+
+        src = "import _bsv_native\n" + textwrap.dedent(body)
+        return subprocess.run(
+            [sys.executable, "-c", src], capture_output=True, text=True, timeout=timeout
+        )
+
+    def test_sign_with_k_zero_does_not_hang(self):
+        """k=0 (or any multiple of the curve order) once hung forever because
+        nonce_fn_custom_k ignored the retry counter. Must raise, not loop."""
+        import subprocess
+
+        try:
+            r = self._run(
+                """
+                msg = _bsv_native.hash256(b'm'); sec = b'\\x01' * 32
+                try:
+                    _bsv_native.ecdsa_sign_with_k(msg, sec, b'\\x00' * 32)
+                    print('NOEXC')
+                except ValueError:
+                    print('VALUEERROR')
+                """,
+                timeout=8.0,
+            )
+        except subprocess.TimeoutExpired:
+            pytest.fail("ecdsa_sign_with_k(k=0) hung (infinite nonce retry loop)")
+        assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
+        assert "VALUEERROR" in r.stdout
+
+    def test_spend_validate_otda_single_out_of_range_no_crash(self):
+        """OTDA SIGHASH_SINGLE with input_index >= n_outputs once read
+        outputs_list out of bounds (SIGSEGV). Must not crash the process."""
+        r = self._run(
+            """
+            sec = b'\\x02' * 32
+            pub = _bsv_native.pubkey_from_secret(sec)
+            sig = _bsv_native.ecdsa_sign(_bsv_native.hash256(b'x'), sec) + b'\\x63'
+            unlock = [(len(sig), sig), (len(pub), pub)]
+            lock = [(0xAC, None)]
+            try:
+                _bsv_native.spend_validate(unlock, lock, 2, '00'*32, 0, 0, 0,
+                                           0xffffffff, 1000, [], [])
+            except RuntimeError:
+                pass
+            print('SURVIVED')
+            """
+        )
+        assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
+        assert "SURVIVED" in r.stdout
+
+    def test_spend_validate_otda_single_bug_digest(self):
+        """A signature over hash256(0x01||0x00*31) must verify TRUE through the
+        SIGHASH_SINGLE-bug path, proving the C digest matches the Python path."""
+        r = self._run(
+            """
+            from bsv.hash import hash256
+            sec = b'\\x02' * 32
+            pub = _bsv_native.pubkey_from_secret(sec)
+            digest = hash256(b'\\x01' + b'\\x00' * 31)
+            sig = _bsv_native.ecdsa_sign(digest, sec) + b'\\x63'
+            unlock = [(len(sig), sig), (len(pub), pub)]
+            lock = [(0xAC, None)]
+            r = _bsv_native.spend_validate(unlock, lock, 2, '00'*32, 0, 0, 0,
+                                           0xffffffff, 1000, [], [])
+            print('OK' if r else 'FALSE')
+            """
+        )
+        assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
+        assert "OK" in r.stdout
+
+    def test_tx_preimage_otda_single_out_of_range_raises(self):
+        """Exported tx_preimage_otda with SINGLE + input_index >= n_outputs
+        once overflowed its buffer / read OOB. Must raise IndexError."""
+        r = self._run(
+            """
+            inp = [('11'*32, 0, b'', 500, 0xffffffff, 0x63)]
+            try:
+                _bsv_native.tx_preimage_otda(0, 2, 0, inp, [])
+                print('NOEXC')
+            except IndexError:
+                print('INDEXERROR')
+            """
+        )
+        assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
+        assert "INDEXERROR" in r.stdout
