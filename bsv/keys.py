@@ -7,11 +7,12 @@ from typing import Callable, Optional, Tuple, Union
 from .aes_cbc import aes_decrypt_with_iv, aes_encrypt_with_iv
 from .base58 import base58check_encode
 from .constants import NETWORK_ADDRESS_PREFIX_DICT, NETWORK_WIF_PREFIX_DICT, PUBLIC_KEY_COMPRESSED_PREFIX_LIST, Network
-from .curve import Point, curve, curve_add, curve_multiply
+from .curve import Point, curve, curve_add, curve_get_y, curve_multiply, on_curve
 from .hash import hash160, hash256, hmac_sha256, hmac_sha512
 from .polynomial import KeyShares, PointInFiniteField, Polynomial
 from .utils import (
     decode_wif,
+    deserialize_ecdsa_der,
     deserialize_ecdsa_recoverable,
     serialize_ecdsa_der,
     stringify_ecdsa_recoverable,
@@ -20,7 +21,7 @@ from .utils import (
 )
 
 # ---------------------------------------------------------------------------
-# Crypto backend: _bsv_native (direct libsecp256k1) → coincurve (CFFI)
+# Crypto backend: _bsv_native (direct libsecp256k1) → pure Python fallback
 # ---------------------------------------------------------------------------
 _CRYPTO_BACKEND = None
 
@@ -29,16 +30,88 @@ try:
 
     _CRYPTO_BACKEND = "native"
 except ImportError:
-    try:
-        from coincurve import PrivateKey as CcPrivateKey
-        from coincurve import PublicKey as CcPublicKey
+    _CRYPTO_BACKEND = "python"
 
-        _CRYPTO_BACKEND = "coincurve"
-    except ImportError:
-        raise ImportError(
-            "bsv-sdk requires either _bsv_native (recommended) or coincurve. "
-            "Install with: pip install bsv-sdk  (includes pre-built binaries)"
-        )
+
+# ---------------------------------------------------------------------------
+# Pure Python ECDSA helpers (used when _bsv_native is unavailable)
+# ---------------------------------------------------------------------------
+
+
+def _rfc6979_k(msg_hash: bytes, secret: bytes) -> int:
+    v = b"\x01" * 32
+    k = b"\x00" * 32
+    k = hmac.new(k, v + b"\x00" + secret + msg_hash, hashlib.sha256).digest()
+    v = hmac.new(k, v, hashlib.sha256).digest()
+    k = hmac.new(k, v + b"\x01" + secret + msg_hash, hashlib.sha256).digest()
+    v = hmac.new(k, v, hashlib.sha256).digest()
+    while True:
+        v = hmac.new(k, v, hashlib.sha256).digest()
+        candidate = int.from_bytes(v, "big")
+        if 1 <= candidate < curve.n:
+            return candidate
+        k = hmac.new(k, v + b"\x00", hashlib.sha256).digest()
+        v = hmac.new(k, v, hashlib.sha256).digest()
+
+
+def _ecdsa_sign_recoverable_py(z: int, k: int, secret: bytes) -> bytes:
+    d = int.from_bytes(secret, "big")
+    R = curve_multiply(k, curve.g)
+    r = R.x
+    s = (pow(k, -1, curve.n) * (z + r * d)) % curve.n
+
+    recovery_id = 0 if R.y % 2 == 0 else 1
+    if s > curve.n // 2:
+        s = curve.n - s
+        recovery_id ^= 1
+
+    return r.to_bytes(32, "big") + s.to_bytes(32, "big") + bytes([recovery_id])
+
+
+def _ecdsa_verify_py(r: int, s: int, z: int, pubkey_point: Point) -> bool:
+    if r < 1 or r >= curve.n or s < 1 or s >= curve.n:
+        return False
+    s_inv = pow(s, -1, curve.n)
+    u1 = (z * s_inv) % curve.n
+    u2 = (r * s_inv) % curve.n
+    point = curve_add(curve_multiply(u1, curve.g), curve_multiply(u2, pubkey_point))
+    if point is None:
+        return False
+    return point.x % curve.n == r
+
+
+def _ecdsa_recover_py(r: int, s: int, recovery_id: int, z: int) -> Point:
+    y = curve_get_y(r, recovery_id % 2 == 0)
+    R = Point(r, y)
+    r_inv = pow(r, -1, curve.n)
+    u1 = (-z * r_inv) % curve.n
+    u2 = (s * r_inv) % curve.n
+    Q = curve_add(curve_multiply(u1, curve.g), curve_multiply(u2, R))
+    if Q is None:
+        raise ValueError("recovery failed: result is point at infinity")
+    return Q
+
+
+def _pubkey_validate_and_compress(pk: bytes) -> tuple[bytes, bytes | None]:
+    if len(pk) == 33:
+        prefix = pk[0]
+        if prefix not in (0x02, 0x03):
+            raise ValueError("invalid compressed public key prefix")
+        x = int.from_bytes(pk[1:33], "big")
+        y = curve_get_y(x, prefix == 0x02)
+        if not on_curve(Point(x, y)):
+            raise ValueError("public key not on curve")
+        return pk, None
+    if len(pk) == 65:
+        if pk[0] != 0x04:
+            raise ValueError("invalid uncompressed public key prefix")
+        x = int.from_bytes(pk[1:33], "big")
+        y = int.from_bytes(pk[33:65], "big")
+        if not on_curve(Point(x, y)):
+            raise ValueError("public key not on curve")
+        prefix = b"\x02" if y % 2 == 0 else b"\x03"
+        return prefix + pk[1:33], pk
+    raise ValueError("invalid public key length")
 
 
 class PublicKey:
@@ -56,17 +129,13 @@ class PublicKey:
                 self._raw: bytes = _bsv_native.pubkey_serialize(uncompressed, True)
                 self._raw_unc: bytes = uncompressed
             else:
-                self.key = CcPublicKey.from_point(public_key.x, public_key.y)
+                prefix = b"\x02" if public_key.y % 2 == 0 else b"\x03"
+                self._raw = prefix + x_bytes
+                self._raw_unc = uncompressed
         elif isinstance(public_key, PublicKey):
-            if _CRYPTO_BACKEND == "native":
-                self._raw = public_key.serialize(True)
-                self._raw_unc = None
-            else:
-                self.key = public_key.key
+            self._raw = public_key.serialize(True)
+            self._raw_unc = None
             self.compressed = public_key.compressed
-        elif _CRYPTO_BACKEND == "coincurve" and hasattr(public_key, "format"):
-            # CcPublicKey instance (for backward compatibility during migration)
-            self.key = public_key
         else:
             if isinstance(public_key, str):
                 pk: bytes = bytes.fromhex(public_key)
@@ -80,19 +149,28 @@ class PublicKey:
                 self._raw = _bsv_native.pubkey_serialize(pk, True)
                 self._raw_unc = None
             else:
-                self.key = CcPublicKey(pk)
+                self._raw, self._raw_unc = _pubkey_validate_and_compress(pk)
 
     def point(self) -> Point:
         if _CRYPTO_BACKEND == "native":
             x, y = _bsv_native.pubkey_point(self._raw)
             return Point(x, y)
-        return Point(*self.key.point())
+        x = int.from_bytes(self._raw[1:33], "big")
+        y = curve_get_y(x, self._raw[0] == 0x02)
+        return Point(x, y)
 
     def serialize(self, compressed: Optional[bool] = None) -> bytes:
         compressed = self.compressed if compressed is None else compressed
         if _CRYPTO_BACKEND == "native":
             return _bsv_native.pubkey_serialize(self._raw, compressed)
-        return self.key.format(compressed)
+        if compressed:
+            return self._raw
+        if self._raw_unc is not None:
+            return self._raw_unc
+        x = int.from_bytes(self._raw[1:33], "big")
+        y = curve_get_y(x, self._raw[0] == 0x02)
+        self._raw_unc = b"\x04" + self._raw[1:33] + y.to_bytes(32, "big")
+        return self._raw_unc
 
     def hex(self, compressed: Optional[bool] = None) -> str:
         return self.serialize(compressed).hex()
@@ -118,7 +196,9 @@ class PublicKey:
         if _CRYPTO_BACKEND == "native":
             msg32 = hasher(message) if hasher else message
             return _bsv_native.ecdsa_verify(signature, msg32, self.serialize())
-        return self.key.verify(signature, message, hasher)
+        msg32 = hasher(message) if hasher else message
+        r, s = deserialize_ecdsa_der(signature)
+        return _ecdsa_verify_py(r, s, int.from_bytes(msg32, "big"), self.point())
 
     def verify_recoverable(
         self, signature: bytes, message: bytes, hasher: Optional[Callable[[bytes], bytes]] = hash256
@@ -134,7 +214,8 @@ class PublicKey:
         if _CRYPTO_BACKEND == "native":
             result = _bsv_native.pubkey_tweak_mul(self.serialize(), key.serialize(), self.compressed)
             return result
-        return PublicKey(self.key.multiply(key.serialize())).serialize()
+        result_point = curve_multiply(int.from_bytes(key.serialize(), "big"), self.point())
+        return PublicKey(result_point).serialize(self.compressed)
 
     def encrypt(self, message: bytes) -> bytes:
         """
@@ -194,13 +275,6 @@ class PrivateKey:
             self._secret: bytes = os.urandom(32)
             while not self._is_valid_secret(self._secret):
                 self._secret = os.urandom(32)  # pragma: no cover
-        elif (
-            _CRYPTO_BACKEND == "coincurve"
-            and isinstance(private_key, type(None)) is False
-            and hasattr(private_key, "secret")
-        ):
-            # CcPrivateKey instance (backward compat during migration)
-            self._secret = private_key.secret
         elif isinstance(private_key, str):
             private_key_bytes, self.compressed, self.network = decode_wif(private_key)
             self._secret = private_key_bytes
@@ -220,7 +294,10 @@ class PrivateKey:
         if _CRYPTO_BACKEND == "native":
             pk_bytes = _bsv_native.pubkey_from_secret(self._secret, self.compressed)
             return PublicKey(pk_bytes)
-        return PublicKey(CcPrivateKey(self._secret).public_key.format(self.compressed))
+        point = curve_multiply(self.int(), curve.g)
+        pk = PublicKey(point)
+        pk.compressed = self.compressed
+        return pk
 
     def address(self, compressed: Optional[bool] = None, network: Optional[Network] = None) -> str:
         """
@@ -247,14 +324,10 @@ class PrivateKey:
         return self._secret.hex()
 
     def der(self) -> bytes:  # pragma: no cover
-        if _CRYPTO_BACKEND == "coincurve":
-            return CcPrivateKey(self._secret).to_der()
-        raise NotImplementedError("DER export requires coincurve backend")
+        raise NotImplementedError("DER export is not supported")
 
     def pem(self) -> bytes:  # pragma: no cover
-        if _CRYPTO_BACKEND == "coincurve":
-            return CcPrivateKey(self._secret).to_pem()
-        raise NotImplementedError("PEM export requires coincurve backend")
+        raise NotImplementedError("PEM export is not supported")
 
     def sign(
         self, message: bytes, hasher: Optional[Callable[[bytes], bytes]] = hash256, k: Optional[int] = None
@@ -271,7 +344,9 @@ class PrivateKey:
         if _CRYPTO_BACKEND == "native":
             msg32 = hasher(message) if hasher else message
             return _bsv_native.ecdsa_sign(msg32, self._secret)
-        return CcPrivateKey(self._secret).sign(message, hasher)
+        msg32 = hasher(message) if hasher else message
+        k_val = _rfc6979_k(msg32, self._secret)
+        return self._sign_custom_k(message, hasher, k_val)
 
     def _sign_custom_k(self, message: bytes, hasher: Callable[[bytes], bytes], k: int) -> bytes:
         """Pure Python fallback for ECDSA signing with custom nonce k."""
@@ -329,7 +404,10 @@ class PrivateKey:
         if _CRYPTO_BACKEND == "native":
             msg32 = hasher(message) if hasher else message
             return _bsv_native.ecdsa_sign_recoverable(msg32, self._secret)
-        return CcPrivateKey(self._secret).sign_recoverable(message, hasher)
+        msg32 = hasher(message) if hasher else message
+        z = int.from_bytes(msg32, "big")
+        k_val = _rfc6979_k(msg32, self._secret)
+        return _ecdsa_sign_recoverable_py(z, k_val, self._secret)
 
     def verify_recoverable(
         self, signature: bytes, message: bytes, hasher: Optional[Callable[[bytes], bytes]] = hash256
@@ -352,7 +430,8 @@ class PrivateKey:
         if _CRYPTO_BACKEND == "native":
             result = _bsv_native.pubkey_tweak_mul(key.serialize(), self.serialize(), key.compressed)
             return result
-        return PublicKey(key.key.multiply(self.serialize())).serialize()
+        result_point = curve_multiply(self.int(), key.point())
+        return PublicKey(result_point).serialize(key.compressed)
 
     def decrypt(self, message: bytes) -> bytes:
         """
@@ -416,17 +495,11 @@ class PrivateKey:
 
     @classmethod
     def from_der(cls, octets: str | bytes) -> "PrivateKey":  # pragma: no cover
-        b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
-        if _CRYPTO_BACKEND == "coincurve":
-            return PrivateKey(CcPrivateKey.from_der(b).secret)
-        raise NotImplementedError("DER import requires coincurve backend")
+        raise NotImplementedError("DER import is not supported")
 
     @classmethod
     def from_pem(cls, octets: str | bytes) -> "PrivateKey":  # pragma: no cover
-        b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
-        if _CRYPTO_BACKEND == "coincurve":
-            return PrivateKey(CcPrivateKey.from_pem(b).secret)
-        raise NotImplementedError("PEM import requires coincurve backend")
+        raise NotImplementedError("PEM import is not supported")
 
     def to_key_shares(self, threshold: int, total_shares: int) -> "KeyShares":
         """
@@ -589,4 +662,8 @@ def recover_public_key(
         msg32 = hasher(message) if hasher else message
         pk_bytes = _bsv_native.ecdsa_recover(signature, msg32, True)
         return PublicKey(pk_bytes)
-    return PublicKey(CcPublicKey.from_signature_and_message(signature, message, hasher))
+    msg32 = hasher(message) if hasher else message
+    r_int, s_int, recovery_id = deserialize_ecdsa_recoverable(signature)
+    z = int.from_bytes(msg32, "big")
+    point = _ecdsa_recover_py(r_int, s_int, recovery_id, z)
+    return PublicKey(point)
