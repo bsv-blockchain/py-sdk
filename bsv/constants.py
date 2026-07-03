@@ -92,13 +92,6 @@ class SIGHASH(int, Enum):
 
 
 #
-# ARC
-#
-#
-taal_mainnet_apikey = os.getenv("TAAL_MAINNET_APIKEY", "")
-taal_testnet_apikey = os.getenv("TAAL_TESTNET_APIKEY", "")
-
-#
 # P2PKH address
 #
 ADDRESS_MAINNET_PREFIX: bytes = b"\x00"
