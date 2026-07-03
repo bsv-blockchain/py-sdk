@@ -71,15 +71,28 @@ libsecp256k1 ソースを同梱ビルドし、coincurve 依存を段階的に廃
   Mode:    C拡張あり / coincurve フォールバック / 純Python フォールバック
   ```
 
-### 4. coincurve の段階的廃止
+### 4. coincurve の段階的廃止 — ✅ 完全廃止済み (2026-07-02)
 
-coincurve を即座に削除するのではなく、段階的に移行する:
+> **状態更新 (2026-07-02):** coincurve は当初「メジャーバージョンで削除」の予定だったが、
+> **前倒しで完全削除**した。フォールバック階層は 3 段 (native / coincurve / 純Python) から
+> **2 段 (native / 純Python) に変更**。詳細は末尾「coincurve 完全廃止記録」参照。
+> 本セクション以下の「段階的移行」記述は**歴史的経緯**であり、現行構成は 2 段フォールバック。
+
+当初計画 (段階的移行) — 履歴として保存:
 
 - **Phase 0 完了時**: `_bsv_native` が推奨、coincurve はフォールバック
 - **Phase 1-2 安定後**: coincurve を optional dependency に格下げ (`pip install bsv-sdk[coincurve]`)
 - **十分な実績蓄積後**: coincurve フォールバックコードを削除（メジャーバージョンで）
 
-廃止の動機:
+前倒し実施の理由 (2026-07-02):
+
+- **Python 3.14 のブロッカー解消**: coincurve は 3.14 wheel を出しておらず、optional のままでも
+  「3.14 で coincurve を要求する経路」が残ると混乱の元。純Python フォールバックに置き換えることで
+  3.14 でも追加依存ゼロで動作する
+- Phase 0-4 で `_bsv_native` が coincurve の全機能を代替済み。純Python フォールバックを足すだけで
+  coincurve 固有の機能 (DER/PEM 入出力を除く) はすべて代替できる状態だった
+
+廃止の動機 (当初からのもの):
 
 - 新しい Python バージョンへの対応が遅れがち（リリースブロッカーになりうる）
 - CFFI 経由のオーバーヘッド（CPython C API 直接呼びで排除可能）
@@ -164,6 +177,15 @@ F8 ────── Python 3.13/3.14 対応 (私的API廃止)                 
                 ① ecdsa_sign_with_k(k=0) 無限ハング (DoS)
                 ② OTDA SIGHASH_SINGLE 範囲外 SIGSEGV (OTDA実装2系統)
               回帰テスト44件追加 (crash/hang subprocess隔離 + 全関数memory scan)
+  │
+coincurve廃止 ─ coincurve 完全削除 + 純Python フォールバック導入        ✅ 完了 (2026-07-02)
+              → フォールバックを 3段(native/coincurve/純Python) → 2段(native/純Python) に変更
+              curve.py: 純Python 点加算 + double-and-add スカラー倍を追加
+              keys.py: RFC6979 署名 / verify / recover / ECDH / pubkey パースを純Python実装
+              pyproject.toml: coincurve optional dependency を削除
+              前倒し動機: coincurve が 3.14 wheel 未提供でブロッカーになるため
+              回帰テスト65件追加 (フォールバック強制 + native⇔python 等価性)
+              DER/PEM 入出力のみ廃止 (NotImplementedError、テスト外・実運用未使用)
 ```
 
 ---
@@ -2801,16 +2823,19 @@ sign_with_k ハング、OTDA SIGSEGV) はすべて対応完了済み**。
 | 4 | F10 | `PublicKey.__init__` の冗長 `pubkey_parse` 除去 | 性能 | 構築コストの ~48%、CHECKSIG パスで6回パース | 半日 |
 | 5 | F16b | crash/hang 回帰を Linux CI に組込 + `detect_leaks=1` ASAN | テスト基盤 | 今回の subprocess 回帰は追加済み。CI での常時実行が未整備 | 半日 |
 | 6 | 3.14-CI | 3.14 標準ビルドを CI に組込: cibuildwheel 2.22.0 → ≥3.2.1、`cp314-*` 追加、`skip=cp3??t-*`、フルスイートを `-W error::DeprecationWarning` で実行 | 互換/CI | 標準ビルドは arm64 3.14.6 で検証済 (159 テスト)。CI 化と SDK レベル非推奨(asyncio等)の洗い出しが残 | 半日 |
-| 7 | 3.14-FT | フリースレッド cp314t 対応: `PyUnstable_Module_SetGIL(Py_MOD_GIL_NOT_USED)` + `g_ctx` を init 時一括生成で不変化 (スレッド安全) | 互換/正当性 | PEP779 で 3.14 FT 正式化。g_ctx 安全化は監査 R1/R7 指摘の解消も兼ねる。wheel 配布は依存(pycryptodomex/coincurve)の cp314t 整備待ち | 1-2日 |
+| 7 | 3.14-FT | フリースレッド cp314t 対応: `PyUnstable_Module_SetGIL(Py_MOD_GIL_NOT_USED)` + `g_ctx` を init 時一括生成で不変化 (スレッド安全) | 互換/正当性 | PEP779 で 3.14 FT 正式化。g_ctx 安全化は監査 R1/R7 指摘の解消も兼ねる。wheel 配布は依存 pycryptodomex の cp314t 整備待ち (coincurve 廃止済につき依存から除外) | 1-2日 |
 | 8 | 4.4 | `context_randomize` 定期呼び出し | セキュリティ | 初期化時のみ実行中。定期化は任意 | 小 |
 | 9 | 4.5 | Schnorr 署名 API 公開 | 機能準備 | BSV で現在未使用。将来のプロトコル拡張用 | 小 |
 | 10 | — | musllinux wheel | 配布 | Alpine 対応。需要次第 | 小 |
+| 11 | DOC | 3段フォールバック記述の整合 (coincurve 廃止の反映残) | ドキュメント | 課題 #6 参照。図表4箇所が未整合。コード側は正しい (P3) | 小 |
 
 ### 完了 (2026-07-02)
 
 | ID | タスク | 結果 |
 |----|--------|------|
 | F8 | Python 3.13/3.14 コンパイル対応 | 私的 API `_PyLong_*` → 公開 `PyLong_*NativeBytes` へ移行 (`#if PY_VERSION_HEX >= 0x030D0000`)。x86_64/arm64 の Python 3.13 で native ビルド + 159 テスト通過、3.11 全 3,589 テスト回帰なし |
+| — | coincurve 完全廃止 + 純Python フォールバック | フォールバックを 3段→2段 (native/純Python) に変更。`curve.py` に純Python 点加算/スカラー倍、`keys.py` に RFC6979 署名・verify・recover・ECDH・pubkey パースを純Python実装。`pyproject.toml` から coincurve optional dependency 削除。native⇔python は公開鍵・アドレス・署名がバイト一致。前倒し動機は coincurve が 3.14 wheel 未提供のため。DER/PEM 入出力のみ廃止 (実運用未使用) |
+| — | 純Python フォールバックの回帰テスト | `tests/bsv/native/test_pure_python_fallback.py` (65件)。`_CRYPTO_BACKEND="python"` 強制で round-trip + native 等価性 (RFC6979 バイト一致・相互 verify・曲線演算一致) を検証。coincurve 廃止で生じた「native 環境では踏まれない未検証コード」の穴を解消 |
 
 ### 却下 (検証で「やらない」と確定)
 
@@ -2866,6 +2891,73 @@ sign_with_k ハング、OTDA SIGSEGV) はすべて対応完了済み**。
 ### 5. `_PyLong_FromByteArray` / `_AsByteArray` 私的 API 依存 — ✅ 解消済み (2026-07-02)
 
 F8 として即日修正。恒久対応 (公開 API 移行) まで一括で実施した。詳細は下記「F8 完了記録」参照。
+
+### 6. 本ドキュメント全体に残る「3段フォールバック」記述の不整合 【要整合】(2026-07-02)
+
+coincurve 完全廃止 (2 段フォールバック化) に伴い、本計画書の各所に散在する
+「native / coincurve / 純Python の 3 段」前提の記述が実態と食い違っている。
+本セッションでは主要箇所 (段階的廃止セクション・進捗レジャー・完了/バックログ表) を更新したが、
+以下の図表は**未整合のまま**であり、次回のドキュメント整理でまとめて反映すべき:
+
+- 設計原則のフォールバック階層図 (「暗号処理のフォールバック階層」に coincurve 段が残存)
+- CI マトリクスの「coincurve フォールバック」モード記述 (Mode 列 / CI マトリクス図)
+- リリース戦略表の「coincurve の扱い」列
+- リスク表・前提条件の「coincurve: Phase 0 以降 optional dependency」記述
+- `bsv/breaking0.md` L40: coincurve を runtime 依存「✅ Unchanged」と記載 (履歴文書のため
+  遡及修正はせず、次バージョンの breaking-changes として別途記録すべき)
+
+いずれも即時の不具合ではなく**ドキュメント整合性のみ**の課題 (P3)。コード・pyproject.toml は
+既に 2 段構成で正しい (grep で coincurve 参照ゼロを確認済み)。
+
+**別途:** coincurve 完全削除は breaking change (optional 依存 `bsv-sdk[coincurve]` の廃止 +
+`PrivateKey.der/pem/from_der/from_pem` が `NotImplementedError` 化) を含むため、**CHANGELOG /
+リリースノートに breaking エントリを追加**すべき (対象バージョン確定後)。
+
+---
+
+## coincurve 完全廃止記録 (2026-07-02)
+
+### 背景・動機
+
+当初は「十分な実績蓄積後にメジャーバージョンで削除」の予定だった (上記「4. coincurve の段階的廃止」)。
+これを**前倒しして完全削除**した。直接の引き金は **Python 3.14 対応**:
+
+- coincurve は 3.14 wheel を提供しておらず ([ofek/coincurve#219])、optional 依存に残したままでも
+  「3.14 で coincurve 経路を要求する」構成が混乱・サポートコストの元になる
+- Phase 0-4 で `_bsv_native` が coincurve の全機能を代替済み。残るフォールバック用途は
+  「C 拡張がビルドできない環境」向けだが、その受け皿を coincurve (これも C ビルド + 外部 wheel 依存)
+  にする必然性は既になく、**純Python 実装の方が「追加依存ゼロ・全 Python バージョンで動く」**
+  というフォールバックの本来目的に適う
+
+### 変更内容
+
+| ファイル | 変更 |
+|----------|------|
+| `bsv/curve.py` | coincurve import 削除。`_py_point_add` (点加算) と double-and-add による `curve_multiply` を純Python実装。フォールバック判定を `"python"` に |
+| `bsv/keys.py` | coincurve import 削除。`_rfc6979_k` (決定的nonce) / `_ecdsa_sign_recoverable_py` / `_ecdsa_verify_py` / `_ecdsa_recover_py` / `_pubkey_validate_and_compress` を追加。`PublicKey`/`PrivateKey` の全メソッドと `recover_public_key` の coincurve 経路を純Python に置換。`CcPrivateKey`/`CcPublicKey` 後方互換コードを削除 |
+| `pyproject.toml` | `[project.optional-dependencies].coincurve` を削除 |
+| `tests/bsv/native/test_pure_python_fallback.py` | 新規 65 件。`_CRYPTO_BACKEND="python"` 強制で round-trip + native 等価性を検証 |
+
+### 検証結果
+
+- native ⇔ 純Python で**公開鍵・アドレス・DER署名・recoverable署名がバイト一致** (RFC6979 の決定的 nonce
+  が libsecp256k1 と同一のため)。相互 verify も成功
+- 既存テストスイート全体 3,620 件通過 + 新規フォールバックテスト 65 件通過。ruff / black クリーン
+
+### 性能特性 (許容範囲)
+
+純Python パスは Python 大整数演算による楕円曲線演算のため native より大幅に遅い
+(ECDSA 1 回あたり概算 native ~50μs → 純Python ~5ms、約 100 倍)。ただしこのパスは
+「wheel が無く C 拡張もビルドできない環境」の**フォールバック専用**であり、pre-built wheel が
+ある通常環境では native が使われる。開発・CI・非対応プラットフォームでの動作保証が目的なので
+速度差は許容範囲。速度が必要な環境では wheel か sdist からの native ビルドを使う。
+
+### 唯一の機能削除: DER / PEM 入出力
+
+`PrivateKey.der()` / `.pem()` / `.from_der()` / `.from_pem()` は coincurve 固有機能だったため
+`NotImplementedError` 化した。いずれも元々 `# pragma: no cover` (テスト外) で、SDK の通常
+ワークフロー (WIF / hex / bytes でのキー管理) では未使用。必要になれば pyca/cryptography か
+純Python ASN.1 で再実装可能。
 
 ---
 
