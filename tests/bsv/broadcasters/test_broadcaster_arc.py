@@ -136,7 +136,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
             },
         )
         mock_sync_http_client = MagicMock(SyncHttpClient)
-        mock_sync_http_client.post = MagicMock(return_value=mock_response)
+        mock_sync_http_client.fetch = MagicMock(return_value=mock_response)
 
         arc_config = ARCConfig(api_key=self.api_key, sync_http_client=mock_sync_http_client)
         arc = ARC(self.URL, arc_config)
@@ -158,7 +158,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
             },
         )
         mock_sync_http_client = MagicMock(SyncHttpClient)
-        mock_sync_http_client.post = MagicMock(return_value=mock_response)  # fetch → post
+        mock_sync_http_client.fetch = MagicMock(return_value=mock_response)  # fetch → post
 
         arc_config = ARCConfig(api_key=self.api_key, sync_http_client=mock_sync_http_client)
         arc = ARC(self.URL, arc_config)
@@ -178,7 +178,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
             json_data={"data": {"status": "ERR_BAD_REQUEST", "detail": "Invalid transaction"}},
         )
         mock_sync_http_client = MagicMock(SyncHttpClient)
-        mock_sync_http_client.post = MagicMock(return_value=mock_response)  # fetch → post
+        mock_sync_http_client.fetch = MagicMock(return_value=mock_response)  # fetch → post
 
         arc_config = ARCConfig(api_key=self.api_key, sync_http_client=mock_sync_http_client)
         arc = ARC(self.URL, arc_config)
@@ -194,7 +194,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
             ok=False, status_code=408, json_data={"data": {"status": "ERR_TIMEOUT", "detail": "Request timed out"}}
         )
         mock_sync_http_client = MagicMock(SyncHttpClient)
-        mock_sync_http_client.post = MagicMock(return_value=mock_response)
+        mock_sync_http_client.fetch = MagicMock(return_value=mock_response)
 
         arc_config = ARCConfig(api_key=self.api_key, sync_http_client=mock_sync_http_client)
         arc = ARC(self.URL, arc_config)
@@ -211,7 +211,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
             ok=False, status_code=503, json_data={"data": {"status": "ERR_CONNECTION", "detail": "Service unavailable"}}
         )
         mock_sync_http_client = MagicMock(SyncHttpClient)
-        mock_sync_http_client.post = MagicMock(return_value=mock_response)
+        mock_sync_http_client.fetch = MagicMock(return_value=mock_response)
 
         arc_config = ARCConfig(api_key=self.api_key, sync_http_client=mock_sync_http_client)
         arc = ARC(self.URL, arc_config)
@@ -224,7 +224,7 @@ class TestARCBroadcast(unittest.IsolatedAsyncioTestCase):
 
     def test_sync_broadcast_exception(self):
         mock_sync_http_client = MagicMock(SyncHttpClient)
-        mock_sync_http_client.post = MagicMock(side_effect=Exception("Internal Error"))
+        mock_sync_http_client.fetch = MagicMock(side_effect=Exception("Internal Error"))
 
         arc_config = ARCConfig(api_key=self.api_key, sync_http_client=mock_sync_http_client)
         arc = ARC(self.URL, arc_config)
