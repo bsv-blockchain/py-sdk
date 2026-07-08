@@ -710,9 +710,7 @@ class Transaction:
             if not input_verified:
                 return False
 
-            other_inputs = [
-                inp for j, inp in enumerate(self.inputs) if j != i
-            ]
+            other_inputs = [inp for j, inp in enumerate(self.inputs) if j != i]
 
             try:
                 Spend(

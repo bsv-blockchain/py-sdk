@@ -856,12 +856,8 @@ class Spend:
         return self._validate_python()
 
     def _validate_native(self) -> bool:
-        unlock_chunks = [
-            (int.from_bytes(c.op, "big"), c.data) for c in self.unlocking_script.chunks
-        ]
-        lock_chunks = [
-            (int.from_bytes(c.op, "big"), c.data) for c in self.locking_script.chunks
-        ]
+        unlock_chunks = [(int.from_bytes(c.op, "big"), c.data) for c in self.unlocking_script.chunks]
+        lock_chunks = [(int.from_bytes(c.op, "big"), c.data) for c in self.locking_script.chunks]
 
         other_inputs_tuples = [
             (

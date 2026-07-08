@@ -62,10 +62,12 @@ def _build_merkle_path(height):
         sibling_offset = 1 if h == 0 else (0 >> h) ^ 1
         pair_hash = os.urandom(32).hex()
         if h == 0:
-            path.append([
-                {"offset": 0, "hash_str": txid},
-                {"offset": 1, "hash_str": pair_hash},
-            ])
+            path.append(
+                [
+                    {"offset": 0, "hash_str": txid},
+                    {"offset": 1, "hash_str": pair_hash},
+                ]
+            )
         else:
             offset = (0 >> h) ^ 1
             path.append([{"offset": offset, "hash_str": pair_hash}])
@@ -80,11 +82,13 @@ def _build_p2pkh_spend():
     lock = P2PKH().lock(key.address())
     source_tx = Transaction([], [TransactionOutput(locking_script=lock, satoshis=1000)])
     tx = Transaction(
-        [TransactionInput(
-            source_transaction=source_tx,
-            source_output_index=0,
-            unlocking_script_template=P2PKH().unlock(key),
-        )],
+        [
+            TransactionInput(
+                source_transaction=source_tx,
+                source_output_index=0,
+                unlocking_script_template=P2PKH().unlock(key),
+            )
+        ],
         [TransactionOutput(locking_script=P2PKH().lock(key.address()), change=True)],
     )
     tx.fee()
@@ -95,6 +99,7 @@ def _build_p2pkh_spend():
 # ═══════════════════════════════════════════════════════════════════════
 # 1. Hash functions
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestBenchHash:
     DATA_32 = b"\xab\xcd" * 16
@@ -122,6 +127,7 @@ class TestBenchHash:
 # ═══════════════════════════════════════════════════════════════════════
 # 2. Script chunk parse / serialize
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestBenchScriptChunks:
     P2PKH_BYTES = bytes.fromhex(P2PKH_SCRIPT_HEX)
@@ -152,6 +158,7 @@ class TestBenchScriptChunks:
 # 3. Transaction parse / serialize / txid
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestBenchTx:
     TX_SMALL = bytes.fromhex(TX_1IN_2OUT)
     TX_100IN = _build_large_tx(100, 2)
@@ -175,13 +182,17 @@ class TestBenchTx:
     def test_txid_python(self, benchmark):
         def _py_txid():
             return py_hash256(self.TX_SMALL)[::-1].hex()
+
         benchmark(_py_txid)
 
     def test_tx_serialize_c(self, benchmark):
         parsed = _bsv_native.tx_from_bytes(self.TX_SMALL)
         benchmark(
             _bsv_native.tx_to_bytes,
-            parsed["version"], parsed["inputs"], parsed["outputs"], parsed["locktime"],
+            parsed["version"],
+            parsed["inputs"],
+            parsed["outputs"],
+            parsed["locktime"],
         )
 
     def test_tx_serialize_python(self, benchmark):
@@ -192,6 +203,7 @@ class TestBenchTx:
 # ═══════════════════════════════════════════════════════════════════════
 # 4. ECDSA sign / verify
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestBenchCrypto:
     SECRET = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000001")
@@ -213,6 +225,7 @@ class TestBenchCrypto:
 # 5. Preimage (BIP-143)
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestBenchPreimage:
     @staticmethod
     def _setup_preimage():
@@ -227,22 +240,30 @@ class TestBenchPreimage:
     def test_preimage_c(self, benchmark):
         tx = self._setup_preimage()
         from bsv.transaction_preimage import _inputs_to_tuples, _outputs_to_bytes
+
         inp_tuples = _inputs_to_tuples(tx.inputs)
         out_bytes = _outputs_to_bytes(tx.outputs)
         benchmark(
             _bsv_native.tx_preimages,
-            tx.version, tx.locktime, inp_tuples, out_bytes,
+            tx.version,
+            tx.locktime,
+            inp_tuples,
+            out_bytes,
         )
 
     def test_preimage_python(self, benchmark):
         tx = self._setup_preimage()
         import bsv.transaction_preimage as tp_mod
+
         orig = tp_mod._USE_NATIVE
         tp_mod._USE_NATIVE = False
         try:
             benchmark(
                 tp_mod.tx_preimages,
-                tx.inputs, tx.outputs, tx.version, tx.locktime,
+                tx.inputs,
+                tx.outputs,
+                tx.version,
+                tx.locktime,
             )
         finally:
             tp_mod._USE_NATIVE = orig
@@ -251,6 +272,7 @@ class TestBenchPreimage:
 # ═══════════════════════════════════════════════════════════════════════
 # 6. Merkle root computation
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestBenchMerkle:
     def test_merkle_hash_pair_c(self, benchmark):
@@ -262,10 +284,12 @@ class TestBenchMerkle:
 
         def _py():
             return py_hash256(bytes.fromhex(a + b)[::-1])[::-1].hex()
+
         benchmark(_py)
 
     def test_merkle_root_h10_c(self, benchmark):
         import bsv.merkle_path as mp_mod
+
         mp, txid = _build_merkle_path(10)
         orig = mp_mod._USE_NATIVE
         mp_mod._USE_NATIVE = True
@@ -276,6 +300,7 @@ class TestBenchMerkle:
 
     def test_merkle_root_h10_python(self, benchmark):
         import bsv.merkle_path as mp_mod
+
         mp, txid = _build_merkle_path(10)
         orig = mp_mod._USE_NATIVE
         mp_mod._USE_NATIVE = False
@@ -289,6 +314,7 @@ class TestBenchMerkle:
 # 7. Spend VM (P2PKH validate)
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestBenchSpend:
     @staticmethod
     def _setup():
@@ -297,23 +323,26 @@ class TestBenchSpend:
     def test_spend_validate_c(self, benchmark):
         tx, lock = self._setup()
         from bsv.script import spend as spend_mod
+
         orig = spend_mod._USE_NATIVE_VM
 
         def run():
             spend_mod._USE_NATIVE_VM = True
-            s = Spend({
-                "unlockingScript": tx.inputs[0].unlocking_script,
-                "lockingScript": lock,
-                "transactionVersion": tx.version,
-                "sourceTXID": tx.inputs[0].source_txid or "00" * 32,
-                "sourceOutputIndex": tx.inputs[0].source_output_index,
-                "lockTime": tx.locktime,
-                "inputIndex": 0,
-                "inputSequence": tx.inputs[0].sequence,
-                "sourceSatoshis": tx.inputs[0].satoshis or 0,
-                "otherInputs": [],
-                "outputs": tx.outputs,
-            })
+            s = Spend(
+                {
+                    "unlockingScript": tx.inputs[0].unlocking_script,
+                    "lockingScript": lock,
+                    "transactionVersion": tx.version,
+                    "sourceTXID": tx.inputs[0].source_txid or "00" * 32,
+                    "sourceOutputIndex": tx.inputs[0].source_output_index,
+                    "lockTime": tx.locktime,
+                    "inputIndex": 0,
+                    "inputSequence": tx.inputs[0].sequence,
+                    "sourceSatoshis": tx.inputs[0].satoshis or 0,
+                    "otherInputs": [],
+                    "outputs": tx.outputs,
+                }
+            )
             return s.validate()
 
         try:
@@ -324,23 +353,26 @@ class TestBenchSpend:
     def test_spend_validate_python(self, benchmark):
         tx, lock = self._setup()
         from bsv.script import spend as spend_mod
+
         orig = spend_mod._USE_NATIVE_VM
 
         def run():
             spend_mod._USE_NATIVE_VM = False
-            s = Spend({
-                "unlockingScript": tx.inputs[0].unlocking_script,
-                "lockingScript": lock,
-                "transactionVersion": tx.version,
-                "sourceTXID": tx.inputs[0].source_txid or "00" * 32,
-                "sourceOutputIndex": tx.inputs[0].source_output_index,
-                "lockTime": tx.locktime,
-                "inputIndex": 0,
-                "inputSequence": tx.inputs[0].sequence,
-                "sourceSatoshis": tx.inputs[0].satoshis or 0,
-                "otherInputs": [],
-                "outputs": tx.outputs,
-            })
+            s = Spend(
+                {
+                    "unlockingScript": tx.inputs[0].unlocking_script,
+                    "lockingScript": lock,
+                    "transactionVersion": tx.version,
+                    "sourceTXID": tx.inputs[0].source_txid or "00" * 32,
+                    "sourceOutputIndex": tx.inputs[0].source_output_index,
+                    "lockTime": tx.locktime,
+                    "inputIndex": 0,
+                    "inputSequence": tx.inputs[0].sequence,
+                    "sourceSatoshis": tx.inputs[0].satoshis or 0,
+                    "otherInputs": [],
+                    "outputs": tx.outputs,
+                }
+            )
             return s.validate()
 
         try:

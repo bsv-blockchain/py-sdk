@@ -799,11 +799,7 @@ class TestMemoryGrowth:
             fn()
         snap2 = tracemalloc.take_snapshot()
         tracemalloc.stop()
-        new_blocks = sum(
-            stat.count_diff
-            for stat in snap2.compare_to(snap1, "lineno")
-            if stat.count_diff > 0
-        )
+        new_blocks = sum(stat.count_diff for stat in snap2.compare_to(snap1, "lineno") if stat.count_diff > 0)
         assert new_blocks < self.MAX_NEW_BLOCKS, (
             f"leaked ~{new_blocks / self.ITERATIONS:.2f} blocks/call "
             f"({new_blocks:,} new live blocks over {self.ITERATIONS:,} iterations)"
@@ -816,9 +812,7 @@ class TestMemoryGrowth:
     def test_tx_to_bytes_no_growth(self):
         parsed = _bsv_native.tx_from_bytes(self.TX_1IN_2OUT)
         self._assert_no_growth(
-            lambda: _bsv_native.tx_to_bytes(
-                parsed["version"], parsed["inputs"], parsed["outputs"], parsed["locktime"]
-            )
+            lambda: _bsv_native.tx_to_bytes(parsed["version"], parsed["inputs"], parsed["outputs"], parsed["locktime"])
         )
 
     def test_parse_script_chunks_success_path_no_growth(self):
@@ -864,6 +858,7 @@ def _all_export_cases():
                 f()
             except Exception:
                 pass
+
         return run
 
     return [
@@ -887,8 +882,10 @@ def _all_export_cases():
         ("ecdsa_sign_with_k", lambda: N.ecdsa_sign_with_k(msg, sec, k)),
         ("ecdh", lambda: N.ecdh(sec, pk2)),
         ("tx_from_bytes", lambda: N.tx_from_bytes(tx)),
-        ("tx_to_bytes", lambda: N.tx_to_bytes(
-            parsed["version"], parsed["inputs"], parsed["outputs"], parsed["locktime"])),
+        (
+            "tx_to_bytes",
+            lambda: N.tx_to_bytes(parsed["version"], parsed["inputs"], parsed["outputs"], parsed["locktime"]),
+        ),
         ("tx_txid", lambda: N.tx_txid(tx)),
         ("tx_preimages", lambda: N.tx_preimages(1, 0, in_tuples, out_bytes)),
         ("tx_preimage_otda", lambda: N.tx_preimage_otda(0, 1, 0, in_tuples, out_bytes)),
@@ -908,8 +905,10 @@ def _all_export_cases():
         ("ERR_tx_from_bytes", swallow(lambda: N.tx_from_bytes(b"\x01\x00"))),
         ("ERR_serialize_chunks", swallow(lambda: N.serialize_script_chunks([(0x4C, b"x" * 300)]))),
         ("ERR_merkle_hash_pair", swallow(lambda: N.merkle_hash_pair("zz" * 32, "bb" * 32))),
-        ("ERR_tx_preimage_otda_single", swallow(lambda: N.tx_preimage_otda(
-            0, 2, 0, [(txid, 0, b"", 1, 0xFFFFFFFF, 0x63)], []))),
+        (
+            "ERR_tx_preimage_otda_single",
+            swallow(lambda: N.tx_preimage_otda(0, 2, 0, [(txid, 0, b"", 1, 0xFFFFFFFF, 0x63)], [])),
+        ),
     ]
 
 
@@ -934,12 +933,8 @@ class TestFullSurfaceMemoryScan:
             fn()
         snap2 = tracemalloc.take_snapshot()
         tracemalloc.stop()
-        new_blocks = sum(
-            s.count_diff for s in snap2.compare_to(snap1, "lineno") if s.count_diff > 0
-        )
-        assert new_blocks < self.MAX_NEW_BLOCKS, (
-            f"{label}: leaked ~{new_blocks / self.ITERATIONS:.2f} blocks/call"
-        )
+        new_blocks = sum(s.count_diff for s in snap2.compare_to(snap1, "lineno") if s.count_diff > 0)
+        assert new_blocks < self.MAX_NEW_BLOCKS, f"{label}: leaked ~{new_blocks / self.ITERATIONS:.2f} blocks/call"
 
 
 # ---------------------------------------------------------------------------
@@ -956,9 +951,7 @@ class TestCrashHangRegression:
         import textwrap
 
         src = "import _bsv_native\n" + textwrap.dedent(body)
-        return subprocess.run(
-            [sys.executable, "-c", src], capture_output=True, text=True, timeout=timeout
-        )
+        return subprocess.run([sys.executable, "-c", src], capture_output=True, text=True, timeout=timeout)
 
     def test_sign_with_k_zero_does_not_hang(self):
         """k=0 (or any multiple of the curve order) once hung forever because
@@ -985,8 +978,7 @@ class TestCrashHangRegression:
     def test_spend_validate_otda_single_out_of_range_no_crash(self):
         """OTDA SIGHASH_SINGLE with input_index >= n_outputs once read
         outputs_list out of bounds (SIGSEGV). Must not crash the process."""
-        r = self._run(
-            """
+        r = self._run("""
             sec = b'\\x02' * 32
             pub = _bsv_native.pubkey_from_secret(sec)
             sig = _bsv_native.ecdsa_sign(_bsv_native.hash256(b'x'), sec) + b'\\x63'
@@ -998,16 +990,14 @@ class TestCrashHangRegression:
             except RuntimeError:
                 pass
             print('SURVIVED')
-            """
-        )
+            """)
         assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
         assert "SURVIVED" in r.stdout
 
     def test_spend_validate_otda_single_bug_digest(self):
         """A signature over hash256(0x01||0x00*31) must verify TRUE through the
         SIGHASH_SINGLE-bug path, proving the C digest matches the Python path."""
-        r = self._run(
-            """
+        r = self._run("""
             from bsv.hash import hash256
             sec = b'\\x02' * 32
             pub = _bsv_native.pubkey_from_secret(sec)
@@ -1018,23 +1008,20 @@ class TestCrashHangRegression:
             r = _bsv_native.spend_validate(unlock, lock, 2, '00'*32, 0, 0, 0,
                                            0xffffffff, 1000, [], [])
             print('OK' if r else 'FALSE')
-            """
-        )
+            """)
         assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
         assert "OK" in r.stdout
 
     def test_tx_preimage_otda_single_out_of_range_raises(self):
         """Exported tx_preimage_otda with SINGLE + input_index >= n_outputs
         once overflowed its buffer / read OOB. Must raise IndexError."""
-        r = self._run(
-            """
+        r = self._run("""
             inp = [('11'*32, 0, b'', 500, 0xffffffff, 0x63)]
             try:
                 _bsv_native.tx_preimage_otda(0, 2, 0, inp, [])
                 print('NOEXC')
             except IndexError:
                 print('INDEXERROR')
-            """
-        )
+            """)
         assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
         assert "INDEXERROR" in r.stdout

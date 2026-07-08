@@ -17,7 +17,6 @@ from bsv.script.type import P2PKH, BareMultisig
 from bsv.transaction import Transaction, TransactionInput, TransactionOutput
 from bsv.utils.script_chunks import ScriptChunk, _parse_script_bytes, serialize_chunks
 
-
 # ─── Test data ────────────────────────────────────────────────────────
 
 P2PKH_SCRIPT = "76a9146a176cd51593e00542b8e1958b7da2be97452d0588ac"
@@ -42,34 +41,44 @@ WIF_KEY = "L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9"
 # 1. Hash functions
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestHashEquivalence:
-    @pytest.mark.parametrize("data", [
-        b"",
-        b"\x00",
-        b"hello world",
-        b"\xff" * 32,
-        bytes(range(256)),
-        b"\xde\xad\xbe\xef" * 100,
-    ])
+    @pytest.mark.parametrize(
+        "data",
+        [
+            b"",
+            b"\x00",
+            b"hello world",
+            b"\xff" * 32,
+            bytes(range(256)),
+            b"\xde\xad\xbe\xef" * 100,
+        ],
+    )
     def test_sha256(self, data):
         assert _bsv_native.sha256(data) == py_sha256(data)
 
-    @pytest.mark.parametrize("data", [
-        b"",
-        b"\x00",
-        b"BSV hash256 test",
-        b"\xff" * 64,
-        bytes(range(256)),
-    ])
+    @pytest.mark.parametrize(
+        "data",
+        [
+            b"",
+            b"\x00",
+            b"BSV hash256 test",
+            b"\xff" * 64,
+            bytes(range(256)),
+        ],
+    )
     def test_hash256(self, data):
         assert _bsv_native.hash256(data) == py_hash256(data)
 
-    @pytest.mark.parametrize("key,msg", [
-        (b"\x00" * 32, b""),
-        (b"\x01" * 32, b"test message"),
-        (bytes(range(32)), bytes(range(64))),
-        (b"\xff" * 32, b"\xab\xcd" * 50),
-    ])
+    @pytest.mark.parametrize(
+        "key,msg",
+        [
+            (b"\x00" * 32, b""),
+            (b"\x01" * 32, b"test message"),
+            (bytes(range(32)), bytes(range(64))),
+            (b"\xff" * 32, b"\xab\xcd" * 50),
+        ],
+    )
     def test_hmac_sha256(self, key, msg):
         assert _bsv_native.hmac_sha256(key, msg) == py_hmac_sha256(key, msg)
 
@@ -78,15 +87,19 @@ class TestHashEquivalence:
 # 2. Script chunk parse / serialize
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestScriptChunksEquivalence:
-    @pytest.mark.parametrize("script_hex", [
-        P2PKH_SCRIPT,
-        "00",
-        "51",
-        "6a" + "04" + "deadbeef",
-        "00" * 100,
-        "4c" + "ff" + "aa" * 255,
-    ])
+    @pytest.mark.parametrize(
+        "script_hex",
+        [
+            P2PKH_SCRIPT,
+            "00",
+            "51",
+            "6a" + "04" + "deadbeef",
+            "00" * 100,
+            "4c" + "ff" + "aa" * 255,
+        ],
+    )
     def test_parse_roundtrip(self, script_hex):
         script_bytes = bytes.fromhex(script_hex)
         py_chunks = _parse_script_bytes(script_bytes)
@@ -96,13 +109,16 @@ class TestScriptChunksEquivalence:
             assert py_chunk.op == c_tuple[0]
             assert py_chunk.data == c_tuple[1]
 
-    @pytest.mark.parametrize("script_hex", [
-        P2PKH_SCRIPT,
-        "00",
-        "51",
-        "6a" + "04" + "deadbeef",
-        "4c" + "03" + "aabbcc",
-    ])
+    @pytest.mark.parametrize(
+        "script_hex",
+        [
+            P2PKH_SCRIPT,
+            "00",
+            "51",
+            "6a" + "04" + "deadbeef",
+            "4c" + "03" + "aabbcc",
+        ],
+    )
     def test_serialize_roundtrip(self, script_hex):
         script_bytes = bytes.fromhex(script_hex)
         py_chunks = _parse_script_bytes(script_bytes)
@@ -115,6 +131,7 @@ class TestScriptChunksEquivalence:
 # ═══════════════════════════════════════════════════════════════════════
 # 3. Transaction parse / serialize / txid
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestTxEquivalence:
     @pytest.mark.parametrize("tx_hex", [TX_1IN_2OUT, TX_2IN_3OUT])
@@ -152,6 +169,7 @@ class TestTxEquivalence:
 # ═══════════════════════════════════════════════════════════════════════
 # 4. Crypto: ECDSA sign / verify / recover
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestCryptoEquivalence:
     @pytest.fixture()
@@ -216,9 +234,7 @@ class TestCryptoEquivalence:
         tweak = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000002")
         pk = _bsv_native.pubkey_from_secret(secret)
         tweaked = _bsv_native.pubkey_tweak_add(pk, tweak)
-        expected = _bsv_native.pubkey_from_secret(
-            _bsv_native.seckey_tweak_add(secret, tweak)
-        )
+        expected = _bsv_native.pubkey_from_secret(_bsv_native.seckey_tweak_add(secret, tweak))
         assert tweaked == expected
 
     def test_pubkey_tweak_mul(self):
@@ -240,6 +256,7 @@ class TestCryptoEquivalence:
 # ═══════════════════════════════════════════════════════════════════════
 # 5. Preimage: BIP-143 (C vs Python)
 # ═══════════════════════════════════════════════════════════════════════
+
 
 def _build_tx_for_preimage(tx_hex, locking_script_hex, satoshis, sighash_flag):
     tx = Transaction.from_hex(tx_hex)
@@ -267,21 +284,29 @@ class TestPreimageEquivalence:
     def test_bip143_preimage_1in(self, sighash):
         tx = _build_tx_for_preimage(TX_1IN_2OUT, self.LOCKING_SCRIPT, self.SATOSHIS, sighash)
         from bsv.transaction_preimage import _inputs_to_tuples, _outputs_to_bytes
+
         inp_tuples = _inputs_to_tuples(tx.inputs)
         out_bytes = _outputs_to_bytes(tx.outputs)
 
         c_preimages = _bsv_native.tx_preimages(tx.version, tx.locktime, inp_tuples, out_bytes)
 
         from bsv.transaction_preimage import _preimage
+
         _hash_prevouts = py_hash256(
-            b"".join(bytes.fromhex(i.source_txid)[::-1] + i.source_output_index.to_bytes(4, "little") for i in tx.inputs)
+            b"".join(
+                bytes.fromhex(i.source_txid)[::-1] + i.source_output_index.to_bytes(4, "little") for i in tx.inputs
+            )
         )
         _hash_sequence = py_hash256(b"".join(i.sequence.to_bytes(4, "little") for i in tx.inputs))
         _hash_outputs = py_hash256(b"".join(o.serialize() for o in tx.outputs))
 
         sh = sighash
         hp = b"\x00" * 32 if sh & SIGHASH.ANYONECANPAY else _hash_prevouts
-        hs = b"\x00" * 32 if (sh & SIGHASH.ANYONECANPAY or sh & 0x1F == SIGHASH.SINGLE or sh & 0x1F == SIGHASH.NONE) else _hash_sequence
+        hs = (
+            b"\x00" * 32
+            if (sh & SIGHASH.ANYONECANPAY or sh & 0x1F == SIGHASH.SINGLE or sh & 0x1F == SIGHASH.NONE)
+            else _hash_sequence
+        )
         if sh & 0x1F not in (SIGHASH.SINGLE, SIGHASH.NONE):
             ho = _hash_outputs
         elif sh & 0x1F == SIGHASH.SINGLE and 0 < len(tx.outputs):
@@ -296,6 +321,7 @@ class TestPreimageEquivalence:
     def test_bip143_preimage_2in(self, sighash):
         tx = _build_tx_for_preimage(TX_2IN_3OUT, self.LOCKING_SCRIPT, self.SATOSHIS, sighash)
         from bsv.transaction_preimage import _inputs_to_tuples, _outputs_to_bytes
+
         inp_tuples = _inputs_to_tuples(tx.inputs)
         out_bytes = _outputs_to_bytes(tx.outputs)
         c_preimages = _bsv_native.tx_preimages(tx.version, tx.locktime, inp_tuples, out_bytes)
@@ -304,6 +330,7 @@ class TestPreimageEquivalence:
         py_tx = _build_tx_for_preimage(TX_2IN_3OUT, self.LOCKING_SCRIPT, self.SATOSHIS, sighash)
         from bsv.transaction_preimage import tx_preimages as py_tx_preimages
         import bsv.transaction_preimage as tp_mod
+
         orig = tp_mod._USE_NATIVE
         tp_mod._USE_NATIVE = False
         try:
@@ -318,6 +345,7 @@ class TestPreimageEquivalence:
 # ═══════════════════════════════════════════════════════════════════════
 # 6. Preimage: OTDA (C vs Python)
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestOTDAPreimageEquivalence:
     LOCKING_SCRIPT = "76a914c0a3c167a28cabb9fbb495affa0761e6e74ac60d88ac"
@@ -336,15 +364,18 @@ class TestOTDAPreimageEquivalence:
     def test_otda_preimage(self, sighash):
         tx = _build_tx_for_preimage(TX_2IN_3OUT, self.LOCKING_SCRIPT, self.SATOSHIS, sighash)
         from bsv.transaction_preimage import _inputs_to_tuples, _outputs_to_bytes
+
         inp_tuples = _inputs_to_tuples(tx.inputs)
         out_bytes = _outputs_to_bytes(tx.outputs)
         c_preimage = _bsv_native.tx_preimage_otda(0, tx.version, tx.locktime, inp_tuples, out_bytes)
 
         import bsv.transaction_preimage as tp_mod
+
         orig = tp_mod._USE_NATIVE
         tp_mod._USE_NATIVE = False
         try:
             from bsv.transaction_preimage import tx_preimage as py_tx_preimage
+
             py_preimage = py_tx_preimage(0, tx.inputs, tx.outputs, tx.version, tx.locktime)
         finally:
             tp_mod._USE_NATIVE = orig
@@ -355,6 +386,7 @@ class TestOTDAPreimageEquivalence:
 # ═══════════════════════════════════════════════════════════════════════
 # 7. Merkle
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestMerkleEquivalence:
     @staticmethod
@@ -381,28 +413,30 @@ class TestMerkleEquivalence:
 # 8. Script VM (Spend.validate): C vs Python
 # ═══════════════════════════════════════════════════════════════════════
 
+
 def _get_spend_mod():
     from bsv.script import spend
+
     return spend
 
 
 def _make_spend(unlock_script, lock_script, tx, input_index=0):
     inp = tx.inputs[input_index]
-    return Spend({
-        "unlockingScript": unlock_script,
-        "lockingScript": lock_script,
-        "transactionVersion": tx.version,
-        "sourceTXID": inp.source_txid or "00" * 32,
-        "sourceOutputIndex": inp.source_output_index,
-        "lockTime": tx.locktime,
-        "inputIndex": input_index,
-        "inputSequence": inp.sequence,
-        "sourceSatoshis": inp.satoshis or 0,
-        "otherInputs": [
-            other for j, other in enumerate(tx.inputs) if j != input_index
-        ],
-        "outputs": tx.outputs,
-    })
+    return Spend(
+        {
+            "unlockingScript": unlock_script,
+            "lockingScript": lock_script,
+            "transactionVersion": tx.version,
+            "sourceTXID": inp.source_txid or "00" * 32,
+            "sourceOutputIndex": inp.source_output_index,
+            "lockTime": tx.locktime,
+            "inputIndex": input_index,
+            "inputSequence": inp.sequence,
+            "sourceSatoshis": inp.satoshis or 0,
+            "otherInputs": [other for j, other in enumerate(tx.inputs) if j != input_index],
+            "outputs": tx.outputs,
+        }
+    )
 
 
 class TestSpendEquivalence:
@@ -410,11 +444,13 @@ class TestSpendEquivalence:
         key = PrivateKey(WIF_KEY)
         source_tx = Transaction([], [TransactionOutput(locking_script=lock_script, satoshis=1000)])
         tx = Transaction(
-            [TransactionInput(
-                source_transaction=source_tx,
-                source_output_index=0,
-                unlocking_script_template=unlock_template,
-            )],
+            [
+                TransactionInput(
+                    source_transaction=source_tx,
+                    source_output_index=0,
+                    unlocking_script_template=unlock_template,
+                )
+            ],
             [TransactionOutput(locking_script=P2PKH().lock(key.address()), change=True)],
         )
         tx.version = tx_version
@@ -455,6 +491,7 @@ class TestSpendEquivalence:
 
     def test_p2pk(self):
         from bsv.script.type import P2PK
+
         key = PrivateKey(WIF_KEY)
         result = self._validate_both(
             P2PK().unlock(key),
@@ -473,6 +510,7 @@ class TestSpendEquivalence:
 
     def test_op_return_fails(self):
         from bsv.script.type import OpReturn
+
         lock = OpReturn().lock(["test data"])
 
         spend_mod = _get_spend_mod()
@@ -481,19 +519,21 @@ class TestSpendEquivalence:
         for use_native in [True, False]:
             spend_mod._USE_NATIVE_VM = use_native
             with pytest.raises(RuntimeError):
-                Spend({
-                    "unlockingScript": Script(b""),
-                    "lockingScript": lock,
-                    "transactionVersion": 2,
-                    "sourceTXID": "00" * 32,
-                    "sourceOutputIndex": 0,
-                    "lockTime": 0,
-                    "inputIndex": 0,
-                    "inputSequence": 0xFFFFFFFF,
-                    "sourceSatoshis": 0,
-                    "otherInputs": [],
-                    "outputs": [],
-                }).validate()
+                Spend(
+                    {
+                        "unlockingScript": Script(b""),
+                        "lockingScript": lock,
+                        "transactionVersion": 2,
+                        "sourceTXID": "00" * 32,
+                        "sourceOutputIndex": 0,
+                        "lockTime": 0,
+                        "inputIndex": 0,
+                        "inputSequence": 0xFFFFFFFF,
+                        "sourceSatoshis": 0,
+                        "otherInputs": [],
+                        "outputs": [],
+                    }
+                ).validate()
 
         spend_mod._USE_NATIVE_VM = orig
 
@@ -501,6 +541,7 @@ class TestSpendEquivalence:
 # ═══════════════════════════════════════════════════════════════════════
 # 9. Known error-message differences (document, don't fail)
 # ═══════════════════════════════════════════════════════════════════════
+
 
 class TestKnownDifferences:
     """
@@ -514,11 +555,13 @@ class TestKnownDifferences:
         lock = P2PKH().lock(key.address())
         source_tx = Transaction([], [TransactionOutput(locking_script=lock, satoshis=1000)])
         tx = Transaction(
-            [TransactionInput(
-                source_transaction=source_tx,
-                source_output_index=0,
-                unlocking_script_template=P2PKH().unlock(key),
-            )],
+            [
+                TransactionInput(
+                    source_transaction=source_tx,
+                    source_output_index=0,
+                    unlocking_script_template=P2PKH().unlock(key),
+                )
+            ],
             [TransactionOutput(locking_script=P2PKH().lock(key.address()), change=True)],
         )
         tx.version = 1
@@ -526,21 +569,26 @@ class TestKnownDifferences:
         tx.sign()
 
         from bsv.hash import hash256
+
         sig_hash = tx.calc_input_signature_hash(
-            0, int(SIGHASH.ALL_FORKID),
+            0,
+            int(SIGHASH.ALL_FORKID),
             tx.inputs[0].locking_script,
             tx.inputs[0].satoshis,
         )
 
         from bsv.curve import curve
+
         sig_bytes = _bsv_native.ecdsa_sign(sig_hash, key._secret)
         r_len = sig_bytes[3]
-        r = int.from_bytes(sig_bytes[4:4 + r_len], "big")
+        r = int.from_bytes(sig_bytes[4 : 4 + r_len], "big")
         s_start = 4 + r_len + 2
         s_len = sig_bytes[s_start - 1]
-        s = int.from_bytes(sig_bytes[s_start:s_start + s_len], "big")
+        s = int.from_bytes(sig_bytes[s_start : s_start + s_len], "big")
 
         is_low_s = s <= curve.n // 2
         # The native ecdsa_sign always normalizes to low-S, so we can't
         # easily construct a high-S signature here. Just document the known difference.
-        assert is_low_s, "ecdsa_sign always produces low-S; high-S error message difference is documented in c-extension-plan.md Phase 3c"
+        assert (
+            is_low_s
+        ), "ecdsa_sign always produces low-S; high-S error message difference is documented in c-extension-plan.md Phase 3c"
