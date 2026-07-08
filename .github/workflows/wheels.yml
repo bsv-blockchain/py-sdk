@@ -124,8 +124,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install without C extension
-        run: |
-          BSV_NO_NATIVE=1 pip install .[test]
+        env:
+          BSV_NO_NATIVE: "1"
+        run: pip install .[test]
 
       - name: Verify _bsv_native is NOT available
         run: |
