@@ -125,7 +125,7 @@ jobs:
 
       - name: Install without C extension
         run: |
-          BSV_NO_NATIVE=1 pip install -e .[test]
+          BSV_NO_NATIVE=1 pip install .[test]
 
       - name: Verify _bsv_native is NOT available
         run: |
