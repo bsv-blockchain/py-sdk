@@ -24,6 +24,7 @@ class ARCConfig:
         callback_url: Optional[str] = None,
         callback_token: Optional[str] = None,
         headers: Optional[dict[str, str]] = None,
+        format: Optional[str] = None,
     ):
         self.api_key = api_key
         self.http_client = http_client
@@ -32,6 +33,7 @@ class ARCConfig:
         self.callback_url = callback_url
         self.callback_token = callback_token
         self.headers = headers
+        self.format = format
 
 
 def default_deployment_id() -> str:
@@ -156,6 +158,7 @@ class ARC(Broadcaster):
             self.callback_url = None
             self.callback_token = None
             self.headers = None
+            self.format = "json"
         else:
             config = config or ARCConfig()
             self.api_key = config.api_key
@@ -165,6 +168,7 @@ class ARC(Broadcaster):
             self.callback_url = config.callback_url
             self.callback_token = config.callback_token
             self.headers = config.headers
+            self.format = config.format or "json"
 
     async def broadcast(self, tx: "Transaction") -> BroadcastResponse | BroadcastFailure:
         """Broadcast a transaction to the BSV network via ARC.
@@ -174,13 +178,8 @@ class ARC(Broadcaster):
         mined or final. Use :meth:`check_transaction_status` and
         :meth:`categorize_transaction_status` to track confirmation progress.
         """
-        # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
-        request_options = {
-            "method": "POST",
-            "headers": self.request_headers(),
-            "data": {"rawTx": tx.to_ef().hex() if has_all_source_txs else tx.hex()},
-        }
+        request_options = self._build_request_options(tx, has_all_source_txs)
         bound = self._http_timeout_for_v1_tx_post()
         if bound is not None:
             request_options["timeout"] = bound
@@ -238,9 +237,30 @@ class ARC(Broadcaster):
                 },
             )
 
-    def request_headers(self) -> dict[str, str]:
+    def _build_request_options(self, tx: "Transaction", has_all_source_txs: bool) -> dict:
+        if self.format == "beef":
+            content_type = "application/beef"
+            raw_data = tx.to_beef()
+        elif self.format == "raw":
+            content_type = "application/octet-stream"
+            raw_data = tx.to_ef() if has_all_source_txs else tx.serialize()
+        else:
+            content_type = "application/json"
+            raw_data = None
+
+        options: dict = {
+            "method": "POST",
+            "headers": self.request_headers(content_type=content_type),
+        }
+        if raw_data is not None:
+            options["raw_data"] = raw_data
+        else:
+            options["data"] = {"rawTx": tx.to_ef().hex() if has_all_source_txs else tx.hex()}
+        return options
+
+    def request_headers(self, content_type: str = "application/json") -> dict[str, str]:
         headers = {
-            "Content-Type": "application/json",
+            "Content-Type": content_type,
             "XDeployment-ID": self.deployment_id,
         }
 
@@ -303,7 +323,6 @@ class ARC(Broadcaster):
         :param timeout: Timeout setting in seconds
         :returns: BroadcastResponse or BroadcastFailure
         """
-        # Check if all inputs have source_transaction
         has_all_source_txs = all(input.source_transaction is not None for input in tx.inputs)
 
         effective_timeout = timeout
@@ -311,12 +330,13 @@ class ARC(Broadcaster):
         if bound is not None:
             effective_timeout = max(effective_timeout, bound)
 
+        request_options = self._build_request_options(tx, has_all_source_txs)
+        request_options["timeout"] = effective_timeout
+
         try:
-            response = self.sync_http_client.post(
+            response = self.sync_http_client.fetch(
                 f"{self.URL}/v1/tx",
-                data={"rawTx": tx.to_ef().hex() if has_all_source_txs else tx.hex()},
-                headers=self.request_headers(),
-                timeout=effective_timeout,
+                request_options,
             )
 
             response_json = response.json()

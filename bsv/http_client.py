@@ -32,12 +32,14 @@ class DefaultHttpClient(HttpClient):
         aiohttp_timeout = aiohttp.ClientTimeout(total=timeout_value) if timeout_value is not None else None
 
         async with aiohttp.ClientSession() as session:
+            raw_data = options.get("raw_data")
+            body_kwargs = {"data": raw_data} if raw_data is not None else {"json": options.get("data")}
             async with session.request(
                 method=options["method"],
                 url=url,
                 headers=options.get("headers", {}),
-                json=options.get("data"),
                 timeout=aiohttp_timeout,
+                **body_kwargs,
             ) as response:
                 text = await response.text()
                 ok = 200 <= response.status <= 299
@@ -93,8 +95,11 @@ class SyncHttpClient(HttpClient):
         timeout = options.get("timeout", self.default_timeout)
         data = options.get("data")
 
+        raw_data = options.get("raw_data")
         try:
-            if method.upper() in ["POST", "PUT", "PATCH"] and data is not None:
+            if raw_data is not None:
+                response = requests.request(method=method, url=url, headers=headers, data=raw_data, timeout=timeout)
+            elif method.upper() in ["POST", "PUT", "PATCH"] and data is not None:
                 response = requests.request(method=method, url=url, headers=headers, json=data, timeout=timeout)
             else:
                 response = requests.request(method=method, url=url, headers=headers, timeout=timeout)
