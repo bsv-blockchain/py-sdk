@@ -126,23 +126,22 @@ jobs:
       - name: Install without C extension
         env:
           BSV_NO_NATIVE: "1"
-        run: pip install .[test]
+        run: |
+          pip install .[test]
+          mv _bsv_native _bsv_native_src
 
       - name: Verify _bsv_native is NOT available
-        working-directory: /tmp
         run: |
           python -c "
           try:
               import _bsv_native
-              print(type(_bsv_native))
               raise AssertionError('_bsv_native should not be importable')
           except ImportError:
               print('OK: pure Python mode')
           "
 
       - name: Run core tests in pure Python mode
-        run: |
-          pytest tests/bsv/script/test_scripts.py tests/bsv/primitives/ -x -q
+        run: pytest tests/bsv/script/test_scripts.py tests/bsv/primitives/ -x -q
 
   # ── publish to PyPI (tag push only) ─────────────────────────────────
   publish:
