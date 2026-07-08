@@ -9,7 +9,8 @@ import pytest
 
 import _bsv_native
 from bsv.constants import SIGHASH
-from bsv.hash import hash256 as py_hash256, sha256 as py_sha256
+from bsv.hash import hash256 as py_hash256
+from bsv.hash import sha256 as py_sha256
 from bsv.keys import PrivateKey
 from bsv.merkle_path import MerklePath
 from bsv.script.script import Script
@@ -59,7 +60,7 @@ def _build_merkle_path(height):
     txid = os.urandom(32).hex()
     path = []
     for h in range(height):
-        sibling_offset = 1 if h == 0 else (0 >> h) ^ 1
+        _ = 1 if h == 0 else (0 >> h) ^ 1
         pair_hash = os.urandom(32).hex()
         if h == 0:
             path.append(
@@ -228,7 +229,7 @@ class TestBenchCrypto:
 
 class TestBenchPreimage:
     @staticmethod
-    def _setup_preimage():
+    def _setup_preimage() -> tuple:
         tx = Transaction.from_hex(TX_1IN_2OUT)
         ls = "76a914c0a3c167a28cabb9fbb495affa0761e6e74ac60d88ac"
         for inp in tx.inputs:
@@ -317,7 +318,7 @@ class TestBenchMerkle:
 
 class TestBenchSpend:
     @staticmethod
-    def _setup():
+    def _setup() -> "Spend":
         return _build_p2pkh_spend()
 
     def test_spend_validate_c(self, benchmark):

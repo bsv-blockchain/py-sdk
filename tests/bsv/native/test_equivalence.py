@@ -9,7 +9,9 @@ import pytest
 
 import _bsv_native
 from bsv.constants import SIGHASH
-from bsv.hash import hash256 as py_hash256, sha256 as py_sha256, hmac_sha256 as py_hmac_sha256
+from bsv.hash import hash256 as py_hash256
+from bsv.hash import hmac_sha256 as py_hmac_sha256
+from bsv.hash import sha256 as py_sha256
 from bsv.keys import PrivateKey
 from bsv.script.script import Script
 from bsv.script.spend import Spend
@@ -105,7 +107,7 @@ class TestScriptChunksEquivalence:
         py_chunks = _parse_script_bytes(script_bytes)
         c_tuples = _bsv_native.parse_script_chunks(script_bytes)
         assert len(py_chunks) == len(c_tuples)
-        for py_chunk, c_tuple in zip(py_chunks, c_tuples):
+        for py_chunk, c_tuple in zip(py_chunks, c_tuples, strict=True):
             assert py_chunk.op == c_tuple[0]
             assert py_chunk.data == c_tuple[1]
 
@@ -143,11 +145,11 @@ class TestTxEquivalence:
         assert c_result["locktime"] == py_tx.locktime
         assert len(c_result["inputs"]) == len(py_tx.inputs)
         assert len(c_result["outputs"]) == len(py_tx.outputs)
-        for i, (c_inp, py_inp) in enumerate(zip(c_result["inputs"], py_tx.inputs)):
+        for i, (c_inp, py_inp) in enumerate(zip(c_result["inputs"], py_tx.inputs, strict=True)):
             assert c_inp["source_txid"] == py_inp.source_txid, f"input {i} txid"
             assert c_inp["source_output_index"] == py_inp.source_output_index, f"input {i} vout"
             assert c_inp["sequence"] == py_inp.sequence, f"input {i} seq"
-        for i, (c_out, py_out) in enumerate(zip(c_result["outputs"], py_tx.outputs)):
+        for i, (c_out, py_out) in enumerate(zip(c_result["outputs"], py_tx.outputs, strict=True)):
             assert c_out["satoshis"] == py_out.satoshis, f"output {i} satoshis"
             assert c_out["locking_script"] == py_out.locking_script.serialize(), f"output {i} script"
         c_serialized = _bsv_native.tx_to_bytes(
@@ -309,7 +311,7 @@ class TestPreimageEquivalence:
         )
         if sh & 0x1F not in (SIGHASH.SINGLE, SIGHASH.NONE):
             ho = _hash_outputs
-        elif sh & 0x1F == SIGHASH.SINGLE and 0 < len(tx.outputs):
+        elif sh & 0x1F == SIGHASH.SINGLE and len(tx.outputs) > 0:
             ho = py_hash256(tx.outputs[0].serialize())
         else:
             ho = b"\x00" * 32
@@ -328,8 +330,8 @@ class TestPreimageEquivalence:
         assert len(c_preimages) == 2
 
         py_tx = _build_tx_for_preimage(TX_2IN_3OUT, self.LOCKING_SCRIPT, self.SATOSHIS, sighash)
-        from bsv.transaction_preimage import tx_preimages as py_tx_preimages
         import bsv.transaction_preimage as tp_mod
+        from bsv.transaction_preimage import tx_preimages as py_tx_preimages
 
         orig = tp_mod._USE_NATIVE
         tp_mod._USE_NATIVE = False
@@ -390,7 +392,7 @@ class TestOTDAPreimageEquivalence:
 
 class TestMerkleEquivalence:
     @staticmethod
-    def _py_hash_fn(a_hex, b_hex):
+    def _py_hash_fn(a_hex, b_hex) -> str:
         """Python merkle_path.py hash_fn: hash256(bytes.fromhex(a+b)[::-1])[::-1].hex()"""
         return py_hash256(bytes.fromhex(a_hex + b_hex)[::-1])[::-1].hex()
 
@@ -581,7 +583,7 @@ class TestKnownDifferences:
 
         sig_bytes = _bsv_native.ecdsa_sign(sig_hash, key._secret)
         r_len = sig_bytes[3]
-        r = int.from_bytes(sig_bytes[4 : 4 + r_len], "big")
+        _ = int.from_bytes(sig_bytes[4 : 4 + r_len], "big")
         s_start = 4 + r_len + 2
         s_len = sig_bytes[s_start - 1]
         s = int.from_bytes(sig_bytes[s_start : s_start + s_len], "big")
