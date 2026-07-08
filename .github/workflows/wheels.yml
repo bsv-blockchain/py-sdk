@@ -14,6 +14,9 @@ on:
       - ".github/workflows/wheels.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   # ── sdist ───────────────────────────────────────────────────────────
   sdist:
