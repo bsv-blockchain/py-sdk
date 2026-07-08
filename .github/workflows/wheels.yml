@@ -61,8 +61,11 @@ jobs:
           - os: ubuntu-latest
             arch: aarch64
             cibw_archs: aarch64
-          # macOS x86_64
-          - os: macos-13
+          # macOS x86_64 — cross-compiled on Apple Silicon (macos-14).
+          # GitHub-hosted Intel (macos-13) runners are capacity-starved /
+          # deprecated and jobs sit queued for hours; arm64 runners allocate
+          # instantly and Apple clang cross-builds x86_64 natively.
+          - os: macos-14
             arch: x86_64
             cibw_archs: x86_64
           # macOS arm64
@@ -102,6 +105,10 @@ jobs:
           CIBW_TEST_COMMAND: >-
             python -c "import _bsv_native; print(_bsv_native.BACKEND, _bsv_native.__version__)" &&
             pytest {project}/tests/bsv/native/ -x -q
+          # x86_64 macOS wheels are cross-built on arm64 runners and cannot be
+          # executed there, so skip their test phase. arm64 wheels are tested
+          # natively, and the C sources are identical across arches.
+          CIBW_TEST_SKIP: "*-macosx_x86_64"
           CIBW_BUILD_VERBOSITY: 1
         run: cibuildwheel --output-dir wheelhouse
 
