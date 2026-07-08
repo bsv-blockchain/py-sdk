@@ -127,8 +127,10 @@ jobs:
         env:
           BSV_NO_NATIVE: "1"
         run: |
-          pip install setuptools wheel
-          pip install --no-build-isolation .[test]
+          pip install --no-build-isolation --no-cache-dir .[test]
+          pip show bsv-sdk
+          python -c "import sysconfig; print(sysconfig.get_paths()['platlib'])"
+          find "$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"platlib\"])')" -name '_bsv_native*' 2>/dev/null || echo "No _bsv_native found in site-packages"
 
       - name: Verify _bsv_native is NOT available
         run: |
