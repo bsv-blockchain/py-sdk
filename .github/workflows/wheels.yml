@@ -128,8 +128,8 @@ jobs:
           BSV_NO_NATIVE: "1"
         run: |
           pip install .[test]
-          # Remove the C extension .so if it was built despite BSV_NO_NATIVE
-          find "$(python -c 'import sysconfig; print(sysconfig.get_paths()[\"platlib\"])')" -name '_bsv_native*' -delete 2>/dev/null || true
+          SITE=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["platlib"])')
+          find "$SITE" -name '_bsv_native*' -delete 2>/dev/null || true
 
       - name: Verify _bsv_native is NOT available
         run: |
