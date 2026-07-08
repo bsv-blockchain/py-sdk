@@ -7,7 +7,7 @@ Both paths are called directly with the same input and outputs compared.
 
 import pytest
 
-import _bsv_native
+_bsv_native = pytest.importorskip("_bsv_native")
 from bsv.constants import SIGHASH
 from bsv.hash import hash256 as py_hash256
 from bsv.hash import hmac_sha256 as py_hmac_sha256

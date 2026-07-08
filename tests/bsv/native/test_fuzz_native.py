@@ -14,7 +14,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-import _bsv_native
+_bsv_native = pytest.importorskip("_bsv_native")
 
 DEADLINE_MS = 2000
 MAX_EXAMPLES = 200

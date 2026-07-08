@@ -7,7 +7,7 @@ Run: pytest tests/bsv/native/test_benchmark_native.py --benchmark-only -v
 
 import pytest
 
-import _bsv_native
+_bsv_native = pytest.importorskip("_bsv_native")
 from bsv.constants import SIGHASH
 from bsv.hash import hash256 as py_hash256
 from bsv.hash import sha256 as py_sha256
