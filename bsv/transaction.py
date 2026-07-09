@@ -60,6 +60,9 @@ class Transaction:
 
         self.kwargs: dict[str, Any] = dict(**kwargs) or {}
 
+        self._cached_hash: Optional[bytes] = None
+        self._cached_txid: Optional[str] = None
+
     def serialize(self) -> bytes:
         raw = self.version.to_bytes(4, "little")
         raw += unsigned_to_varint(len(self.inputs))
@@ -71,9 +74,14 @@ class Transaction:
         raw += self.locktime.to_bytes(4, "little")
         return raw
 
+    def _invalidate_hash_cache(self):
+        self._cached_hash = None
+        self._cached_txid = None
+
     def add_input(self, tx_input: TransactionInput) -> "Transaction":  # pragma: no cover
         if isinstance(tx_input, TransactionInput):
             self.inputs.append(tx_input)
+            self._invalidate_hash_cache()
         else:
             raise TypeError("unsupported transaction input type")
         return self
@@ -85,6 +93,7 @@ class Transaction:
 
     def add_output(self, tx_output: TransactionOutput) -> "Transaction":  # pragma: no cover
         self.outputs.append(tx_output)
+        self._invalidate_hash_cache()
         return self
 
     def add_outputs(self, tx_outputs: list[TransactionOutput]) -> "Transaction":
@@ -98,12 +107,14 @@ class Transaction:
     raw = hex
 
     def hash(self) -> bytes:
-        return hash256(self.serialize())
+        if self._cached_hash is None:
+            self._cached_hash = hash256(self.serialize())
+        return self._cached_hash
 
     def txid(self) -> str:
-        if _USE_NATIVE_TX:
-            return _bsv_native.tx_txid(self.serialize())
-        return self.hash()[::-1].hex()
+        if self._cached_txid is None:
+            self._cached_txid = self.hash()[::-1].hex()
+        return self._cached_txid
 
     def preimage(self, index: int) -> bytes:
         """
@@ -357,6 +368,7 @@ class Transaction:
             tx_input = self.inputs[i]
             if tx_input.unlocking_script is None or not bypass:
                 tx_input.unlocking_script = tx_input.unlocking_script_template.sign(self, i)
+        self._invalidate_hash_cache()
         return self
 
     def total_value_in(self) -> int:
@@ -446,6 +458,7 @@ class Transaction:
             # Not enough change to distribute among the change outputs.
             # Remove all change outputs and leave the extra for the miners.
             self.outputs = [out for out in self.outputs if not out.change]
+            self._invalidate_hash_cache()
             return
 
         # Distribute change among change outputs
@@ -457,6 +470,7 @@ class Transaction:
             for out in self.outputs:
                 if out.change:
                     out.satoshis = per_output
+        self._invalidate_hash_cache()
         return None
 
     async def broadcast(
