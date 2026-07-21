@@ -227,29 +227,24 @@ class TestLowSSignature:
         return to_unlock_script_template(sign, lambda: 107)
 
     def test_v1_rejects_high_s(self, priv_key):
-        """v1 tx rejects high-S signatures during encoding check.
-
-        The RuntimeError from low-S check is caught by suppress(Exception)
-        in check_signature_encoding, so the error surfaces as 'signature format'.
-        """
+        """v1 tx rejects high-S signatures during encoding check."""
         lock = P2PKH().lock(priv_key.address())
         unlock = self._make_high_s_unlock(priv_key)
         tx = _build_tx_no_validate(lock, unlock, tx_version=1)
-        with pytest.raises(RuntimeError, match="signature format is invalid"):
+        with pytest.raises(RuntimeError, match="low S value"):
             validate_spend(tx, 0)
 
     def test_v2_bypasses_low_s_check(self, priv_key):
-        """v2 tx bypasses low-S encoding check (fails later at crypto level).
+        """v2 tx bypasses low-S encoding check; high-S is valid in relaxed mode.
 
-        With is_relaxed()=True, check_signature_encoding passes the high-S sig.
-        But coincurve's verify() rejects high-S at the crypto level, so
-        CHECKSIG returns FALSE and the script fails.
+        With is_relaxed()=True, the low-S check is skipped.
+        libsecp256k1 correctly verifies high-S signatures (they are
+        mathematically valid), so the script succeeds.
         """
         lock = P2PKH().lock(priv_key.address())
         unlock = self._make_high_s_unlock(priv_key)
         tx = _build_tx_no_validate(lock, unlock, tx_version=2)
-        with pytest.raises(RuntimeError, match="truthy after script evaluation"):
-            validate_spend(tx, 0)
+        validate_spend(tx, 0)
 
 
 # ---------------------------------------------------------------------------

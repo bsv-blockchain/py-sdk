@@ -8,6 +8,9 @@ dist/
 htmlcov/
 .coverage
 build/
+*.so
+*.pyd
+*.dylib
 .wallet
 .venv/
 

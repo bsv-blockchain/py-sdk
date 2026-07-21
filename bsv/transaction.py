@@ -23,6 +23,13 @@ from .transaction_output import TransactionOutput
 from .transaction_preimage import tx_preimage
 from .utils import Reader, Writer, reverse_hex_byte_order, unsigned_to_varint
 
+try:
+    import _bsv_native
+
+    _USE_NATIVE_TX = True
+except ImportError:
+    _USE_NATIVE_TX = False
+
 
 # Lazy import to avoid circular dependency
 def Spend(params):  # NOSONAR - Matches TS SDK naming (class Spend)
@@ -144,9 +151,8 @@ class Transaction:
         Calculate BIP143/ForkID preimage for signature hashing.
         Uses tx_input.locking_script as the script_code (parameter kept for interface compatibility).
         """
-        from io import BytesIO
-
-        from .utils import unsigned_to_varint
+        if _USE_NATIVE_TX:
+            return self._calc_input_preimage_bip143_native(input_index, hash_type, prev_satoshis)
 
         tx_input = self.inputs[input_index]
 
@@ -159,6 +165,26 @@ class Transaction:
         return self._build_bip143_preimage(
             tx_input, hash_prevouts, hash_sequence, hash_outputs, hash_type, prev_satoshis
         )
+
+    def _calc_input_preimage_bip143_native(self, input_index: int, hash_type: int, prev_satoshis: int) -> bytes:
+        input_tuples = []
+        for i, inp in enumerate(self.inputs):
+            sh = hash_type if i == input_index else int(inp.sighash)
+            sats = prev_satoshis if (prev_satoshis != 0 and i == input_index) else (inp.satoshis or 0)
+            script = inp.locking_script.serialize() if inp.locking_script else b""
+            input_tuples.append(
+                (
+                    inp.source_txid,
+                    inp.source_output_index,
+                    script,
+                    sats,
+                    inp.sequence,
+                    sh,
+                )
+            )
+        output_bytes = [out.serialize() for out in self.outputs]
+        preimages = _bsv_native.tx_preimages(self.version, self.locktime, input_tuples, output_bytes)
+        return preimages[input_index]
 
     def _calc_hash_prevouts(self, hash_type: int) -> bytes:
         """Calculate hashPrevouts component for BIP143."""
@@ -604,6 +630,17 @@ class Transaction:
 
         Raises ValueError if data is invalid or incomplete.
         """
+        if _USE_NATIVE_TX:
+            pos_before = reader.tell()
+            remaining = reader.getvalue()[pos_before:]
+            if remaining:
+                try:
+                    d = _bsv_native.tx_from_bytes(remaining)
+                    reader.seek(pos_before + d["bytes_read"])
+                    return cls._from_native_dict(d)
+                except ValueError:
+                    reader.seek(pos_before)
+
         t = cls()
         t.version = reader.read_uint32_le()
         if t.version is None:
@@ -635,6 +672,30 @@ class Transaction:
 
         return t
 
+    @classmethod
+    def _from_native_dict(cls, d: dict) -> "Transaction":
+        """Construct a Transaction from the dict returned by _bsv_native.tx_from_bytes."""
+        t = cls()
+        t.version = d["version"]
+        t.locktime = d["locktime"]
+        for inp_d in d["inputs"]:
+            t.inputs.append(
+                TransactionInput(
+                    source_txid=inp_d["source_txid"],
+                    source_output_index=inp_d["source_output_index"],
+                    unlocking_script=Script(inp_d["unlocking_script"]),
+                    sequence=inp_d["sequence"],
+                )
+            )
+        for out_d in d["outputs"]:
+            t.outputs.append(
+                TransactionOutput(
+                    locking_script=Script(out_d["locking_script"]),
+                    satoshis=out_d["satoshis"],
+                )
+            )
+        return t
+
     async def verify(self, chaintracker: Optional[ChainTracker] = default_chain_tracker(), scripts_only=False) -> bool:
         if self.merkle_path and not scripts_only:
             proof_valid = await self.merkle_path.verify(self.txid(), chaintracker)
@@ -663,14 +724,25 @@ class Transaction:
             if not input_verified:
                 return False
 
-            # Use Engine-based script interpreter (matches Go SDK implementation)
-            from bsv.script.interpreter import Engine, with_after_genesis, with_fork_id, with_tx
+            other_inputs = [inp for j, inp in enumerate(self.inputs) if j != i]
 
-            engine = Engine()
-            err = engine.execute(with_tx(self, i, source_output), with_after_genesis(), with_fork_id())
-
-            if err is not None:
-                # Script verification failed
+            try:
+                Spend(
+                    {
+                        "sourceTXID": tx_input.source_txid or tx_input.source_transaction.txid(),
+                        "sourceOutputIndex": tx_input.source_output_index,
+                        "sourceSatoshis": source_output.satoshis,
+                        "lockingScript": source_output.locking_script,
+                        "transactionVersion": self.version,
+                        "otherInputs": other_inputs,
+                        "inputIndex": i,
+                        "unlockingScript": tx_input.unlocking_script,
+                        "outputs": self.outputs,
+                        "inputSequence": tx_input.sequence,
+                        "lockTime": self.locktime,
+                    }
+                ).validate()
+            except RuntimeError:
                 return False
 
         # All inputs verified successfully

@@ -56,16 +56,22 @@ class Script:
         if script is None:
             self._bytes: bytes = b""
         elif isinstance(script, str):
-            # script in hex string
             self._bytes: bytes = bytes.fromhex(script)
         elif isinstance(script, bytes):
-            # script in bytes
             self._bytes: bytes = script
         else:
             raise TypeError("unsupported script type")
-        # An array of script chunks that make up the script.
-        self.chunks: list[ScriptChunk] = []
-        self._build_chunks()
+        self._chunks: list[ScriptChunk] | None = None
+
+    @property
+    def chunks(self) -> list[ScriptChunk]:
+        if self._chunks is None:
+            self._build_chunks()
+        return self._chunks
+
+    @chunks.setter
+    def chunks(self, value: list[ScriptChunk]) -> None:
+        self._chunks = value
 
     @property
     def script(self) -> bytes:
@@ -92,7 +98,7 @@ class Script:
             chunk.data = reader.read_bytes(remaining_length)
         else:
             chunk.data = None
-        self.chunks.append(chunk)
+        self._chunks.append(chunk)
         return True  # Terminate parsing
 
     def _read_push_data(self, reader: Reader, op: bytes) -> Optional[bytes]:
@@ -111,7 +117,7 @@ class Script:
         return None
 
     def _build_chunks(self):
-        self.chunks = []
+        self._chunks = []
         reader = Reader(self._bytes)
         in_conditional_block = 0
 
@@ -128,7 +134,7 @@ class Script:
 
             data = self._read_push_data(reader, op)
             chunk.data = data
-            self.chunks.append(chunk)
+            self._chunks.append(chunk)
 
     def serialize(self) -> bytes:
         if self._bytes:

@@ -39,7 +39,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install hypothesis
         pip install -e .[test,dev]
+
+    - name: Verify C extension built
+      run: |
+        python -c "import _bsv_native; print(f'Backend: {_bsv_native.BACKEND}')"
 
     - name: Run linting
       run: |

@@ -6,6 +6,13 @@ from .hash import hash256
 from .transaction_input import TransactionInput
 from .transaction_output import TransactionOutput
 
+try:
+    import _bsv_native
+
+    _USE_NATIVE = True
+except ImportError:
+    _USE_NATIVE = False
+
 
 def _preimage(
     tx_input: TransactionInput,
@@ -54,6 +61,24 @@ def _preimage(
     return stream.getvalue()
 
 
+def _inputs_to_tuples(inputs: list[TransactionInput]) -> list[tuple]:
+    return [
+        (
+            inp.source_txid,
+            inp.source_output_index,
+            inp.locking_script.serialize(),
+            inp.satoshis or 0,
+            inp.sequence,
+            int(inp.sighash),
+        )
+        for inp in inputs
+    ]
+
+
+def _outputs_to_bytes(outputs: list[TransactionOutput]) -> list[bytes]:
+    return [out.serialize() for out in outputs]
+
+
 def tx_preimages(
     inputs: list[TransactionInput],
     outputs: list[TransactionOutput],
@@ -63,6 +88,9 @@ def tx_preimages(
     """
     :returns: the digests of unsigned transaction
     """
+    if _USE_NATIVE:
+        return _bsv_native.tx_preimages(tx_version, tx_locktime, _inputs_to_tuples(inputs), _outputs_to_bytes(outputs))
+
     _hash_prevouts = hash256(
         b"".join(bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little") for _in in inputs)
     )
@@ -206,7 +234,17 @@ def tx_preimage(
     sighash = inputs[input_index].sighash
 
     if SIGHASH.use_otda(sighash):
+        if _USE_NATIVE:
+            return _bsv_native.tx_preimage_otda(
+                input_index, tx_version, tx_locktime, _inputs_to_tuples(inputs), _outputs_to_bytes(outputs)
+            )
         return _preimage_otda(input_index, inputs, outputs, tx_version, tx_locktime)
+
+    if _USE_NATIVE:
+        preimages = _bsv_native.tx_preimages(
+            tx_version, tx_locktime, _inputs_to_tuples(inputs), _outputs_to_bytes(outputs)
+        )
+        return preimages[input_index]
 
     # BIP143 path
     # hash previous outs

@@ -121,6 +121,7 @@ The `bsv` package is organized into functional submodules:
 
   - `Broadcaster`: Interface for transaction broadcasting
   - `arc.py`: ARC broadcaster implementation
+  - `arcade.py`: Arcade broadcaster (Teranode-native, ARC-compatible; root-level `/tx` endpoints, EF submission)
   - `whatsonchain.py`: WhatsOnChain broadcaster
   - `default_broadcaster.py`: Default broadcaster selection
 
@@ -266,17 +267,15 @@ The SDK implements the BSV Chronicle network upgrade (MainNet block 943,816, tar
 - `bsv/script/spend.py`: `is_relaxed()`, all opcode handlers, malleability gates
 - `bsv/transaction.py`: `calc_input_signature_hash()` OTDA routing
 - `bsv/transaction_preimage.py`: `_preimage_otda()`, OTDA preimage generation
-- `bsv/script/interpreter/config.py`: 32MB script number limit
-
 ### Chronicle Tests
 
 ```bash
-pytest tests/bsv/script/test_chronicle_*.py tests/bsv/script/interpreter/test_chronicle_*.py -v
+pytest tests/bsv/script/test_chronicle_*.py -v
 ```
 
 ## Important Notes
 
-- The SDK uses `coincurve` for ECDSA operations (not pure Python)
+- The SDK uses `_bsv_native` (libsecp256k1 直接統合) for ECDSA operations. `coincurve` is an optional fallback
 - Encryption uses `pycryptodomex` (not standard `pycryptodome`)
 - Network operations require `aiohttp` for async HTTP
 - Tests require `pytest-asyncio` for async test support

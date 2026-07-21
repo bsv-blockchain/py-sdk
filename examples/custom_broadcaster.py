@@ -27,7 +27,7 @@ class WOC(Broadcaster):
         self.URL = f"https://api.whatsonchain.com/v1/bsv/{network}/tx/raw"
         self.http_client = http_client if http_client else default_http_client()
 
-    async def broadcast(self, tx: Transaction) -> Union[BroadcastResponse, BroadcastFailure]:
+    async def broadcast(self, tx: Transaction) -> BroadcastResponse | BroadcastFailure:
         """
         Broadcasts a transaction via WOC.
 

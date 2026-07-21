@@ -4,17 +4,15 @@ import os
 from base64 import b64decode, b64encode
 from typing import Callable, Optional, Tuple, Union
 
-from coincurve import PrivateKey as CcPrivateKey
-from coincurve import PublicKey as CcPublicKey
-
 from .aes_cbc import aes_decrypt_with_iv, aes_encrypt_with_iv
 from .base58 import base58check_encode
 from .constants import NETWORK_ADDRESS_PREFIX_DICT, NETWORK_WIF_PREFIX_DICT, PUBLIC_KEY_COMPRESSED_PREFIX_LIST, Network
-from .curve import Point, curve, curve_add, curve_multiply
+from .curve import Point, curve, curve_add, curve_get_y, curve_multiply, on_curve
 from .hash import hash160, hash256, hmac_sha256, hmac_sha512
 from .polynomial import KeyShares, PointInFiniteField, Polynomial
 from .utils import (
     decode_wif,
+    deserialize_ecdsa_der,
     deserialize_ecdsa_recoverable,
     serialize_ecdsa_der,
     stringify_ecdsa_recoverable,
@@ -22,38 +20,157 @@ from .utils import (
     unstringify_ecdsa_recoverable,
 )
 
+# ---------------------------------------------------------------------------
+# Crypto backend: _bsv_native (direct libsecp256k1) → pure Python fallback
+# ---------------------------------------------------------------------------
+_CRYPTO_BACKEND = None
+
+try:
+    import _bsv_native
+
+    _CRYPTO_BACKEND = "native"
+except ImportError:
+    _CRYPTO_BACKEND = "python"
+
+
+# ---------------------------------------------------------------------------
+# Pure Python ECDSA helpers (used when _bsv_native is unavailable)
+# ---------------------------------------------------------------------------
+
+
+def _rfc6979_k(msg_hash: bytes, secret: bytes) -> int:
+    v = b"\x01" * 32
+    k = b"\x00" * 32
+    k = hmac.new(k, v + b"\x00" + secret + msg_hash, hashlib.sha256).digest()
+    v = hmac.new(k, v, hashlib.sha256).digest()
+    k = hmac.new(k, v + b"\x01" + secret + msg_hash, hashlib.sha256).digest()
+    v = hmac.new(k, v, hashlib.sha256).digest()
+    while True:
+        v = hmac.new(k, v, hashlib.sha256).digest()
+        candidate = int.from_bytes(v, "big")
+        if 1 <= candidate < curve.n:
+            return candidate
+        k = hmac.new(k, v + b"\x00", hashlib.sha256).digest()
+        v = hmac.new(k, v, hashlib.sha256).digest()
+
+
+def _ecdsa_sign_recoverable_py(z: int, k: int, secret: bytes) -> bytes:
+    d = int.from_bytes(secret, "big")
+    R = curve_multiply(k, curve.g)
+    r = R.x
+    s = (pow(k, -1, curve.n) * (z + r * d)) % curve.n
+
+    recovery_id = 0 if R.y % 2 == 0 else 1
+    if s > curve.n // 2:
+        s = curve.n - s
+        recovery_id ^= 1
+
+    return r.to_bytes(32, "big") + s.to_bytes(32, "big") + bytes([recovery_id])
+
+
+def _ecdsa_verify_py(r: int, s: int, z: int, pubkey_point: Point) -> bool:
+    if r < 1 or r >= curve.n or s < 1 or s >= curve.n:
+        return False
+    s_inv = pow(s, -1, curve.n)
+    u1 = (z * s_inv) % curve.n
+    u2 = (r * s_inv) % curve.n
+    point = curve_add(curve_multiply(u1, curve.g), curve_multiply(u2, pubkey_point))
+    if point is None:
+        return False
+    return point.x % curve.n == r
+
+
+def _ecdsa_recover_py(r: int, s: int, recovery_id: int, z: int) -> Point:
+    y = curve_get_y(r, recovery_id % 2 == 0)
+    R = Point(r, y)
+    r_inv = pow(r, -1, curve.n)
+    u1 = (-z * r_inv) % curve.n
+    u2 = (s * r_inv) % curve.n
+    Q = curve_add(curve_multiply(u1, curve.g), curve_multiply(u2, R))
+    if Q is None:
+        raise ValueError("recovery failed: result is point at infinity")
+    return Q
+
+
+def _pubkey_validate_and_compress(pk: bytes) -> tuple[bytes, bytes | None]:
+    if len(pk) == 33:
+        prefix = pk[0]
+        if prefix not in (0x02, 0x03):
+            raise ValueError("invalid compressed public key prefix")
+        x = int.from_bytes(pk[1:33], "big")
+        y = curve_get_y(x, prefix == 0x02)
+        if not on_curve(Point(x, y)):
+            raise ValueError("public key not on curve")
+        return pk, None
+    if len(pk) == 65:
+        if pk[0] != 0x04:
+            raise ValueError("invalid uncompressed public key prefix")
+        x = int.from_bytes(pk[1:33], "big")
+        y = int.from_bytes(pk[33:65], "big")
+        if not on_curve(Point(x, y)):
+            raise ValueError("public key not on curve")
+        prefix = b"\x02" if y % 2 == 0 else b"\x03"
+        return prefix + pk[1:33], pk
+    raise ValueError("invalid public key length")
+
 
 class PublicKey:
-    def __init__(self, public_key: str | bytes | Point | CcPublicKey):
+    def __init__(self, public_key: Union[str, bytes, Point, "PublicKey"]):
         """
-        create public key from serialized hex string or bytes, or curve point, or CoinCurve public key
+        create public key from serialized hex string or bytes, or curve point, or another PublicKey
         """
-        self.compressed: bool = True  # use compressed format public key by default
+        self.compressed: bool = True
+
         if isinstance(public_key, Point):
-            # from curve point
-            self.key: CcPublicKey = CcPublicKey.from_point(public_key.x, public_key.y)
-        elif isinstance(public_key, CcPublicKey):
-            # from CoinCurve public key
-            self.key: CcPublicKey = public_key
+            x_bytes = public_key.x.to_bytes(32, "big")
+            y_bytes = public_key.y.to_bytes(32, "big")
+            uncompressed = b"\x04" + x_bytes + y_bytes
+            if _CRYPTO_BACKEND == "native":
+                self._raw: bytes = _bsv_native.pubkey_serialize(uncompressed, True)
+                self._raw_unc: bytes = uncompressed
+            else:
+                prefix = b"\x02" if public_key.y % 2 == 0 else b"\x03"
+                self._raw = prefix + x_bytes
+                self._raw_unc = uncompressed
+        elif isinstance(public_key, PublicKey):
+            self._raw = public_key.serialize(True)
+            self._raw_unc = None
+            self.compressed = public_key.compressed
         else:
             if isinstance(public_key, str):
-                # from serialized public key in hex string
                 pk: bytes = bytes.fromhex(public_key)
             elif isinstance(public_key, bytes):
-                # from serialized public key in bytes
                 pk: bytes = public_key
             else:
                 raise TypeError("unsupported public key type")
-            # here we have serialized public key in bytes
-            self.key: CcPublicKey = CcPublicKey(pk)
-            self.compressed: bool = pk[:1] in PUBLIC_KEY_COMPRESSED_PREFIX_LIST
+            self.compressed = pk[:1] in PUBLIC_KEY_COMPRESSED_PREFIX_LIST
+            if _CRYPTO_BACKEND == "native":
+                _bsv_native.pubkey_parse(pk)
+                self._raw = _bsv_native.pubkey_serialize(pk, True)
+                self._raw_unc = None
+            else:
+                self._raw, self._raw_unc = _pubkey_validate_and_compress(pk)
 
     def point(self) -> Point:
-        return Point(*self.key.point())
+        if _CRYPTO_BACKEND == "native":
+            x, y = _bsv_native.pubkey_point(self._raw)
+            return Point(x, y)
+        x = int.from_bytes(self._raw[1:33], "big")
+        y = curve_get_y(x, self._raw[0] == 0x02)
+        return Point(x, y)
 
     def serialize(self, compressed: Optional[bool] = None) -> bytes:
         compressed = self.compressed if compressed is None else compressed
-        return self.key.format(compressed)
+        if _CRYPTO_BACKEND == "native":
+            return _bsv_native.pubkey_serialize(self._raw, compressed)
+        if compressed:
+            return self._raw
+        if self._raw_unc is not None:
+            return self._raw_unc
+        x = int.from_bytes(self._raw[1:33], "big")
+        y = curve_get_y(x, self._raw[0] == 0x02)
+        self._raw_unc = b"\x04" + self._raw[1:33] + y.to_bytes(32, "big")
+        return self._raw_unc
 
     def hex(self, compressed: Optional[bool] = None) -> str:
         return self.serialize(compressed).hex()
@@ -76,7 +193,12 @@ class PublicKey:
         """
         verify serialized ECDSA signature in bitcoin strict DER (low-s) format
         """
-        return self.key.verify(signature, message, hasher)
+        if _CRYPTO_BACKEND == "native":
+            msg32 = hasher(message) if hasher else message
+            return _bsv_native.ecdsa_verify(signature, msg32, self.serialize())
+        msg32 = hasher(message) if hasher else message
+        r, s = deserialize_ecdsa_der(signature)
+        return _ecdsa_verify_py(r, s, int.from_bytes(msg32, "big"), self.point())
 
     def verify_recoverable(
         self, signature: bytes, message: bytes, hasher: Optional[Callable[[bytes], bytes]] = hash256
@@ -89,27 +211,23 @@ class PublicKey:
         return self.verify(der, message, hasher) and self == recover_public_key(signature, message, hasher)
 
     def derive_shared_secret(self, key: "PrivateKey") -> bytes:
-        return PublicKey(self.key.multiply(key.serialize())).serialize()
+        if _CRYPTO_BACKEND == "native":
+            result = _bsv_native.pubkey_tweak_mul(self.serialize(), key.serialize(), self.compressed)
+            return result
+        result_point = curve_multiply(int.from_bytes(key.serialize(), "big"), self.point())
+        return PublicKey(result_point).serialize(self.compressed)
 
     def encrypt(self, message: bytes) -> bytes:
         """
         Electrum ECIES (aka BIE1) encryption
         """
-        # generate an ephemeral EC private key in order to derive shared secret (ECDH key)
         ephemeral_private_key = PrivateKey()
-        # derive ECDH key
         ecdh_key: bytes = self.derive_shared_secret(ephemeral_private_key)
-        # SHA512(ECDH_KEY), then we have
-        # key_e and iv used in AES, key_m used in HMAC.SHA256
         key: bytes = hashlib.sha512(ecdh_key).digest()
         iv, key_e, key_m = key[0:16], key[16:32], key[32:]
-        # make AES encryption
         cipher: bytes = aes_encrypt_with_iv(key_e, iv, message)
-        # encrypted = magic_bytes (4 bytes) + ephemeral_public_key (33 bytes) + cipher (16 bytes at least)
         encrypted: bytes = b"BIE1" + ephemeral_private_key.public_key().serialize() + cipher
-        # mac = HMAC_SHA256(encrypted), 32 bytes
         mac: bytes = hmac.new(key_m, encrypted, hashlib.sha256).digest()
-        # give out encrypted + mac
         return encrypted + mac
 
     def encrypt_text(self, text: str) -> str:
@@ -134,7 +252,7 @@ class PublicKey:
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, PublicKey):
-            return self.key == o.key
+            return self.serialize(compressed=True) == o.serialize(compressed=True)
         return super().__eq__(o)  # pragma: no cover
 
     def __str__(self) -> str:  # pragma: no cover
@@ -145,34 +263,41 @@ class PublicKey:
 
 
 class PrivateKey:
-    def __init__(self, private_key: str | int | bytes | CcPrivateKey | None = None, network: Optional[Network] = None):
+    def __init__(self, private_key: str | int | bytes | None = None, network: Optional[Network] = None):
         """
-        create private key from WIF (str), or int, or bytes, or CoinCurve private key
+        create private key from WIF (str), or int, or bytes
         random a new private key if None
         """
         self.network: Network = network or Network.MAINNET
-        self.compressed: bool = True  # use compressed WIF by default
+        self.compressed: bool = True
+
         if private_key is None:
-            # create a new private key
-            self.key: CcPrivateKey = CcPrivateKey()
-        elif isinstance(private_key, CcPrivateKey):
-            # from CoinCurve private key
-            self.key: CcPrivateKey = private_key
+            self._secret: bytes = os.urandom(32)
+            while not self._is_valid_secret(self._secret):
+                self._secret = os.urandom(32)  # pragma: no cover
         elif isinstance(private_key, str):
-            # from wif
             private_key_bytes, self.compressed, self.network = decode_wif(private_key)
-            self.key: CcPrivateKey = CcPrivateKey(private_key_bytes)
+            self._secret = private_key_bytes
         elif isinstance(private_key, int):
-            # from private key as int
-            self.key: CcPrivateKey = CcPrivateKey.from_int(private_key)
+            self._secret = private_key.to_bytes(32, "big")
         elif isinstance(private_key, bytes):
-            # from private key integer in bytes
-            self.key: CcPrivateKey = CcPrivateKey(private_key)
+            self._secret = private_key
         else:
             raise TypeError("unsupported private key type")
 
+    def _is_valid_secret(self, secret: bytes) -> bool:
+        if _CRYPTO_BACKEND == "native":
+            return _bsv_native.seckey_verify(secret)
+        return len(secret) == 32 and int.from_bytes(secret, "big") > 0 and int.from_bytes(secret, "big") < curve.n
+
     def public_key(self) -> PublicKey:
-        return PublicKey(self.key.public_key.format(self.compressed))
+        if _CRYPTO_BACKEND == "native":
+            pk_bytes = _bsv_native.pubkey_from_secret(self._secret, self.compressed)
+            return PublicKey(pk_bytes)
+        point = curve_multiply(self.int(), curve.g)
+        pk = PublicKey(point)
+        pk.compressed = self.compressed
+        return pk
 
     def address(self, compressed: Optional[bool] = None, network: Optional[Network] = None) -> str:
         """
@@ -190,19 +315,19 @@ class PrivateKey:
         return base58check_encode(NETWORK_WIF_PREFIX_DICT.get(network) + key_bytes + compressed_bytes)
 
     def int(self) -> int:
-        return self.key.to_int()
+        return int.from_bytes(self._secret, "big")
 
     def serialize(self) -> bytes:
-        return self.key.secret
+        return self._secret
 
     def hex(self) -> str:
-        return self.serialize().hex()
+        return self._secret.hex()
 
     def der(self) -> bytes:  # pragma: no cover
-        return self.key.to_der()
+        raise NotImplementedError("DER export is not supported")
 
     def pem(self) -> bytes:  # pragma: no cover
-        return self.key.to_pem()
+        raise NotImplementedError("PEM export is not supported")
 
     def sign(
         self, message: bytes, hasher: Optional[Callable[[bytes], bytes]] = hash256, k: Optional[int] = None
@@ -211,49 +336,47 @@ class PrivateKey:
         :returns: ECDSA signature in bitcoin strict DER (low-s) format
         """
         if k:
+            if _CRYPTO_BACKEND == "native":
+                msg32 = hasher(message) if hasher else message
+                k_bytes = (k % curve.n).to_bytes(32, "big")
+                return _bsv_native.ecdsa_sign_with_k(msg32, self._secret, k_bytes)
             return self._sign_custom_k(message, hasher, k)
-        return self.key.sign(message, hasher)
+        if _CRYPTO_BACKEND == "native":
+            msg32 = hasher(message) if hasher else message
+            return _bsv_native.ecdsa_sign(msg32, self._secret)
+        msg32 = hasher(message) if hasher else message
+        k_val = _rfc6979_k(msg32, self._secret)
+        return self._sign_custom_k(message, hasher, k_val)
 
     def _sign_custom_k(self, message: bytes, hasher: Callable[[bytes], bytes], k: int) -> bytes:
-        # TODO: This could be done using self.key.sign() but the interface needs a custom k value function to be injected into te C binary
-        #       of libsecp256k1, since the default one does some transformations to the value.
-        #       See https://github.com/rustyrussell/secp256k1-py/blob/5bad581d959d722bf6c2df5eaa996fd4c24096aa/tests/test_custom_nonce.py#L51ffi%20=%20FFI()
-        #           https://github.com/bitcoin-core/secp256k1/blob/master/src/secp256k1.c#L518
-
+        """Pure Python fallback for ECDSA signing with custom nonce k."""
         z = int.from_bytes(hasher(message), "big")
 
-        # Ensure k is valid
         k = k % curve.n
         if k == 0:
             raise ValueError("Invalid nonce k")
 
-        # Compute R = k * G and obtain its x-coordinate (r)
         R = curve_multiply(k, curve.g)
         if R is None:
             raise ValueError("Invalid R value")
         r = R.x
 
-        # Compute s = k^(-1) * (z + r * d) mod n
         d = int.from_bytes(self.serialize(), "big")
         s = (pow(k, -1, curve.n) * (z + r * d)) % curve.n
         if s == 0:
             raise ValueError("Invalid s value")
 
-        # Ensure the signature is canonical (low S value)
         if s > curve.n // 2:
             s = curve.n - s
 
-        # Convert r and s to minimal big-endian bytes (DER requires no leading zeros)
         r_bytes = r.to_bytes((r.bit_length() + 7) // 8, "big")
         s_bytes = s.to_bytes((s.bit_length() + 7) // 8, "big")
 
-        # Add prefix if the MSB is set (DER integers are signed)
         if r_bytes[0] & 0x80:
             r_bytes = b"\x00" + r_bytes
         if s_bytes[0] & 0x80:
             s_bytes = b"\x00" + s_bytes
 
-        # Serialize the signature in DER format
         signature = (
             b"\x30"
             + (4 + len(r_bytes) + len(s_bytes)).to_bytes(1, "big")
@@ -278,7 +401,13 @@ class PrivateKey:
         :returns: serialized recoverable ECDSA signature (aka compact signature) in format
                     r (32 bytes) + s (32 bytes) + recovery_id (1 byte)
         """
-        return self.key.sign_recoverable(message, hasher)
+        if _CRYPTO_BACKEND == "native":
+            msg32 = hasher(message) if hasher else message
+            return _bsv_native.ecdsa_sign_recoverable(msg32, self._secret)
+        msg32 = hasher(message) if hasher else message
+        z = int.from_bytes(msg32, "big")
+        k_val = _rfc6979_k(msg32, self._secret)
+        return _ecdsa_sign_recoverable_py(z, k_val, self._secret)
 
     def verify_recoverable(
         self, signature: bytes, message: bytes, hasher: Optional[Callable[[bytes], bytes]] = hash256
@@ -298,7 +427,11 @@ class PrivateKey:
         return self.address(), stringify_ecdsa_recoverable(self.sign_recoverable(message), self.compressed)
 
     def derive_shared_secret(self, key: PublicKey) -> bytes:
-        return PublicKey(key.key.multiply(self.serialize())).serialize()
+        if _CRYPTO_BACKEND == "native":
+            result = _bsv_native.pubkey_tweak_mul(key.serialize(), self.serialize(), key.compressed)
+            return result
+        result_point = curve_multiply(self.int(), key.point())
+        return PublicKey(result_point).serialize(key.compressed)
 
     def decrypt(self, message: bytes) -> bytes:
         """
@@ -306,17 +439,12 @@ class PrivateKey:
         """
         assert len(message) >= 85, "invalid encrypted length"
         encrypted, mac = message[:-32], message[-32:]
-        # encrypted = magic_bytes (4 bytes) + ephemeral_public_key (33 bytes) + cipher_text (16 bytes at least)
         magic_bytes, ephemeral_public_key, cipher = encrypted[:4], PublicKey(encrypted[4:37]), encrypted[37:]
         assert magic_bytes.decode("utf-8") == "BIE1", "invalid magic bytes"
-        # restore ECDH key
         ecdh_key = self.derive_shared_secret(ephemeral_public_key)
-        # restore iv, key_e, key_m
         key = hashlib.sha512(ecdh_key).digest()
         iv, key_e, key_m = key[0:16], key[16:32], key[32:]
-        # verify mac
         assert hmac.new(key_m, encrypted, hashlib.sha256).digest().hex() == mac.hex(), "incorrect hmac checksum"
-        # make the AES decryption
         return aes_decrypt_with_iv(key_e, iv, cipher)
 
     def decrypt_text(self, text: str) -> str:
@@ -351,7 +479,7 @@ class PrivateKey:
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, PrivateKey):
-            return self.key == o.key
+            return self._secret == o._secret
         return super().__eq__(o)  # pragma: no cover
 
     def __str__(self) -> str:  # pragma: no cover
@@ -363,17 +491,15 @@ class PrivateKey:
     @classmethod
     def from_hex(cls, octets: str | bytes) -> "PrivateKey":
         b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
-        return PrivateKey(CcPrivateKey(b))
+        return PrivateKey(b)
 
     @classmethod
     def from_der(cls, octets: str | bytes) -> "PrivateKey":  # pragma: no cover
-        b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
-        return PrivateKey(CcPrivateKey.from_der(b))
+        raise NotImplementedError("DER import is not supported")
 
     @classmethod
     def from_pem(cls, octets: str | bytes) -> "PrivateKey":  # pragma: no cover
-        b: bytes = octets if isinstance(octets, bytes) else bytes.fromhex(octets)
-        return PrivateKey(CcPrivateKey.from_pem(b))
+        raise NotImplementedError("PEM import is not supported")
 
     def to_key_shares(self, threshold: int, total_shares: int) -> "KeyShares":
         """
@@ -407,25 +533,12 @@ class PrivateKey:
         points = []
         used_x_coordinates = set()
 
-        # Cryptographically secure x-coordinate generation for Shamir's Secret Sharing (toKeyShares)
-        #
-        # - Each x-coordinate is derived using a master seed (Random(64)) as the HMAC key and a per-attempt counter array as the message.
-        # - The counter array includes the share index, the attempt number (to handle rare collisions), and 32 bytes of fresh randomness for each attempt.
-        # - This ensures:
-        #   1. **Non-determinism**: Each split is unique, even for the same key and parameters, due to the per-attempt randomness.
-        #   2. **Uniqueness**: x-coordinates are checked for zero and duplication; retry logic ensures no repeats or invalid values.
-        #   3. **Cryptographic strength**: HMAC-SHA-512 is robust, and combining deterministic and random values protects against RNG compromise or bias.
-        #   4. **Defensive programming**: Attempts are capped (5 per share) to prevent infinite loops in pathological cases.
-        #
-        # This approach is robust against all practical attacks and is suitable for high-security environments where deterministic splits are not desired.
-
         seed = os.urandom(64)
 
         for i in range(total_shares):
             x = None
             attempts = 0
 
-            # TypeScript版と同様の安全なx座標生成
             while x is None or x == 0 or x in used_x_coordinates:
                 counter = [i, attempts, *list(os.urandom(32))]
                 counter_bytes = bytes(counter)
@@ -440,11 +553,8 @@ class PrivateKey:
             used_x_coordinates.add(x)
             y = poly.value_at(x)
 
-            # Create a point and add to points' list
             points.append(PointInFiniteField(x, y))
 
-        # Calculate integrity hash from the public key
-        # In the JS implementation: (this.toPublicKey().toHash('hex') as string).slice(0, 8)
         integrity = self.public_key().hash160().hex()[:8]
 
         return KeyShares(points, threshold, integrity)
@@ -517,7 +627,6 @@ class PrivateKey:
         secret_value = poly.value_at(0)
 
         # Create private key from secret value
-        # Instead of from_int (which doesn't exist), use the proper constructor
         private_key = PrivateKey(secret_value)
 
         # Verify integrity by comparing hash of public key
@@ -549,4 +658,12 @@ def recover_public_key(
     recover public key from serialized recoverable ECDSA signature in format
       "r (32 bytes) + s (32 bytes) + recovery_id (1 byte)"
     """
-    return PublicKey(CcPublicKey.from_signature_and_message(signature, message, hasher))
+    if _CRYPTO_BACKEND == "native":
+        msg32 = hasher(message) if hasher else message
+        pk_bytes = _bsv_native.ecdsa_recover(signature, msg32, True)
+        return PublicKey(pk_bytes)
+    msg32 = hasher(message) if hasher else message
+    r_int, s_int, recovery_id = deserialize_ecdsa_recoverable(signature)
+    z = int.from_bytes(msg32, "big")
+    point = _ecdsa_recover_py(r_int, s_int, recovery_id, z)
+    return PublicKey(point)

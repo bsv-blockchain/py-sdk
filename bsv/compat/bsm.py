@@ -10,6 +10,7 @@ from typing import Union
 
 from bsv.hash import hash256
 from bsv.keys import PrivateKey, PublicKey
+from bsv.keys import recover_public_key as _recover_public_key
 from bsv.utils import deserialize_ecdsa_der, serialize_ecdsa_der, unsigned_to_varint
 
 PREFIX = "Bitcoin Signed Message:\n"
@@ -28,14 +29,12 @@ def magic_hash(message_buf: bytes | list) -> bytes:
     if isinstance(message_buf, list):
         message_buf = bytes(message_buf)
 
-    # Build the message: varint(prefix_len) + prefix + varint(msg_len) + message
     prefix_bytes = PREFIX.encode("utf-8")
     buf = unsigned_to_varint(len(prefix_bytes))
     buf += prefix_bytes
     buf += unsigned_to_varint(len(message_buf))
     buf += message_buf
 
-    # Double SHA256
     hash_buf = hash256(buf)
     return hash_buf
 
@@ -55,28 +54,22 @@ def sign(message: bytes | list, private_key: PrivateKey, mode: str = "base64") -
     """
     hash_buf = magic_hash(message)
 
-    # Sign the hash
-    sig_bytes = private_key.sign(hash_buf, hasher=lambda x: x)  # No hashing, already hashed
+    sig_bytes = private_key.sign(hash_buf, hasher=lambda x: x)
 
     if mode == "raw":
         return sig_bytes
 
-    # Convert to compact format with recovery factor
-    # For base64 mode, we need to compute recovery factor and create compact signature
     from bsv.utils import deserialize_ecdsa_der, stringify_ecdsa_recoverable
 
     r, s = deserialize_ecdsa_der(sig_bytes)
 
-    # Compute recovery factor
     public_key = private_key.public_key()
     recovery_id = _calculate_recovery_factor(r, s, hash_buf, public_key)
 
-    # Create recoverable signature: r (32 bytes) + s (32 bytes) + recovery_id (1 byte)
     r_bytes = r.to_bytes(32, "big")
     s_bytes = s.to_bytes(32, "big")
     recoverable_sig = r_bytes + s_bytes + bytes([recovery_id])
 
-    # Stringify with compression flag
     compressed = private_key.compressed
     return stringify_ecdsa_recoverable(recoverable_sig, compressed)
 
@@ -95,7 +88,6 @@ def verify(message: bytes | list, sig: bytes | str, pub_key: PublicKey) -> bool:
     """
     hash_buf = magic_hash(message)
 
-    # Handle base64 string signature
     if isinstance(sig, str):
         from bsv.utils import deserialize_ecdsa_recoverable, unstringify_ecdsa_recoverable
 
@@ -105,16 +97,13 @@ def verify(message: bytes | list, sig: bytes | str, pub_key: PublicKey) -> bool:
     else:
         der_sig = sig
 
-    # Verify using public key
     return pub_key.verify(der_sig, hash_buf, hasher=lambda x: x)
 
 
 def _calculate_recovery_factor(r: int, s: int, hash_buf: bytes, public_key: PublicKey) -> int:
     """
     Calculate recovery factor for a signature.
-    This is a simplified version - full implementation would try all 4 possibilities.
     """
-    # Try recovery factors 0-3
     for recovery_id in range(4):
         try:
             from bsv.utils import serialize_ecdsa_recoverable
@@ -125,17 +114,11 @@ def _calculate_recovery_factor(r: int, s: int, hash_buf: bytes, public_key: Publ
                 return recovery_id
         except Exception:
             continue
-    return 0  # Default
+    return 0
 
 
 def recover_public_key(signature: bytes, message_hash: bytes) -> PublicKey:
     """
     Recover public key from recoverable signature.
-    Simplified implementation - would need full ECDSA recovery logic.
     """
-    # This is a placeholder - full implementation would use coincurve's recovery
-    from coincurve import PublicKey as CcPublicKey
-
-    # Try to recover using coincurve
-    recovered = CcPublicKey.from_signature_and_message(signature, message_hash, hasher=None)
-    return PublicKey(recovered.format(True))
+    return _recover_public_key(signature, message_hash, hasher=None)

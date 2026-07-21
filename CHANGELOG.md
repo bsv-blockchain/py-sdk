@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.3.0 - 2026-07-21](#230---2026-07-21)
 - [2.2.1 - 2026-06-12](#221---2026-06-12)
 - [2.2.0 - 2026-06-10](#220---2026-06-10)
 - [2.1.5 - 2026-06-05](#215---2026-06-05)
@@ -31,6 +32,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [2.3.0] - 2026-07-21
+
+### Added
+
+- **Native C extension (`_bsv_native`)** — libsecp256k1 statically linked via CPython C extension for ECDSA sign/verify/recover, SHA256/hash256, public key operations, ECDH, Schnorr signatures, and BRC-42 key derivation. Falls back to pure Python ECDSA when the extension is unavailable.
+- **ARC broadcaster format selection** — `ARCConfig(format=...)` enables three submission formats: `"json"` (default, backward compatible), `"raw"` (application/octet-stream + binary), and `"beef"` (application/beef + BEEF binary).
+- **Arcade broadcaster** (`bsv/broadcasters/arcade.py`) — Teranode-native, ARC-compatible broadcaster. Root-level `/tx` endpoints, EF submission preferred, separate from `ARC` class mirroring the TS SDK design.
+- **Binary send path in HTTP client** — `DefaultHttpClient.fetch()` and `SyncHttpClient.fetch()` now accept `raw_data` for binary payloads alongside the existing JSON `data` path.
+- **CI wheel pipeline** — cibuildwheel builds for Linux (x86_64/aarch64), macOS (x86_64/arm64), and Windows (AMD64) with pure Python fallback verification.
+
+### Changed
+
+- **Removed `coincurve` dependency** — replaced by the native C extension with pure Python ECDSA fallback. No external cryptographic library required at runtime.
+- **Script Engine consolidation** — removed the `bsv/script/interpreter/` Engine (~9,100 lines). All script validation is now handled by `Spend`, eliminating the dual-implementation.
+
+### Performance
+
+- **`txid()` / `hash()` caching** — transaction hash is computed once and cached; invalidated automatically on `add_input()` / `add_output()`. Avoids redundant serialize + SHA256 on repeated calls.
 
 ---
 

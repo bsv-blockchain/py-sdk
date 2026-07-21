@@ -1,0 +1,181 @@
+name: Build wheels & publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches: [master]
+    paths:
+      - "_bsv_native/**"
+      - "setup.py"
+      - "pyproject.toml"
+      - "MANIFEST.in"
+      - ".github/workflows/wheels.yml"
+  workflow_dispatch:
+
+jobs:
+  # ── sdist ───────────────────────────────────────────────────────────
+  sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install build
+      - run: python -m build --sdist
+
+      - name: Verify sdist contains C sources
+        run: |
+          tar tzf dist/*.tar.gz | grep bsv_native.c
+          tar tzf dist/*.tar.gz | grep secp256k1/src/secp256k1.c
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  # ── wheels (cibuildwheel) ───────────────────────────────────────────
+  wheels:
+    name: "wheel ${{ matrix.os }} ${{ matrix.arch }}"
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            arch: x86_64
+            cibw_archs: x86_64
+          # Linux aarch64 (emulated via QEMU)
+          - os: ubuntu-latest
+            arch: aarch64
+            cibw_archs: aarch64
+          # macOS x86_64 — cross-compiled on Apple Silicon (macos-14).
+          # GitHub-hosted Intel (macos-13) runners are capacity-starved /
+          # deprecated and jobs sit queued for hours; arm64 runners allocate
+          # instantly and Apple clang cross-builds x86_64 natively.
+          - os: macos-14
+            arch: x86_64
+            cibw_archs: x86_64
+          # macOS arm64
+          - os: macos-14
+            arch: arm64
+            cibw_archs: arm64
+          # Windows x86_64
+          - os: windows-latest
+            arch: AMD64
+            cibw_archs: AMD64
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU (Linux aarch64)
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: arm64
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install cibuildwheel
+        run: pip install cibuildwheel==2.22.0
+
+      - name: Build wheels
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_SKIP: "*-musllinux_* *-win32 *-manylinux_i686"
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+          CIBW_ENVIRONMENT: "BSV_REQUIRE_NATIVE=1"
+          CIBW_TEST_REQUIRES: "pytest pytest-asyncio pytest-benchmark pycryptodomex hypothesis"
+          CIBW_TEST_COMMAND: >-
+            python -c "import _bsv_native; print(_bsv_native.BACKEND, _bsv_native.__version__)" &&
+            pytest {project}/tests/bsv/native/ -x -q
+          # x86_64 macOS wheels are cross-built on arm64 runners and cannot be
+          # executed there, so skip their test phase. arm64 wheels are tested
+          # natively, and the C sources are identical across arches.
+          CIBW_TEST_SKIP: "*-macosx_x86_64"
+          CIBW_BUILD_VERBOSITY: 1
+        run: cibuildwheel --output-dir wheelhouse
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          path: wheelhouse/*.whl
+
+  # ── pure-python fallback test ───────────────────────────────────────
+  pure-python:
+    name: Pure Python fallback
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install without C extension
+        env:
+          BSV_NO_NATIVE: "1"
+        run: |
+          pip install .[test]
+          mv _bsv_native _bsv_native_src
+
+      - name: Verify _bsv_native is NOT available
+        run: |
+          python -c "
+          try:
+              import _bsv_native
+              raise AssertionError('_bsv_native should not be importable')
+          except ImportError:
+              print('OK: pure Python mode')
+          "
+
+      - name: Run core tests in pure Python mode
+        run: >-
+          pytest tests/bsv/script/test_scripts.py tests/bsv/primitives/ -x -q
+          -k "not test_invalid_public_key_creation"
+
+  # ── publish to PyPI (tag push only) ─────────────────────────────────
+  publish:
+    name: Publish to PyPI
+    needs: [sdist, wheels, pure-python]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List distributions
+        run: ls -lh dist/
+
+      - name: Check distributions
+        run: |
+          pip install twine
+          twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1

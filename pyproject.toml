@@ -1,10 +1,10 @@
 [project]
 name = "bsv-sdk"
-version = "2.2.1"
+version = "2.3.0"
 description = "BSV BLOCKCHAIN | Software Development Kit for Python"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
     { name = "Aaron", email = "aaron@scrypt.io" },
 ]
@@ -19,7 +19,6 @@ classifiers = [
 ]
 dependencies = [
     "pycryptodomex>=3.23.0",
-    "coincurve>=21.0.0",
     "requests>=2.34.0",
     "aiohttp>=3.13.0",
     "typing_extensions>=4.0.0",
@@ -33,6 +32,7 @@ Homepage = "https://github.com/bitcoin-sv/py-sdk"
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
+    "pytest-benchmark>=5.1.0",
     "pytest-cov>=7.1.0",
     "cryptography>=48.0.0",
 ]
@@ -49,10 +49,10 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-exclude = ["tests*"]
+exclude = ["tests*", "_bsv_native*", "examples*"]
 
 [tool.setuptools.package-data]
-"*" = ["hd/wordlist/*.txt"]
+"bsv" = ["hd/wordlist/*.txt"]
 
 [tool.black]
 line-length = 120
