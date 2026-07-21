@@ -1,4 +1,5 @@
 from .arc import ARC, ARCConfig
+from .arcade import Arcade, ArcadeConfig
 from .broadcaster import (
     Broadcaster,
     BroadcasterInterface,
@@ -14,6 +15,8 @@ from .whatsonchain import WhatsOnChainBroadcaster, WhatsOnChainBroadcasterSync
 __all__ = [
     "ARC",
     "ARCConfig",
+    "Arcade",
+    "ArcadeConfig",
     "BroadcastFailure",
     "BroadcastResponse",
     "Broadcaster",
