@@ -175,6 +175,8 @@ jobs:
       - name: Check distributions
         run: |
           pip install twine
+          twine --version
+          ls -la dist/
           twine check dist/*
 
       - name: Publish to PyPI
