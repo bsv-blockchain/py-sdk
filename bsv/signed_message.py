@@ -2,7 +2,7 @@ from base64 import b64encode
 
 from .curve import curve, curve_multiply
 from .keys import PrivateKey, PublicKey
-from .utils import Reader, randbytes
+from .utils import Reader
 
 
 class SignedMessage:
@@ -22,7 +22,6 @@ class SignedMessage:
             anyone_point = curve_multiply(1, curve.g)
             verifier = PublicKey(anyone_point)
 
-        # key_id = randbytes(32)
         key_id = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000000")
         key_id_base64 = b64encode(key_id).decode("ascii")
         invoice_number = f"2-message signing-{key_id_base64}"

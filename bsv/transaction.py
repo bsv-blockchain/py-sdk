@@ -501,46 +501,52 @@ class Transaction:
         else:
             data = stream if isinstance(stream, bytes) else bytes.fromhex(stream)
             reader = Reader(data)
-        stream = reader
-        version = stream.read_uint32_le()
+        version = reader.read_uint32_le()
         if version != 4022206465:
             raise ValueError(f"Invalid BEEF version. Expected 4022206465, received {version}.")
 
-        number_of_bumps = stream.read_var_int_num()
+        number_of_bumps = reader.read_var_int_num()
         bumps = []
         for _ in range(number_of_bumps):
-            bumps.append(MerklePath.from_reader(stream))
+            bumps.append(MerklePath.from_reader(reader))
 
-        number_of_transactions = stream.read_var_int_num()
+        transactions, last_txid = cls._read_beef_transactions(reader)
+        cls._link_beef_transaction(transactions[last_txid], transactions, bumps)
+        return transactions[last_txid]["tx"]
+
+    @classmethod
+    def _read_beef_transactions(cls, reader: Reader) -> tuple[dict, Optional[str]]:
+        """Read the transaction section of a BEEF stream, returning (transactions, last_txid)."""
+        number_of_transactions = reader.read_var_int_num()
         transactions = {}
         last_txid = None
         for i in range(number_of_transactions):
-            tx = cls.from_reader(stream)
+            tx = cls.from_reader(reader)
             obj = {"tx": tx}
             txid = tx.txid()
             if i + 1 == number_of_transactions:
                 last_txid = txid
-            has_bump = bool(stream.read_uint8())
+            has_bump = bool(reader.read_uint8())
             if has_bump:
-                obj["pathIndex"] = stream.read_var_int_num()
+                obj["pathIndex"] = reader.read_var_int_num()
             transactions[txid] = obj
+        return transactions, last_txid
 
-        def add_path_or_inputs(item):
-            if "pathIndex" in item:
-                path = bumps[item["pathIndex"]]
-                if not isinstance(path, MerklePath):
-                    raise ValueError("Invalid merkle path index found in BEEF!")
-                item["tx"].merkle_path = path
-            else:
-                for tx_input in item["tx"].inputs:
-                    source_obj = transactions[tx_input.source_txid]
-                    if not isinstance(source_obj, dict):
-                        raise ValueError(f"Reference to unknown TXID in BUMP: {tx_input.source_txid}")
-                    tx_input.source_transaction = source_obj["tx"]
-                    add_path_or_inputs(source_obj)
-
-        add_path_or_inputs(transactions[last_txid])
-        return transactions[last_txid]["tx"]
+    @classmethod
+    def _link_beef_transaction(cls, item: dict, transactions: dict, bumps: list) -> None:
+        """Recursively attach merkle paths or source transactions to a parsed BEEF entry."""
+        if "pathIndex" in item:
+            path = bumps[item["pathIndex"]]
+            if not isinstance(path, MerklePath):
+                raise ValueError("Invalid merkle path index found in BEEF!")
+            item["tx"].merkle_path = path
+        else:
+            for tx_input in item["tx"].inputs:
+                source_obj = transactions[tx_input.source_txid]
+                if not isinstance(source_obj, dict):
+                    raise ValueError(f"Reference to unknown TXID in BUMP: {tx_input.source_txid}")
+                tx_input.source_transaction = source_obj["tx"]
+                cls._link_beef_transaction(source_obj, transactions, bumps)
 
     def to_ef(self) -> bytes:
         writer = Writer()
@@ -575,41 +581,43 @@ class Transaction:
         writer.write_uint32_le(self.locktime)
         return writer.to_bytes()
 
+    @staticmethod
+    def _find_or_combine_bump(bumps: list, merkle_path: "MerklePath") -> Optional[int]:
+        """Return the index of an existing bump matching merkle_path, combining when roots match."""
+        for i, bump in enumerate(bumps):
+            if bump == merkle_path:
+                return i
+            if bump.block_height == merkle_path.block_height:
+                root_a = bump.compute_root()
+                root_b = merkle_path.compute_root()
+                if root_a == root_b:
+                    bump.combine(merkle_path)
+                    return i
+        return None
+
+    def _collect_beef_entries(self, bumps: list, txs: list) -> None:
+        """Recursively collect this transaction and its ancestors into BEEF bump/tx lists."""
+        obj = {"tx": self}
+        has_proof = isinstance(self.merkle_path, MerklePath)
+        if has_proof:
+            index = Transaction._find_or_combine_bump(bumps, self.merkle_path)
+            if index is None:
+                index = len(bumps)
+                bumps.append(self.merkle_path)
+            obj["path_index"] = index
+        txs.insert(0, obj)
+        if not has_proof:
+            for tx_input in self.inputs:
+                if not isinstance(tx_input.source_transaction, Transaction):
+                    raise ValueError("A required source transaction is missing!")
+                tx_input.source_transaction._collect_beef_entries(bumps, txs)
+
     def to_beef(self) -> bytes:
         writer = Writer()
         writer.write_uint32_le(4022206465)
         bumps = []
         txs = []
-
-        def add_paths_and_inputs(tx):
-            obj = {"tx": tx}
-            has_proof = isinstance(tx.merkle_path, MerklePath)
-            if has_proof:
-                added = False
-                for i, bump in enumerate(bumps):
-                    if bump == tx.merkle_path:
-                        obj["path_index"] = i
-                        added = True
-                        break
-                    if bump.block_height == tx.merkle_path.block_height:
-                        root_a = bump.compute_root()
-                        root_b = tx.merkle_path.compute_root()
-                        if root_a == root_b:
-                            bump.combine(tx.merkle_path)
-                            obj["path_index"] = i
-                            added = True
-                            break
-                if not added:
-                    obj["path_index"] = len(bumps)
-                    bumps.append(tx.merkle_path)
-            txs.insert(0, obj)
-            if not has_proof:
-                for tx_input in tx.inputs:
-                    if not isinstance(tx_input.source_transaction, Transaction):
-                        raise ValueError("A required source transaction is missing!")
-                    add_paths_and_inputs(tx_input.source_transaction)
-
-        add_paths_and_inputs(self)
+        self._collect_beef_entries(bumps, txs)
 
         writer.write_var_int_num(len(bumps))
         for b in bumps:
@@ -631,15 +639,9 @@ class Transaction:
         Raises ValueError if data is invalid or incomplete.
         """
         if _USE_NATIVE_TX:
-            pos_before = reader.tell()
-            remaining = reader.getvalue()[pos_before:]
-            if remaining:
-                try:
-                    d = _bsv_native.tx_from_bytes(remaining)
-                    reader.seek(pos_before + d["bytes_read"])
-                    return cls._from_native_dict(d)
-                except ValueError:
-                    reader.seek(pos_before)
+            native_tx = cls._from_reader_native(reader)
+            if native_tx is not None:
+                return native_tx
 
         t = cls()
         t.version = reader.read_uint32_le()
@@ -671,6 +673,21 @@ class Transaction:
             raise ValueError("Incomplete data: cannot read locktime")
 
         return t
+
+    @classmethod
+    def _from_reader_native(cls, reader: Reader) -> Optional["Transaction"]:
+        """Try parsing via the native backend; return None to fall back to pure Python."""
+        pos_before = reader.tell()
+        remaining = reader.getvalue()[pos_before:]
+        if not remaining:
+            return None
+        try:
+            d = _bsv_native.tx_from_bytes(remaining)
+            reader.seek(pos_before + d["bytes_read"])
+            return cls._from_native_dict(d)
+        except ValueError:
+            reader.seek(pos_before)
+            return None
 
     @classmethod
     def _from_native_dict(cls, d: dict) -> "Transaction":

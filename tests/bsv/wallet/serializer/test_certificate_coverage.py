@@ -207,10 +207,10 @@ def test_deserialize_certificate_invalid_data():
         # Should handle gracefully or raise appropriate exception
         try:
             result = deserialize_certificate(invalid_data)
-            # If it doesn't raise, should return something
-            assert result is not None
-        except Exception:
-            # Expected for invalid data
-            pass
+        except (EOFError, ValueError):
+            # Expected for invalid/truncated data
+            return
+        # If it doesn't raise, should return something
+        assert result is not None
     except ImportError:
         pytest.skip("certificate functions not available")

@@ -95,9 +95,7 @@ def test_register_definition(client):
 
 def test_lookup_definition(client):
     """Test lookup definition."""
-    if hasattr(client, "lookup_definition"):
-        try:
-            result = client.lookup_definition(Mock(), "basket", "testbasket")
-            assert result is not None
-        except Exception:
-            pass
+    if not hasattr(client, "lookup_definition"):
+        pytest.skip("RegistryClient has no lookup_definition method")
+    result = client.lookup_definition(Mock(), "basket", "testbasket")
+    assert result is not None

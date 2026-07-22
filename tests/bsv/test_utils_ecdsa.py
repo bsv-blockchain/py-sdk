@@ -317,7 +317,9 @@ class TestStringifyRecoverable:
 
     def test_unstringify_invalid_base64_raises(self):
         """Test that invalid base64 raises exception."""
-        with pytest.raises(Exception):
+        import binascii
+
+        with pytest.raises(binascii.Error):
             unstringify_ecdsa_recoverable("not-valid-base64!!!")
 
     @pytest.mark.parametrize("rec_id", [0, 1, 2, 3])

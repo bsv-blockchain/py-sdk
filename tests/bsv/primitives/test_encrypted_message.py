@@ -20,9 +20,10 @@ def test_brc78():
     decrypted = EncryptedMessage.decrypt(encrypted, recipient_priv)
     assert decrypted == message
 
+    wrong_recipient = PrivateKey()
     with pytest.raises(ValueError, match=r"message version mismatch"):
-        EncryptedMessage.decrypt(encrypted[1:], PrivateKey())
+        EncryptedMessage.decrypt(encrypted[1:], wrong_recipient)
     with pytest.raises(ValueError, match=r"recipient public key mismatch"):
-        EncryptedMessage.decrypt(encrypted, PrivateKey())
+        EncryptedMessage.decrypt(encrypted, wrong_recipient)
     with pytest.raises(ValueError, match=r"failed to decrypt message"):
         EncryptedMessage.decrypt(encrypted[:-1], recipient_priv)

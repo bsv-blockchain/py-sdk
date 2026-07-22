@@ -67,7 +67,7 @@ class TestOpVerif:
     def test_empty_stack_error(self):
         # No value on stack before OP_VERIF
         spend = make_spend("OP_VERIF OP_TRUE OP_ENDIF", tx_version=1)
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             spend.validate()
 
 
@@ -161,22 +161,22 @@ class TestOpSubstr:
 
     def test_empty_source_error(self):
         spend = make_spend("OP_0 OP_0 OP_SUBSTR OP_TRUE", "OP_0")
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             spend.validate()
 
     def test_negative_length_error(self):
         spend = make_spend("OP_0 OP_1NEGATE OP_SUBSTR OP_TRUE", "616263")
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             spend.validate()
 
     def test_out_of_range_error(self):
         spend = make_spend("OP_1 OP_3 OP_SUBSTR OP_TRUE", "616263")
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             spend.validate()
 
     def test_insufficient_stack_error(self):
         spend = make_spend("OP_0 OP_SUBSTR OP_TRUE", "OP_0")
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             spend.validate()
 
 
@@ -203,7 +203,7 @@ class TestOpLeft:
 
     def test_overflow_error(self):
         spend = make_spend("OP_4 OP_LEFT OP_TRUE", "616263")
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             spend.validate()
 
 
@@ -234,7 +234,7 @@ class TestOpRight:
 
     def test_overflow_error(self):
         spend = make_spend("OP_4 OP_RIGHT OP_TRUE", "616263")
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             spend.validate()
 
     def test_left_right_cat_roundtrip(self):
@@ -265,7 +265,7 @@ class TestOpLshiftnum:
 
     def test_negative_shift_error(self):
         spend = make_spend("OP_1NEGATE OP_LSHIFTNUM OP_TRUE", "OP_1")
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             spend.validate()
 
 

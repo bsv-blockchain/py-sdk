@@ -80,11 +80,13 @@ def test_ckd():
     assert ckd(Xpub(master_xpub), "m/0") == Xpub(normal_xpub)
     assert ckd(Xpub(master_xpub), "./0") == Xpub(normal_xpub)
 
+    non_master_xpub = Xpub(normal_xpub)
     with pytest.raises(AssertionError, match=r"absolute path for non-master key"):
-        ckd(Xpub(normal_xpub), "m/0")
+        ckd(non_master_xpub, "m/0")
 
+    master_xpub_obj = Xpub(master_xpub)
     with pytest.raises(AssertionError, match=r"can't make hardened derivation from xpub"):
-        ckd(Xpub(master_xpub), "m/0'")
+        ckd(master_xpub_obj, "m/0'")
 
 
 def test_wordlist():

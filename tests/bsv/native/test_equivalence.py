@@ -181,7 +181,7 @@ class TestCryptoEquivalence:
         return secret, pubkey
 
     def test_pubkey_from_secret(self, keypair):
-        secret, pubkey = keypair
+        _, pubkey = keypair
         assert len(pubkey) == 33
         parsed = _bsv_native.pubkey_parse(pubkey)
         assert parsed == pubkey
@@ -520,22 +520,23 @@ class TestSpendEquivalence:
 
         for use_native in [True, False]:
             spend_mod._USE_NATIVE_VM = use_native
+            spend = Spend(
+                {
+                    "unlockingScript": Script(b""),
+                    "lockingScript": lock,
+                    "transactionVersion": 2,
+                    "sourceTXID": "00" * 32,
+                    "sourceOutputIndex": 0,
+                    "lockTime": 0,
+                    "inputIndex": 0,
+                    "inputSequence": 0xFFFFFFFF,
+                    "sourceSatoshis": 0,
+                    "otherInputs": [],
+                    "outputs": [],
+                }
+            )
             with pytest.raises(RuntimeError):
-                Spend(
-                    {
-                        "unlockingScript": Script(b""),
-                        "lockingScript": lock,
-                        "transactionVersion": 2,
-                        "sourceTXID": "00" * 32,
-                        "sourceOutputIndex": 0,
-                        "lockTime": 0,
-                        "inputIndex": 0,
-                        "inputSequence": 0xFFFFFFFF,
-                        "sourceSatoshis": 0,
-                        "otherInputs": [],
-                        "outputs": [],
-                    }
-                ).validate()
+                spend.validate()
 
         spend_mod._USE_NATIVE_VM = orig
 

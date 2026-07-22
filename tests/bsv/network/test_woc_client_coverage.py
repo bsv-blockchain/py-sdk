@@ -18,7 +18,7 @@ def test_woc_client_init():
     from bsv.network.woc_client import WOCClient
 
     client = WOCClient()
-    assert client is not None
+    assert isinstance(client, WOCClient)
 
 
 def test_woc_client_with_network():
@@ -26,7 +26,7 @@ def test_woc_client_with_network():
     from bsv.network.woc_client import WOCClient
 
     client = WOCClient(network="mainnet")
-    assert client is not None
+    assert isinstance(client, WOCClient)
 
 
 def test_woc_client_with_api_key():
@@ -188,4 +188,4 @@ def test_woc_client_invalid_address():
 
     # WOCClient doesn't have get_balance method, only get_tx_hex
     # This test verifies the client can be instantiated
-    assert client is not None
+    assert isinstance(client, WOCClient)

@@ -107,6 +107,48 @@ async def _woc_relay_parent_then_setup(
     return relay_result
 
 
+async def _broadcast_setup_tx_with_orphan_retries(utxo_mgr, setup_tx, utxo, setup_broadcaster):
+    """Broadcast the step-1 setup tx, retrying on SEEN_IN_ORPHAN_MEMPOOL.
+
+    ARC may not have propagated the fan-out parent to its mempool yet; a brief
+    wait and retry resolves it.
+    """
+    max_orphan_retries = 3
+    orphan_delay = 3.0
+    result = None
+    for attempt in range(max_orphan_retries):
+        result = await utxo_mgr.broadcast_test_tx(setup_tx, spent_utxo=utxo, broadcaster=setup_broadcaster)
+        if result.status == "success":
+            return result
+        desc = (getattr(result, "description", "") or "").upper()
+        if "SEEN_IN_ORPHAN_MEMPOOL" in desc and attempt + 1 < max_orphan_retries:
+            print(
+                f"\n  [setup tx] SEEN_IN_ORPHAN_MEMPOOL — parent not yet propagated; "
+                f"retry {attempt + 2}/{max_orphan_retries} in {orphan_delay}s"
+            )
+            await asyncio.sleep(orphan_delay)
+            orphan_delay = min(orphan_delay * 2, 15.0)
+            continue
+        raise RuntimeError(f"Setup tx failed: {getattr(result, 'description', '')}")
+    raise RuntimeError(
+        f"Setup tx failed after {max_orphan_retries} orphan retries: {getattr(result, 'description', '')}"
+    )
+
+
+async def _sync_setup_tx_to_woc(utxo_mgr, relay_setup_to_woc, source_tx, setup_tx, setup_txid):
+    """Make sure WoC's node can see the setup tx before step 2 is broadcast there."""
+    if relay_setup_to_woc is None:
+        await utxo_mgr.wait_until_woc_sees_txid(setup_txid)
+        return
+    relay_result = await _woc_relay_parent_then_setup(relay_setup_to_woc, source_tx, setup_tx)
+    if not _woc_relay_ready_for_spend(relay_result):
+        raise RuntimeError(
+            "WoC setup relay failed after POSTing the pool parent tx; "
+            "GET /tx/hex is not used for 0-conf sync. "
+            f"setup_txid={setup_txid} relay={getattr(relay_result, 'description', relay_result)!r}"
+        )
+
+
 def build_live_tx(
     source_tx: Transaction,
     source_vout: int,
@@ -186,42 +228,11 @@ async def build_two_step_live_tx(
     setup_tx.fee(FEE_MODEL)
     setup_tx.sign()
 
-    # Retry on SEEN_IN_ORPHAN_MEMPOOL — ARC may not have propagated the fan-out
-    # parent to its mempool yet; a brief wait and retry resolves it.
-    max_orphan_retries = 3
-    orphan_delay = 3.0
-    for attempt in range(max_orphan_retries):
-        result = await utxo_mgr.broadcast_test_tx(setup_tx, spent_utxo=utxo, broadcaster=setup_broadcaster)
-        if result.status == "success":
-            break
-        desc = (getattr(result, "description", "") or "").upper()
-        if "SEEN_IN_ORPHAN_MEMPOOL" in desc and attempt + 1 < max_orphan_retries:
-            print(
-                f"\n  [setup tx] SEEN_IN_ORPHAN_MEMPOOL — parent not yet propagated; "
-                f"retry {attempt + 2}/{max_orphan_retries} in {orphan_delay}s"
-            )
-            await asyncio.sleep(orphan_delay)
-            orphan_delay = min(orphan_delay * 2, 15.0)
-            continue
-        raise RuntimeError(f"Setup tx failed: {getattr(result, 'description', '')}")
-    else:
-        if result.status != "success":
-            raise RuntimeError(
-                f"Setup tx failed after {max_orphan_retries} orphan retries: {getattr(result, 'description', '')}"
-            )
+    result = await _broadcast_setup_tx_with_orphan_retries(utxo_mgr, setup_tx, utxo, setup_broadcaster)
 
     if sync_setup_to_woc:
         setup_txid = result.txid or setup_tx.txid()
-        if relay_setup_to_woc is None:
-            await utxo_mgr.wait_until_woc_sees_txid(setup_txid)
-        else:
-            relay_result = await _woc_relay_parent_then_setup(relay_setup_to_woc, source_tx, setup_tx)
-            if not _woc_relay_ready_for_spend(relay_result):
-                raise RuntimeError(
-                    "WoC setup relay failed after POSTing the pool parent tx; "
-                    "GET /tx/hex is not used for 0-conf sync. "
-                    f"setup_txid={setup_txid} relay={getattr(relay_result, 'description', relay_result)!r}"
-                )
+        await _sync_setup_tx_to_woc(utxo_mgr, relay_setup_to_woc, source_tx, setup_tx, setup_txid)
 
     test_tx = Transaction(
         [

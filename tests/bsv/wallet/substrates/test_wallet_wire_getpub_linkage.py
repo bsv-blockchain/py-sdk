@@ -81,18 +81,15 @@ def test_get_public_key_error_frame_permission_denied():
 def test_reveal_counterparty_key_linkage_error_frame_permission_denied():
     wallet = ProtoWallet(PrivateKey(4321), permission_callback=lambda a: False)
     t = WalletWireTransceiver(WalletWireProcessor(wallet))
+    args = {
+        "privileged": True,
+        "privilegedReason": "need",
+        "counterparty": PrivateKey(1).public_key().serialize(),
+        "verifier": PrivateKey(2).public_key().serialize(),
+        "seekPermission": True,
+    }
     with pytest.raises(
         RuntimeError,
         match=r"reveal_counterparty_key_linkage: Operation 'Reveal counterparty key linkage' was not permitted by the user.",
     ):
-        t.reveal_counterparty_key_linkage(
-            None,
-            {
-                "privileged": True,
-                "privilegedReason": "need",
-                "counterparty": PrivateKey(1).public_key().serialize(),
-                "verifier": PrivateKey(2).public_key().serialize(),
-                "seekPermission": True,
-            },
-            "origin",
-        )
+        t.reveal_counterparty_key_linkage(None, args, "origin")

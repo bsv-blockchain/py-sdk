@@ -142,9 +142,12 @@ def test_woc_client_get_tx_hex_invalid_txid():
         with pytest.raises(requests.exceptions.HTTPError):
             client.get_tx_hex("")
 
-        # Test with None txid
-        with pytest.raises((TypeError, AttributeError)):
-            client.get_tx_hex(None)
+        # Test with None txid - interpolated into the URL, so the server returns 404
+        from typing import cast
+
+        none_txid = cast(str, None)
+        with pytest.raises((requests.exceptions.HTTPError, TypeError, AttributeError)):
+            client.get_tx_hex(none_txid)
 
     except ImportError:
         pytest.skip(SKIP_WOC_CLIENT)

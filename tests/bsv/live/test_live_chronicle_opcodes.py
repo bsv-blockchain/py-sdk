@@ -135,7 +135,7 @@ class TestOp2Mul:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_2mul_basic(self, priv_key, sighash, tx_version):
-        """2 * 2 = 4"""
+        """Doubling 2 yields 4."""
         lock = p2pkh_lock_with_prefix("OP_2MUL OP_4 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_2")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -144,7 +144,7 @@ class TestOp2Mul:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_2mul_zero(self, priv_key, sighash, tx_version):
-        """0 * 2 = 0"""
+        """Doubling 0 yields 0."""
         lock = p2pkh_lock_with_prefix("OP_2MUL OP_0 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_0")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -153,7 +153,7 @@ class TestOp2Mul:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_2mul_negative(self, priv_key, sighash, tx_version):
-        """(-1) * 2 = -2"""
+        """Doubling minus one yields minus two."""
         lock = p2pkh_lock_with_prefix("OP_2MUL OP_1NEGATE OP_1SUB OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_1NEGATE")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -171,7 +171,7 @@ class TestOp2Div:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_2div_basic(self, priv_key, sighash, tx_version):
-        """10 / 2 = 5"""
+        """Halving 10 yields 5."""
         lock = p2pkh_lock_with_prefix("OP_2DIV OP_5 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_10")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -180,7 +180,7 @@ class TestOp2Div:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_2div_truncation(self, priv_key, sighash, tx_version):
-        """7 / 2 = 3 (truncated)"""
+        """Halving 7 yields 3 (truncated)."""
         lock = p2pkh_lock_with_prefix("OP_2DIV OP_3 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_7")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -189,7 +189,7 @@ class TestOp2Div:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_2div_zero(self, priv_key, sighash, tx_version):
-        """0 / 2 = 0"""
+        """Halving 0 yields 0."""
         lock = p2pkh_lock_with_prefix("OP_2DIV OP_0 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_0")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -213,7 +213,7 @@ class TestOpSubstr:
         # Push order in unlock (bottom to top): data, start, length
         data = Script(
             encode_pushdata(bytes.fromhex("6162636465"))  # "abcde"
-            + Script.from_asm("OP_1 OP_2").serialize()  # start=1, length=2
+            + Script.from_asm("OP_1 OP_2").serialize()  # pushes start (1) then length (2)
         )
         unlock = custom_unlock(priv_key, data_prefix_script=data)
         tx = build_signed_tx(lock, unlock, sighash=sighash, tx_version=tx_version)
@@ -284,7 +284,7 @@ class TestOpLshiftnum:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_lshiftnum_basic(self, priv_key, sighash, tx_version):
-        """1 << 3 = 8"""
+        """Shifting 1 left by 3 yields 8."""
         lock = p2pkh_lock_with_prefix("OP_LSHIFTNUM OP_8 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_1 OP_3")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -293,7 +293,7 @@ class TestOpLshiftnum:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_lshiftnum_zero_shift(self, priv_key, sighash, tx_version):
-        """5 << 0 = 5"""
+        """Shifting 5 left by 0 yields 5."""
         lock = p2pkh_lock_with_prefix("OP_LSHIFTNUM OP_5 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_5 OP_0")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -311,7 +311,7 @@ class TestOpRshiftnum:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_rshiftnum_basic(self, priv_key, sighash, tx_version):
-        """8 >> 2 = 2"""
+        """Shifting 8 right by 2 yields 2."""
         lock = p2pkh_lock_with_prefix("OP_RSHIFTNUM OP_2 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_8 OP_2")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -320,7 +320,7 @@ class TestOpRshiftnum:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_rshiftnum_truncation(self, priv_key, sighash, tx_version):
-        """7 >> 1 = 3 (truncated)"""
+        """Shifting 7 right by 1 yields 3 (truncated)."""
         lock = p2pkh_lock_with_prefix("OP_RSHIFTNUM OP_3 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_7 OP_1")
         unlock = custom_unlock(priv_key, data_prefix_script=data)
@@ -329,7 +329,7 @@ class TestOpRshiftnum:
 
     @pytest.mark.parametrize("sighash,tx_version", SIGHASH_VERSIONS)
     def test_rshiftnum_zero_shift(self, priv_key, sighash, tx_version):
-        """5 >> 0 = 5"""
+        """Shifting 5 right by 0 yields 5."""
         lock = p2pkh_lock_with_prefix("OP_RSHIFTNUM OP_5 OP_NUMEQUALVERIFY", priv_key)
         data = Script.from_asm("OP_5 OP_0")
         unlock = custom_unlock(priv_key, data_prefix_script=data)

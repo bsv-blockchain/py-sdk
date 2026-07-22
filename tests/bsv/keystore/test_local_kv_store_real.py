@@ -135,20 +135,20 @@ def test_set_with_large_value(kv_store):
 
     try:
         result = kv_store.set(ctx=None, key="large_key", value=large_value)
-        assert isinstance(result, str)
     except Exception:
         # May have size limits
-        pass
+        return
+    assert isinstance(result, str)
 
 
 def test_set_with_special_characters(kv_store):
     """Test set() with special characters in key and value."""
     try:
         result = kv_store.set(ctx=None, key="special:key/test", value="value with\nnewlines\tand\ttabs")
-        assert isinstance(result, str) or result is None
     except Exception:
         # May have character restrictions
-        pass
+        return
+    assert isinstance(result, str) or result is None
 
 
 def test_get_with_none_key(kv_store):
@@ -186,9 +186,9 @@ def test_set_with_ca_args(kv_store):
 
     try:
         result = kv_store.set(ctx=None, key="ca_test", value="value", ca_args=ca_args)
-        assert isinstance(result, str) or result is None
     except Exception:
-        pass  # ca_args might not be fully supported
+        return  # ca_args might not be fully supported
+    assert isinstance(result, str) or result is None
 
 
 def test_concurrent_gets(kv_store):
@@ -223,9 +223,9 @@ def test_unicode_in_values(kv_store):
     """Test set/get with Unicode characters."""
     try:
         result = kv_store.set(ctx=None, key="unicode", value="Hello 世界 🌍")
-        assert isinstance(result, str) or result is None
     except Exception:
-        pass  # Unicode might not be fully supported
+        return  # Unicode might not be fully supported
+    assert isinstance(result, str) or result is None
 
 
 def test_key_length_limits(kv_store):
@@ -234,6 +234,6 @@ def test_key_length_limits(kv_store):
 
     try:
         result = kv_store.set(ctx=None, key=long_key, value="value")
-        assert isinstance(result, str) or result is None
     except Exception:
-        pass  # May have key length limits
+        return  # May have key length limits
+    assert isinstance(result, str) or result is None

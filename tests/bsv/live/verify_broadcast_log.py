@@ -21,7 +21,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Literal
-from urllib.error import HTTPError, URLError
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 # Match conftest defaults (avoid importing pytest conftest as a script side effect).
@@ -101,7 +101,7 @@ def _http_get_json(url: str, *, timeout: float) -> tuple[int, dict | None]:
             return e.code, json.loads(body) if body.strip().startswith("{") else None
         except Exception:
             return e.code, None
-    except (URLError, OSError):
+    except OSError:
         return -1, None
 
 
@@ -112,7 +112,7 @@ def _http_get_status(url: str, *, timeout: float) -> int:
             return resp.status
     except HTTPError as e:
         return e.code
-    except (URLError, OSError):
+    except OSError:
         return -1
 
 
@@ -182,7 +182,7 @@ def _warn_rawtx_consistency(text: str, known: dict[str, Network]) -> list[str]:
     return warnings
 
 
-def main(argv: list[str] | None = None) -> int:
+def _build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
         "log_file",
@@ -224,13 +224,81 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Warn when decoded [rawTx hex] txids are missing from parsed set",
     )
-    args = p.parse_args(argv)
+    return p
+
+
+def _resolve_log_path(candidate: str, base_dirs: tuple[str, ...]) -> str | None:
+    """Resolve ``candidate`` and require it to stay under one of ``base_dirs``.
+
+    Prevents CLI-provided paths from escaping the working / test directories
+    (e.g. via ``..`` or symlinks). Returns the resolved path or ``None``.
+    """
+    resolved = os.path.realpath(candidate)
+    for base in base_dirs:
+        real_base = os.path.realpath(base)
+        try:
+            if os.path.commonpath([resolved, real_base]) == real_base:
+                return resolved
+        except ValueError:
+            continue
+    return None
+
+
+def _check_with_retries(check, retries: int) -> bool:
+    ok = False
+    for attempt in range(max(1, retries + 1)):
+        ok = check()
+        if ok:
+            break
+        time.sleep(0.3 * (attempt + 1))
+    return ok
+
+
+def _verify_one_tx(
+    txid: str,
+    net: Network,
+    *,
+    use_arc: bool,
+    timeout: float,
+    retries: int,
+) -> tuple[bool, bool | None]:
+    woc_bases = {"testnet": WOC_API_TESTNET, "mainnet": WOC_API_MAINNET}
+    woc_base = woc_bases[net]
+    woc_ok = _check_with_retries(
+        lambda: verify_woc_tx(woc_base, txid, timeout=timeout) or verify_woc_tx_hex(woc_base, txid, timeout=timeout),
+        retries,
+    )
+    arc_ok: bool | None = None
+    if use_arc:
+        arc_base = live_arc_base_url(net)
+        arc_ok = _check_with_retries(lambda: verify_arc_tx(arc_base, txid, timeout=timeout), retries)
+    return woc_ok, arc_ok
+
+
+def _print_results_table(rows: list[tuple[str, str, bool, bool | None]], use_arc: bool) -> None:
+    hdr = f"{'txid':<66} {'net':<8} {'WoC':<5}"
+    if use_arc:
+        hdr += f" {'ARC':<5}"
+    print(hdr)
+    print("-" * len(hdr))
+    for txid, net, woc_ok, arc_ok in rows:
+        line = f"{txid} {net:<8} {'ok' if woc_ok else 'FAIL':<5}"
+        if use_arc:
+            line += f" {'ok' if arc_ok else 'FAIL':<5}"
+        print(line)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_arg_parser().parse_args(argv)
 
     here = os.path.dirname(os.path.abspath(__file__))
-    default_log = os.path.join(here, ".artifacts", "last_run.log")
-    path = args.log_file or default_log
-    if not Path(path).is_file():
-        print(f"error: log file not found: {path}", file=sys.stderr)
+    candidate = args.log_file or os.path.join(here, ".artifacts", "last_run.log")
+    path = _resolve_log_path(candidate, (str(Path.cwd()), here))
+    if path is None or not Path(path).is_file():
+        print(
+            f"error: log file not found (or outside the working/test directories): {candidate}",
+            file=sys.stderr,
+        )
         return 2
 
     with open(path, encoding="utf-8", errors="replace") as f:
@@ -247,44 +315,15 @@ def main(argv: list[str] | None = None) -> int:
         for w in _warn_rawtx_consistency(text, known):
             print(f"warning: {w}", file=sys.stderr)
 
-    woc_bases = {"testnet": WOC_API_TESTNET, "mainnet": WOC_API_MAINNET}
-
     rows: list[tuple[str, str, bool, bool | None]] = []
     failed = False
     for txid, net in sorted(known.items(), key=lambda x: (x[1], x[0])):
-        woc_base = woc_bases[net]
-        woc_ok = False
-        for attempt in range(max(1, args.retries + 1)):
-            woc_ok = verify_woc_tx(woc_base, txid, timeout=args.timeout) or verify_woc_tx_hex(
-                woc_base, txid, timeout=args.timeout
-            )
-            if woc_ok:
-                break
-            time.sleep(0.3 * (attempt + 1))
-        arc_ok: bool | None = None
-        if use_arc:
-            arc_base = live_arc_base_url(net)
-            arc_ok = False
-            for attempt in range(max(1, args.retries + 1)):
-                arc_ok = verify_arc_tx(arc_base, txid, timeout=args.timeout)
-                if arc_ok:
-                    break
-                time.sleep(0.3 * (attempt + 1))
+        woc_ok, arc_ok = _verify_one_tx(txid, net, use_arc=use_arc, timeout=args.timeout, retries=args.retries)
         if not woc_ok or (use_arc and arc_ok is False):
             failed = True
         rows.append((txid, net, woc_ok, arc_ok))
 
-    # Print table
-    hdr = f"{'txid':<66} {'net':<8} {'WoC':<5}"
-    if use_arc:
-        hdr += f" {'ARC':<5}"
-    print(hdr)
-    print("-" * len(hdr))
-    for txid, net, woc_ok, arc_ok in rows:
-        line = f"{txid} {net:<8} {'ok' if woc_ok else 'FAIL':<5}"
-        if use_arc:
-            line += f" {'ok' if arc_ok else 'FAIL':<5}"
-        print(line)
+    _print_results_table(rows, use_arc)
 
     if failed:
         print("\nVerification failed for one or more transactions.", file=sys.stderr)

@@ -36,10 +36,10 @@ def test_live_policy_fee_model_compute_fee():
     if hasattr(fee_model, "compute_fee"):
         try:
             fee = fee_model.compute_fee(250)
-            assert isinstance(fee, (int, float))
         except Exception:
             # Expected without network access
-            pass
+            return
+        assert isinstance(fee, (int, float))
 
 
 def test_live_policy_fee_model_update():

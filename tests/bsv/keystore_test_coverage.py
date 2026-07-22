@@ -205,10 +205,10 @@ def test_local_kv_store_get_operation():
         # Test get operation - should work with basic setup
         try:
             result = store.get(None, "test_key")
-            assert isinstance(result, str)
         except Exception:
             # Expected for complex implementation
-            pass
+            return
+        assert isinstance(result, str)
 
     except ImportError:
         pytest.skip(SKIP_LOCAL_KVSTORE)
@@ -232,10 +232,10 @@ def test_local_kv_store_remove_operation():
         # Test remove operation
         try:
             result = store.remove(None, "test_key")
-            assert isinstance(result, list)
         except Exception:
             # Expected for complex implementation
-            pass
+            return
+        assert isinstance(result, list)
 
     except ImportError:
         pytest.skip(SKIP_LOCAL_KVSTORE)

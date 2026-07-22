@@ -49,8 +49,9 @@ def test_aescbc_encrypt_decrypt():
     # Invalid padding (tampered ciphertext)
     bad_ct = bytearray(ct)
     bad_ct[-1] ^= 0xFF
+    bad_ct_bytes = bytes(bad_ct)
     with pytest.raises(InvalidPadding):
-        aescbc_decrypt(bytes(bad_ct), key, iv)
+        aescbc_decrypt(bad_ct_bytes, key, iv)
 
 
 def test_pkcs7_padding():
@@ -175,8 +176,9 @@ def test_aes_cbc_decrypt_mac_errors():
     # Tamper with MAC
     tampered = bytearray(encrypted_mac)
     tampered[-1] ^= 0xFF
+    tampered_bytes = bytes(tampered)
     with pytest.raises(ValueError, match="HMAC verification failed"):
-        aes_cbc_decrypt_mac(bytes(tampered), key_e, None, mac_key, concat_iv=True)
+        aes_cbc_decrypt_mac(tampered_bytes, key_e, None, mac_key, concat_iv=True)
 
     # Test with missing IV when concat_iv=False
     encrypted_no_iv = aes_cbc_encrypt_mac(data, key_e, iv, mac_key, concat_iv=False)

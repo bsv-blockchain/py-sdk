@@ -56,7 +56,7 @@ class TestAuthFetchCallbackCleanup:
         request_nonce_b64 = "test_nonce"
         response_event, response_holder = self.auth_fetch._setup_callbacks(request_nonce_b64)
 
-        test_error = Exception("Test error")
+        test_error = RuntimeError("Test error")
 
         # Call reject callback
         self.auth_fetch.callbacks[request_nonce_b64]["reject"](test_error)

@@ -70,6 +70,8 @@ ARC_PROGRESSING_TX_STATUSES = frozenset(
 
 _ARC_503_DESCRIPTION = "Failed to connect to ARC service"
 
+_UNKNOWN_ERROR = "Unknown error"
+
 ARC_WARNING_TX_STATUSES = frozenset(
     {
         "DOUBLE_SPEND_ATTEMPTED",
@@ -82,9 +84,9 @@ ARC_WARNING_TX_STATUSES = frozenset(
 def _arc_extract_http_error_detail(payload: Any) -> str:
     """Human-readable message from ARC/HTTP error JSON (RFC 7807 and variants)."""
     if payload is None:
-        return "Unknown error"
+        return _UNKNOWN_ERROR
     if isinstance(payload, str):
-        return payload.strip()[:8000] or "Unknown error"
+        return payload.strip()[:8000] or _UNKNOWN_ERROR
     if isinstance(payload, dict):
         for key in ("detail", "description", "message", "title"):
             v = payload.get(key)
@@ -451,7 +453,7 @@ class ARC(Broadcaster):
                     "status": "failure",
                     "code": data.get("status", response.status_code),
                     "title": data.get("title", "Error"),
-                    "detail": data.get("detail", "Unknown error"),
+                    "detail": data.get("detail", _UNKNOWN_ERROR),
                     "txid": data.get("txid", txid),
                     "extra_info": data.get("extraInfo", ""),
                 }

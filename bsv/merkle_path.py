@@ -19,6 +19,18 @@ class MerkleLeaf(TypedDict, total=False):
     duplicate: Optional[bool]
 
 
+def _push_if_new(v: int, a: list[int]) -> None:
+    if not a or a[-1] != v:
+        a.append(v)
+
+
+def _next_computed_offsets(cos: list[int]) -> list[int]:
+    ncos: list[int] = []
+    for o in cos:
+        _push_if_new(o >> 1, ncos)
+    return ncos
+
+
 class MerklePath:
     """
     Represents a Merkle Path, which is used to provide a compact proof of inclusion for a
@@ -367,19 +379,21 @@ class MerklePath:
         if root1 != root2:
             raise ValueError("You cannot combine paths which do not have the same root.")
 
-        combined_path = []
-        for h in range(len(self.path)):
-            combined_level = self.path[h] + [
-                leaf for leaf in other.path[h] if leaf["offset"] not in {e["offset"] for e in self.path[h]}
-            ]
-            for leaf in other.path[h]:
-                if "txid" in leaf:
-                    for e in combined_level:
-                        if e["offset"] == leaf["offset"]:
-                            e["txid"] = True
-            combined_path.append(combined_level)
+        combined_path = [self._combine_levels(self.path[h], other.path[h]) for h in range(len(self.path))]
         self.path = combined_path
         self.trim()
+
+    @staticmethod
+    def _combine_levels(own_level: list, other_level: list) -> list:
+        """Merge one level of another path into this path's level, preserving txid flags."""
+        own_offsets = {e["offset"] for e in own_level}
+        combined_level = own_level + [leaf for leaf in other_level if leaf["offset"] not in own_offsets]
+        for leaf in other_level:
+            if "txid" in leaf:
+                for e in combined_level:
+                    if e["offset"] == leaf["offset"]:
+                        e["txid"] = True
+        return combined_level
 
     def trim(self) -> None:
         """
@@ -387,40 +401,33 @@ class MerklePath:
         Assumes that at least all required nodes are present.
         Leaves all levels sorted by increasing offset.
         """
-
-        def push_if_new(v: int, a: list[int]) -> None:
-            if not a or a[-1] != v:
-                a.append(v)
-
-        def drop_offsets_from_level(drop_offsets: list[int], level: int) -> None:
-            for i in reversed(drop_offsets):
-                idx = next((j for j, n in enumerate(self.path[level]) if n["offset"] == i), None)
-                if idx is not None:
-                    self.path[level].pop(idx)
-
-        def next_computed_offsets(cos: list[int]) -> list[int]:
-            ncos = []
-            for o in cos:
-                push_if_new(o >> 1, ncos)
-            return ncos
-
-        computed_offsets = []
-        drop_offsets = []
         for h in range(len(self.path)):
             self.path[h].sort(key=lambda x: x["offset"])
 
+        computed_offsets, drop_offsets = self._trim_level_zero_offsets()
+
+        self._drop_offsets_from_level(drop_offsets, 0)
+        for h in range(1, len(self.path)):
+            drop_offsets = computed_offsets
+            computed_offsets = _next_computed_offsets(computed_offsets)
+            self._drop_offsets_from_level(drop_offsets, h)
+
+    def _trim_level_zero_offsets(self) -> tuple[list[int], list[int]]:
+        """Scan level zero, returning (offsets computed upward, offsets droppable at level zero)."""
+        computed_offsets: list[int] = []
+        drop_offsets: list[int] = []
         for e in self.path[0]:
             if e.get("txid"):
-                push_if_new(e["offset"] >> 1, computed_offsets)
+                _push_if_new(e["offset"] >> 1, computed_offsets)
             else:
                 is_odd = e["offset"] % 2 == 1
                 peer = next((n for n in self.path[0] if n["offset"] == e["offset"] + (1 if is_odd else -1)), None)
                 if peer and not peer.get("txid"):
-                    push_if_new(peer["offset"], drop_offsets)
+                    _push_if_new(peer["offset"], drop_offsets)
+        return computed_offsets, drop_offsets
 
-        drop_offsets_from_level(drop_offsets, 0)
-        # print('testing', self.path)
-        for h in range(1, len(self.path)):
-            drop_offsets = computed_offsets
-            computed_offsets = next_computed_offsets(computed_offsets)
-            drop_offsets_from_level(drop_offsets, h)
+    def _drop_offsets_from_level(self, drop_offsets: list[int], level: int) -> None:
+        for i in reversed(drop_offsets):
+            idx = next((j for j, n in enumerate(self.path[level]) if n["offset"] == i), None)
+            if idx is not None:
+                self.path[level].pop(idx)

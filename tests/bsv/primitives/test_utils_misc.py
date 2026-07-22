@@ -98,8 +98,9 @@ def test_decode_wif():
     assert decode_wif(wif_compressed_test) == (private_key_bytes, True, Network.TESTNET)
     assert decode_wif(wif_uncompressed_test) == (private_key_bytes, False, Network.TESTNET)
 
+    bad_prefix_wif = base58check_encode(b"\xff" + private_key_bytes)
     with pytest.raises(ValueError, match=r"unknown WIF prefix"):
-        decode_wif(base58check_encode(b"\xff" + private_key_bytes))
+        decode_wif(bad_prefix_wif)
 
 
 def test_der_serialization():

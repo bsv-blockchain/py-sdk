@@ -10,18 +10,18 @@ from bsv.keys import PrivateKey
 
 def test_auth_message_missing_version():
     """Test AuthMessage raises ValueError when version is empty."""
-    priv_key = PrivateKey()
+    identity_key = PrivateKey().public_key()
 
     with pytest.raises(ValueError, match="version is required and cannot be empty"):
-        AuthMessage(version="", message_type="initialRequest", identity_key=priv_key.public_key())  # Empty version
+        AuthMessage(version="", message_type="initialRequest", identity_key=identity_key)  # Empty version
 
 
 def test_auth_message_missing_message_type():
     """Test AuthMessage raises ValueError when message_type is empty."""
-    priv_key = PrivateKey()
+    identity_key = PrivateKey().public_key()
 
     with pytest.raises(ValueError, match="message_type is required and cannot be empty"):
-        AuthMessage(version="1.0", message_type="", identity_key=priv_key.public_key())  # Empty message_type
+        AuthMessage(version="1.0", message_type="", identity_key=identity_key)  # Empty message_type
 
 
 def test_auth_message_missing_identity_key():

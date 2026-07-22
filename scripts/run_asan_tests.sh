@@ -40,7 +40,7 @@ echo -e "${YELLOW}=== ASAN Build: _bsv_native ===${NC}"
 
 # Save the original .so for restoration
 NATIVE_SO=$(python3 -c "import _bsv_native; print(_bsv_native.__file__)" 2>/dev/null || true)
-if [ -n "$NATIVE_SO" ] && [ -f "$NATIVE_SO" ]; then
+if [[ -n "$NATIVE_SO" && -f "$NATIVE_SO" ]]; then
     cp "$NATIVE_SO" "${NATIVE_SO}.bak"
     echo "Backed up: $NATIVE_SO"
 fi
@@ -51,7 +51,7 @@ CFLAGS="-fsanitize=address -fno-omit-frame-pointer -g -O1" \
 
 echo -e "${GREEN}ASAN build complete${NC}"
 
-if [ "${1:-}" = "--build-only" ]; then
+if [[ "${1:-}" == "--build-only" ]]; then
     echo "Build-only mode. Run tests manually with:"
     echo "  ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 python3 -m pytest tests/bsv/native/"
     exit 0
@@ -76,14 +76,14 @@ python3 -m pytest "$TEST_TARGET" -x -v --tb=short 2>&1 || ASAN_EXIT=$?
 
 # Restore original build
 echo -e "${YELLOW}=== Restoring non-ASAN build ===${NC}"
-if [ -n "$NATIVE_SO" ] && [ -f "${NATIVE_SO}.bak" ]; then
+if [[ -n "$NATIVE_SO" && -f "${NATIVE_SO}.bak" ]]; then
     mv "${NATIVE_SO}.bak" "$NATIVE_SO"
     echo "Restored: $NATIVE_SO"
 else
     python3 setup.py build_ext --inplace 2>&1 | tail -3
 fi
 
-if [ $ASAN_EXIT -eq 0 ]; then
+if [[ $ASAN_EXIT -eq 0 ]]; then
     echo -e "${GREEN}=== ASAN tests PASSED ===${NC}"
 else
     echo -e "${RED}=== ASAN tests FAILED (exit $ASAN_EXIT) ===${NC}"

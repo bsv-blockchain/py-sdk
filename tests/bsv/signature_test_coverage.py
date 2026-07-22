@@ -130,16 +130,12 @@ def test_signature_recovery():
 
 def test_signature_der_encoding():
     """Test DER encoding of signature."""
-    try:
-        priv = PrivateKey()
-        message = b"test"
-        signature = priv.sign(message)
+    priv = PrivateKey()
+    message = b"test"
+    signature = priv.sign(message)
 
-        # Signature should already be DER encoded
-        assert signature[0] == 0x30  # DER sequence tag
-    except (AssertionError, IndexError):
-        # May use different encoding
-        pytest.skip("DER encoding check not applicable")
+    # Signature should already be DER encoded
+    assert signature[0] == 0x30  # DER sequence tag
 
 
 # ========================================================================

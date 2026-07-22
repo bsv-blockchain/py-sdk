@@ -510,9 +510,10 @@ def test_input_auto_txid():
 
     prev_tx.outputs[0].locking_script = None
     prev_tx._invalidate_hash_cache()
+    unlock_template = P2PKH().unlock(private_key)
     with pytest.raises(AttributeError, match="'NoneType' object has no attribute"):
         TransactionInput(
             source_transaction=prev_tx,
             source_output_index=0,
-            unlocking_script_template=P2PKH().unlock(private_key),
+            unlocking_script_template=unlock_template,
         )

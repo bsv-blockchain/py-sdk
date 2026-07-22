@@ -179,14 +179,18 @@ def deserialize_ecdsa_der(signature: bytes) -> tuple[int, int]:
         ValueError: If signature encoding is invalid
     """
     try:
-        assert signature[0] == 0x30
-        assert int(signature[1]) == len(signature) - 2
+        if signature[0] != 0x30:
+            raise ValueError("invalid DER sequence tag")
+        if int(signature[1]) != len(signature) - 2:
+            raise ValueError("invalid DER length")
         # r
-        assert signature[2] == 0x02
+        if signature[2] != 0x02:
+            raise ValueError("invalid DER integer tag for r")
         r_len = int(signature[3])
         r = int.from_bytes(signature[4 : 4 + r_len], "big")
         # s
-        assert signature[4 + r_len] == 0x02
+        if signature[4 + r_len] != 0x02:
+            raise ValueError("invalid DER integer tag for s")
         s_len = int(signature[5 + r_len])
         s = int.from_bytes(signature[-s_len:], "big")
         return r, s

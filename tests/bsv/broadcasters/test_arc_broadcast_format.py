@@ -99,7 +99,7 @@ class TestBroadcastFormat(unittest.IsolatedAsyncioTestCase):
         return result, url, options, tx
 
     async def test_json_format_sends_json_body(self):
-        result, url, options, tx = await self._broadcast_and_capture("json")
+        result, _, options, _ = await self._broadcast_and_capture("json")
         assert isinstance(result, BroadcastResponse)
         assert options["headers"]["Content-Type"] == "application/json"
         assert "data" in options
@@ -117,7 +117,7 @@ class TestBroadcastFormat(unittest.IsolatedAsyncioTestCase):
         assert "data" in options
 
     async def test_raw_format_sends_binary_ef(self):
-        result, url, options, tx = await self._broadcast_and_capture("raw", has_source_txs=True)
+        result, _, options, tx = await self._broadcast_and_capture("raw", has_source_txs=True)
         assert isinstance(result, BroadcastResponse)
         assert options["headers"]["Content-Type"] == "application/octet-stream"
         assert options["raw_data"] == tx.to_ef.return_value
@@ -125,14 +125,14 @@ class TestBroadcastFormat(unittest.IsolatedAsyncioTestCase):
         tx.to_ef.assert_called()
 
     async def test_raw_format_without_source_txs_falls_back_to_serialize(self):
-        result, url, options, tx = await self._broadcast_and_capture("raw", has_source_txs=False)
+        result, _, options, tx = await self._broadcast_and_capture("raw", has_source_txs=False)
         assert isinstance(result, BroadcastResponse)
         assert options["headers"]["Content-Type"] == "application/octet-stream"
         assert options["raw_data"] == tx.serialize.return_value
         tx.serialize.assert_called()
 
     async def test_beef_format_sends_binary_beef(self):
-        result, url, options, tx = await self._broadcast_and_capture("beef")
+        result, _, options, tx = await self._broadcast_and_capture("beef")
         assert isinstance(result, BroadcastResponse)
         assert options["headers"]["Content-Type"] == "application/beef"
         assert options["raw_data"] == tx.to_beef.return_value
@@ -159,24 +159,24 @@ class TestSyncBroadcastFormat(unittest.TestCase):
         return result, url, options, tx
 
     def test_json_format_sends_json_body(self):
-        result, url, options, tx = self._sync_broadcast_and_capture("json")
+        result, _, options, _ = self._sync_broadcast_and_capture("json")
         assert isinstance(result, BroadcastResponse)
         assert options["headers"]["Content-Type"] == "application/json"
         assert "data" in options
         assert "raw_data" not in options
 
     def test_raw_format_sends_binary_ef(self):
-        result, url, options, tx = self._sync_broadcast_and_capture("raw", has_source_txs=True)
+        result, _, options, tx = self._sync_broadcast_and_capture("raw", has_source_txs=True)
         assert isinstance(result, BroadcastResponse)
         assert options["headers"]["Content-Type"] == "application/octet-stream"
         assert options["raw_data"] == tx.to_ef.return_value
 
     def test_raw_format_without_source_txs_falls_back_to_serialize(self):
-        result, url, options, tx = self._sync_broadcast_and_capture("raw", has_source_txs=False)
+        _, _, options, tx = self._sync_broadcast_and_capture("raw", has_source_txs=False)
         assert options["raw_data"] == tx.serialize.return_value
 
     def test_beef_format_sends_binary_beef(self):
-        result, url, options, tx = self._sync_broadcast_and_capture("beef")
+        result, _, options, tx = self._sync_broadcast_and_capture("beef")
         assert isinstance(result, BroadcastResponse)
         assert options["headers"]["Content-Type"] == "application/beef"
         assert options["raw_data"] == tx.to_beef.return_value

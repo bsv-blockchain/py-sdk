@@ -34,11 +34,11 @@ class TestBlockHeadersService:
         # In test environment, it will likely fail due to network/API key requirements
         try:
             result = await service.is_valid_root_for_height("dummy_root", 100000)
-            # If it succeeds, should return a boolean
-            assert isinstance(result, bool)
         except Exception:
             # Expected to fail in test environment without proper API key
-            pass
+            return
+        # If it succeeds, should return a boolean
+        assert isinstance(result, bool)
 
     @pytest.mark.asyncio
     async def test_current_height_structure(self):
@@ -49,9 +49,9 @@ class TestBlockHeadersService:
         # In test environment, it will likely fail due to network
         try:
             result = await service.current_height()
-            # If it succeeds, should return an integer
-            assert isinstance(result, int)
-            assert result >= 0
         except Exception:
             # Expected to fail in test environment without network
-            pass
+            return
+        # If it succeeds, should return an integer
+        assert isinstance(result, int)
+        assert result >= 0

@@ -32,8 +32,9 @@ class TestLocalKVStoreErrorHandling:
         # Test None key (this will fail before validation)
         # Pass empty string for ctx, but None for key will cause type error
         invalid_key: str | None = None
+        key_arg = cast(str, invalid_key)
         with pytest.raises((ErrInvalidKey, TypeError)):
-            store.set("", cast(str, invalid_key), "value")
+            store.set("", key_arg, "value")
 
         # Test empty string key
         with pytest.raises(ErrInvalidKey):
@@ -48,8 +49,9 @@ class TestLocalKVStoreErrorHandling:
         # Test None value (this will fail before validation)
         # Pass empty string for ctx, but None for value will cause type error
         invalid_value: str | None = None
+        value_arg = cast(str, invalid_value)
         with pytest.raises((ErrInvalidValue, TypeError)):
-            store.set("", "key", cast(str, invalid_value))
+            store.set("", "key", value_arg)
 
         # Test empty string value
         with pytest.raises(ErrInvalidValue):
@@ -64,8 +66,9 @@ class TestLocalKVStoreErrorHandling:
         # Test None key (this will fail before validation)
         # Pass empty string for ctx, but None for key will cause type error
         invalid_key: str | None = None
+        key_arg = cast(str, invalid_key)
         with pytest.raises((ErrInvalidKey, TypeError)):
-            store.get("", cast(str, invalid_key))
+            store.get("", key_arg)
 
         # Test empty string key
         with pytest.raises(ErrInvalidKey):

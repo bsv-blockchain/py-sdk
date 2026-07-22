@@ -14,7 +14,7 @@ def test_overlay_lookup_init():
     from bsv.overlay.lookup import LookupResolver
 
     lookup = LookupResolver()
-    assert lookup is not None
+    assert isinstance(lookup, LookupResolver)
 
 
 def test_overlay_lookup_query():
@@ -36,7 +36,7 @@ def test_overlay_lookup_with_protocol():
 
     # LookupResolver doesn't accept protocol parameter, only backend
     lookup = LookupResolver()
-    assert lookup is not None
+    assert isinstance(lookup, LookupResolver)
 
 
 # ========================================================================

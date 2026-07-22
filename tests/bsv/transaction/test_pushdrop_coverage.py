@@ -47,16 +47,16 @@ def test_pushdrop_lock_basic():
     """Test PushDrop lock with basic fields."""
     try:
         from bsv.transaction.pushdrop import PushDrop
+    except ImportError:
+        pytest.skip("PushDrop not available")
 
-        wallet = Mock()
-        pd = PushDrop(wallet)
+    wallet = Mock()
+    pd = PushDrop(wallet)
 
-        # PushDrop.lock needs fields, protocol_id, key_id, counterparty
-        fields = [b"field1", b"field2"]
-        script = pd.lock(fields, "test", "key1", None)
-        assert script is not None
-    except Exception:
-        pytest.skip("PushDrop lock not fully testable")
+    # PushDrop.lock needs fields, protocol_id, key_id, counterparty
+    fields = [b"field1", b"field2"]
+    script = pd.lock(fields, "test", "key1", None)
+    assert script is not None
 
 
 def test_pushdrop_lock_empty_fields():

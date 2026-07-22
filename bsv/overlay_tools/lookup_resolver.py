@@ -238,7 +238,6 @@ class HTTPSOverlayLookupFacilitator:
         Each output's BEEF is reconstructed from the trailing combined BEEF,
         selecting the subject transaction by txid.
         """
-        from bsv.transaction import Transaction
         from bsv.transaction.beef import parse_beef
         from bsv.utils import Reader
 
@@ -256,20 +255,33 @@ class HTTPSOverlayLookupFacilitator:
         trailing = bytes(reader.read() or b"")  # one combined BEEF for every referenced tx
         beef_set = parse_beef(trailing) if trailing else None
 
-        outputs = []
-        for txid, output_index, context in outpoints:
-            beef = b""
-            if beef_set is not None:
-                btx = beef_set.find_transaction(txid)
-                if btx is not None:
-                    # parse_beef populates tx_obj for V2 and tx_bytes for V1;
-                    # fall back to the raw bytes when the object is absent.
-                    tx = btx.tx_obj or (Transaction.from_hex(btx.tx_bytes.hex()) if btx.tx_bytes else None)
-                    if tx is not None:
-                        beef = tx.to_beef()
-            outputs.append(LookupOutput(beef=beef, output_index=output_index, context=context))
+        outputs = [
+            LookupOutput(
+                beef=self._beef_for_txid(beef_set, txid),
+                output_index=output_index,
+                context=context,
+            )
+            for txid, output_index, context in outpoints
+        ]
 
         return LookupAnswer(type="output-list", outputs=outputs)
+
+    @staticmethod
+    def _beef_for_txid(beef_set, txid: str) -> bytes:
+        """Rebuild the standalone BEEF for one txid from a combined BEEF set."""
+        from bsv.transaction import Transaction
+
+        if beef_set is None:
+            return b""
+        btx = beef_set.find_transaction(txid)
+        if btx is None:
+            return b""
+        # parse_beef populates tx_obj for V2 and tx_bytes for V1;
+        # fall back to the raw bytes when the object is absent.
+        tx = btx.tx_obj or (Transaction.from_hex(btx.tx_bytes.hex()) if btx.tx_bytes else None)
+        if tx is None:
+            return b""
+        return tx.to_beef()
 
 
 class LookupResolver:

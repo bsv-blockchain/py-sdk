@@ -17,7 +17,7 @@ def test_overlay_topic_init():
 
     config = BroadcasterConfig(network_preset="mainnet")
     topic = TopicBroadcaster(["test-topic"], config)
-    assert topic is not None
+    assert isinstance(topic, TopicBroadcaster)
 
 
 def test_overlay_topic_subscribe():
@@ -28,7 +28,7 @@ def test_overlay_topic_subscribe():
     topic = TopicBroadcaster(["test-topic"], config)
 
     # TopicBroadcaster doesn't have subscribe method, only broadcast
-    assert topic is not None
+    assert isinstance(topic, TopicBroadcaster)
     assert hasattr(topic, "broadcast")
 
 
@@ -40,7 +40,7 @@ def test_overlay_topic_publish():
     topic = TopicBroadcaster(["test-topic"], config)
 
     # TopicBroadcaster has broadcast method, not publish
-    assert topic is not None
+    assert isinstance(topic, TopicBroadcaster)
     assert hasattr(topic, "broadcast")
 
 
@@ -117,4 +117,4 @@ def test_overlay_topic_empty_name():
     config = BroadcasterConfig(network_preset="mainnet")
     # TopicBroadcaster accepts a list of topics, empty list is valid
     topic = TopicBroadcaster([], config)
-    assert topic is not None
+    assert isinstance(topic, TopicBroadcaster)

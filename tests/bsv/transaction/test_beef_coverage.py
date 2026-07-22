@@ -99,13 +99,10 @@ def test_beef_validate():
     beef = Beef(version=4)
 
     # Beef has validation methods
-    if hasattr(beef, "is_valid"):
-        try:
-            is_valid = beef.is_valid()
-            assert isinstance(is_valid, bool)
-        except Exception:
-            # May require valid structure
-            pass
+    if not hasattr(beef, "is_valid"):
+        pytest.skip("Beef has no is_valid method")
+    is_valid = beef.is_valid()
+    assert isinstance(is_valid, bool)
 
 
 # ========================================================================
@@ -130,11 +127,8 @@ def test_beef_roundtrip():
 
     beef1 = Beef(version=4)
 
-    if hasattr(beef1, "to_binary") and hasattr(Beef, "deserialize"):
-        try:
-            serialized = beef1.to_binary()
-            beef2 = Beef.deserialize(serialized)
-            assert beef2 is not None
-        except Exception:
-            # May require valid structure
-            pass
+    if not (hasattr(beef1, "to_binary") and hasattr(Beef, "deserialize")):
+        pytest.skip("Beef serialize/deserialize API not available")
+    serialized = beef1.to_binary()
+    beef2 = Beef.deserialize(serialized)
+    assert beef2 is not None

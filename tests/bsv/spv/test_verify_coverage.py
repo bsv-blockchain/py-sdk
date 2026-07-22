@@ -108,17 +108,10 @@ def test_verify_block_header_invalid():
 
 def test_verify_merkle_proof_empty_txid():
     """Test verifying with empty txid."""
-    try:
-        from bsv.spv.verify import verify_merkle_proof
+    from bsv.spv.verify import verify_merkle_proof
 
-        try:
-            is_valid = verify_merkle_proof(b"", b"\x00" * 32, [])
-            assert isinstance(is_valid, bool)
-        except (ValueError, AssertionError):
-            # Expected
-            pass
-    except (ImportError, AttributeError):
-        pytest.skip("verify_merkle_proof not available")
+    with pytest.raises(ValueError, match="txid must be 32 bytes"):
+        verify_merkle_proof(b"", b"\x00" * 32, [])
 
 
 # ========================================================================

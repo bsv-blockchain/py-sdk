@@ -70,13 +70,13 @@ class TestLocalKVStoreConstructor:
         """Test that empty context raises error."""
         wallet = create_mock_wallet()
 
+        config_empty = KVStoreConfig(wallet=wallet, context="")
         with pytest.raises(ErrEmptyContext):
-            config = KVStoreConfig(wallet=wallet, context="")
-            LocalKVStore(config)
+            LocalKVStore(config_empty)
 
+        config_none = KVStoreConfig(wallet=wallet, context=None)
         with pytest.raises(ErrEmptyContext):
-            config = KVStoreConfig(wallet=wallet, context=None)
-            LocalKVStore(config)
+            LocalKVStore(config_none)
 
 
 class TestLocalKVStoreGet:

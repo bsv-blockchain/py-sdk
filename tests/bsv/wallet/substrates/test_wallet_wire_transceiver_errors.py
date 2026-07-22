@@ -41,9 +41,9 @@ class TestWalletWireTransceiverErrors:
 
         with patch(
             "bsv.wallet.serializer.create_action_args.serialize_create_action_args",
-            side_effect=Exception("Serialize failed"),
+            side_effect=RuntimeError("Serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Serialize failed"):
                 self.transceiver.create_action(None, {}, "test")
 
     def test_create_action_transmit_error(self):
@@ -65,9 +65,9 @@ class TestWalletWireTransceiverErrors:
 
         with patch(
             "bsv.wallet.serializer.sign_action_args.serialize_sign_action_args",
-            side_effect=Exception("Sign serialize failed"),
+            side_effect=RuntimeError("Sign serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Sign serialize failed"):
                 self.transceiver.sign_action(None, {}, "test")
 
     def test_sign_action_transmit_error(self):
@@ -88,9 +88,9 @@ class TestWalletWireTransceiverErrors:
 
         with patch(
             "bsv.wallet.serializer.abort_action.serialize_abort_action_args",
-            side_effect=Exception("Abort serialize failed"),
+            side_effect=RuntimeError("Abort serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Abort serialize failed"):
                 self.transceiver.abort_action(None, {}, "test")
 
     def test_list_actions_serialize_error(self):
@@ -98,11 +98,12 @@ class TestWalletWireTransceiverErrors:
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.list_actions.serialize_list_actions_args",
-            side_effect=Exception("List serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_list_actions_args",
+            side_effect=RuntimeError("List serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="List serialize failed"):
                 self.transceiver.list_actions(None, {}, "test")
 
     def test_internalize_action_serialize_error(self):
@@ -110,23 +111,25 @@ class TestWalletWireTransceiverErrors:
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.internalize_action.serialize_internalize_action_args",
-            side_effect=Exception("Internalize serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_internalize_action_args",
+            side_effect=RuntimeError("Internalize serialize failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.internalize_action(None, {}, "test")
+            with pytest.raises(RuntimeError, match="Internalize serialize failed"):
+                self.transceiver.internalize_action(None, {"tx": b"\x01"}, "test")
 
     def test_list_certificates_serialize_error(self):
         """Test list_certificates with serialization error."""
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.list_certificates.serialize_list_certificates_args",
-            side_effect=Exception("List certs serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_list_certificates_args",
+            side_effect=RuntimeError("List certs serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="List certs serialize failed"):
                 self.transceiver.list_certificates(None, {}, "test")
 
     def test_relinquish_output_serialize_error(self):
@@ -134,59 +137,64 @@ class TestWalletWireTransceiverErrors:
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.relinquish_output.serialize_relinquish_output_args",
-            side_effect=Exception("Relinquish serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_relinquish_output_args",
+            side_effect=RuntimeError("Relinquish serialize failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.relinquish_output(None, {}, "test")
+            with pytest.raises(RuntimeError, match="Relinquish serialize failed"):
+                self.transceiver.relinquish_output(None, {"outpoint": "00" * 32 + ":0"}, "test")
 
     def test_create_hmac_serialize_error(self):
         """Test create_hmac with serialization error."""
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.create_hmac.serialize_create_hmac_args",
-            side_effect=Exception("HMAC serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_create_hmac_args",
+            side_effect=RuntimeError("HMAC serialize failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.create_hmac(None, {}, "test")
+            with pytest.raises(RuntimeError, match="HMAC serialize failed"):
+                self.transceiver.create_hmac(None, {"data": b"payload"}, "test")
 
     def test_verify_hmac_serialize_error(self):
         """Test verify_hmac with serialization error."""
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.verify_hmac.serialize_verify_hmac_args",
-            side_effect=Exception("Verify HMAC serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_verify_hmac_args",
+            side_effect=RuntimeError("Verify HMAC serialize failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.verify_hmac(None, {}, "test")
+            with pytest.raises(RuntimeError, match="Verify HMAC serialize failed"):
+                self.transceiver.verify_hmac(None, {"hmac": b"\x01" * 32, "data": b"payload"}, "test")
 
     def test_create_signature_serialize_error(self):
         """Test create_signature with serialization error."""
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.create_signature.serialize_create_signature_args",
-            side_effect=Exception("Signature serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_create_signature_args",
+            side_effect=RuntimeError("Signature serialize failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.create_signature(None, {}, "test")
+            with pytest.raises(RuntimeError, match="Signature serialize failed"):
+                self.transceiver.create_signature(None, {"data": b"payload"}, "test")
 
     def test_verify_signature_serialize_error(self):
         """Test verify_signature with serialization error."""
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.verify_signature.serialize_verify_signature_args",
-            side_effect=Exception("Verify sig serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_verify_signature_args",
+            side_effect=RuntimeError("Verify sig serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Verify sig serialize failed"):
                 self.transceiver.verify_signature(None, {}, "test")
 
     def test_key_linkage_serialize_errors(self):
@@ -195,68 +203,73 @@ class TestWalletWireTransceiverErrors:
             pytest.skip("WalletWireTransceiver not available")
 
         # Test reveal_counterparty_key_linkage
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.key_linkage.serialize_reveal_counterparty_key_linkage_args",
-            side_effect=Exception("Counterparty linkage failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_reveal_counterparty_key_linkage_args",
+            side_effect=RuntimeError("Counterparty linkage failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.reveal_counterparty_key_linkage(None, {}, "test")
+            with pytest.raises(RuntimeError, match="Counterparty linkage failed"):
+                self.transceiver.reveal_counterparty_key_linkage(None, {"counterparty": b"\x02" * 33}, "test")
 
         # Test reveal_specific_key_linkage
         with patch(
-            "bsv.wallet.serializer.key_linkage.serialize_reveal_specific_key_linkage_args",
-            side_effect=Exception("Specific linkage failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_reveal_specific_key_linkage_args",
+            side_effect=RuntimeError("Specific linkage failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.reveal_specific_key_linkage(None, {}, "test")
+            with pytest.raises(RuntimeError, match="Specific linkage failed"):
+                self.transceiver.reveal_specific_key_linkage(
+                    None, {"protocolID": {"securityLevel": 0, "protocol": "test proto"}}, "test"
+                )
 
     def test_network_operations_serialize_errors(self):
         """Test network-related operations with serialization errors."""
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
-        # Test get_header
+        # Test get_header_for_height
+        # Patch the names bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.get_network.serialize_get_header_args",
-            side_effect=Exception("Header serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_get_header_args",
+            side_effect=RuntimeError("Header serialize failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.get_header(None, {}, "test")
+            with pytest.raises(RuntimeError, match="Header serialize failed"):
+                self.transceiver.get_header_for_height(None, {}, "test")
 
         # Test get_network
         with patch(
-            "bsv.wallet.serializer.get_network.serialize_get_network_args",
-            side_effect=Exception("Network serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_get_network_args",
+            side_effect=RuntimeError("Network serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Network serialize failed"):
                 self.transceiver.get_network(None, {}, "test")
 
         # Test get_version
         with patch(
-            "bsv.wallet.serializer.get_network.serialize_get_version_args",
-            side_effect=Exception("Version serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_get_version_args",
+            side_effect=RuntimeError("Version serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Version serialize failed"):
                 self.transceiver.get_version(None, {}, "test")
 
         # Test get_height
         with patch(
-            "bsv.wallet.serializer.get_network.serialize_get_height_args",
-            side_effect=Exception("Height serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_get_height_args",
+            side_effect=RuntimeError("Height serialize failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.get_height(None, {}, "test")
+            with pytest.raises(RuntimeError, match="Height serialize failed"):
+                self.transceiver.get_height(None, {"header": b"\x01"}, "test")
 
     def test_acquire_certificate_serialize_error(self):
         """Test acquire_certificate with serialization error."""
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.acquire_certificate.serialize_acquire_certificate_args",
-            side_effect=Exception("Acquire cert serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_acquire_certificate_args",
+            side_effect=RuntimeError("Acquire cert serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Acquire cert serialize failed"):
                 self.transceiver.acquire_certificate(None, {}, "test")
 
     def test_prove_certificate_serialize_error(self):
@@ -264,22 +277,25 @@ class TestWalletWireTransceiverErrors:
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.prove_certificate.serialize_prove_certificate_args",
-            side_effect=Exception("Prove cert serialize failed"),
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_prove_certificate_args",
+            side_effect=RuntimeError("Prove cert serialize failed"),
         ):
-            with pytest.raises(Exception):
-                self.transceiver.prove_certificate(None, {}, "test")
+            with pytest.raises(RuntimeError, match="Prove cert serialize failed"):
+                self.transceiver.prove_certificate(None, {"verifier": b"\x02" * 33}, "test")
 
     def test_encrypt_serialize_error(self):
         """Test encrypt with serialization error."""
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.encrypt.serialize_encrypt_args", side_effect=Exception("Encrypt serialize failed")
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_encrypt_args",
+            side_effect=RuntimeError("Encrypt serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Encrypt serialize failed"):
                 self.transceiver.encrypt(None, {}, "test")
 
     def test_decrypt_serialize_error(self):
@@ -287,10 +303,12 @@ class TestWalletWireTransceiverErrors:
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
+        # Patch the name bound in the transceiver module (imported at module top level)
         with patch(
-            "bsv.wallet.serializer.decrypt.serialize_decrypt_args", side_effect=Exception("Decrypt serialize failed")
+            "bsv.wallet.substrates.wallet_wire_transceiver.serialize_decrypt_args",
+            side_effect=RuntimeError("Decrypt serialize failed"),
         ):
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError, match="Decrypt serialize failed"):
                 self.transceiver.decrypt(None, {}, "test")
 
     def test_transceiver_with_invalid_wire(self):
@@ -298,16 +316,12 @@ class TestWalletWireTransceiverErrors:
         if self.transceiver is None:
             pytest.skip("WalletWireTransceiver not available")
 
-        # Test with None wire (though constructor may not check this)
-        try:
-            from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
+        # Test with None wire (the constructor accepts it without validation)
+        from bsv.wallet.substrates.wallet_wire_transceiver import WalletWireTransceiver
 
-            transceiver_none = WalletWireTransceiver(None)
-            # Should not crash on init, but may fail on first use
-            assert transceiver_none.wire is None
-        except Exception:
-            # Constructor may validate wire parameter
-            pass
+        transceiver_none = WalletWireTransceiver(None)
+        # Should not crash on init, but may fail on first use
+        assert transceiver_none.wire is None
 
     def test_all_methods_with_transmission_errors(self):
         """Test that all transceiver methods properly handle transmission errors."""

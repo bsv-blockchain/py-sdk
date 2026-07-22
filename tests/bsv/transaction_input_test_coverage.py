@@ -36,14 +36,8 @@ def test_transaction_input_init_with_transaction():
 
 def test_transaction_input_init_with_none_source():
     """Test TransactionInput with None source."""
-    try:
-        inp = TransactionInput(
-            source_txid=None, source_output_index=0, unlocking_script=Script(b""), sequence=0xFFFFFFFF
-        )
-        assert inp.source_txid is None
-    except Exception:
-        # May require source
-        pass
+    inp = TransactionInput(source_txid=None, source_output_index=0, unlocking_script=Script(b""), sequence=0xFFFFFFFF)
+    assert inp.source_txid is None
 
 
 def test_transaction_input_init_with_template():

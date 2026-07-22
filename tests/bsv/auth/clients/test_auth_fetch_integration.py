@@ -172,7 +172,7 @@ class TestAuthFetchCallbacks:
             "resolve": lambda resp: (response_holder.update({"resp": resp}), response_event.set()),
             "reject": lambda err: (response_holder.update({"err": err}), response_event.set()),
         }
-        test_error = Exception("test error")
+        test_error = RuntimeError("test error")
         callbacks["reject"](test_error)
         assert response_holder["err"] == test_error
         assert response_event.is_set()
