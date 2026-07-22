@@ -386,6 +386,193 @@ class TestOTDAPreimageEquivalence:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# 6b. Regression: preimage() with an unrestored non-signing input (#187)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestPreimageUnrestoredNonSigningInput:
+    """Regression for https://github.com/bsv-blockchain/py-sdk/issues/187.
+
+    When a transaction is parsed from raw hex, every input has
+    ``locking_script=None`` and ``satoshis=None``. Callers that restore the
+    prev-output script/value for ONLY the input they want to sign (the common
+    single-input signing flow) must still be able to call
+    ``Transaction.preimage(i)``. The native path used to crash in
+    ``_inputs_to_tuples()`` because it called ``locking_script.serialize()``
+    unconditionally on the non-signing input whose ``locking_script`` is None,
+    while the pure-Python path only ever read the signing input's script.
+
+    The fix (``_inputs_to_tuples_for_input``) replaces a *non-signing* input's
+    missing script with ``b""`` but still requires the *signing* input's own
+    script, matching the pure-Python path (which raises when the signing input's
+    script is missing). Both native BIP143 (``tx_preimages``) and native OTDA
+    (``tx_preimage_otda``) funnel through it.
+    """
+
+    LOCKING_SCRIPT = "76a914c0a3c167a28cabb9fbb495affa0761e6e74ac60d88ac"
+    SATOSHIS = 100_000_000
+
+    SIGHASH_FLAGS = [
+        SIGHASH.ALL_FORKID,  # BIP143 routing
+        SIGHASH.NONE_FORKID,  # BIP143 routing
+        SIGHASH.SINGLE_FORKID,  # BIP143 routing
+        SIGHASH.ALL_FORKID | SIGHASH.CHRONICLE,  # OTDA routing
+        SIGHASH.NONE_FORKID | SIGHASH.CHRONICLE,  # OTDA routing
+        SIGHASH.SINGLE_FORKID | SIGHASH.CHRONICLE,  # OTDA routing
+    ]
+
+    def _build(self, sighash):
+        # TX_2IN_3OUT parsed from hex -> every input locking_script/satoshis is None.
+        tx = Transaction.from_hex(TX_2IN_3OUT)
+        # Restore the prev-output script/value for the SIGNING input only.
+        tx.inputs[0].locking_script = Script.from_bytes(bytes.fromhex(self.LOCKING_SCRIPT))
+        tx.inputs[0].satoshis = self.SATOSHIS
+        tx.inputs[0].sighash = sighash
+        return tx
+
+    @pytest.mark.parametrize("sighash", SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}")
+    def test_preimage_native_matches_python(self, sighash):
+        import bsv.transaction_preimage as tp_mod
+
+        # Precondition: the non-signing input is genuinely unrestored.
+        guard = self._build(sighash)
+        assert guard.inputs[1].locking_script is None
+        assert guard.inputs[1].satoshis is None
+
+        orig = tp_mod._USE_NATIVE
+
+        # (a) Native path must not crash and must return a preimage.
+        tp_mod._USE_NATIVE = True
+        try:
+            native_preimage = self._build(sighash).preimage(0)
+        finally:
+            tp_mod._USE_NATIVE = orig
+        assert isinstance(native_preimage, bytes) and len(native_preimage) > 0
+
+        # (b) Pure-Python fallback yields the identical digest.
+        tp_mod._USE_NATIVE = False
+        try:
+            py_preimage = self._build(sighash).preimage(0)
+        finally:
+            tp_mod._USE_NATIVE = orig
+
+        assert native_preimage == py_preimage, f"preimage mismatch for sighash 0x{int(sighash):02x}"
+        assert py_hash256(native_preimage) == py_hash256(py_preimage)
+
+    @pytest.mark.parametrize("sighash", SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}")
+    def test_preimage_raises_when_signing_input_unrestored(self, sighash):
+        """The SIGNING input's own script must be present on both paths.
+
+        Substituting b"" for the signing input would silently produce a digest
+        over an empty scriptCode; instead both native and pure-Python must raise
+        (parity), so callers like the KVStore PushDrop unlocker keep skipping
+        inputs they cannot validly sign rather than emitting a garbage signature.
+        """
+        import bsv.transaction_preimage as tp_mod
+
+        # Signing input 0 is NOT restored -> its locking_script stays None.
+        tx = Transaction.from_hex(TX_2IN_3OUT)
+        tx.inputs[0].sighash = sighash
+        assert tx.inputs[0].locking_script is None
+
+        orig = tp_mod._USE_NATIVE
+        for use_native in (True, False):
+            tp_mod._USE_NATIVE = use_native
+            try:
+                with pytest.raises(AttributeError):
+                    tx.preimage(0)
+            finally:
+                tp_mod._USE_NATIVE = orig
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 6c. Regression: preimage() with an unfunded (satoshis=None) output (#187 sibling)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestPreimageUnfundedOutput:
+    """Regression sibling of #187 on the OUTPUT side.
+
+    The native preimage path used to serialize EVERY output eagerly, so an
+    unfunded output (``satoshis=None``, e.g. a change output awaiting ``fee()``)
+    crashed the native path even when the signing input's sighash does not
+    commit to that output — whereas the pure-Python path skips it (SIGHASH_NONE
+    commits no output; SIGHASH_SINGLE commits only ``outputs[input_index]``).
+
+    The fix serializes only the committed outputs strictly, so:
+      * a NON-committed unfunded output no longer crashes the native path, and
+        the native digest equals the pure-Python digest; and
+      * a COMMITTED unfunded amount still raises on BOTH paths (parity — never a
+        silently-wrong signature over amount 0).
+    """
+
+    LOCKING = "76a914c0a3c167a28cabb9fbb495affa0761e6e74ac60d88ac"
+
+    SIGHASH_FLAGS = [
+        SIGHASH.ALL_FORKID,
+        SIGHASH.NONE_FORKID,
+        SIGHASH.SINGLE_FORKID,
+        SIGHASH.ALL_FORKID | SIGHASH.CHRONICLE,
+        SIGHASH.NONE_FORKID | SIGHASH.CHRONICLE,
+        SIGHASH.SINGLE_FORKID | SIGHASH.CHRONICLE,
+    ]
+
+    def _build(self, sighash, none_output_index):
+        script = Script.from_bytes(bytes.fromhex(self.LOCKING))
+        outs = [
+            TransactionOutput(locking_script=script, satoshis=500),
+            TransactionOutput(locking_script=script, satoshis=600),
+        ]
+        outs[none_output_index].satoshis = None  # unfunded
+        tx = Transaction(
+            tx_inputs=[TransactionInput(source_txid="aa" * 32, source_output_index=0, sequence=0xFFFFFFFF)],
+            tx_outputs=outs,
+        )
+        tx.inputs[0].locking_script = script
+        tx.inputs[0].satoshis = 1000
+        tx.inputs[0].sighash = int(sighash)
+        return tx
+
+    def _preimage(self, sighash, none_output_index, use_native):
+        import bsv.transaction_preimage as tp_mod
+
+        orig = tp_mod._USE_NATIVE
+        tp_mod._USE_NATIVE = use_native
+        try:
+            return ("ok", self._build(sighash, none_output_index).preimage(0))
+        except Exception as e:  # parity check only compares the outcome kind
+            return ("err", type(e).__name__)
+        finally:
+            tp_mod._USE_NATIVE = orig
+
+    # none output at index 1 == NOT the signing input's SINGLE output; committed only under ALL.
+    # none output at index 0 == the signing input's SINGLE output; committed under ALL and SINGLE.
+    @pytest.mark.parametrize("none_output_index", [1, 0], ids=["none@non-committed", "none@committed"])
+    @pytest.mark.parametrize("sighash", SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}")
+    def test_native_matches_python(self, sighash, none_output_index):
+        native = self._preimage(sighash, none_output_index, True)
+        python = self._preimage(sighash, none_output_index, False)
+
+        # Native and pure-Python must agree on the outcome kind ...
+        assert native[0] == python[0], (
+            f"native={native} python={python} for sighash 0x{int(sighash):02x} "
+            f"none_output_index={none_output_index}"
+        )
+        # ... and, when both succeed, on the exact preimage bytes.
+        if native[0] == "ok":
+            assert native[1] == python[1]
+
+    def test_funded_outputs_are_unaffected(self):
+        """Sanity: with every output funded the fix is a pure no-op vs full serialization."""
+        from bsv.transaction_preimage import _outputs_to_bytes, _outputs_to_bytes_for_input
+
+        tx = self._build(SIGHASH.ALL_FORKID, none_output_index=0)
+        tx.outputs[0].satoshis = 500  # re-fund the one we blanked
+        for sighash in self.SIGHASH_FLAGS:
+            assert _outputs_to_bytes_for_input(tx.outputs, 0, int(sighash)) == _outputs_to_bytes(tx.outputs)
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # 7. Merkle
 # ═══════════════════════════════════════════════════════════════════════
 
