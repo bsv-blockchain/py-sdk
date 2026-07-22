@@ -174,8 +174,12 @@ jobs:
 
       - name: Check distributions
         run: |
-          pip install twine
+          # packaging>=24.2 is required to validate PEP 639 metadata
+          # (License-Expression / License-File, Metadata-Version 2.4) that
+          # setuptools>=77 emits; the runner's system packaging is too old.
+          pip install --upgrade twine packaging
           twine --version
+          python -c "import packaging; print('packaging', packaging.__version__)"
           ls -la dist/
           twine check dist/*
 

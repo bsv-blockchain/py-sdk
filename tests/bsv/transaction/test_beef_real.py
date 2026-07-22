@@ -38,7 +38,8 @@ def test_beef_to_hex():
 
     assert isinstance(result, str)
     # Should be valid hex — raises ValueError if not
-    bytes.fromhex(result)
+    raw = bytes.fromhex(result)
+    assert len(raw) > 0
 
 
 def test_beef_merge_transaction():

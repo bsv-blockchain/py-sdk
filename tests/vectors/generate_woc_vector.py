@@ -59,13 +59,7 @@ def _fetch_header_by_height(client, base: str, height: int) -> dict:
     return {}
 
 
-def _validate_output_path(out: str) -> str:
-    """Resolve the CLI-provided output path and ensure it stays under the current working directory."""
-    base_dir = os.path.realpath(Path.cwd())
-    resolved = os.path.realpath(out)
-    if os.path.commonpath([base_dir, resolved]) != base_dir:
-        raise SystemExit(f"Refusing to write outside the working directory: {out}")
-    return resolved
+_VECTORS_DIR = Path(__file__).resolve().parent
 
 
 def main():
@@ -73,10 +67,11 @@ def main():
     ap.add_argument("txid", help="Transaction ID (hex)")
     ap.add_argument("--network", default=os.getenv("WOC_NETWORK", "main"))
     ap.add_argument("--height", type=int, default=None)
-    ap.add_argument("--out", required=True, help="Output JSON path")
+    ap.add_argument("--out", required=True, help="Output JSON filename (written to tests/vectors/)")
     args = ap.parse_args()
 
-    out_path = _validate_output_path(args.out)
+    safe_name = Path(args.out).name
+    out_path = _VECTORS_DIR / safe_name
 
     tx_hex, height, header = fetch_woc_tx_and_header(args.txid, args.network, None, args.height)
     if not tx_hex or not height or not isinstance(header, dict):
@@ -86,7 +81,6 @@ def main():
         "tx_hex": tx_hex,
         "block_height": height,
         "header_root": header.get("merkleroot", ""),
-        # Users may optionally add merkle_path_binary_hex if they have a proof
     }
     with open(out_path, "w") as f:
         json.dump(vector, f, indent=2)

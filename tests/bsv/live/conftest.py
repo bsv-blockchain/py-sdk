@@ -1482,9 +1482,7 @@ class UTXOManager:
         if spent_utxo is None:
             return
         if broadcast_failure_indicates_spent_input(result):
-            print(
-                f"\n  [UTXO pool] input no longer spendable — not re-queuing " f"{spent_utxo[0].txid()}:{spent_utxo[1]}"
-            )
+            print(f"\n  [UTXO pool] input no longer spendable — not re-queuing {spent_utxo[0].txid()}:{spent_utxo[1]}")
         else:
             self.return_utxo(spent_utxo)
 

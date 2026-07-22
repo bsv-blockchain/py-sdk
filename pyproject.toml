@@ -1,6 +1,6 @@
 [project]
 name = "bsv-sdk"
-version = "2.3.1"
+version = "2.3.2"
 description = "BSV BLOCKCHAIN | Software Development Kit for Python"
 readme = "README.md"
 requires-python = ">=3.10"

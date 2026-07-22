@@ -78,9 +78,14 @@ def test_merkle_path_verify():
     """Test merkle path verification against a mock chaintracker."""
     import asyncio
 
-    class MockChainTracker:
-        async def is_valid_root_for_height(self, root: str, height: int) -> bool:
+    from bsv.chaintracker import ChainTracker
+
+    class MockChainTracker(ChainTracker):
+        async def is_valid_root_for_height(self, _root: str, _height: int) -> bool:
             return True
+
+        async def current_height(self) -> int:
+            return 100
 
     mp = MerklePath(block_height=100, path=_two_leaf_path())
     is_valid = asyncio.run(mp.verify("00" * 32, MockChainTracker()))
