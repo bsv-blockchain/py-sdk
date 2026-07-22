@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
 - [2.2.1 - 2026-06-12](#221---2026-06-12)
 - [2.2.0 - 2026-06-10](#220---2026-06-10)
@@ -32,6 +33,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [2.3.1] - 2026-07-22
+
+Re-release of v2.3.0 for PyPI — the v2.3.0 tag build failed due to an invalid `license` field in `pyproject.toml`. This release includes the license metadata fix; no other code changes beyond v2.3.0.
+
+### Fixed
+
+- Fixed `license = {text = "MIT"}` → `license = "LicenseRef-Open-BSV-4"` (PEP 639 compliant format + correct license name) — resolves `InvalidDistribution: unrecognized or malformed field 'license-file'` in twine check.
 
 ---
 
