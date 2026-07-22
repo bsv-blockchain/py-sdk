@@ -235,13 +235,33 @@ def _resolve_log_path(candidate: str, base_dirs: tuple[str, ...]) -> str | None:
     """
     resolved = os.path.realpath(candidate)
     for base in base_dirs:
-        real_base = os.path.realpath(base)
-        try:
-            if os.path.commonpath([resolved, real_base]) == real_base:
-                return resolved
-        except ValueError:
-            continue
+        rebuilt = _rebuild_from_listing(os.path.realpath(base), resolved)
+        if rebuilt is not None:
+            return rebuilt
     return None
+
+
+def _rebuild_from_listing(base: str, resolved: str) -> str | None:
+    """Rebuild ``resolved`` under ``base`` component-by-component from directory listings.
+
+    Every segment of the returned path is taken from the directory listing
+    itself rather than from the input string, so the result can only name an
+    entry that actually exists under ``base``.
+    """
+    if resolved == base:
+        return base
+    if not resolved.startswith(base + os.sep):
+        return None
+    current = Path(base)
+    for part in Path(resolved[len(base) + 1 :]).parts:
+        try:
+            matches = [entry for entry in current.iterdir() if entry.name == part]
+        except OSError:
+            return None
+        if not matches:
+            return None
+        current = matches[0]
+    return str(current)
 
 
 def _check_with_retries(check, retries: int) -> bool:
