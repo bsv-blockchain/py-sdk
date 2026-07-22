@@ -61,22 +61,90 @@ def _preimage(
     return stream.getvalue()
 
 
+def _input_to_tuple(inp: TransactionInput, script: bytes) -> tuple:
+    return (
+        inp.source_txid,
+        inp.source_output_index,
+        script,
+        inp.satoshis or 0,
+        inp.sequence,
+        int(inp.sighash),
+    )
+
+
 def _inputs_to_tuples(inputs: list[TransactionInput]) -> list[tuple]:
+    """Input tuples for the native batch preimage of ALL inputs.
+
+    Every input is the signing input of its own preimage, so each locking_script
+    enters a digest; a missing one is a caller error, surfaced here exactly as
+    the pure-Python batch path does.
+    """
+    return [_input_to_tuple(inp, inp.locking_script.serialize()) for inp in inputs]
+
+
+def _inputs_to_tuples_for_input(inputs: list[TransactionInput], signing_index: int) -> list[tuple]:
+    """Input tuples for the native preimage of ONE signing input.
+
+    Only ``inputs[signing_index]``'s locking_script enters the digest (BIP143
+    scriptCode / OTDA scriptSig), so a missing one is surfaced as an error, matching
+    the pure-Python single-input path. The other inputs' scripts never enter this
+    digest — they contribute only outpoints (hashPrevouts) and sequences
+    (hashSequence) — so a missing one is replaced with ``b""`` instead of crashing.
+    This restores parity with the 2.2.x pure-Python behaviour for a tx parsed from
+    raw hex where only the signing input's prev-output has been restored (issue #187).
+    """
     return [
-        (
-            inp.source_txid,
-            inp.source_output_index,
-            inp.locking_script.serialize(),
-            inp.satoshis or 0,
-            inp.sequence,
-            int(inp.sighash),
+        _input_to_tuple(
+            inp,
+            inp.locking_script.serialize() if (i == signing_index or inp.locking_script) else b"",
         )
-        for inp in inputs
+        for i, inp in enumerate(inputs)
     ]
 
 
 def _outputs_to_bytes(outputs: list[TransactionOutput]) -> list[bytes]:
     return [out.serialize() for out in outputs]
+
+
+def _serialize_output_for_preimage(out: TransactionOutput, committed: bool) -> bytes:
+    """Serialize a single output for a native single-input preimage.
+
+    ``committed`` outputs (the ones the signing input's sighash actually digests)
+    are serialized as-is, so a genuinely missing amount still surfaces as an
+    error — matching the pure-Python path and avoiding a silently-wrong signature.
+    A *non-committed* output whose amount is not yet set (``satoshis is None``,
+    e.g. a change output restored from wire or awaiting ``fee()``) is serialized
+    with a zero-satoshis placeholder so the native path does not crash on a value
+    that never enters this input's digest.
+    """
+    if committed or out.satoshis is not None:
+        return out.serialize()
+    return b"".join(
+        [
+            (0).to_bytes(8, "little"),
+            out.locking_script.byte_length_varint(),
+            out.locking_script.serialize(),
+        ]
+    )
+
+
+def _outputs_to_bytes_for_input(outputs: list[TransactionOutput], input_index: int, sighash: int) -> list[bytes]:
+    """Serialize outputs for the native preimage of one signing input.
+
+    Mirrors the BIP143/OTDA output commitment of a single signing input:
+    SIGHASH_ALL digests every output, SIGHASH_SINGLE only ``outputs[input_index]``,
+    SIGHASH_NONE none. Only the committed outputs are serialized strictly; the
+    rest are serialized defensively (see :func:`_serialize_output_for_preimage`)
+    so an unfunded output elsewhere in the tx cannot crash the native path on an
+    amount this input never signs. For already-funded transactions this returns
+    exactly the same bytes as :func:`_outputs_to_bytes`.
+    """
+    base = sighash & 0x1F
+    commits_all = base != int(SIGHASH.NONE) and base != int(SIGHASH.SINGLE)
+    return [
+        _serialize_output_for_preimage(out, commits_all or (base == int(SIGHASH.SINGLE) and i == input_index))
+        for i, out in enumerate(outputs)
+    ]
 
 
 def tx_preimages(
@@ -236,13 +304,20 @@ def tx_preimage(
     if SIGHASH.use_otda(sighash):
         if _USE_NATIVE:
             return _bsv_native.tx_preimage_otda(
-                input_index, tx_version, tx_locktime, _inputs_to_tuples(inputs), _outputs_to_bytes(outputs)
+                input_index,
+                tx_version,
+                tx_locktime,
+                _inputs_to_tuples_for_input(inputs, input_index),
+                _outputs_to_bytes_for_input(outputs, input_index, sighash),
             )
         return _preimage_otda(input_index, inputs, outputs, tx_version, tx_locktime)
 
     if _USE_NATIVE:
         preimages = _bsv_native.tx_preimages(
-            tx_version, tx_locktime, _inputs_to_tuples(inputs), _outputs_to_bytes(outputs)
+            tx_version,
+            tx_locktime,
+            _inputs_to_tuples_for_input(inputs, input_index),
+            _outputs_to_bytes_for_input(outputs, input_index, sighash),
         )
         return preimages[input_index]
 

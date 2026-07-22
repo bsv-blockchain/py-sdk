@@ -20,7 +20,7 @@ from .script.script import Script
 from .script.type import P2PKH
 from .transaction_input import TransactionInput
 from .transaction_output import TransactionOutput
-from .transaction_preimage import tx_preimage
+from .transaction_preimage import _outputs_to_bytes_for_input, tx_preimage
 from .utils import Reader, Writer, reverse_hex_byte_order, unsigned_to_varint
 
 try:
@@ -171,7 +171,13 @@ class Transaction:
         for i, inp in enumerate(self.inputs):
             sh = hash_type if i == input_index else int(inp.sighash)
             sats = prev_satoshis if (prev_satoshis != 0 and i == input_index) else (inp.satoshis or 0)
-            script = inp.locking_script.serialize() if inp.locking_script else b""
+            # The signing input's scriptCode enters the digest, so it must be present
+            # (parity with the pure-Python _build_bip143_preimage). A non-signing input's
+            # script never enters this digest, so a missing one is replaced with b"".
+            if i == input_index or inp.locking_script:
+                script = inp.locking_script.serialize()
+            else:
+                script = b""
             input_tuples.append(
                 (
                     inp.source_txid,
@@ -182,7 +188,7 @@ class Transaction:
                     sh,
                 )
             )
-        output_bytes = [out.serialize() for out in self.outputs]
+        output_bytes = _outputs_to_bytes_for_input(self.outputs, input_index, hash_type)
         preimages = _bsv_native.tx_preimages(self.version, self.locktime, input_tuples, output_bytes)
         return preimages[input_index]
 
