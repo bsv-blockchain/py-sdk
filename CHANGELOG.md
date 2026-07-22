@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
 - [2.2.1 - 2026-06-12](#221---2026-06-12)
@@ -33,6 +34,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [2.3.3] - 2026-07-23
+
+### Fixed
+
+- **Native `tx_preimage` no longer crashes on inputs/outputs the signature does not commit to** (#187, #188) — `Transaction.preimage(i)` raised `AttributeError: 'NoneType' object has no attribute 'serialize'` on the native (`_bsv_native`) path when another input's `locking_script` was `None` (e.g. a transaction parsed with `Transaction.from_hex()` where only the signing input's prev-output had been restored). This was a regression versus the 2.2.x pure-Python path. The single-input preimage now replaces only a *non-signing* input's missing script with `b""` (it never enters the BIP143/OTDA digest — it contributes only outpoints and sequences) while still requiring the *signing* input's script, and serializes only the outputs the sighash commits to (defensively zero-filling a *non-committed* unfunded amount). A committed missing script/amount still raises on both paths, so no silently-wrong signatures. The native path stays byte-identical to the pure-Python path for every funded, restored transaction.
+- **`verify_broadcast_log` path-resolution hardening** (#186) — severed CLI-argument taint in the broadcast-log path resolution (SonarCloud `pythonsecurity:S8707`).
 
 ---
 
