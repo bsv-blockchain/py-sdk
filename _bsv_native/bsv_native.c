@@ -2468,7 +2468,9 @@ static void vm_error(VMState *st, const char *msg) {
         ctx, st->program_counter, st->stack.count, st->alt_stack.count);
 }
 
+#if defined(__GNUC__) || defined(__clang__)
 __attribute__((format(printf, 2, 3)))
+#endif
 static void vm_errorf(VMState *st, const char *fmt, ...) {
     char buf[512];
     va_list ap;
