@@ -148,8 +148,8 @@ class TestPublicKey:
             PublicKey("invalid_hex")
 
         # Invalid point coordinates
+        invalid_point = Point(10, 13)  # Not on curve
         with pytest.raises(ValueError):
-            invalid_point = Point(10, 13)  # Not on curve
             PublicKey(invalid_point)
 
     def test_public_key_equality(self):

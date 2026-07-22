@@ -207,46 +207,25 @@ def test_read_script_chunks_pushdata4():
         pytest.skip("read_script_chunks not available")
 
 
-def test_read_script_chunks_truncated_pushdata1():
-    """Test parsing truncated OP_PUSHDATA1 script."""
+@pytest.mark.parametrize(
+    "script",
+    [
+        b"\x4c",  # OP_PUSHDATA1 missing length byte
+        b"\x4d\x01",  # OP_PUSHDATA2 missing second length byte
+        b"\x4e\x01\x02\x03",  # OP_PUSHDATA4 missing 4th length byte
+    ],
+    ids=["pushdata1", "pushdata2", "pushdata4"],
+)
+def test_read_script_chunks_truncated_pushdata(script):
+    """Test parsing truncated OP_PUSHDATA scripts."""
     try:
         from bsv.utils.script_chunks import read_script_chunks
-
-        # OP_PUSHDATA1 but not enough bytes for length
-        script = b"\x4c"  # Missing length byte
-        chunks = read_script_chunks(script)
-        # Should handle gracefully (break early)
-        assert isinstance(chunks, list)
     except ImportError:
         pytest.skip("read_script_chunks not available")
 
-
-def test_read_script_chunks_truncated_pushdata2():
-    """Test parsing truncated OP_PUSHDATA2 script."""
-    try:
-        from bsv.utils.script_chunks import read_script_chunks
-
-        # OP_PUSHDATA2 but not enough bytes for length
-        script = b"\x4d\x01"  # Missing second length byte
-        chunks = read_script_chunks(script)
-        # Should handle gracefully (break early)
-        assert isinstance(chunks, list)
-    except ImportError:
-        pytest.skip("read_script_chunks not available")
-
-
-def test_read_script_chunks_truncated_pushdata4():
-    """Test parsing truncated OP_PUSHDATA4 script."""
-    try:
-        from bsv.utils.script_chunks import read_script_chunks
-
-        # OP_PUSHDATA4 but not enough bytes for length
-        script = b"\x4e\x01\x02\x03"  # Missing 4th length byte
-        chunks = read_script_chunks(script)
-        # Should handle gracefully (break early)
-        assert isinstance(chunks, list)
-    except ImportError:
-        pytest.skip("read_script_chunks not available")
+    chunks = read_script_chunks(script)
+    # Should handle gracefully (break early)
+    assert isinstance(chunks, list)
 
 
 # ========================================================================

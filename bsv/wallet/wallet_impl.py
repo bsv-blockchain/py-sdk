@@ -586,7 +586,7 @@ class ProtoWallet:
             print(f"[ProtoWallet.verify_hmac] Traceback: {traceback.format_exc()}")
             return {"error": error_msg}
 
-    def abort_action(self, *a, **k):
+    def abort_action(self, *_args, **_kwargs):
         warnings.warn(
             "ProtoWallet.abort_action() is deprecated. Use Wallet from py-wallet-toolbox instead.",
             DeprecationWarning,

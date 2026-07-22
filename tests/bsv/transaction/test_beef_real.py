@@ -37,11 +37,9 @@ def test_beef_to_hex():
     result = beef.to_hex()
 
     assert isinstance(result, str)
-    # Should be valid hex
-    try:
-        bytes.fromhex(result)
-    except ValueError:
-        pytest.fail("to_hex() did not return valid hex string")
+    # Should be valid hex — raises ValueError if not
+    raw = bytes.fromhex(result)
+    assert len(raw) > 0
 
 
 def test_beef_merge_transaction():
@@ -68,12 +66,8 @@ def test_beef_merge_raw_tx():
     raw_tx += b"\x00\x00\x00\x00"  # Locktime
 
     # Test the REAL merge_raw_tx() method
-    try:
-        result = beef.merge_raw_tx(raw_tx)
-        assert result is not None
-    except Exception:
-        # May reject invalid transaction
-        pass
+    result = beef.merge_raw_tx(raw_tx)
+    assert result is not None
 
 
 def test_beef_find_transaction():
@@ -150,12 +144,8 @@ def test_beef_to_binary_atomic():
     txid = tx.txid()
 
     # Test the REAL to_binary_atomic() method
-    try:
-        result = beef.to_binary_atomic(txid)
-        assert isinstance(result, bytes)
-    except Exception:
-        # May fail if txid not found
-        pass
+    result = beef.to_binary_atomic(txid)
+    assert isinstance(result, bytes)
 
 
 def test_beef_find_bump():

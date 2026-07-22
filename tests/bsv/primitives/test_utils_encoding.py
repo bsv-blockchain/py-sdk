@@ -40,8 +40,9 @@ class TestBase58Encoding:
         # Test undefined/None input
         from typing import Any, cast
 
+        none_input = cast(Any, None)
         with pytest.raises(ValueError, match="Expected base58 string"):
-            from_base58(cast(Any, None))
+            from_base58(none_input)
 
         # Test invalid characters
         with pytest.raises(ValueError, match="Invalid base58 character"):

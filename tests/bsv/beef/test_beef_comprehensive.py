@@ -34,11 +34,11 @@ def test_from_beef_error_case():
         parse_beef(b"invalid data")
 
     # Test empty data - should raise some error
-    with pytest.raises(Exception):  # Can be ValueError, IndexError, or struct.error
+    with pytest.raises(ValueError, match="invalid beef bytes"):
         parse_beef(b"")
 
     # Test truncated version header
-    with pytest.raises(Exception):  # Can be ValueError, IndexError, or struct.error
+    with pytest.raises(ValueError, match="invalid beef bytes"):
         parse_beef(b"\x00\x01")
 
 
@@ -455,10 +455,11 @@ def test_beef_merge_beef_tx():
     # Test handle nil transaction - Python doesn't allow None, but we can test TypeError
     from typing import Any, cast
 
+    nil_btx = cast(Any, None)
     with pytest.raises(
         (TypeError, AttributeError, ValueError), match="'NoneType' object has no attribute 'data_format'"
     ):
-        beef.merge_beef_tx(cast(Any, None))
+        beef.merge_beef_tx(nil_btx)
 
     # Test handle BeefTx with nil Transaction (txid-only)
     btx_nil = BeefTx(txid="55" * 32, tx_bytes=b"", tx_obj=None, data_format=2)

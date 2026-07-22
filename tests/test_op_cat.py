@@ -139,14 +139,15 @@ def test_op_cat_edge_cases():
 
 def test_op_cat_type_errors():
     """Test that OpCat raises appropriate TypeErrors for invalid inputs"""
+    op_cat = OpCat()
 
     # Test invalid locking script data type
     with pytest.raises(TypeError, match=r"unsupported type for OpCat locking script data"):
-        OpCat().lock(123)
+        op_cat.lock(123)
 
     # Test invalid unlocking script data types
     with pytest.raises(TypeError, match=r"unsupported type for first OpCat unlocking data"):
-        OpCat().unlock(123, b"world")
+        op_cat.unlock(123, b"world")
 
     with pytest.raises(TypeError, match=r"unsupported type for second OpCat unlocking data"):
-        OpCat().unlock(b"hello", 456)
+        op_cat.unlock(b"hello", 456)

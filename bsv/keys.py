@@ -122,34 +122,40 @@ class PublicKey:
         self.compressed: bool = True
 
         if isinstance(public_key, Point):
-            x_bytes = public_key.x.to_bytes(32, "big")
-            y_bytes = public_key.y.to_bytes(32, "big")
-            uncompressed = b"\x04" + x_bytes + y_bytes
-            if _CRYPTO_BACKEND == "native":
-                self._raw: bytes = _bsv_native.pubkey_serialize(uncompressed, True)
-                self._raw_unc: bytes = uncompressed
-            else:
-                prefix = b"\x02" if public_key.y % 2 == 0 else b"\x03"
-                self._raw = prefix + x_bytes
-                self._raw_unc = uncompressed
+            self._init_from_point(public_key)
         elif isinstance(public_key, PublicKey):
             self._raw = public_key.serialize(True)
             self._raw_unc = None
             self.compressed = public_key.compressed
         else:
-            if isinstance(public_key, str):
-                pk: bytes = bytes.fromhex(public_key)
-            elif isinstance(public_key, bytes):
-                pk: bytes = public_key
-            else:
-                raise TypeError("unsupported public key type")
-            self.compressed = pk[:1] in PUBLIC_KEY_COMPRESSED_PREFIX_LIST
-            if _CRYPTO_BACKEND == "native":
-                _bsv_native.pubkey_parse(pk)
-                self._raw = _bsv_native.pubkey_serialize(pk, True)
-                self._raw_unc = None
-            else:
-                self._raw, self._raw_unc = _pubkey_validate_and_compress(pk)
+            self._init_from_serialized(public_key)
+
+    def _init_from_point(self, point: Point) -> None:
+        x_bytes = point.x.to_bytes(32, "big")
+        y_bytes = point.y.to_bytes(32, "big")
+        uncompressed = b"\x04" + x_bytes + y_bytes
+        if _CRYPTO_BACKEND == "native":
+            self._raw: bytes = _bsv_native.pubkey_serialize(uncompressed, True)
+            self._raw_unc: bytes = uncompressed
+        else:
+            prefix = b"\x02" if point.y % 2 == 0 else b"\x03"
+            self._raw = prefix + x_bytes
+            self._raw_unc = uncompressed
+
+    def _init_from_serialized(self, public_key: str | bytes) -> None:
+        if isinstance(public_key, str):
+            pk: bytes = bytes.fromhex(public_key)
+        elif isinstance(public_key, bytes):
+            pk: bytes = public_key
+        else:
+            raise TypeError("unsupported public key type")
+        self.compressed = pk[:1] in PUBLIC_KEY_COMPRESSED_PREFIX_LIST
+        if _CRYPTO_BACKEND == "native":
+            _bsv_native.pubkey_parse(pk)
+            self._raw = _bsv_native.pubkey_serialize(pk, True)
+            self._raw_unc = None
+        else:
+            self._raw, self._raw_unc = _pubkey_validate_and_compress(pk)
 
     def point(self) -> Point:
         if _CRYPTO_BACKEND == "native":

@@ -673,12 +673,12 @@ def test_online_woc_sample_tx_verify_optional():
         loop = asyncio.new_event_loop()
         ok = loop.run_until_complete(tx.verify(woc))
         loop.close()
-        assert ok is True
     except Exception:
         # Intentional: Skip test if online verification fails (network issues, endpoint unavailable)
         import pytest
 
         pytest.skip("Online WOC sample verify skipped due to endpoint or data unavailability")
+    assert ok is True
 
 
 def test_transaction_verify_with_merkle_proof_and_chaintracker():
@@ -1318,8 +1318,9 @@ def test_beef_mixed_versions_and_atomic_selection_logic():
     # V1 with only version bytes should fail to parse (incomplete BEEF)
     import pytest
 
+    v1_version_only = int(BEEF_V1).to_bytes(4, "little")
     with pytest.raises((ValueError, TypeError)):
-        new_beef_from_bytes(int(BEEF_V1).to_bytes(4, "little"))
+        new_beef_from_bytes(v1_version_only)
 
 
 def test_parse_beef_ex_selection_priority():

@@ -46,8 +46,9 @@ def test_xdm_constructor_throws_if_no_postMessage():  # NOSONAR - Testing JavaSc
     class NoPostMessage:
         pass
 
+    win = NoPostMessage()
     with pytest.raises(WalletError, match="support postMessage calls"):
-        XDMSubstrate(window=NoPostMessage())
+        XDMSubstrate(window=win)
 
 
 def test_xdm_invoke_calls_postMessage():  # NOSONAR - Testing JavaScript Web API naming
@@ -79,8 +80,10 @@ def test_xdm_invoke_calls_post_message():
 
 def test_xdm_invoke_raises_if_no_parent():
     class NoParent:
-        pass
+        def postMessage(self, msg, target):  # NOSONAR - Matches JavaScript Web API naming
+            pass
 
     win = NoParent()
-    with pytest.raises(WalletError, match="postMessage"):
-        XDMSubstrate(window=win).invoke("test", {})
+    xdm = XDMSubstrate(window=win)
+    with pytest.raises(WalletError, match="No parent window"):
+        xdm.invoke("test", {})

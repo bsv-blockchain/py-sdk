@@ -87,10 +87,10 @@ def test_p2pkh_unlocking_template_sign():
 
             try:
                 unlocking_script = unlock_template.sign(tx, 0)
-                assert unlocking_script is not None
             except Exception:
                 # May need valid transaction structure
                 pytest.skip("Requires valid transaction structure")
+            assert unlocking_script is not None
     except ImportError:
         pytest.skip("P2PKH unlock not available")
 

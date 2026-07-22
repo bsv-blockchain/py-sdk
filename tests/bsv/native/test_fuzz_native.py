@@ -955,23 +955,19 @@ class TestCrashHangRegression:
 
     def test_sign_with_k_zero_does_not_hang(self):
         """k=0 (or any multiple of the curve order) once hung forever because
-        nonce_fn_custom_k ignored the retry counter. Must raise, not loop."""
-        import subprocess
-
-        try:
-            r = self._run(
-                """
-                msg = _bsv_native.hash256(b'm'); sec = b'\\x01' * 32
-                try:
-                    _bsv_native.ecdsa_sign_with_k(msg, sec, b'\\x00' * 32)
-                    print('NOEXC')
-                except ValueError:
-                    print('VALUEERROR')
-                """,
-                timeout=8.0,
-            )
-        except subprocess.TimeoutExpired:
-            pytest.fail("ecdsa_sign_with_k(k=0) hung (infinite nonce retry loop)")
+        nonce_fn_custom_k ignored the retry counter. Must raise, not loop.
+        A subprocess TimeoutExpired here means the infinite nonce retry loop is back."""
+        r = self._run(
+            """
+            msg = _bsv_native.hash256(b'm'); sec = b'\\x01' * 32
+            try:
+                _bsv_native.ecdsa_sign_with_k(msg, sec, b'\\x00' * 32)
+                print('NOEXC')
+            except ValueError:
+                print('VALUEERROR')
+            """,
+            timeout=8.0,
+        )
         assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
         assert "VALUEERROR" in r.stdout
 

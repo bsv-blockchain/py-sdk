@@ -76,7 +76,7 @@ def test_aes_gcm_decrypt_valid():
 def test_aes_gcm_decrypt_wrong_key():
     """Test AES-GCM decryption with wrong key."""
     try:
-        from bsv.aes_gcm import decrypt, encrypt
+        from bsv.aes_gcm import AESGCMError, decrypt, encrypt
 
         key1 = b"\x00" * 32
         key2 = b"\x01" * 32
@@ -84,7 +84,7 @@ def test_aes_gcm_decrypt_wrong_key():
 
         encrypted = encrypt(data, key1)
         # Should fail authentication with wrong key
-        with pytest.raises(Exception):
+        with pytest.raises((ValueError, AESGCMError)):
             decrypt(encrypted, key2)
             # Expected to fail
     except ImportError:

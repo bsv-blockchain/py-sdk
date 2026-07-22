@@ -152,12 +152,9 @@ def test_reader_eof():
         reader = Reader(data)
 
         if hasattr(reader, "read"):
-            try:
-                result = reader.read(10)
-                assert len(result) <= 2
-            except Exception:
-                # Expected
-                pass
+            # Reading beyond EOF returns only the available bytes
+            result = reader.read(10)
+            assert len(result) <= 2
     except ImportError:
         pytest.skip("Reader not available")
 
@@ -170,12 +167,9 @@ def test_reader_empty():
         reader = Reader(b"")
 
         if hasattr(reader, "read"):
-            try:
-                result = reader.read(1)
-                assert result == b""
-            except Exception:
-                # Expected
-                pass
+            # Reading from empty data yields no bytes
+            result = reader.read(1)
+            assert result is None or result == b""
     except ImportError:
         pytest.skip("Reader not available")
 

@@ -18,18 +18,29 @@ def test_merkle_path_init_empty():
     assert len(mp.path) == 0
 
 
+def _two_leaf_path():
+    """A minimal valid single-level path with two txid leaves."""
+    return [
+        [
+            {"offset": 0, "hash_str": "00" * 32, "txid": True},
+            {"offset": 1, "hash_str": "11" * 32, "txid": True},
+        ]
+    ]
+
+
 def test_merkle_path_init_with_path():
     """Test MerklePath with path data."""
-    path = [{"offset": 0, "hash": "00" * 32}, {"offset": 1, "hash": "11" * 32}]
-    mp = MerklePath(block_height=100, path=path)
+    mp = MerklePath(block_height=100, path=_two_leaf_path())
     assert mp.block_height == 100
-    assert len(mp.path) == 2
+    assert len(mp.path) == 1
+    assert len(mp.path[0]) == 2
 
 
 def test_merkle_path_init_with_txid():
-    """Test MerklePath with txid."""
-    mp = MerklePath(block_height=100, path=[], txid="abc123")
-    assert mp.txid == "abc123"
+    """Test MerklePath with txid leaves."""
+    mp = MerklePath(block_height=100, path=_two_leaf_path())
+    assert mp.path[0][0]["txid"] is True
+    assert mp.path[0][0]["hash_str"] == "00" * 32
 
 
 # ========================================================================
@@ -37,20 +48,19 @@ def test_merkle_path_init_with_txid():
 # ========================================================================
 
 
-def test_merkle_path_to_dict():
-    """Test MerklePath to_dict."""
-    path = [{"offset": 0, "hash": "00" * 32}]
-    mp = MerklePath(block_height=100, path=path)
-    result = mp.to_dict()
-    assert isinstance(result, dict)
-    assert "blockHeight" in result or "block_height" in result
+def test_merkle_path_to_hex():
+    """Test MerklePath hex serialization."""
+    mp = MerklePath(block_height=100, path=_two_leaf_path())
+    result = mp.to_hex()
+    assert isinstance(result, str)
+    assert len(result) > 0
 
 
-def test_merkle_path_from_dict():
-    """Test MerklePath from_dict."""
-    data = {"blockHeight": 100, "path": [{"offset": 0, "hash": "00" * 32}]}
-    mp = MerklePath.from_dict(data)
-    assert mp.block_height == 100
+def test_merkle_path_from_hex():
+    """Test MerklePath hex deserialization round-trip."""
+    mp = MerklePath(block_height=100, path=_two_leaf_path())
+    mp2 = MerklePath.from_hex(mp.to_hex())
+    assert mp2.block_height == 100
 
 
 def test_merkle_path_compute_root_empty():
@@ -58,21 +68,28 @@ def test_merkle_path_compute_root_empty():
     mp = MerklePath(block_height=0, path=[])
     try:
         root = mp.compute_root(b"\x00" * 32)
-        assert isinstance(root, bytes) or root is None
     except Exception:
         # May require valid path
-        pass
+        return
+    assert isinstance(root, bytes) or root is None
 
 
 def test_merkle_path_verify():
-    """Test merkle path verification."""
-    mp = MerklePath(block_height=0, path=[])
-    try:
-        is_valid = mp.verify(b"\x00" * 32, b"\x00" * 32)
-        assert isinstance(is_valid, bool)
-    except AttributeError:
-        # May not have verify method
-        pass
+    """Test merkle path verification against a mock chaintracker."""
+    import asyncio
+
+    from bsv.chaintracker import ChainTracker
+
+    class MockChainTracker(ChainTracker):
+        async def is_valid_root_for_height(self, _root: str, _height: int) -> bool:
+            return True
+
+        async def current_height(self) -> int:
+            return 100
+
+    mp = MerklePath(block_height=100, path=_two_leaf_path())
+    is_valid = asyncio.run(mp.verify("00" * 32, MockChainTracker()))
+    assert is_valid is True
 
 
 # ========================================================================

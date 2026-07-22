@@ -37,8 +37,8 @@ class TestKeyDeriver:
             self.key_deriver.normalize_counterparty("invalid_type")
 
         # Test with Counterparty with invalid type
+        invalid_counterparty = Counterparty("invalid", None)
         with pytest.raises(ValueError):
-            invalid_counterparty = Counterparty("invalid", None)
             self.key_deriver.normalize_counterparty(invalid_counterparty)
 
     def test_normalize_counterparty_self(self):
@@ -145,12 +145,12 @@ class TestKeyDeriver:
             self.key_deriver.compute_invoice_number(protocol, self.key_id)
 
         # Invalid security levels
+        invalid_protocol = Protocol(-1, "valid protocol")
         with pytest.raises(ValueError, match="protocol security level must be 0, 1, or 2"):
-            invalid_protocol = Protocol(-1, "valid protocol")
             self.key_deriver.compute_invoice_number(invalid_protocol, self.key_id)
 
+        invalid_protocol = Protocol(3, "valid test")
         with pytest.raises(ValueError, match="protocol security level must be 0, 1, or 2"):
-            invalid_protocol = Protocol(3, "valid test")
             self.key_deriver.compute_invoice_number(invalid_protocol, self.key_id)
 
     def test_key_id_validation(self):
@@ -174,29 +174,27 @@ class TestKeyDeriver:
         # Should not error
         valid_protocol = Protocol(0, "abc")  # 3 chars
         self.key_deriver.compute_invoice_number(valid_protocol, self.key_id)
-        # Too short
+        # Too short (Protocol constructor validates name length)
         with pytest.raises(ValueError, match="protocol names must be 3-400 characters"):
-            invalid_protocol = Protocol(0, "ab")  # 2 chars
-            self.key_deriver.compute_invoice_number(invalid_protocol, self.key_id)
+            Protocol(0, "ab")  # 2 chars
 
-        # Too long
+        # Too long (Protocol constructor validates name length)
         with pytest.raises(ValueError, match="protocol names must be 3-400 characters"):
-            invalid_protocol = Protocol(0, "a" * 401)
-            self.key_deriver.compute_invoice_number(invalid_protocol, self.key_id)
+            Protocol(0, "a" * 401)
 
         # Multiple consecutive spaces
+        invalid_protocol = Protocol(0, "test  protocol")
         with pytest.raises(ValueError, match="protocol names cannot contain multiple consecutive spaces"):
-            invalid_protocol = Protocol(0, "test  protocol")
             self.key_deriver.compute_invoice_number(invalid_protocol, self.key_id)
 
         # Invalid characters
+        invalid_protocol = Protocol(0, "test-protocol")
         with pytest.raises(ValueError, match="protocol names can only contain letters, numbers and spaces"):
-            invalid_protocol = Protocol(0, "test-protocol")
             self.key_deriver.compute_invoice_number(invalid_protocol, self.key_id)
 
         # Ending with " protocol"
+        invalid_protocol = Protocol(0, "test protocol")
         with pytest.raises(ValueError, match='no need to end your protocol name with " protocol"'):
-            invalid_protocol = Protocol(0, "test protocol")
             self.key_deriver.compute_invoice_number(invalid_protocol, self.key_id)
 
     def test_deterministic_derivation(self):

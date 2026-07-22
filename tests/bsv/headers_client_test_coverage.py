@@ -41,9 +41,9 @@ def test_headers_client_get_header():
             if hasattr(client, "get_header"):
                 try:
                     header = client.get_header(0)
-                    assert header is None or header
                 except Exception:
                     pytest.skip("Requires valid configuration")
+                assert header is None or header
         except TypeError:
             pytest.skip(SKIP_HEADERS_CLIENT)
     except (ImportError, AttributeError):
@@ -61,9 +61,9 @@ def test_headers_client_get_tip():
             if hasattr(client, "get_tip"):
                 try:
                     tip = client.get_tip()
-                    assert tip is None or tip
                 except Exception:
                     pytest.skip("Requires valid configuration")
+                assert tip is None or tip
         except TypeError:
             pytest.skip(SKIP_HEADERS_CLIENT)
     except (ImportError, AttributeError):

@@ -30,21 +30,21 @@ def test_chaintracker_interface_exists():
 
 
 def test_chaintracker_get_header():
-    """Test ChainTracker get_header method exists."""
+    """Test ChainTracker root validation method exists."""
     try:
         from bsv.chaintracker import ChainTracker
 
-        assert hasattr(ChainTracker, "get_header")
+        assert hasattr(ChainTracker, "is_valid_root_for_height")
     except ImportError:
         pytest.skip(SKIP_CHAINTRACKER)
 
 
 def test_chaintracker_get_height():
-    """Test ChainTracker get_height method exists."""
+    """Test ChainTracker current_height method exists."""
     try:
         from bsv.chaintracker import ChainTracker
 
-        assert hasattr(ChainTracker, "get_height")
+        assert hasattr(ChainTracker, "current_height")
     except ImportError:
         pytest.skip(SKIP_CHAINTRACKER)
 
@@ -75,10 +75,11 @@ def test_default_chaintracker_get_height():
         if hasattr(tracker, "get_height"):
             try:
                 height = tracker.get_height()
-                assert isinstance(height, int)
             except Exception:
                 # May require connection
-                pass
+                height = None
+            if height is not None:
+                assert isinstance(height, int)
     except (ImportError, AttributeError):
         pytest.skip(SKIP_DEFAULT_CHAINTRACKER)
 

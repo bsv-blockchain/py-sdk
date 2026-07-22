@@ -23,17 +23,13 @@ def test_beef_serialize_beef():
 
     beef = Beef(version=4)
 
-    try:
-        # Use to_binary function
-        serialized = to_binary(beef)
-        assert isinstance(serialized, bytes)
+    # Use to_binary function
+    serialized = to_binary(beef)
+    assert isinstance(serialized, bytes)
 
-        # Also test to_hex
-        hex_str = to_hex(beef)
-        assert isinstance(hex_str, str)
-    except Exception:
-        # May require valid BEEF structure
-        pass
+    # Also test to_hex
+    hex_str = to_hex(beef)
+    assert isinstance(hex_str, str)
 
 
 def test_beef_deserialize_beef():

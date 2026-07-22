@@ -3,7 +3,7 @@ import pytest
 pytest.skip("Skipping examples in automated test run", allow_module_level=True)
 import asyncio
 
-from bsv.broadcasters.default import default_broadcaster, gorillapool_broadcaster, taal_broadcaster
+from bsv.broadcasters.default import gorillapool_broadcaster
 
 from bsv import (
     P2PKH,
@@ -21,12 +21,8 @@ Simple example of synchronous ARC broadcasting and status checking.
 
 
 async def main():
-    # def main():
-
-    # arc = default_broadcaster()
-    # arc = taal_broadcaster()
-    arc = gorillapool_broadcaster()
     # Setup ARC broadcaster
+    arc = gorillapool_broadcaster()
 
     # Create a simple transaction
     private_key = PrivateKey("Kzpr5a6T-------------------dGEjxCufyxGMo9xV")

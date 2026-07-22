@@ -59,24 +59,9 @@ class TestLeftRightCatComposition:
 
 
 class TestValidNopsStillWork:
-    def test_nop1(self):
-        spend = make_spend("OP_NOP1 OP_TRUE")
-        assert spend.validate()
-
-    def test_nop2_cltv(self):
-        spend = make_spend("OP_NOP2 OP_TRUE")
-        assert spend.validate()
-
-    def test_nop3_csv(self):
-        spend = make_spend("OP_NOP3 OP_TRUE")
-        assert spend.validate()
-
-    def test_nop9(self):
-        spend = make_spend("OP_NOP9 OP_TRUE")
-        assert spend.validate()
-
-    def test_nop10(self):
-        spend = make_spend("OP_NOP10 OP_TRUE")
+    @pytest.mark.parametrize("nop", ["OP_NOP1", "OP_NOP2", "OP_NOP3", "OP_NOP9", "OP_NOP10"])
+    def test_nop(self, nop):
+        spend = make_spend(f"{nop} OP_TRUE")
         assert spend.validate()
 
 

@@ -288,6 +288,33 @@ def _print_live_broadcast_result(bc: Broadcaster, result: object, *, kind: str) 
         print(f"  [{tag} {kind}] more: {more!r}")
 
 
+def _broadcast_error_note(result: object) -> str | None:
+    """``code: description`` summary for failed broadcasts (``None`` for success / no info)."""
+    if getattr(result, "status", None) == "success":
+        return None
+    code = getattr(result, "code", None)
+    desc = getattr(result, "description", None)
+    parts = [str(v) for v in (code, desc) if v is not None]
+    msg = ": ".join(p for p in parts if p).strip(": ")
+    return msg or None
+
+
+def _arc_http_diagnostics(result: object) -> dict:
+    """ARC HTTP response / status / client-transport details from the broadcast result."""
+    out: dict = {}
+    st = getattr(result, "status", None)
+    source = (getattr(result, "extra", None) if st == "success" else getattr(result, "more", None)) or {}
+    if source.get("arc_json") is not None:
+        out["arc_http_response"] = source["arc_json"]
+    if source.get("http_status") is not None:
+        out["arc_http_status"] = source["http_status"]
+    if st != "success":
+        tran = {k: source[k] for k in ("exception_type", "exception") if source.get(k)}
+        if tran:
+            out["arc_client_transport"] = tran
+    return out
+
+
 def _ledger_diagnostics_payload(
     result: object,
     *,
@@ -296,34 +323,43 @@ def _ledger_diagnostics_payload(
 ) -> dict:
     """Structured ARC POST / WoC GET / client-transport info for the live Markdown report."""
     out: dict = {}
-    st = getattr(result, "status", None)
-    if st != "success":
-        code = getattr(result, "code", None)
-        desc = getattr(result, "description", None)
-        parts = [str(code) if code is not None else "", str(desc) if desc is not None else ""]
-        msg = ": ".join(p for p in parts if p).strip(": ")
-        if msg:
-            out["broadcast_error"] = msg
-    more = getattr(result, "more", None) or {}
-    extra = getattr(result, "extra", None) or {}
-    if st == "success":
-        if extra.get("arc_json") is not None:
-            out["arc_http_response"] = extra["arc_json"]
-        if extra.get("http_status") is not None:
-            out["arc_http_status"] = extra["http_status"]
-    else:
-        if more.get("arc_json") is not None:
-            out["arc_http_response"] = more["arc_json"]
-        if more.get("http_status") is not None:
-            out["arc_http_status"] = more["http_status"]
-        tran = {k: more[k] for k in ("exception_type", "exception") if more.get(k)}
-        if tran:
-            out["arc_client_transport"] = tran
+    err = _broadcast_error_note(result)
+    if err:
+        out["broadcast_error"] = err
+    out.update(_arc_http_diagnostics(result))
     if woc_http_detail:
         out["woc_probe_http"] = woc_http_detail
     if visibility_poll_error:
         out["visibility_poll_error"] = visibility_poll_error
     return out
+
+
+def _arc_seen_wait_description(*, require_arc_seen_on_network: bool, woc_fb: bool) -> str:
+    """Human-readable description of the ARC/WoC visibility wait strategy."""
+    if require_arc_seen_on_network:
+        if woc_fb:
+            return "polling ARC for SEEN_ON_NETWORK or MINED; WoC POST /tx/raw if already in mempool"
+        return (
+            "polling ARC only until SEEN_ON_NETWORK or MINED "
+            "(set LIVE_ARC_SEEN_WOC_FALLBACK=1 to allow WoC /tx/raw mempool probe)"
+        )
+    extra = " + WhatsOnChain (GET and/or POST /tx/raw mempool probe)" if woc_fb else ""
+    return f"polling ARC + WoC until visible (SEEN_ON_NETWORK/MINED, progressing, or mempool/indexer){extra}"
+
+
+def _summarize_result_message(result: object) -> str:
+    """Broadcast result message trimmed to table width."""
+    msg = (getattr(result, "message", None) or "").strip()
+    if len(msg) > 120:
+        msg = msg[:117] + "..."
+    return msg
+
+
+def _woc_probe_cell(woc_visible: bool | None, woc_method: str | None) -> str:
+    """Ledger cell for the WoC visibility probe outcome."""
+    if woc_visible is None:
+        return "—"
+    return ("yes" if woc_visible else "no") + (f" ({woc_method})" if woc_method else "")
 
 
 def format_broadcast_diagnostic(result: object) -> str:
@@ -891,15 +927,11 @@ class UTXOManager:
         from .live_broadcast_ledger import append_row
 
         st = getattr(result, "status", None)
-        msg = (getattr(result, "message", None) or "").strip()
-        if len(msg) > 120:
-            msg = msg[:117] + "..."
+        msg = _summarize_result_message(result)
         txid = getattr(result, "txid", None)
         if not txid and tx is not None:
             txid = tx.txid()
-        woc_probe = "—"
-        if woc_visible is not None:
-            woc_probe = ("yes" if woc_visible else "no") + (f" ({woc_method})" if woc_method else "")
+        woc_probe = _woc_probe_cell(woc_visible, woc_method)
 
         hex_out = raw_tx_hex
         if hex_out is None and tx is not None:
@@ -910,9 +942,7 @@ class UTXOManager:
             woc_http_detail=woc_http_detail,
             visibility_poll_error=visibility_poll_error,
         )
-        fail_note = diag.get("broadcast_error") or diag.get("visibility_poll_error")
-        if not fail_note:
-            fail_note = "—"
+        fail_note = diag.get("broadcast_error") or diag.get("visibility_poll_error") or "—"
 
         append_row(
             {
@@ -964,26 +994,12 @@ class UTXOManager:
         txid = getattr(result, "txid", None)
         if not txid:
             return None
-        if kind == "fan-out":
-            tmo = arc_fanout_seen_poll_timeout_sec()
-        else:
-            tmo = arc_seen_poll_timeout_sec()
+        tmo = arc_fanout_seen_poll_timeout_sec() if kind == "fan-out" else arc_seen_poll_timeout_sec()
         woc_fb = live_arc_seen_woc_fallback_enabled()
-        if require_arc_seen_on_network:
-            if woc_fb:
-                wait_desc = "polling ARC for SEEN_ON_NETWORK or MINED; WoC POST /tx/raw if already in mempool"
-            else:
-                wait_desc = (
-                    "polling ARC only until SEEN_ON_NETWORK or MINED "
-                    "(set LIVE_ARC_SEEN_WOC_FALLBACK=1 to allow WoC /tx/raw mempool probe)"
-                )
-        else:
-            extra = ""
-            if woc_fb:
-                extra = " + WhatsOnChain (GET and/or POST /tx/raw mempool probe)"
-            wait_desc = (
-                f"polling ARC + WoC until visible (SEEN_ON_NETWORK/MINED, progressing, or mempool/indexer){extra}"
-            )
+        wait_desc = _arc_seen_wait_description(
+            require_arc_seen_on_network=require_arc_seen_on_network,
+            woc_fb=woc_fb,
+        )
         print(f"\n  [ARC {kind}] POST txStatus={st!r}; {wait_desc} (timeout {tmo}s)…")
         from .arc_verify import wait_until_arc_tx_seen_on_network
 
@@ -1064,9 +1080,7 @@ class UTXOManager:
             else:
                 removed += 1
         if removed:
-            print(
-                f"\n  [UTXO pool] dropped {removed} stale entr(y/ies) not in WoC unspent for " f"{self.key.address()}"
-            )
+            print(f"\n  [UTXO pool] dropped {removed} stale entr(y/ies) not in WoC unspent for {self.key.address()}")
             self.utxos = kept
             self._save_pool()
         return removed
@@ -1398,7 +1412,7 @@ class UTXOManager:
 
         broadcast_ordinal = self.broadcast_count + 1
         n_in, n_out = len(tx.inputs), len(tx.outputs)
-        print(f"\n  [Broadcast #{broadcast_ordinal}] kind=tx txs_in_broadcast=1 " f"inputs={n_in} outputs={n_out}")
+        print(f"\n  [Broadcast #{broadcast_ordinal}] kind=tx txs_in_broadcast=1 inputs={n_in} outputs={n_out}")
 
         bc = _arc_with_broadcast_test_tx_headers(broadcaster or self.broadcaster)
         result = await _broadcast_with_transient_retries(bc, tx, label="ARC tx")
@@ -1426,20 +1440,7 @@ class UTXOManager:
         if result.status == "success":
             txid = result.txid or tx.txid()
             print(f"\n  -> {self.explorer_tx_base}/{txid}")
-            # Non-blocking WoC visibility probe
-            try:
-                from .arc_verify import check_woc_visibility
-
-                visible, method, elapsed, woc_http_detail = await check_woc_visibility(self.woc_api_base, txid)
-                if visible:
-                    print(f"  [WoC visibility] observable=yes (via {method} after {elapsed:.1f}s)")
-                else:
-                    print(f"  [WoC visibility] observable=no ({method} after {elapsed:.1f}s)")
-                self._woc_visibility_results.append((txid, visible))
-                woc_visible = visible
-                woc_method = method
-            except Exception:
-                pass  # never fail the test for a visibility check
+            woc_visible, woc_method, woc_http_detail = await self._probe_woc_visibility_after_success(txid)
             if live_require_mined_enabled(verify_mined):
                 await wait_until_live_tx_confirmed(
                     self.arc_base_url,
@@ -1457,15 +1458,33 @@ class UTXOManager:
             woc_method=woc_method,
             woc_http_detail=woc_http_detail,
         )
-        if result.status != "success" and spent_utxo is not None:
-            if broadcast_failure_indicates_spent_input(result):
-                print(
-                    f"\n  [UTXO pool] input no longer spendable — not re-queuing "
-                    f"{spent_utxo[0].txid()}:{spent_utxo[1]}"
-                )
-            else:
-                self.return_utxo(spent_utxo)
+        if result.status != "success":
+            self._requeue_or_drop_spent_utxo(result, spent_utxo)
         return result
+
+    async def _probe_woc_visibility_after_success(self, txid: str) -> tuple[bool | None, str | None, dict | None]:
+        """Non-blocking WoC visibility probe; never fails the test for a visibility check."""
+        try:
+            from .arc_verify import check_woc_visibility
+
+            visible, method, elapsed, woc_http_detail = await check_woc_visibility(self.woc_api_base, txid)
+            if visible:
+                print(f"  [WoC visibility] observable=yes (via {method} after {elapsed:.1f}s)")
+            else:
+                print(f"  [WoC visibility] observable=no ({method} after {elapsed:.1f}s)")
+            self._woc_visibility_results.append((txid, visible))
+            return visible, method, woc_http_detail
+        except Exception:
+            return None, None, None
+
+    def _requeue_or_drop_spent_utxo(self, result: object, spent_utxo: tuple[Transaction, int, int] | None) -> None:
+        """Return a UTXO to the pool after a transient failure; drop it when already spent/missing."""
+        if spent_utxo is None:
+            return
+        if broadcast_failure_indicates_spent_input(result):
+            print(f"\n  [UTXO pool] input no longer spendable — not re-queuing {spent_utxo[0].txid()}:{spent_utxo[1]}")
+        else:
+            self.return_utxo(spent_utxo)
 
 
 # ---------------------------------------------------------------------------

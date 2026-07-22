@@ -127,13 +127,10 @@ def test_p2pkh_extract_pubkey_hash_invalid():
 
     script = Script(b"\x51")
 
-    if hasattr(P2PKH, "extract_pubkey_hash"):
-        try:
-            extracted = P2PKH.extract_pubkey_hash(script)
-            assert extracted is None
-        except Exception:
-            # Expected for invalid script
-            pass
+    if not hasattr(P2PKH, "extract_pubkey_hash"):
+        pytest.skip("P2PKH has no extract_pubkey_hash method")
+    extracted = P2PKH.extract_pubkey_hash(script)
+    assert extracted is None
 
 
 # ========================================================================

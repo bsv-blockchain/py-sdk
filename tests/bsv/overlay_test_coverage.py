@@ -56,10 +56,10 @@ def test_overlay_lookup():
         if hasattr(client, "lookup"):
             try:
                 result = client.lookup("test")
-                assert result is not None
             except Exception:
                 # Expected without real overlay server
-                pass
+                return
+            assert result is not None
     except (ImportError, AttributeError):
         pytest.skip("OverlayClient lookup not available")
 

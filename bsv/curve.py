@@ -53,7 +53,7 @@ def curve_negative(point: Optional[Point]) -> Optional[Point]:
     """
     assert on_curve(point)
     if point is None:
-        # -0 = 0
+        # the point at infinity is its own negative
         return None
     x, y = point
     r = Point(x, -y % curve.p)
@@ -87,13 +87,13 @@ def curve_add(p: Optional[Point], q: Optional[Point]) -> Optional[Point]:
     assert on_curve(p)
     assert on_curve(q)
     if p is None:
-        # 0 + q = q
+        # adding the point at infinity leaves q unchanged
         return q
     if q is None:
-        # p + 0 = p
+        # adding the point at infinity leaves p unchanged
         return p
     if p == curve_negative(q):
-        # p == -q
+        # p is the negative of q, so the sum is the point at infinity
         return None
     # p != -q
     if _CRYPTO_BACKEND == "native":
@@ -117,7 +117,7 @@ def curve_multiply(scalar: int, point: Optional[Point]) -> Optional[Point]:
     if scalar % curve.n == 0 or point is None:
         return None
     if scalar < 0:
-        # k * point = -k * (-point)
+        # multiplying by a negative scalar equals multiplying the negated point by the positive scalar
         return curve_multiply(-scalar, curve_negative(point))
     if _CRYPTO_BACKEND == "native":
         pk = _point_to_pubkey_bytes(point)
@@ -146,4 +146,5 @@ def curve_get_y(x: int, even: bool) -> int:
     """
     y_square = (x * x * x + curve.a * x + curve.b) % curve.p
     y = pow(y_square, (curve.p + 1) // 4, curve.p)
-    return y if (y + (0 if even else 1)) % 2 == 0 else -y % curve.p
+    y_is_even = y % 2 == 0
+    return y if y_is_even == even else -y % curve.p

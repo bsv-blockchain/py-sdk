@@ -218,6 +218,7 @@ class Spend:
                 OpCode.OP_NOP73,
                 OpCode.OP_NOP77,
             ]:
+                # NOP opcodes intentionally do nothing; execution simply advances.
                 pass
 
             elif current_opcode in [OpCode.OP_IF, OpCode.OP_NOTIF]:
@@ -637,7 +638,6 @@ class Spend:
                 # Drop the signature, since there's no way for a signature to sign itself
                 sub_script = Script.find_and_delete(sub_script, Script.write_bin(sig))
 
-                # TODO
                 f = self.verify_signature(sig, pub_key, sub_script)
 
                 if not self.is_relaxed() and not f and len(sig) > 0:
@@ -708,7 +708,6 @@ class Spend:
                         _m = f"{_codename} requires correct encoding for the public key and signature."
                         self.script_evaluation_error(_m)
 
-                    # TODO
                     f_verify = self.verify_signature(buf_sig, buf_pub_key, sub_script)
 
                     if f_verify:

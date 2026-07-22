@@ -212,7 +212,7 @@ def test_decode_wif_invalid_format():
 
         # Invalid WIF - too short
         wif = "KyvGbxRUoofdw3TNydWn2Z78UaBFFap8DQ3KQ48UX4U8FEPFj"
-        with pytest.raises(Exception):  # Could be ValueError or other
+        with pytest.raises(ValueError):
             decode_wif(wif)
     except ImportError:
         pytest.skip(SKIP_DECODE_WIF)

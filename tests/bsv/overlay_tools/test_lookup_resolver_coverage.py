@@ -10,6 +10,8 @@ from bsv.overlay_tools.lookup_resolver import (
     HTTPSOverlayLookupFacilitator,
     LookupResolver,
     LookupResolverConfig,
+    LookupResponseError,
+    LookupTimeoutError,
     TimeoutContext,
 )
 
@@ -212,7 +214,7 @@ async def test_lookup_non_200_status():
 
         mock_session.return_value = mock_session_instance
 
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(LookupResponseError) as exc:
             await f.lookup("https://example.com", question)
         assert "500" in str(exc.value) or "failed" in str(exc.value).lower()
 
@@ -241,10 +243,11 @@ async def test_lookup_timeout():
 
         mock_session.return_value = mock_session_instance
 
-        with pytest.raises(Exception) as exc:
-            timeout_seconds = 100 / 1000
-            async with TimeoutContext(timeout_seconds) as timeout_ctx:
-                await timeout_ctx.run(f.lookup("https://example.com", question))
+        timeout_seconds = 100 / 1000
+        timeout_ctx = TimeoutContext(timeout_seconds)
+        lookup_coro = f.lookup("https://example.com", question)
+        with pytest.raises(LookupTimeoutError) as exc:
+            await timeout_ctx.run(lookup_coro)
         assert "timeout" in str(exc.value).lower() or "timed out" in str(exc.value).lower()
 
 

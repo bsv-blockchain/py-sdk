@@ -88,7 +88,7 @@ class SIGHASH(int, Enum):
         """
         has_forkid = bool(sighash & SIGHASH.FORKID)
         has_chronicle = bool(sighash & SIGHASH.CHRONICLE)
-        return not has_forkid or (has_forkid and has_chronicle)
+        return not has_forkid or has_chronicle
 
 
 #

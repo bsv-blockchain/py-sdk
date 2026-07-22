@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+from pathlib import Path
 from typing import Optional
 
 from bsv.http_client import default_sync_http_client
@@ -58,13 +59,19 @@ def _fetch_header_by_height(client, base: str, height: int) -> dict:
     return {}
 
 
+_VECTORS_DIR = Path(__file__).resolve().parent
+
+
 def main():
     ap = argparse.ArgumentParser(description="Generate WOC-based vector for Transaction.verify E2E")
     ap.add_argument("txid", help="Transaction ID (hex)")
     ap.add_argument("--network", default=os.getenv("WOC_NETWORK", "main"))
     ap.add_argument("--height", type=int, default=None)
-    ap.add_argument("--out", required=True, help="Output JSON path")
+    ap.add_argument("--out", required=True, help="Output JSON filename (written to tests/vectors/)")
     args = ap.parse_args()
+
+    safe_name = Path(args.out).name
+    out_path = _VECTORS_DIR / safe_name
 
     tx_hex, height, header = fetch_woc_tx_and_header(args.txid, args.network, None, args.height)
     if not tx_hex or not height or not isinstance(header, dict):
@@ -74,11 +81,10 @@ def main():
         "tx_hex": tx_hex,
         "block_height": height,
         "header_root": header.get("merkleroot", ""),
-        # Users may optionally add merkle_path_binary_hex if they have a proof
     }
-    with open(args.out, "w") as f:
+    with open(out_path, "w") as f:
         json.dump(vector, f, indent=2)
-    print(f"Wrote vector to {args.out}")
+    print(f"Wrote vector to {out_path}")
 
 
 if __name__ == "__main__":

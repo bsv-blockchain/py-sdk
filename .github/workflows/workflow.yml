@@ -3,6 +3,8 @@
 # wheels.yml builds platform-specific wheels via cibuildwheel and publishes on tag push.
 name: Publish to PyPI (legacy)
 
+permissions: {}
+
 on:
   # Disabled — wheels.yml handles tag-based publishing
   workflow_dispatch:

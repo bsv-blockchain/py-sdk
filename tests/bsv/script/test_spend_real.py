@@ -149,12 +149,9 @@ def test_spend_check_signature_encoding():
 
     spend = Spend(params)
 
-    # Test with invalid signature
-    try:
-        result = spend.check_signature_encoding(b"invalid_sig")
-        assert isinstance(result, bool)
-    except Exception:
-        pass  # May raise on invalid encoding
+    # Invalid signature: the trailing byte is not a valid SIGHASH flag
+    with pytest.raises(RuntimeError, match="Invalid SIGHASH flag"):
+        spend.check_signature_encoding(b"invalid_sig")
 
 
 def test_spend_check_public_key_encoding():
@@ -168,17 +165,16 @@ def test_spend_check_public_key_encoding():
     assert isinstance(result, bool)
 
     # Invalid public key
-    try:
-        result = Spend.check_public_key_encoding(b"invalid")
-        assert not result
-    except Exception:
-        pass
+    result = Spend.check_public_key_encoding(b"invalid")
+    assert not result
 
 
 def test_spend_verify_signature():
     """Test verify_signature() method with real signature."""
+    from bsv.constants import SIGHASH
     from bsv.hash import hash160
     from bsv.script.type import P2PKH
+    from bsv.transaction_output import TransactionOutput
 
     priv = PrivateKey()
     pub = priv.public_key()
@@ -195,7 +191,7 @@ def test_spend_verify_signature():
         "lockingScript": locking_script,
         "transactionVersion": 1,
         "otherInputs": [],
-        "outputs": [{"satoshis": 900, "lockingScript": locking_script}],
+        "outputs": [TransactionOutput(locking_script=locking_script, satoshis=900)],
         "inputIndex": 0,
         "unlockingScript": unlocking_script,
         "inputSequence": 0xFFFFFFFF,
@@ -204,18 +200,16 @@ def test_spend_verify_signature():
 
     spend = Spend(params)
 
-    # Create a signature (simplified)
+    # Create a real DER signature with a valid SIGHASH flag appended
     message = b"test_message"
-    sig = priv.sign(message)
+    sig = priv.sign(message) + bytes([SIGHASH.ALL | SIGHASH.FORKID])
     pub_bytes = pub.serialize()
 
-    # Test verify_signature
-    try:
-        # This will use the transaction preimage, not our simple message
-        result = spend.verify_signature(sig, pub_bytes, locking_script)
-        assert isinstance(result, bool)
-    except Exception:
-        pass  # Signature verification may fail without proper preimage
+    # The signature commits to our simple message, not the transaction
+    # preimage, so verification completes and returns False
+    result = spend.verify_signature(sig, pub_bytes, locking_script)
+    assert isinstance(result, bool)
+    assert not result
 
 
 def test_spend_with_empty_unlocking_script():

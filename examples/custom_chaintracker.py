@@ -43,11 +43,11 @@ def load_env_file():
 class BHSChainTracker(ChainTracker):
     def __init__(
         self,
-        URL: str,
+        url: str,
         api_key: Optional[str] = None,
         http_client: Optional[HttpClient] = None,
     ):
-        self.URL = URL
+        self.url = url
         self.http_client = http_client if http_client else default_http_client()
         self.api_key = api_key
 
@@ -58,7 +58,7 @@ class BHSChainTracker(ChainTracker):
             "data": [{"merkleRoot": root, "blockHeight": height}],
         }
 
-        response = await self.http_client.fetch(f"{self.URL}/api/v1/chain/merkleroot/verify", request_options)
+        response = await self.http_client.fetch(f"{self.url}/api/v1/chain/merkleroot/verify", request_options)
         if response.ok:
             print(response.json())
             return response.json()["data"]["confirmationState"] == "CONFIRMED"
@@ -90,7 +90,7 @@ async def main():
     tx = Transaction.from_beef(beef_hex)
     print("TXID:", tx.txid())
 
-    verified = await tx.verify(BHSChainTracker(URL="http://localhost:8080", api_key=api_key))
+    verified = await tx.verify(BHSChainTracker(url="http://localhost:8080", api_key=api_key))
     print("BEEF verified:", verified)
     assert verified
 

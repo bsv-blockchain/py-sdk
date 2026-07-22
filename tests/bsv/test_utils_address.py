@@ -200,14 +200,14 @@ class TestDecodeWIF:
 
     def test_decode_wif_invalid_prefix_raises(self):
         """Test that WIF with invalid prefix raises exception."""
-        # WIF with invalid prefix or checksum - will raise an exception
-        with pytest.raises(Exception):  # Could be ValueError or checksum error
+        # WIF with invalid prefix or checksum - will raise a checksum error
+        with pytest.raises(ValueError, match="unmatched base58 checksum"):
             decode_wif("9" * 52)
 
     def test_decode_wif_invalid_checksum_raises(self):
         """Test that WIF with invalid checksum raises exception."""
-        # This should raise during base58check decode
-        with pytest.raises(Exception):
+        # This should raise during base58check decode ('0' is not valid base58)
+        with pytest.raises(ValueError, match="invalid base58 encoded"):
             decode_wif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyT0")
 
     def test_decode_wif_length_detection(self):
@@ -223,7 +223,7 @@ class TestDecodeWIF:
 
     def test_decode_wif_empty_raises(self):
         """Test that empty WIF raises exception."""
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="unmatched base58 checksum"):
             decode_wif("")
 
     def test_decode_wif_unknown_prefix_raises(self):

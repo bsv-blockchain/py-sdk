@@ -167,7 +167,7 @@ def test_handle_peer_error_session_not_found(auth_fetch, mock_wallet):
     # Mock fetch method to return success
     with patch.object(auth_fetch, "fetch", return_value="retry_result"):
         auth_fetch._handle_peer_error(
-            Exception("Session not found for nonce"),
+            RuntimeError("Session not found for nonce"),
             "http://test.com",  # NOSONAR - Test URL, not used in production
             "http://test.com",  # NOSONAR - Test URL, not used in production
             SimplifiedFetchRequestOptions(),
@@ -194,7 +194,7 @@ def test_handle_peer_error_http_auth_failed(auth_fetch):
     # Mock handle_fetch_and_validate to return success
     with patch.object(auth_fetch, "handle_fetch_and_validate", return_value=fallback_response):
         auth_fetch._handle_peer_error(
-            Exception("HTTP server failed to authenticate"),
+            RuntimeError("HTTP server failed to authenticate"),
             "http://test.com",  # NOSONAR - Test URL, not used in production
             "http://test.com",  # NOSONAR - Test URL, not used in production
             SimplifiedFetchRequestOptions(),

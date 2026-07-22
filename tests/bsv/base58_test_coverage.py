@@ -4,7 +4,8 @@ Coverage tests for base58.py - untested branches.
 
 import pytest
 
-from bsv.base58 import decode, encode
+from bsv.base58 import b58_decode as decode
+from bsv.base58 import b58_encode as encode
 
 # ========================================================================
 # encode branches
@@ -97,12 +98,8 @@ def test_decode_invalid_character():
 def test_decode_with_checksum():
     """Test decode handles various input lengths."""
     # Valid base58 string
-    try:
-        result = decode("1")
-        assert result == b"\x00"
-    except Exception:
-        # May fail depending on implementation
-        pass
+    result = decode("1")
+    assert result == b"\x00"
 
 
 # ========================================================================

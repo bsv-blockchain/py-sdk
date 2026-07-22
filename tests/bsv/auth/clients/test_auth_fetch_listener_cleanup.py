@@ -144,7 +144,7 @@ class TestAuthFetchListenerCleanup:
         mock_response = Mock()
         with patch.object(self.auth_fetch, "fetch", return_value=mock_response) as mock_fetch:
             self.auth_fetch._handle_peer_error(
-                Exception("Session not found for nonce"), base_url, url_str, config, request_nonce_b64, mock_peer
+                RuntimeError("Session not found for nonce"), base_url, url_str, config, request_nonce_b64, mock_peer
             )
 
             # Should delete peer and retry with fetch
@@ -168,7 +168,12 @@ class TestAuthFetchListenerCleanup:
         mock_response = Mock()
         with patch.object(self.auth_fetch, "handle_fetch_and_validate", return_value=mock_response):
             self.auth_fetch._handle_peer_error(
-                Exception("HTTP server failed to authenticate"), base_url, url_str, config, request_nonce_b64, mock_peer
+                RuntimeError("HTTP server failed to authenticate"),
+                base_url,
+                url_str,
+                config,
+                request_nonce_b64,
+                mock_peer,
             )
 
             # Should call handle_fetch_and_validate and resolve
@@ -189,7 +194,12 @@ class TestAuthFetchListenerCleanup:
         # Mock handle_fetch_and_validate to raise exception
         with patch.object(self.auth_fetch, "handle_fetch_and_validate", side_effect=Exception("Auth failed")):
             self.auth_fetch._handle_peer_error(
-                Exception("HTTP server failed to authenticate"), base_url, url_str, config, request_nonce_b64, mock_peer
+                RuntimeError("HTTP server failed to authenticate"),
+                base_url,
+                url_str,
+                config,
+                request_nonce_b64,
+                mock_peer,
             )
 
             # Should reject with the exception
@@ -207,7 +217,7 @@ class TestAuthFetchListenerCleanup:
         self.auth_fetch.peers[base_url] = mock_peer
         self.auth_fetch._setup_callbacks(request_nonce_b64)
 
-        test_error = Exception("Some other error")
+        test_error = RuntimeError("Some other error")
         self.auth_fetch._handle_peer_error(test_error, base_url, url_str, config, request_nonce_b64, mock_peer)
 
         # Should reject with the original error
@@ -333,7 +343,7 @@ class TestAuthFetchListenerCleanup:
         with patch.object(self.auth_fetch, "fetch", return_value=Mock()):
             # Call peer error handler that deletes the peer
             self.auth_fetch._handle_peer_error(
-                Exception("Session not found for nonce"), base_url, url_str, config, request_nonce_b64, mock_peer
+                RuntimeError("Session not found for nonce"), base_url, url_str, config, request_nonce_b64, mock_peer
             )
 
         # Peer should be deleted

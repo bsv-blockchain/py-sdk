@@ -234,8 +234,8 @@ class AuthServer:
 
             return bytes(response_data)
 
-        except Exception as e:
-            logger.error(f"Error parsing binary request: {e}")
+        except Exception:
+            logger.exception("Error parsing binary request")
             # Return error response
             error_body = b'{"error": "Failed to parse request"}'
             response_data = bytearray()
@@ -298,8 +298,8 @@ async def handle_auth_message(request):
         return web.Response(
             status=400, text="Validation error occurred"
         )  # codeql[py/stack-trace-exposure] - Not used in production - test server only
-    except Exception as e:
-        logger.error(f"Server error: {e}")
+    except Exception:
+        logger.exception("Server error")
         return web.Response(status=500, text="Internal server error")
 
 

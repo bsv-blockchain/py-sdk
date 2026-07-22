@@ -31,9 +31,10 @@ def test_p2pkh():
     assert P2PKH().lock(address) == Script(locking_script)
     assert P2PKH().lock(address_to_public_key_hash(address)) == Script(locking_script)
 
+    p2pkh_template = P2PKH()
     with pytest.raises(TypeError, match=r"unsupported type to parse P2PKH locking script"):
         # noinspection PyTypeChecker
-        P2PKH().lock(1)
+        p2pkh_template.lock(1)
 
     key_compressed = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
     key_uncompressed = PrivateKey("5KiANv9EHEU4o9oLzZ6A7z4xJJ3uvfK2RLEubBtTz1fSwAbpJ2U")
@@ -84,9 +85,10 @@ def test_op_return():
     assert OpReturn().lock(["0" * 0x0100]) == Script("006a" + "4d0001" + "30" * 0x0100)
     assert OpReturn().lock([b"\x31\x32", "345"]) == Script("006a" + "023132" + "03333435")
 
+    op_return_template = OpReturn()
     with pytest.raises(TypeError, match=r"unsupported type to parse OP_RETURN locking script"):
         # noinspection PyTypeChecker
-        OpReturn().lock([1])
+        op_return_template.lock([1])
 
 
 def test_op_return_chunk_parsing():
@@ -142,9 +144,10 @@ def test_p2pk():
     public_key = private_key.public_key()
     assert P2PK().lock(public_key.hex()) == P2PK().lock(public_key.serialize())
 
+    p2pk_template = P2PK()
     with pytest.raises(TypeError, match=r"unsupported type to parse P2PK locking script"):
         # noinspection PyTypeChecker
-        P2PK().lock(1)
+        p2pk_template.lock(1)
 
     source_tx = Transaction([], [TransactionOutput(locking_script=P2PK().lock(public_key.hex()), satoshis=1000)])
     tx = Transaction(

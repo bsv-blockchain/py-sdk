@@ -118,62 +118,58 @@ async def test_auth_fetch_full_protocol(auth_server):
 
     import requests
 
-    try:
-        wallet = DummyWallet()
-        requested_certs = RequestedCertificateSet()
-        auth_fetch = AuthFetch(wallet, requested_certs)
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
 
-        # Test 1: Basic HTTP request through authenticated channel
-        config = SimplifiedFetchRequestOptions(
-            method="POST",
-            headers={"Content-Type": "application/json"},
-            body=json.dumps(
-                {
-                    "version": "0.1",
-                    "messageType": "initialRequest",
-                    "identityKey": "02a1633cafb311f41c1137864d7dd7cf2d5c9e5c2e5b5f5a5d5c5b5a59584f5e5f",
-                    "nonce": "dGVzdF9ub25jZV8zMmJ5dGVzX2Zvcl90ZXN0aW5nXzEyMzQ=",
-                }
-            ).encode(),
-        )
+    # Test 1: Basic HTTP request through authenticated channel
+    config = SimplifiedFetchRequestOptions(
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        body=json.dumps(
+            {
+                "version": "0.1",
+                "messageType": "initialRequest",
+                "identityKey": "02a1633cafb311f41c1137864d7dd7cf2d5c9e5c2e5b5f5a5d5c5b5a59584f5e5f",
+                "nonce": "dGVzdF9ub25jZV8zMmJ5dGVzX2Zvcl90ZXN0aW5nXzEyMzQ=",
+            }
+        ).encode(),
+    )
 
-        # Pre-configure the peer to use HTTP fallback instead of mutual auth
-        base_url = "https://localhost:8084"
-        from bsv.auth.clients.auth_fetch import AuthPeer
+    # Pre-configure the peer to use HTTP fallback instead of mutual auth
+    base_url = "https://localhost:8084"
+    from bsv.auth.clients.auth_fetch import AuthPeer
 
-        auth_peer = AuthPeer()
-        auth_peer.supports_mutual_auth = False
-        auth_fetch.peers[base_url] = auth_peer
+    auth_peer = AuthPeer()
+    auth_peer.supports_mutual_auth = False
+    auth_fetch.peers[base_url] = auth_peer
 
-        # Configure requests to accept self-signed certificates
-        original_request = requests.Session.request
+    # Configure requests to accept self-signed certificates
+    original_request = requests.Session.request
 
-        def patched_request(self, method, url, **kwargs):
-            kwargs["verify"] = False
-            return original_request(self, method, url, **kwargs)
+    def patched_request(self, method, url, **kwargs):
+        kwargs["verify"] = False
+        return original_request(self, method, url, **kwargs)
 
-        with patch.object(requests.Session, "request", patched_request):
-            with patch.object(
-                requests.Session,
-                "post",
-                lambda self, url, **kwargs: original_request(self, "POST", url, **{**kwargs, "verify": False}),
-            ):
-                # The AuthFetch should use HTTP fallback to communicate with the server
-                resp = auth_fetch.fetch("https://localhost:8084/auth", config)
+    with patch.object(requests.Session, "request", patched_request):
+        with patch.object(
+            requests.Session,
+            "post",
+            lambda self, url, **kwargs: original_request(self, "POST", url, **{**kwargs, "verify": False}),
+        ):
+            # The AuthFetch should use HTTP fallback to communicate with the server
+            resp = auth_fetch.fetch("https://localhost:8084/auth", config)
 
-        assert resp is not None
-        assert resp.status_code == 200
+    assert resp is not None
+    assert resp.status_code == 200
 
-        # The response should be an initialResponse from the auth server
-        response_data = json.loads(resp.text)
-        assert response_data.get("messageType") == "initialResponse"
-        assert "identityKey" in response_data
-        assert "nonce" in response_data
+    # The response should be an initialResponse from the auth server
+    response_data = json.loads(resp.text)
+    assert response_data.get("messageType") == "initialResponse"
+    assert "identityKey" in response_data
+    assert "nonce" in response_data
 
-        print("✓ Full protocol authentication test passed")
-
-    except Exception as e:
-        pytest.fail(f"Full protocol test failed: {e}")
+    print("✓ Full protocol authentication test passed")
 
 
 @pytest.mark.asyncio
@@ -286,59 +282,55 @@ async def test_auth_fetch_session_management(auth_server):
 
     import requests
 
-    try:
-        wallet = DummyWallet()
-        requested_certs = RequestedCertificateSet()
-        auth_fetch = AuthFetch(wallet, requested_certs)
+    wallet = DummyWallet()
+    requested_certs = RequestedCertificateSet()
+    auth_fetch = AuthFetch(wallet, requested_certs)
 
-        base_url = "https://localhost:8084"
-        # Force HTTP fallback (disable mutual auth for this base URL)
-        from bsv.auth.clients.auth_fetch import AuthPeer
+    base_url = "https://localhost:8084"
+    # Force HTTP fallback (disable mutual auth for this base URL)
+    from bsv.auth.clients.auth_fetch import AuthPeer
 
-        _ap = AuthPeer()
-        _ap.supports_mutual_auth = False
-        auth_fetch.peers[base_url] = _ap
+    _ap = AuthPeer()
+    _ap.supports_mutual_auth = False
+    auth_fetch.peers[base_url] = _ap
 
-        # Configure requests to accept self-signed certificates
-        original_request = requests.Session.request
+    # Configure requests to accept self-signed certificates
+    original_request = requests.Session.request
 
-        def patched_request(self, method, url, **kwargs):
-            kwargs["verify"] = False
-            return original_request(self, method, url, **kwargs)
+    def patched_request(self, method, url, **kwargs):
+        kwargs["verify"] = False
+        return original_request(self, method, url, **kwargs)
 
-        with patch.object(requests.Session, "request", patched_request):
-            with patch.object(
-                requests.Session,
-                "post",
-                lambda self, url, **kwargs: original_request(self, "POST", url, **{**kwargs, "verify": False}),
-            ):
-                # First request - should establish session
-                config1 = SimplifiedFetchRequestOptions(
-                    method="POST", headers={"Content-Type": "application/json"}, body=b'{"request": 1}'
-                )
+    with patch.object(requests.Session, "request", patched_request):
+        with patch.object(
+            requests.Session,
+            "post",
+            lambda self, url, **kwargs: original_request(self, "POST", url, **{**kwargs, "verify": False}),
+        ):
+            # First request - should establish session
+            config1 = SimplifiedFetchRequestOptions(
+                method="POST", headers={"Content-Type": "application/json"}, body=b'{"request": 1}'
+            )
 
-                resp1 = auth_fetch.fetch(f"{base_url}/auth", config1)
-                assert resp1.status_code == 200
+            resp1 = auth_fetch.fetch(f"{base_url}/auth", config1)
+            assert resp1.status_code == 200
 
-                # Second request - should reuse session
-                config2 = SimplifiedFetchRequestOptions(
-                    method="POST", headers={"Content-Type": "application/json"}, body=b'{"request": 2}'
-                )
+            # Second request - should reuse session
+            config2 = SimplifiedFetchRequestOptions(
+                method="POST", headers={"Content-Type": "application/json"}, body=b'{"request": 2}'
+            )
 
-                resp2 = auth_fetch.fetch(f"{base_url}/auth", config2)
-                assert resp2.status_code == 200
+            resp2 = auth_fetch.fetch(f"{base_url}/auth", config2)
+            assert resp2.status_code == 200
 
-        # Verify both requests succeeded
-        data1 = json.loads(resp1.text)
-        data2 = json.loads(resp2.text)
+    # Verify both requests succeeded
+    data1 = json.loads(resp1.text)
+    data2 = json.loads(resp2.text)
 
-        assert "Authentication successful" in data1["message"]
-        assert "Authentication successful" in data2["message"]
+    assert "Authentication successful" in data1["message"]
+    assert "Authentication successful" in data2["message"]
 
-        print("✓ Session management test passed")
-
-    except Exception as e:
-        pytest.fail(f"Session management test failed: {e}")
+    print("✓ Session management test passed")
 
 
 @pytest.mark.asyncio
@@ -371,6 +363,8 @@ async def test_auth_fetch_error_handling(auth_server):
     config = SimplifiedFetchRequestOptions(method="GET")
     error_occurred = False
     response_received = False
+    error_msg = None
+    resp = None
 
     try:
         with patch.object(requests.Session, "request", patched_request):
@@ -381,26 +375,25 @@ async def test_auth_fetch_error_handling(auth_server):
             ):
                 resp = auth_fetch.fetch("https://localhost:8084/nonexistent", config)
                 response_received = True
-
-        # If response is returned, verify it's a valid HTTP response
-        if resp:
-            assert hasattr(resp, "status_code"), "Response should have status_code attribute"
-            assert resp.status_code in [404, 200], f"Expected 404 (not found) or 200 (fallback), got {resp.status_code}"
-
-            # 404 is preferred for non-existent endpoints
-            if resp.status_code == 404:
-                print("✓ Correctly returned 404 for non-existent endpoint")
-            elif resp.status_code == 200:
-                print("✓ Fell back to regular HTTP request")
-
     except Exception as e:
         # Exception is also acceptable - verify it's handled gracefully
         error_occurred = True
         error_msg = str(e)
         print(f"✓ Gracefully raised exception for invalid endpoint: {type(e).__name__}")
 
+    if error_occurred:
         # Verify error message is meaningful (not a crash)
         assert len(error_msg) > 0, "Exception should have a message"
+    elif resp:
+        # If a response is returned, verify it's a valid HTTP response
+        assert hasattr(resp, "status_code"), "Response should have status_code attribute"
+        assert resp.status_code in [404, 200], f"Expected 404 (not found) or 200 (fallback), got {resp.status_code}"
+
+        # 404 is preferred for non-existent endpoints
+        if resp.status_code == 404:
+            print("✓ Correctly returned 404 for non-existent endpoint")
+        elif resp.status_code == 200:
+            print("✓ Fell back to regular HTTP request")
 
     # One of the two outcomes should occur (either response or exception)
     assert response_received or error_occurred, "Either a response or exception should occur for invalid endpoint"

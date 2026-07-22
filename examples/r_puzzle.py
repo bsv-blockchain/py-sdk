@@ -116,11 +116,9 @@ async def main():
     private_key = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
     private_key.public_key()
 
-    k = PrivateKey().int()
-
     k_priv = PrivateKey()
     k = k_priv.int()
-    r = k_priv.public_key().point().x  # R = k*G, R.x
+    r = k_priv.public_key().point().x
 
     r_bytes = r.to_bytes(32, byteorder="big")
     if r_bytes[0] > 0x7F:

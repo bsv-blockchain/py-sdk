@@ -185,10 +185,10 @@ class TestAdvancedSHIPBroadcaster:
         # This should require acknowledgment
         try:
             result = await broadcaster.broadcast(tagged_beef)
-            assert result is not None
         except Exception:
             # Expected if acknowledgment handling is not fully implemented
-            pass
+            return
+        assert result is not None
 
     @pytest.mark.asyncio
     async def test_broadcast_failure_handling(self):
@@ -204,11 +204,13 @@ class TestAdvancedSHIPBroadcaster:
         # Should handle failure gracefully
         try:
             result = await broadcaster.broadcast(tagged_beef)
-            # If it returns, check that it handled the error
-            assert isinstance(result, dict) or result is None
         except Exception:
             # Expected if error handling is not implemented
-            pass
+            return
+        # If it returns, check that it handled the error (BroadcastFailure signals graceful handling)
+        from bsv.broadcasters.broadcaster import BroadcastFailure
+
+        assert isinstance(result, (dict, BroadcastFailure)) or result is None
 
     def test_admittance_instructions_parsing(self):
         """Test parsing of admittance instructions."""
@@ -382,15 +384,15 @@ class TestErrorHandling:
         # Should eventually succeed or handle failure gracefully
         try:
             results = await resolver.lookup(question)
-            assert isinstance(results, list)
         except Exception:
             # Expected if retry logic not implemented
-            pass
+            return
+        assert isinstance(results, list)
 
     def test_invalid_input_validation(self):
         """Test validation of invalid inputs."""
         # Test Historian with invalid interpreter
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="interpreter is required"):
             Historian(None)  # Should require interpreter
 
         # Test reputation tracker with invalid host

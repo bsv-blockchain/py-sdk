@@ -201,14 +201,10 @@ def test_combine_paths():
 @pytest.mark.parametrize("invalid", invalidBumps)
 def test_reject_invalid_bumps(invalid):
     with pytest.raises(ValueError, match=invalid["error"]):
-        print("--------------!!-----------------------")
-        print(invalid)
         MerklePath.from_hex(invalid["bump"])
 
 
 @pytest.mark.parametrize("valid", validBumps)
 def test_verify_valid_bumps(valid):
-    try:
-        MerklePath.from_hex(valid["bump"])
-    except ValueError:
-        pytest.fail("Unexpected ValueError raised")
+    path = MerklePath.from_hex(valid["bump"])
+    assert path is not None

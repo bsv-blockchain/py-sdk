@@ -702,11 +702,7 @@ class TestMetanetDesktopAuth(unittest.TestCase):
         self.assertEqual(len(transport._on_data_funcs), 1)
 
         # Test send (should not raise exception)
-        try:
-            transport.send("test message")
-            # Should reach here without exception
-        except Exception:
-            self.fail("Mock transport send should not raise exception")
+        transport.send("test message")
 
     def test_mock_session_manager(self):
         """Test mock session manager functionality"""
@@ -795,37 +791,41 @@ class TestMetanetDesktopAuth(unittest.TestCase):
             # Test server health endpoint
             try:
                 import requests
-
-                response = requests.get(f"{mock_server.get_server_url()}/health", timeout=1)
-                self.assertEqual(response.status_code, 200)
-                health_data = response.json()
-                self.assertEqual(health_data["status"], "healthy")
-                print("✅ Mock server health check successful")
             except ImportError:
                 self.skipTest("requests library not available")
+
+            try:
+                response = requests.get(f"{mock_server.get_server_url()}/health", timeout=1)
             except Exception as e:
                 self.skipTest(f"Server health check failed: {e}")
+
+            self.assertEqual(response.status_code, 200)
+            health_data = response.json()
+            self.assertEqual(health_data["status"], "healthy")
+            print("✅ Mock server health check successful")
 
             # Test actual SessionManager library
             try:
                 from bsv.auth.session_manager import DefaultSessionManager
 
                 session_manager = DefaultSessionManager()
-                self.assertIsNotNone(session_manager)
-                print("✅ 実際のSessionManagerライブラリのテストが成功しました")
             except Exception as e:
                 self.skipTest(f"SessionManagerライブラリのテストに失敗: {e}")
+
+            self.assertIsNotNone(session_manager)
+            print("✅ 実際のSessionManagerライブラリのテストが成功しました")
 
             # Test actual Transport library
             try:
                 from bsv.auth.transports.simplified_http_transport import SimplifiedHTTPTransport
 
                 transport = SimplifiedHTTPTransport(mock_server.get_server_url())
-                self.assertIsNotNone(transport)
-                self.assertEqual(transport.base_url, mock_server.get_server_url())
-                print("✅ 実際のTransportライブラリのテストが成功しました")
             except Exception as e:
                 self.skipTest(f"Transportライブラリのテストに失敗: {e}")
+
+            self.assertIsNotNone(transport)
+            self.assertEqual(transport.base_url, mock_server.get_server_url())
+            print("✅ 実際のTransportライブラリのテストが成功しました")
 
             # Test actual AuthMessage library
             try:
@@ -838,12 +838,12 @@ class TestMetanetDesktopAuth(unittest.TestCase):
                     identity_key="04test_identity_key",
                     initial_nonce="test_nonce",
                 )
-
-                self.assertEqual(auth_message.version, AUTH_VERSION)
-                self.assertEqual(auth_message.message_type, MessageTypeInitialRequest)
-                print("✅ 実際のAuthMessageライブラリのテストが成功しました")
             except Exception as e:
                 self.skipTest(f"AuthMessageライブラリのテストに失敗: {e}")
+
+            self.assertEqual(auth_message.version, AUTH_VERSION)
+            self.assertEqual(auth_message.message_type, MessageTypeInitialRequest)
+            print("✅ 実際のAuthMessageライブラリのテストが成功しました")
 
             # Test actual PeerOptions library
             try:
@@ -855,12 +855,12 @@ class TestMetanetDesktopAuth(unittest.TestCase):
                     session_manager=session_manager,  # Use real session manager
                     auto_persist_last_session=True,
                 )
-
-                self.assertEqual(peer_options.wallet, self.wallet)
-                self.assertTrue(peer_options.auto_persist_last_session)
-                print("✅ 実際のPeerOptionsライブラリのテストが成功しました")
             except Exception as e:
                 self.skipTest(f"PeerOptionsライブラリのテストに失敗: {e}")
+
+            self.assertEqual(peer_options.wallet, self.wallet)
+            self.assertTrue(peer_options.auto_persist_last_session)
+            print("✅ 実際のPeerOptionsライブラリのテストが成功しました")
 
         finally:
             # Stop mock server
@@ -898,21 +898,20 @@ class TestMetanetDesktopAuth(unittest.TestCase):
 
                 # Create peer (this tests the full integration)
                 peer = Peer(peer_options)
-
-                # Test that all components are properly integrated
-                self.assertIsNotNone(peer)
-                self.assertIsNotNone(peer.wallet)
-                self.assertIsNotNone(peer.transport)
-                self.assertIsNotNone(peer.session_manager)
-
-                print("✅ 実際のpy-sdkライブラリの完全統合テストが成功しました")
-
-                # Test basic peer functionality
-                self.assertTrue(hasattr(peer, "get_authenticated_session"))
-                self.assertTrue(hasattr(peer, "to_peer"))
-
             except Exception as e:
                 self.skipTest(f"完全統合テストに失敗: {e}")
+
+            # Test that all components are properly integrated
+            self.assertIsNotNone(peer)
+            self.assertIsNotNone(peer.wallet)
+            self.assertIsNotNone(peer.transport)
+            self.assertIsNotNone(peer.session_manager)
+
+            print("✅ 実際のpy-sdkライブラリの完全統合テストが成功しました")
+
+            # Test basic peer functionality
+            self.assertTrue(hasattr(peer, "get_authenticated_session"))
+            self.assertTrue(hasattr(peer, "to_peer"))
 
         finally:
             # Stop mock server
@@ -948,21 +947,20 @@ class TestMetanetDesktopAuth(unittest.TestCase):
                 response = requests.post(
                     f"{mock_server.get_server_url()}/.well-known/auth", json=auth_request, timeout=1
                 )
-
-                self.assertEqual(response.status_code, 200)
-                auth_response = response.json()
-
-                # Verify response structure
-                self.assertEqual(auth_response["version"], "0.1")
-                self.assertEqual(auth_response["messageType"], "initialResponse")
-                self.assertEqual(auth_response["initialNonce"], "test_nonce_123")
-                self.assertIn("nonce", auth_response)
-                self.assertIn("identityKey", auth_response)
-
-                print("✅ Mock server authentication flow test successful")
-
             except Exception as e:
                 self.skipTest(f"Authentication flow test failed: {e}")
+
+            self.assertEqual(response.status_code, 200)
+            auth_response = response.json()
+
+            # Verify response structure
+            self.assertEqual(auth_response["version"], "0.1")
+            self.assertEqual(auth_response["messageType"], "initialResponse")
+            self.assertEqual(auth_response["initialNonce"], "test_nonce_123")
+            self.assertIn("nonce", auth_response)
+            self.assertIn("identityKey", auth_response)
+
+            print("✅ Mock server authentication flow test successful")
 
         finally:
             # Stop mock server
@@ -1005,23 +1003,22 @@ class TestMetanetDesktopAuth(unittest.TestCase):
                 response = requests.post(
                     f"{mock_server.get_server_url()}/", json=rpc_request, headers=headers, timeout=1
                 )
-
-                self.assertEqual(response.status_code, 200)
-                rpc_response = response.json()
-
-                # Verify response structure
-                self.assertEqual(rpc_response["jsonrpc"], "2.0")
-                self.assertEqual(rpc_response["id"], 1)
-                self.assertIn("result", rpc_response)
-
-                result = rpc_response["result"]
-                self.assertIn("txid", result)
-                self.assertEqual(result["status"], "success")
-
-                print("✅ Mock server RPC endpoint test successful")
-
             except Exception as e:
                 self.skipTest(f"RPC endpoint test failed: {e}")
+
+            self.assertEqual(response.status_code, 200)
+            rpc_response = response.json()
+
+            # Verify response structure
+            self.assertEqual(rpc_response["jsonrpc"], "2.0")
+            self.assertEqual(rpc_response["id"], 1)
+            self.assertIn("result", rpc_response)
+
+            result = rpc_response["result"]
+            self.assertIn("txid", result)
+            self.assertEqual(result["status"], "success")
+
+            print("✅ Mock server RPC endpoint test successful")
 
         finally:
             # Stop mock server
@@ -1047,28 +1044,31 @@ class TestMetanetDesktopAuth(unittest.TestCase):
             # Test invalid endpoint
             try:
                 response = requests.get(f"{mock_server.get_server_url()}/invalid", timeout=1)
-                self.assertEqual(response.status_code, 404)
-                print("✅ Mock server 404 error handling test successful")
             except Exception as e:
                 self.skipTest(f"404 error handling test failed: {e}")
+
+            self.assertEqual(response.status_code, 404)
+            print("✅ Mock server 404 error handling test successful")
 
             # Test invalid auth request
             try:
                 response = requests.post(
                     f"{mock_server.get_server_url()}/.well-known/auth", json={"invalid": "data"}, timeout=1
                 )
-                self.assertEqual(response.status_code, 400)
-                print("✅ Mock server 400 error handling test successful")
             except Exception as e:
                 self.skipTest(f"400 error handling test failed: {e}")
+
+            self.assertEqual(response.status_code, 400)
+            print("✅ Mock server 400 error handling test successful")
 
             # Test RPC without auth headers
             try:
                 response = requests.post(f"{mock_server.get_server_url()}/", json={"method": "test"}, timeout=1)
-                self.assertEqual(response.status_code, 401)
-                print("✅ Mock server 401 error handling test successful")
             except Exception as e:
                 self.skipTest(f"401 error handling test failed: {e}")
+
+            self.assertEqual(response.status_code, 401)
+            print("✅ Mock server 401 error handling test successful")
 
         finally:
             # Stop mock server
