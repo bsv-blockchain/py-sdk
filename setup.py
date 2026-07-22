@@ -39,7 +39,6 @@ ext_modules = []
 
 if USE_C_EXTENSION:
     compile_args = [
-        "-DSECP256K1_BUILD",
         "-DECMULT_WINDOW_SIZE=15",
         "-DECMULT_GEN_PREC_BITS=4",
         "-DENABLE_MODULE_RECOVERY=1",

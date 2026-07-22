@@ -5,6 +5,7 @@ description = "BSV BLOCKCHAIN | Software Development Kit for Python"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "LicenseRef-Open-BSV-4"
+license-files = ["LICENSE.txt"]
 authors = [
     { name = "Aaron", email = "aaron@scrypt.io" },
 ]

@@ -12,13 +12,29 @@
 #include <Python.h>
 
 /* ---------- libsecp256k1 configuration (before including the source) ------ */
-#define SECP256K1_BUILD          1
+/* These macros are passed via compiler flags in setup.py / pyproject.toml.
+ * Guard with #ifndef so the source can still be compiled standalone. */
+#ifndef SECP256K1_BUILD
+#define SECP256K1_BUILD
+#endif
+#ifndef ECMULT_WINDOW_SIZE
 #define ECMULT_WINDOW_SIZE      15
+#endif
+#ifndef ECMULT_GEN_PREC_BITS
 #define ECMULT_GEN_PREC_BITS     4
+#endif
+#ifndef ENABLE_MODULE_RECOVERY
 #define ENABLE_MODULE_RECOVERY   1
+#endif
+#ifndef ENABLE_MODULE_ECDH
 #define ENABLE_MODULE_ECDH       1
+#endif
+#ifndef ENABLE_MODULE_SCHNORRSIG
 #define ENABLE_MODULE_SCHNORRSIG 1
+#endif
+#ifndef ENABLE_MODULE_EXTRAKEYS
 #define ENABLE_MODULE_EXTRAKEYS  1
+#endif
 
 /* Include precomputed tables first, then the single-file amalgamation */
 #include "secp256k1/src/precomputed_ecmult.c"
@@ -46,8 +62,14 @@ static int ensure_context(void) {
             PyObject *urandom = PyObject_CallMethod(os_mod, "urandom", "i", 32);
             if (urandom && PyBytes_Check(urandom)) {
                 memcpy(seed, PyBytes_AS_STRING(urandom), 32);
-                secp256k1_context_randomize(g_ctx, seed);
-                /* Clear seed from stack */
+                if (!secp256k1_context_randomize(g_ctx, seed)) {
+                    memset(seed, 0, 32);
+                    Py_XDECREF(urandom);
+                    Py_DECREF(os_mod);
+                    PyErr_SetString(PyExc_RuntimeError,
+                                    "secp256k1 context randomization failed");
+                    return 0;
+                }
                 memset(seed, 0, 32);
             }
             Py_XDECREF(urandom);
@@ -2393,7 +2415,7 @@ static int vms_push_num(VmStack *s, PyObject *num) {
 }
 
 static PyObject *vms_pop_num(VmStack *s) {
-    StackElem e;
+    StackElem e = {0};
     if (vms_pop(s, &e) < 0) return NULL;
     PyObject *n = c_bin2num(e.data, e.len);
     se_free(&e);
@@ -2401,7 +2423,7 @@ static PyObject *vms_pop_num(VmStack *s) {
 }
 
 static PyObject *vms_remove_num(VmStack *s, Py_ssize_t idx) {
-    StackElem e;
+    StackElem e = {0};
     if (vms_remove(s, idx, &e) < 0) return NULL;
     PyObject *n = c_bin2num(e.data, e.len);
     se_free(&e);
@@ -2446,6 +2468,7 @@ static void vm_error(VMState *st, const char *msg) {
         ctx, st->program_counter, st->stack.count, st->alt_stack.count);
 }
 
+__attribute__((format(printf, 2, 3)))
 static void vm_errorf(VMState *st, const char *fmt, ...) {
     char buf[512];
     va_list ap;
@@ -2941,7 +2964,7 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_VERIF/OP_VERNOTIF requires at least one item on the stack.");
             return -1;
         }
-        StackElem e; vms_pop(&st->stack, &e);
+        StackElem e = {0}; vms_pop(&st->stack, &e);
         int fv = 0;
         if (e.len == 4) {
             unsigned char ver[4];
@@ -3045,7 +3068,7 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_TOALTSTACK requires at least one item to be on the stack.");
             return -1;
         }
-        StackElem e; vms_pop(&st->stack, &e);
+        StackElem e = {0}; vms_pop(&st->stack, &e);
         return vms_push_take(&st->alt_stack, e.data, e.len) < 0 ? -1 : 0;
     }
     case 0x6C: { /* OP_FROMALTSTACK */
@@ -3053,7 +3076,7 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_FROMALTSTACK requires at least one item to be on the stack.");
             return -1;
         }
-        StackElem e; vms_pop(&st->alt_stack, &e);
+        StackElem e = {0}; vms_pop(&st->alt_stack, &e);
         return vms_push_take(&st->stack, e.data, e.len) < 0 ? -1 : 0;
     }
     case 0x6D: { /* OP_2DROP */
@@ -3106,7 +3129,7 @@ static int vm_step(VMState *st) {
             return -1;
         }
         Py_ssize_t idx = st->stack.count - 6;
-        StackElem x1, x2;
+        StackElem x1 = {0}, x2 = {0};
         vms_remove(&st->stack, idx, &x1);
         vms_remove(&st->stack, idx, &x2);
         if (vms_push_take(&st->stack, x1.data, x1.len) < 0) {
@@ -3120,7 +3143,7 @@ static int vm_step(VMState *st) {
             return -1;
         }
         Py_ssize_t idx = st->stack.count - 4;
-        StackElem x1, x2;
+        StackElem x1 = {0}, x2 = {0};
         vms_remove(&st->stack, idx, &x1);
         vms_remove(&st->stack, idx, &x2);
         if (vms_push_take(&st->stack, x1.data, x1.len) < 0) {
@@ -3202,7 +3225,7 @@ static int vm_step(VMState *st) {
         }
         Py_ssize_t idx = st->stack.count - (Py_ssize_t)n - 1;
         if (op == 0x7A) {
-            StackElem e;
+            StackElem e = {0};
             vms_remove(&st->stack, idx, &e);
             return vms_push_take(&st->stack, e.data, e.len) < 0 ? -1 : 0;
         }
@@ -3274,7 +3297,7 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_INVERT requires at least one item to be on the stack.");
             return -1;
         }
-        StackElem e; vms_pop(&st->stack, &e);
+        StackElem e = {0}; vms_pop(&st->stack, &e);
         for (Py_ssize_t i = 0; i < e.len; i++) e.data[i] ^= 0xFF;
         return vms_push_take(&st->stack, e.data, e.len) < 0 ? -1 : 0;
     }
@@ -3284,7 +3307,7 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least one item to be on the stack.", name);
             return -1;
         }
-        StackElem a, b;
+        StackElem a = {0}, b = {0};
         vms_remove(&st->stack, st->stack.count - 2, &a);
         vms_pop(&st->stack, &b);
         if (a.len != b.len) {
@@ -3322,7 +3345,7 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires the top stack item to be non-negative.", name);
             return -1;
         }
-        StackElem x;
+        StackElem x = {0};
         vms_remove(&st->stack, st->stack.count - 2, &x);
         unsigned char *res = NULL; Py_ssize_t rlen = 0;
         if (op == 0x98) {
@@ -3359,7 +3382,7 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least two items to be on the stack.", name);
             return -1;
         }
-        StackElem a, b;
+        StackElem a = {0}, b = {0};
         vms_remove(&st->stack, st->stack.count - 2, &a);
         vms_pop(&st->stack, &b);
         int f = (a.len == b.len) &&
@@ -3601,7 +3624,7 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least one item to be on the stack.", name);
             return -1;
         }
-        StackElem e; vms_pop(&st->stack, &e);
+        StackElem e = {0}; vms_pop(&st->stack, &e);
         const unsigned char *inp = e.data;
         Py_ssize_t ilen = e.len;
         if (op == 0xA8 || op == 0xAA) {
@@ -3641,7 +3664,7 @@ static int vm_step(VMState *st) {
             return -1;
         }
 
-        StackElem sig, pub_key;
+        StackElem sig = {0}, pub_key = {0};
         vms_remove(&st->stack, st->stack.count - 2, &sig);
         vms_pop(&st->stack, &pub_key);
         Py_ssize_t sig_len = sig.len;
@@ -3717,7 +3740,7 @@ static int vm_step(VMState *st) {
         if (PyErr_Occurred()) { PyErr_Clear(); keys_count = -1; }
 
         if (keys_count < 0 || keys_count > VM_MAX_MULTISIG_KEY_COUNT) {
-            vm_errorf(st, "$%s requires a key count between 0 and %lld.",
+            vm_errorf(st, "%s requires a key count between 0 and %lld.",
                       name, VM_MAX_MULTISIG_KEY_COUNT);
             return -1;
         }
@@ -3873,7 +3896,7 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_CAT requires at least two items to be on the stack.");
             return -1;
         }
-        StackElem a, b;
+        StackElem a = {0}, b = {0};
         vms_remove(&st->stack, st->stack.count - 2, &a);
         vms_pop(&st->stack, &b);
         Py_ssize_t total = a.len + b.len;
@@ -3898,7 +3921,7 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_SPLIT requires at least two items to be on the stack.");
             return -1;
         }
-        StackElem x1;
+        StackElem x1 = {0};
         vms_remove(&st->stack, st->stack.count - 2, &x1);
         PyObject *nobj = vms_pop_num(&st->stack);
         if (!nobj) { se_free(&x1); return -1; }
@@ -3925,7 +3948,7 @@ static int vm_step(VMState *st) {
         }
         PyObject *lobj = vms_pop_num(&st->stack);
         PyObject *sobj = vms_pop_num(&st->stack);
-        StackElem dat; vms_pop(&st->stack, &dat);
+        StackElem dat = {0}; vms_pop(&st->stack, &dat);
         if (!lobj || !sobj) {
             Py_XDECREF(lobj); Py_XDECREF(sobj); se_free(&dat); return -1;
         }
@@ -3957,7 +3980,7 @@ static int vm_step(VMState *st) {
             return -1;
         }
         PyObject *lobj = vms_pop_num(&st->stack);
-        StackElem dat; vms_pop(&st->stack, &dat);
+        StackElem dat = {0}; vms_pop(&st->stack, &dat);
         if (!lobj) { se_free(&dat); return -1; }
         long long length = PyLong_AsLongLong(lobj);
         Py_DECREF(lobj);
@@ -3977,7 +4000,7 @@ static int vm_step(VMState *st) {
             return -1;
         }
         PyObject *lobj = vms_pop_num(&st->stack);
-        StackElem dat; vms_pop(&st->stack, &dat);
+        StackElem dat = {0}; vms_pop(&st->stack, &dat);
         if (!lobj) { se_free(&dat); return -1; }
         long long length = PyLong_AsLongLong(lobj);
         Py_DECREF(lobj);
