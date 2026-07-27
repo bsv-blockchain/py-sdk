@@ -27,11 +27,11 @@ class SatoshisPerKilobyte(FeeModel):
         """
 
         def get_varint_size(i: int) -> int:
-            if i > 2**32:
+            if i > 0xFFFFFFFF:
                 return 9
-            elif i > 2**16:
+            elif i > 0xFFFF:
                 return 5
-            elif i > 253:
+            elif i > 0xFC:
                 return 3
             else:
                 return 1

@@ -2,6 +2,8 @@
 Coverage tests for fee_model.py - untested branches.
 """
 
+import math
+
 import pytest
 
 from bsv.fee_model import FeeModel
@@ -139,3 +141,44 @@ def test_satoshis_per_kb_compute_fee_boundary():
     fee1001 = fee_model.compute_fee(tx1001)
     # Fees should generally increase with size
     assert fee999 >= 0 and fee1000 >= 0 and fee1001 >= 0
+
+
+# ========================================================================
+# Varint boundary regression (off-by-one fix)
+# ========================================================================
+
+
+@pytest.mark.parametrize(
+    "script_len,expected_varint_bytes",
+    [
+        (252, 1),
+        (253, 3),
+        (254, 3),
+        (0xFFFF, 3),
+    ],
+)
+def test_fee_varint_boundary_consistency(script_len, expected_varint_bytes):
+    """Fee estimate must account for the correct varint size at boundaries.
+
+    Regression test: the old code used ``> 253`` instead of ``> 0xFC``,
+    underestimating by 2 bytes when script_len == 253.
+    """
+    from bsv.utils.binary import unsigned_to_varint
+
+    assert len(unsigned_to_varint(script_len)) == expected_varint_bytes
+
+    tx = Transaction()
+    tx_input = TransactionInput(source_txid="00" * 32, source_output_index=0)
+    tx_input.unlocking_script = Script(b"\x00" * script_len)
+    tx.add_input(tx_input)
+    output_script = Script(b"\x76\xa9\x14" + b"\x00" * 20 + b"\x88\xac")
+    tx.add_output(TransactionOutput(output_script, 1000))
+
+    fee_model = SatoshisPerKilobyte(value=1000)
+    fee = fee_model.compute_fee(tx)
+
+    # 4 (ver) + 1 (ninputs) + 40 (input base) + varint(script_len) + script_len
+    # + 1 (noutputs) + 8 (sats) + 1 (lock_script varint) + 25 (lock_script) + 4 (locktime)
+    expected_size = 4 + 1 + 40 + expected_varint_bytes + script_len + 1 + 8 + 1 + 25 + 4
+    expected_fee = math.ceil((expected_size / 1000) * 1000)
+    assert fee == expected_fee

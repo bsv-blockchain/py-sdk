@@ -21,7 +21,7 @@ def test_satoshis_per_kb_compute_with_transaction():
     try:
         from bsv.fee_models import SatoshisPerKilobyte
 
-        fee_model = SatoshisPerKilobyte(rate=1000)
+        fee_model = SatoshisPerKilobyte(value=1000)
 
         tx = Transaction(
             version=1,
@@ -45,16 +45,23 @@ def test_satoshis_per_kb_compute_with_transaction():
         pytest.skip(SKIP_SATOSHIS_PER_KB)
 
 
+def _make_simple_tx():
+    tx = Transaction()
+    tx_input = TransactionInput(source_txid="00" * 32, source_output_index=0)
+    tx_input.unlocking_script = Script(b"\x00" * 100)
+    tx.add_input(tx_input)
+    tx.add_output(TransactionOutput(Script(b"\x76\xa9\x14" + b"\x00" * 20 + b"\x88\xac"), 1000))
+    return tx
+
+
 def test_satoshis_per_kb_zero_rate():
     """Test fee model with zero rate."""
     try:
         from bsv.fee_models import SatoshisPerKilobyte
 
-        fee_model = SatoshisPerKilobyte(rate=0)
-
-        if hasattr(fee_model, "compute_fee"):
-            fee = fee_model.compute_fee(250)  # 250 bytes
-            assert fee == 0
+        fee_model = SatoshisPerKilobyte(value=0)
+        fee = fee_model.compute_fee(_make_simple_tx())
+        assert fee == 0
     except ImportError:
         pytest.skip(SKIP_SATOSHIS_PER_KB)
 
@@ -64,11 +71,9 @@ def test_satoshis_per_kb_very_high_rate():
     try:
         from bsv.fee_models import SatoshisPerKilobyte
 
-        fee_model = SatoshisPerKilobyte(rate=1000000)
-
-        if hasattr(fee_model, "compute_fee"):
-            fee = fee_model.compute_fee(250)
-            assert fee > 0
+        fee_model = SatoshisPerKilobyte(value=1000000)
+        fee = fee_model.compute_fee(_make_simple_tx())
+        assert fee > 0
     except ImportError:
         pytest.skip(SKIP_SATOSHIS_PER_KB)
 
@@ -119,7 +124,7 @@ def test_fee_model_with_empty_transaction():
     try:
         from bsv.fee_models import SatoshisPerKilobyte
 
-        fee_model = SatoshisPerKilobyte(rate=1000)
+        fee_model = SatoshisPerKilobyte(value=1000)
 
         tx = Transaction(version=1, tx_inputs=[], tx_outputs=[], locktime=0)
 
@@ -135,10 +140,8 @@ def test_fee_model_fractional_rate():
     try:
         from bsv.fee_models import SatoshisPerKilobyte
 
-        fee_model = SatoshisPerKilobyte(rate=1.5)
-
-        if hasattr(fee_model, "compute_fee"):
-            fee = fee_model.compute_fee(250)
-            assert isinstance(fee, (int, float))
+        fee_model = SatoshisPerKilobyte(value=1.5)
+        fee = fee_model.compute_fee(_make_simple_tx())
+        assert isinstance(fee, (int, float))
     except (ImportError, TypeError):
         pytest.skip("SatoshisPerKilobyte not available or doesn't support fractional rate")
