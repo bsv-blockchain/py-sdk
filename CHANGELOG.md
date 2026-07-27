@@ -37,6 +37,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Varint boundary off-by-one in `SatoshisPerKilobyte` fee model** — `get_varint_size` used `> 253` / `> 2**16` / `> 2**32` which underestimated by 2–4 bytes when a script length landed exactly on a varint boundary (253, 65536, 4294967296). Aligned to `> 0xFC` / `> 0xFFFF` / `> 0xFFFFFFFF`, matching the canonical encoder in `binary.py` and the SV Node / Teranode / Go SDK implementations. The same bug exists in the TS SDK's `SatoshisPerKilobyte`.
+- **Fee model test fixes** — corrected pre-existing test failures in `fee_models_test_coverage.py` (wrong constructor kwarg `rate=` → `value=`, and `int` passed instead of `Transaction` to `compute_fee`).
+
+---
+
 ## [2.3.3] - 2026-07-23
 
 ### Fixed
