@@ -3,7 +3,7 @@ from typing import List
 
 from .constants import SIGHASH
 from .hash import hash256
-from .transaction_input import TransactionInput
+from .transaction_input import TransactionInput, txid_to_bytes_le
 from .transaction_output import TransactionOutput
 
 try:
@@ -43,7 +43,7 @@ def _preimage(
     # 3
     stream.write(hash_sequence)
     # 4
-    stream.write(bytes.fromhex(tx_input.source_txid)[::-1])
+    stream.write(txid_to_bytes_le(tx_input.source_txid))
     stream.write(tx_input.source_output_index.to_bytes(4, "little"))
     # 5
     stream.write(tx_input.locking_script.byte_length_varint())
@@ -160,7 +160,7 @@ def tx_preimages(
         return _bsv_native.tx_preimages(tx_version, tx_locktime, _inputs_to_tuples(inputs), _outputs_to_bytes(outputs))
 
     _hash_prevouts = hash256(
-        b"".join(bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little") for _in in inputs)
+        b"".join(txid_to_bytes_le(_in.source_txid) + _in.source_output_index.to_bytes(4, "little") for _in in inputs)
     )
     _hash_sequence = hash256(b"".join(_in.sequence.to_bytes(4, "little") for _in in inputs))
     _hash_outputs = hash256(b"".join(tx_output.serialize() for tx_output in outputs))
@@ -195,7 +195,7 @@ def tx_preimages(
 def _otda_serialize_input(stream, inp: TransactionInput, idx: int, input_index: int, base_type: int) -> None:
     """Serialize a single input for the OTDA preimage."""
     # outpoint
-    stream.write(bytes.fromhex(inp.source_txid)[::-1])
+    stream.write(txid_to_bytes_le(inp.source_txid))
     stream.write(inp.source_output_index.to_bytes(4, "little"))
     # scriptSig: only for the signing input
     if idx == input_index:
@@ -326,7 +326,7 @@ def tx_preimage(
     if not sighash & SIGHASH.ANYONECANPAY:
         hash_prevouts = hash256(
             b"".join(
-                bytes.fromhex(_in.source_txid)[::-1] + _in.source_output_index.to_bytes(4, "little") for _in in inputs
+                txid_to_bytes_le(_in.source_txid) + _in.source_output_index.to_bytes(4, "little") for _in in inputs
             )
         )
     else:

@@ -1470,6 +1470,30 @@ static int varint_size(uint64_t n) {
     return 9;
 }
 
+/* Internal: parse a Python int as a strict uint32.
+ * Rejects negative values and values > UINT32_MAX with OverflowError,
+ * matching Python's int.to_bytes(4, "little") contract. */
+static int parse_uint32(PyObject *obj, const char *name, uint32_t *out) {
+    if (!PyLong_Check(obj)) {
+        PyErr_Format(PyExc_TypeError, "%s must be an integer", name);
+        return -1;
+    }
+    int overflow = 0;
+    long long val = PyLong_AsLongLongAndOverflow(obj, &overflow);
+    if (overflow > 0 || (overflow == 0 && val > (long long)UINT32_MAX)) {
+        PyErr_Format(PyExc_OverflowError, "%s does not fit in uint32", name);
+        return -1;
+    }
+    if (overflow < 0 || val < 0) {
+        PyErr_Format(PyExc_OverflowError,
+                     "can't convert negative int to unsigned (%s)", name);
+        return -1;
+    }
+    if (val == -1 && PyErr_Occurred()) return -1;
+    *out = (uint32_t)val;
+    return 0;
+}
+
 /* Internal: PyDict_SetItemString does NOT steal the value reference.
  * This helper consumes it, so inline-created values are not leaked. */
 static int dict_set_steal(PyObject *d, const char *key, PyObject *v) {
@@ -1626,10 +1650,14 @@ parse_err:
  * outputs: list of dict(satoshis=int, locking_script=bytes)
  */
 static PyObject* pyfn_tx_to_bytes(PyObject *self, PyObject *args) {
-    unsigned int version, locktime;
+    PyObject *py_version, *py_locktime;
     PyObject *inputs, *outputs;
-    if (!PyArg_ParseTuple(args, "IOOI", &version, &inputs, &outputs, &locktime))
+    if (!PyArg_ParseTuple(args, "OOOO", &py_version, &inputs, &outputs, &py_locktime))
         return NULL;
+
+    uint32_t version, locktime;
+    if (parse_uint32(py_version, "version", &version) < 0) return NULL;
+    if (parse_uint32(py_locktime, "locktime", &locktime) < 0) return NULL;
 
     if (!PyList_Check(inputs) || !PyList_Check(outputs)) {
         PyErr_SetString(PyExc_TypeError, "inputs and outputs must be lists");
@@ -1644,15 +1672,43 @@ static PyObject* pyfn_tx_to_bytes(PyObject *self, PyObject *args) {
     total += varint_size(n_in);
     for (Py_ssize_t i = 0; i < n_in; i++) {
         PyObject *inp = PyList_GET_ITEM(inputs, i);
+        if (!PyDict_Check(inp)) {
+            PyErr_SetString(PyExc_TypeError, "each input must be a dict");
+            return NULL;
+        }
         PyObject *script = PyDict_GetItemString(inp, "unlocking_script");
-        Py_ssize_t slen = script && PyBytes_Check(script) ? PyBytes_GET_SIZE(script) : 0;
+        Py_ssize_t slen;
+        if (!script || script == Py_None) {
+            slen = 0;
+        } else if (PyBytes_Check(script)) {
+            slen = PyBytes_GET_SIZE(script);
+        } else {
+            PyErr_Format(PyExc_TypeError,
+                         "unlocking_script must be bytes or None, got %s",
+                         Py_TYPE(script)->tp_name);
+            return NULL;
+        }
         total += 32 + 4 + varint_size(slen) + slen + 4; /* txid + vout + script + seq */
     }
     total += varint_size(n_out);
     for (Py_ssize_t i = 0; i < n_out; i++) {
         PyObject *outp = PyList_GET_ITEM(outputs, i);
+        if (!PyDict_Check(outp)) {
+            PyErr_SetString(PyExc_TypeError, "each output must be a dict");
+            return NULL;
+        }
         PyObject *script = PyDict_GetItemString(outp, "locking_script");
-        Py_ssize_t slen = script && PyBytes_Check(script) ? PyBytes_GET_SIZE(script) : 0;
+        if (!script || script == Py_None) {
+            PyErr_SetString(PyExc_TypeError, "locking_script must not be None");
+            return NULL;
+        }
+        if (!PyBytes_Check(script)) {
+            PyErr_Format(PyExc_TypeError,
+                         "locking_script must be bytes, got %s",
+                         Py_TYPE(script)->tp_name);
+            return NULL;
+        }
+        Py_ssize_t slen = PyBytes_GET_SIZE(script);
         total += 8 + varint_size(slen) + slen; /* satoshis + script */
     }
     total += 4; /* locktime */
@@ -1675,21 +1731,40 @@ static PyObject* pyfn_tx_to_bytes(PyObject *self, PyObject *args) {
 
         /* txid hex -> bytes reversed */
         PyObject *txid_obj = PyDict_GetItemString(inp, "source_txid");
-        const char *txid_hex = PyUnicode_AsUTF8(txid_obj);
-        hex_to_bytes_reversed(txid_hex, out + pos, 32);
+        if (!txid_obj || !PyUnicode_Check(txid_obj)) {
+            PyErr_SetString(PyExc_TypeError, "source_txid must be a hex string");
+            goto serialize_err;
+        }
+        Py_ssize_t txid_len = 0;
+        const char *txid_hex = PyUnicode_AsUTF8AndSize(txid_obj, &txid_len);
+        if (!txid_hex) goto serialize_err;
+        if (txid_len != 64 || hex_to_bytes_reversed(txid_hex, out + pos, 32) < 0) {
+            PyErr_SetString(PyExc_ValueError, "source_txid must be exactly 64 hex characters");
+            goto serialize_err;
+        }
         pos += 32;
 
         /* vout */
         PyObject *vout_obj = PyDict_GetItemString(inp, "source_output_index");
-        uint32_t vout = (uint32_t)PyLong_AsUnsignedLong(vout_obj);
+        if (!vout_obj) {
+            PyErr_SetString(PyExc_KeyError, "missing source_output_index");
+            goto serialize_err;
+        }
+        unsigned long vout_value = PyLong_AsUnsignedLong(vout_obj);
+        if (PyErr_Occurred()) goto serialize_err;
+        if (vout_value > UINT32_MAX) {
+            PyErr_SetString(PyExc_OverflowError, "source_output_index does not fit in uint32");
+            goto serialize_err;
+        }
+        uint32_t vout = (uint32_t)vout_value;
         out[pos++] = (unsigned char)(vout & 0xFF);
         out[pos++] = (unsigned char)((vout >> 8) & 0xFF);
         out[pos++] = (unsigned char)((vout >> 16) & 0xFF);
         out[pos++] = (unsigned char)((vout >> 24) & 0xFF);
 
-        /* unlocking script */
+        /* unlocking script (already validated in size loop) */
         PyObject *script = PyDict_GetItemString(inp, "unlocking_script");
-        Py_ssize_t slen = script && PyBytes_Check(script) ? PyBytes_GET_SIZE(script) : 0;
+        Py_ssize_t slen = (script && PyBytes_Check(script)) ? PyBytes_GET_SIZE(script) : 0;
         pos += write_varint(out + pos, slen);
         if (slen > 0) {
             memcpy(out + pos, PyBytes_AS_STRING(script), slen);
@@ -1698,7 +1773,17 @@ static PyObject* pyfn_tx_to_bytes(PyObject *self, PyObject *args) {
 
         /* sequence */
         PyObject *seq_obj = PyDict_GetItemString(inp, "sequence");
-        uint32_t seq = (uint32_t)PyLong_AsUnsignedLong(seq_obj);
+        if (!seq_obj) {
+            PyErr_SetString(PyExc_KeyError, "missing sequence");
+            goto serialize_err;
+        }
+        unsigned long seq_value = PyLong_AsUnsignedLong(seq_obj);
+        if (PyErr_Occurred()) goto serialize_err;
+        if (seq_value > UINT32_MAX) {
+            PyErr_SetString(PyExc_OverflowError, "sequence does not fit in uint32");
+            goto serialize_err;
+        }
+        uint32_t seq = (uint32_t)seq_value;
         out[pos++] = (unsigned char)(seq & 0xFF);
         out[pos++] = (unsigned char)((seq >> 8) & 0xFF);
         out[pos++] = (unsigned char)((seq >> 16) & 0xFF);
@@ -1712,13 +1797,18 @@ static PyObject* pyfn_tx_to_bytes(PyObject *self, PyObject *args) {
 
         /* satoshis */
         PyObject *sats_obj = PyDict_GetItemString(outp, "satoshis");
+        if (!sats_obj) {
+            PyErr_SetString(PyExc_KeyError, "missing satoshis");
+            goto serialize_err;
+        }
         uint64_t sats = PyLong_AsUnsignedLongLong(sats_obj);
+        if (PyErr_Occurred()) goto serialize_err;
         for (int k = 0; k < 8; k++)
             out[pos++] = (unsigned char)((sats >> (k * 8)) & 0xFF);
 
-        /* locking script */
+        /* locking script (already validated in size loop) */
         PyObject *script = PyDict_GetItemString(outp, "locking_script");
-        Py_ssize_t slen = script && PyBytes_Check(script) ? PyBytes_GET_SIZE(script) : 0;
+        Py_ssize_t slen = PyBytes_GET_SIZE(script);
         pos += write_varint(out + pos, slen);
         if (slen > 0) {
             memcpy(out + pos, PyBytes_AS_STRING(script), slen);
@@ -1733,6 +1823,10 @@ static PyObject* pyfn_tx_to_bytes(PyObject *self, PyObject *args) {
     out[pos++] = (unsigned char)((locktime >> 24) & 0xFF);
 
     return result;
+
+serialize_err:
+    Py_DECREF(result);
+    return NULL;
 }
 
 /*
@@ -1838,10 +1932,14 @@ static void write_u64_le(unsigned char *buf, uint64_t v) {
  * outputs: list of bytes (pre-serialized)
  */
 static PyObject* pyfn_tx_preimages(PyObject *self, PyObject *args) {
-    uint32_t version, locktime;
+    PyObject *py_version, *py_locktime;
     PyObject *inputs_list, *outputs_list;
-    if (!PyArg_ParseTuple(args, "IIOO", &version, &locktime, &inputs_list, &outputs_list))
+    if (!PyArg_ParseTuple(args, "OOOO", &py_version, &py_locktime, &inputs_list, &outputs_list))
         return NULL;
+
+    uint32_t version, locktime;
+    if (parse_uint32(py_version, "version", &version) < 0) return NULL;
+    if (parse_uint32(py_locktime, "locktime", &locktime) < 0) return NULL;
 
     if (!PyList_Check(inputs_list) || !PyList_Check(outputs_list)) {
         PyErr_SetString(PyExc_TypeError, "inputs and outputs must be lists");
@@ -2024,11 +2122,15 @@ static PyObject* pyfn_tx_preimages(PyObject *self, PyObject *args) {
  */
 static PyObject* pyfn_tx_preimage_otda(PyObject *self, PyObject *args) {
     int input_index;
-    uint32_t version, locktime;
+    PyObject *py_version, *py_locktime;
     PyObject *inputs_list, *outputs_list;
-    if (!PyArg_ParseTuple(args, "iIIOO", &input_index, &version, &locktime,
+    if (!PyArg_ParseTuple(args, "iOOOO", &input_index, &py_version, &py_locktime,
                           &inputs_list, &outputs_list))
         return NULL;
+
+    uint32_t version, locktime;
+    if (parse_uint32(py_version, "version", &version) < 0) return NULL;
+    if (parse_uint32(py_locktime, "locktime", &locktime) < 0) return NULL;
 
     if (!PyList_Check(inputs_list) || !PyList_Check(outputs_list)) {
         PyErr_SetString(PyExc_TypeError, "inputs and outputs must be lists");
