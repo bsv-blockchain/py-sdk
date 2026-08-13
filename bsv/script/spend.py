@@ -7,7 +7,7 @@ from ..hash import hash160, hash256, ripemd160, sha1, sha256
 from ..keys import PublicKey
 from ..transaction_input import TransactionInput
 from ..transaction_preimage import tx_preimage
-from ..utils import deserialize_ecdsa_der, unsigned_to_bytes
+from ..utils import deserialize_ecdsa_der, serialize_ecdsa_der, unsigned_to_bytes
 from .script import Script, ScriptChunk
 
 try:
@@ -1003,12 +1003,16 @@ class Spend:
         if not SIGHASH.validate(sighash):
             self.script_evaluation_error("Invalid SIGHASH flag")
 
+        # The low-S check has to sit outside the suppression: raising from
+        # inside would be caught here and reported as a malformed signature.
+        s = None
         with suppress(Exception):
             _, s = deserialize_ecdsa_der(sig)
-            if not self.is_relaxed() and REQUIRE_LOW_S_SIGNATURES and s > curve.n // 2:
-                self.script_evaluation_error("The signature must have a low S value.")
-            return True
-        self.script_evaluation_error("The signature format is invalid.")
+        if s is None:
+            self.script_evaluation_error("The signature format is invalid.")
+        elif not self.is_relaxed() and REQUIRE_LOW_S_SIGNATURES and s > curve.n // 2:
+            self.script_evaluation_error("The signature must have a low S value.")
+        return True
 
     @classmethod
     def check_public_key_encoding(cls, octets: bytes) -> bool:
@@ -1016,6 +1020,24 @@ class Spend:
             PublicKey(octets)
             return True
         return False
+
+    @staticmethod
+    def normalize_low_s(der: bytes) -> bytes:
+        """Fold a high-S signature to its low-S equivalent.
+
+        Both encode the same valid signature, but `PublicKey.verify` rejects the
+        high-S form outright. Whether high-S is *allowed* is a policy question
+        `check_signature_encoding` already answers -- Chronicle relaxes it for
+        transaction version > 1 -- so verification itself must not re-impose it.
+        The native VM normalizes here too, via `secp256k1_ecdsa_signature_normalize`.
+        """
+        try:
+            r, s = deserialize_ecdsa_der(der)
+        except ValueError:
+            return der
+        if s <= curve.n // 2:
+            return der
+        return serialize_ecdsa_der((r, curve.n - s))
 
     def verify_signature(self, sig: bytes, pub_key: bytes, sub_script: Script) -> bool:
         if sig == b"":
@@ -1035,7 +1057,7 @@ class Spend:
         inputs.insert(self.input_index, current_input)
 
         preimage = tx_preimage(self.input_index, inputs, self.outputs, self.transaction_version, self.lock_time)
-        return PublicKey(pub_key).verify(sig[:-1], preimage)
+        return PublicKey(pub_key).verify(self.normalize_low_s(sig[:-1]), preimage)
 
     @classmethod
     def encode_bool(cls, f: bool) -> bytes:

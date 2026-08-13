@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- **The pure-Python VM rejected high-S signatures the native VM accepts** — Chronicle relaxes the low-S requirement for transaction version > 1, and a high-S signature is mathematically valid, so the native VM folds it to its low-S equivalent (`secp256k1_ecdsa_signature_normalize`) before verifying. The pure-Python VM verified through `PublicKey.verify`, which rejects the high-S form outright, so an environment without the C extension refused transactions the network accepts. Script verification now normalizes on both paths; whether high-S is *allowed* stays with `check_signature_encoding`, which still rejects it for version ≤ 1. `PublicKey.verify` is unchanged and continues to require low-S.
+- **Low-S rejections no longer report as malformed signatures** — `check_signature_encoding` raised its low-S error from inside a `with suppress(Exception)` block, which swallowed it and fell through to "The signature format is invalid." The check now sits outside the suppression, so a high-S signature on a version-1 transaction says so.
 
 ---
 
