@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- **VM state no longer carries across the unlocking→locking script boundary** — only the data stack is meant to survive it, but the alt stack, the conditional stack and the code-separator position were all left in place. An unlocking script could therefore stash a value with `OP_TOALTSTACK` for the locking script to retrieve, open an `OP_IF` for the locking script to close, or move the code separator so the locking script signed a truncated subscript. Each of these is cleared at the boundary in the TS SDK (`Spend.ts`) and the Go SDK (`interpreter/thread.go`), and both also reject a conditional still open at the end of the unlocking script, as py-sdk now does on both VM paths.
 
 ---
 

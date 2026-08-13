@@ -2898,6 +2898,17 @@ static int vm_step(VMState *st) {
     Py_ssize_t ulen = PyList_GET_SIZE(st->unlock_chunks);
 
     if (st->context == VM_CTX_UNLOCK && st->program_counter >= ulen) {
+        /* Only the data stack survives the boundary. Everything else is
+           per-script in the TS/Go SDKs, so leaving it in place let an unlocking
+           script open a conditional, stash to the alt stack, or move the code
+           separator and have the locking script inherit it. */
+        if (st->if_stack.count != 0) {
+            vm_error(st, "Every OP_IF, OP_NOTIF, or OP_ELSE must be terminated with "
+                         "OP_ENDIF prior to the end of the unlocking script.");
+            return -1;
+        }
+        vms_free(&st->alt_stack);
+        st->last_code_separator = 0;
         st->context = VM_CTX_LOCK;
         st->program_counter = 0;
     }

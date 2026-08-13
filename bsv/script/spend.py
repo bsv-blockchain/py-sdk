@@ -80,6 +80,18 @@ class Spend:
         # If the context is UnlockingScript, and we have reached the end,
         # set the context to LockingScript and zero the program counter
         if self.context == "UnlockingScript" and self.program_counter >= len(self.unlocking_script.chunks):
+            # Only the data stack survives the boundary. Everything else is
+            # per-script in the TS/Go SDKs, so leaving it in place let an
+            # unlocking script open a conditional, stash to the alt stack, or
+            # move the code separator and have the locking script inherit it.
+            if self.if_stack:
+                self.script_evaluation_error(
+                    "Every OP_IF, OP_NOTIF, or OP_ELSE must be terminated with "
+                    "OP_ENDIF prior to the end of the unlocking script."
+                )
+            self.alt_stack = []
+            self.if_stack = []
+            self.last_code_separator = None
             self.context = "LockingScript"
             self.program_counter = 0
 
