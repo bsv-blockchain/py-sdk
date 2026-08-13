@@ -1,29 +1,44 @@
+import pytest
+
 from bsv.script.script import Script
 from bsv.script.spend import Spend
 from bsv.transaction import Transaction
 
-from .spend_vector import SPEND_VALID_CASES
+from .spend_vector import SPEND_MULTIPLE_ELSE_CASES, SPEND_VALID_CASES
+
+
+def _spend_for(case) -> Spend:
+    return Spend(
+        {
+            "sourceTXID": "0000000000000000000000000000000000000000000000000000000000000000",
+            "sourceOutputIndex": 0,
+            "sourceSatoshis": 1,
+            "lockingScript": Script(case[1]),
+            "transactionVersion": 1,
+            "otherInputs": [],
+            "outputs": [],
+            "inputIndex": 0,
+            "unlockingScript": Script(case[0]),
+            "inputSequence": 0xFFFFFFFF,
+            "lockTime": 0,
+        }
+    )
 
 
 def test():
     for case in SPEND_VALID_CASES:
         print(case)
-        spend = Spend(
-            {
-                "sourceTXID": "0000000000000000000000000000000000000000000000000000000000000000",
-                "sourceOutputIndex": 0,
-                "sourceSatoshis": 1,
-                "lockingScript": Script(case[1]),
-                "transactionVersion": 1,
-                "otherInputs": [],
-                "outputs": [],
-                "inputIndex": 0,
-                "unlockingScript": Script(case[0]),
-                "inputSequence": 0xFFFFFFFF,
-                "lockTime": 0,
-            }
-        )
-        assert spend.validate()
+        assert _spend_for(case).validate()
+
+
+@pytest.mark.parametrize("case", SPEND_MULTIPLE_ELSE_CASES, ids=lambda c: c[2][:40])
+def test_multiple_else_rejected_post_genesis(case):
+    # These are Bitcoin Core vectors that were valid before Genesis. The node
+    # allows one OP_ELSE per OP_IF post-Genesis, and py-sdk targets
+    # post-Chronicle, so they must now be rejected rather than validated.
+    spend = _spend_for(case)
+    with pytest.raises(RuntimeError, match="OP_ELSE may only be used once"):
+        spend.validate()
 
 
 def test_complex_case():

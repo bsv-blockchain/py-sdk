@@ -1,9 +1,12 @@
-"""Conditional-branch behaviour: OP_VERIF and OP_VERNOTIF.
+"""Conditional-branch behaviour: OP_VERIF/OP_VERNOTIF and OP_ELSE.
 
-Both sit inside the `OP_IF..OP_ENDIF` opcode range, so they are reached inside
-a skipped branch as well. The TS SDK (`Spend.ts`) and the Go SDK
-(`interpreter/operations.go`) both leave the data stack alone there and only
-push onto the conditional stack.
+`OP_VERIF` and `OP_VERNOTIF` sit inside the `OP_IF..OP_ENDIF` opcode range, so
+they are reached inside a skipped branch as well. The TS SDK (`Spend.ts`) and
+the Go SDK (`interpreter/operations.go`) both leave the data stack alone there
+and only push onto the conditional stack.
+
+Post-Genesis the node allows one `OP_ELSE` per `OP_IF` and rejects the rest
+(`conditional_tracker`: "Prevents duplicate OP_ELSE at the same level").
 """
 
 import pytest
@@ -62,6 +65,10 @@ def test_taken_branch_still_consumes_the_operand(opcode):
     taken = opcode == "OP_VERIF"
     body = "OP_1" if taken else "OP_0"
     assert all(_run_both_paths(f"02000000 {opcode} {body} OP_ELSE {'OP_0' if taken else 'OP_1'} OP_ENDIF"))
+
+
+def test_second_else_for_the_same_if_is_rejected():
+    _expect_rejected("OP_IF OP_ELSE OP_ELSE OP_1 OP_ENDIF", "OP_1", "OP_ELSE may only be used once")
 
 
 def test_one_else_per_if_is_accepted():

@@ -75,6 +75,8 @@ class Spend:
         self.stack = []
         self.alt_stack = []
         self.if_stack = []
+        # Whether each open conditional has already seen its OP_ELSE.
+        self.else_stack = []
 
     def step(self) -> None:
         # If the context is UnlockingScript, and we have reached the end,
@@ -150,6 +152,7 @@ class Spend:
                     if current_opcode == OpCode.OP_VERNOTIF:
                         f_value = not f_value
                 self.if_stack.append(self.encode_bool(f_value))
+                self.else_stack.append(False)
 
             elif current_opcode in [
                 OpCode.OP_NOP,
@@ -248,10 +251,17 @@ class Spend:
                         f = not f
                     self.stack.pop()
                 self.if_stack.append(self.encode_bool(f))
+                self.else_stack.append(False)
 
             elif current_opcode == OpCode.OP_ELSE:
                 if len(self.if_stack) == 0:
                     self.script_evaluation_error("OP_ELSE requires a preceeding OP_IF.")
+                # Post-Genesis grammar: one OP_ELSE per OP_IF. The node rejects
+                # the second with SCRIPT_ERR_UNBALANCED_CONDITIONAL.
+                if self.else_stack and self.else_stack[-1]:
+                    self.script_evaluation_error("OP_ELSE may only be used once for each OP_IF or OP_NOTIF.")
+                if self.else_stack:
+                    self.else_stack[-1] = True
                 f = not self.cast_to_bool(self.if_stack[-1])
                 self.if_stack[-1] = self.encode_bool(f)
 
@@ -259,6 +269,8 @@ class Spend:
                 if len(self.if_stack) == 0:
                     self.script_evaluation_error("OP_ENDIF requires a preceeding OP_IF.")
                 self.if_stack.pop()
+                if self.else_stack:
+                    self.else_stack.pop()
 
             elif current_opcode == OpCode.OP_VERIFY:
                 if len(self.stack) < 1:
