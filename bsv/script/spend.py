@@ -722,6 +722,12 @@ class Spend:
 
                 # Clean up stack of actual arguments
                 while i > 1:
+                    # NULLFAIL: once the keys are exhausted the remaining items
+                    # are the signatures, and a failed check requires every one
+                    # of them to be empty. Chronicle relaxes this for
+                    # transaction version > 1, as it does for OP_CHECKSIG.
+                    if not f and not self.is_relaxed() and i_key2 == 0 and len(self.stacktop(-1)) > 0:
+                        self.script_evaluation_error(f"{_codename} requires a failed signature to be the empty vector.")
                     if i_key2 > 0:
                         i_key2 -= 1
 

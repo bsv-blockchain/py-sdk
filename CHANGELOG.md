@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- **`OP_CHECKMULTISIG` now enforces NULLFAIL** — a failed signature check requires the signature to be the empty vector, which py-sdk applied to `OP_CHECKSIG` but not to `OP_CHECKMULTISIG`. The node applies it to both, in the multisig cleanup loop (`if (!fSuccess && VerifyNullFail(flags) && !ikey2 && !vchSig.empty())`), so a transaction the node rejects as malleable validated here. Chronicle relaxes it for transaction version > 1 exactly as it does for `OP_CHECKSIG`, and both VM paths now agree.
 
 ---
 
