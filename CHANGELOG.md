@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- **`OP_DIV` and `OP_MOD` now truncate toward zero** — both used Python's `//` and `%`, which floor the quotient and take the remainder's sign from the divisor. The TS SDK (BigInt `/` and `%`) and the Go SDK (`big.Int.Quo` and `big.Int.Rem`) truncate toward zero and take the remainder's sign from the dividend. Whenever the operand signs disagreed and the division was inexact, the results differed by one: `-7 2 OP_DIV` returned `-4` instead of `-3`, and `-7 2 OP_MOD` returned `1` instead of `-1`. No error was raised — the wrong value simply propagated, so a script could validate here and fail on the other SDKs, or the reverse. `OP_2DIV` was already correct and is unchanged.
+- **`OP_NUM2BIN` no longer raises out of `validate()` when widening zero** — zero encodes to no bytes, and the widening path then combined an `int` with a `bytes` sentinel and indexed an empty buffer. `OP_0 OP_4 OP_NUM2BIN` raised `TypeError` on the pure-Python VM (and `IndexError` for a zero size) where the native VM returned the correct result, so the two paths disagreed and the exception escaped `Spend.validate()` as neither a script evaluation error nor `False`. A value that already occupies the requested width now returns directly, as in the TS and Go SDKs.
 
 ---
 

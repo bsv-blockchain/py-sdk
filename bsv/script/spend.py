@@ -551,11 +551,18 @@ class Spend:
                 elif current_opcode == OpCode.OP_DIV:
                     if x2 == 0:
                         self.script_evaluation_error("OP_DIV cannot divide by zero!")
-                    x = x1 // x2
+                    # Truncate toward zero, not floor: `//` would round -7 // 2
+                    # to -4 where the TS/Go SDKs give -3.
+                    x = abs(x1) // abs(x2)
+                    if (x1 < 0) != (x2 < 0):
+                        x = -x
                 elif current_opcode == OpCode.OP_MOD:
                     if x2 == 0:
                         self.script_evaluation_error("OP_MOD cannot divide by zero!")
-                    x = x1 % x2
+                    # Remainder takes the dividend's sign, not the divisor's.
+                    x = abs(x1) % abs(x2)
+                    if x1 < 0:
+                        x = -x
                 elif current_opcode == OpCode.OP_BOOLAND:
                     x = 1 if x1 != 0 and x2 != 0 else 0
                 elif current_opcode == OpCode.OP_BOOLOR:
@@ -824,14 +831,19 @@ class Spend:
                     )
                     self.script_evaluation_error(_m)
 
-                msb = b"\x00"
-                if len(x) > 0:
-                    msb = x[-1] & 0x80
-                    x[-1] &= 0x7F
-                octets = x + b"\x00" * (size - len(x))
-                octets[-1] |= msb
-
-                self.stack.append(octets)
+                # Already the requested width: the sign bit needs no relocating,
+                # and returning here keeps the zero-length case off the code
+                # below, which indexes the last byte.
+                if len(x) == size:
+                    self.stack.append(x)
+                else:
+                    msb = 0
+                    if len(x) > 0:
+                        msb = x[-1] & 0x80
+                        x[-1] &= 0x7F
+                    octets = x + b"\x00" * (size - len(x))
+                    octets[-1] |= msb
+                    self.stack.append(octets)
 
             elif current_opcode == OpCode.OP_BIN2NUM:
                 if len(self.stack) < 1:

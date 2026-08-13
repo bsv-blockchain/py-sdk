@@ -2891,6 +2891,31 @@ static int c_checksig_verify(VMState *st,
     return ok ? 1 : 0;
 }
 
+/* Truncating division / remainder: the quotient rounds toward zero and the
+   remainder takes the dividend's sign, matching the TS/Go SDKs. Python's
+   floor semantics differ from both whenever the operand signs disagree.
+   Operating on absolute values keeps the two rules in one place. */
+static PyObject *num_trunc_div_or_mod(PyObject *a, PyObject *b, int want_mod) {
+    PyObject *aa = PyNumber_Absolute(a);
+    PyObject *ab = PyNumber_Absolute(b);
+    if (!aa || !ab) { Py_XDECREF(aa); Py_XDECREF(ab); return NULL; }
+    PyObject *res = want_mod ? PyNumber_Remainder(aa, ab) : PyNumber_FloorDivide(aa, ab);
+    Py_DECREF(aa); Py_DECREF(ab);
+    if (!res) return NULL;
+    PyObject *zero = PyLong_FromLong(0);
+    if (!zero) { Py_DECREF(res); return NULL; }
+    int a_neg = PyObject_RichCompareBool(a, zero, Py_LT);
+    int b_neg = PyObject_RichCompareBool(b, zero, Py_LT);
+    Py_DECREF(zero);
+    if (a_neg < 0 || b_neg < 0) { Py_DECREF(res); return NULL; }
+    if (want_mod ? a_neg : (a_neg != b_neg)) {
+        PyObject *neg = PyNumber_Negative(res);
+        Py_DECREF(res);
+        res = neg;
+    }
+    return res;
+}
+
 /* --- vm_step: execute one opcode ---------------------------------------- */
 /* Returns: 0 = success (increment PC), 1 = don't increment PC, -1 = error */
 
@@ -3533,14 +3558,14 @@ static int vm_step(VMState *st) {
                 vm_error(st, "OP_DIV cannot divide by zero!");
                 return -1;
             }
-            r = PyNumber_FloorDivide(x1, x2); break;
+            r = num_trunc_div_or_mod(x1, x2, 0); break;
         case 0x97:
             if (PyObject_RichCompareBool(x2, pz, Py_EQ) > 0) {
                 Py_DECREF(x1); Py_DECREF(x2); Py_DECREF(pz);
                 vm_error(st, "OP_MOD cannot divide by zero!");
                 return -1;
             }
-            r = PyNumber_Remainder(x1, x2); break;
+            r = num_trunc_div_or_mod(x1, x2, 1); break;
         case 0x9A: {
             int a = PyObject_IsTrue(x1), b = PyObject_IsTrue(x2);
             r = PyLong_FromLong((a > 0 && b > 0) ? 1 : 0); break;
