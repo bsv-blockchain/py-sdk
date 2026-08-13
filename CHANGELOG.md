@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- **`OP_CODESEPARATOR` no longer leaves itself in the signed subscript** — the subscript a signature commits to started *at* the last separator instead of past it, so the `OP_CODESEPARATOR` byte (`0xab`) entered the sighash preimage. For `<pubkey> OP_CODESEPARATOR OP_CHECKSIG` the scriptCode was `abac` where the TS and Go SDKs both use `ac`, so a signature produced by either of them failed to verify here and one produced here failed there. Affects `OP_CHECKSIG`, `OP_CHECKSIGVERIFY`, `OP_CHECKMULTISIG` and `OP_CHECKMULTISIGVERIFY` on both VM paths. A separator in the very first position is unchanged: index 0 is indistinguishable from "no separator seen", so the whole script stays in the subscript, matching the Go SDK that Teranode builds on. (The TS SDK excludes the separator in that position as well — the one place the two references disagree.)
 
 ---
 
