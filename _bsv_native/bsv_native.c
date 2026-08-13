@@ -2962,22 +2962,28 @@ static int vm_step(VMState *st) {
         return vms_push(&st->stack, ver, 4) < 0 ? -1 : 0;
     }
     case 0x65: case 0x66: { /* OP_VERIF / OP_VERNOTIF */
-        if (st->stack.count < 1) {
-            vm_error(st, "OP_VERIF/OP_VERNOTIF requires at least one item on the stack.");
-            return -1;
-        }
-        StackElem e = {0}; vms_pop(&st->stack, &e);
         int fv = 0;
-        if (e.len == 4) {
-            unsigned char ver[4];
-            ver[0] = st->tx_version & 0xFF;
-            ver[1] = (st->tx_version >> 8) & 0xFF;
-            ver[2] = (st->tx_version >> 16) & 0xFF;
-            ver[3] = (st->tx_version >> 24) & 0xFF;
-            fv = (memcmp(e.data, ver, 4) == 0);
+        /* These land in the OP_IF..OP_ENDIF range, so they are reached inside a
+           skipped branch too. Only the conditional stack may be touched there --
+           consuming an operand would desynchronise the data stack against the
+           branch that was actually taken. */
+        if (is_exec) {
+            if (st->stack.count < 1) {
+                vm_error(st, "OP_VERIF/OP_VERNOTIF requires at least one item on the stack.");
+                return -1;
+            }
+            StackElem e = {0}; vms_pop(&st->stack, &e);
+            if (e.len == 4) {
+                unsigned char ver[4];
+                ver[0] = st->tx_version & 0xFF;
+                ver[1] = (st->tx_version >> 8) & 0xFF;
+                ver[2] = (st->tx_version >> 16) & 0xFF;
+                ver[3] = (st->tx_version >> 24) & 0xFF;
+                fv = (memcmp(e.data, ver, 4) == 0);
+            }
+            se_free(&e);
+            if (op == 0x66) fv = !fv;
         }
-        se_free(&e);
-        if (op == 0x66) fv = !fv;
         return ifs_push(&st->if_stack, fv ? 1 : 0) < 0 ? -1 : 0;
     }
     case 0x63: case 0x64: { /* OP_IF / OP_NOTIF */

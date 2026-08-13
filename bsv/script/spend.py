@@ -135,15 +135,20 @@ class Spend:
                 self.stack.append(self.transaction_version.to_bytes(4, "little"))
 
             elif current_opcode in [OpCode.OP_VERIF, OpCode.OP_VERNOTIF]:
-                if len(self.stack) < 1:
-                    self.script_evaluation_error("OP_VERIF/OP_VERNOTIF requires at least one item on the stack.")
-                buf = self.stack.pop()
                 f_value = False
-                if len(buf) == 4:
-                    ver_bytes = self.transaction_version.to_bytes(4, "little")
-                    f_value = buf == ver_bytes
-                if current_opcode == OpCode.OP_VERNOTIF:
-                    f_value = not f_value
+                # These land in the OP_IF..OP_ENDIF range, so they are reached
+                # inside a skipped branch too. Only the conditional stack may be
+                # touched there -- consuming an operand would desynchronise the
+                # data stack against the branch that was actually taken.
+                if is_script_executing:
+                    if len(self.stack) < 1:
+                        self.script_evaluation_error("OP_VERIF/OP_VERNOTIF requires at least one item on the stack.")
+                    buf = self.stack.pop()
+                    if len(buf) == 4:
+                        ver_bytes = self.transaction_version.to_bytes(4, "little")
+                        f_value = buf == ver_bytes
+                    if current_opcode == OpCode.OP_VERNOTIF:
+                        f_value = not f_value
                 self.if_stack.append(self.encode_bool(f_value))
 
             elif current_opcode in [
@@ -903,7 +908,9 @@ class Spend:
                     "The clean stack rule requires exactly one item to be on the stack after script execution."
                 )
 
-        if not self.cast_to_bool(self.stacktop(-1)):
+        # An empty stack reaches here whenever the clean-stack rule is relaxed;
+        # indexing it would surface a raw IndexError instead of a script error.
+        if len(self.stack) < 1 or not self.cast_to_bool(self.stacktop(-1)):
             self.script_evaluation_error("The top stack element must be truthy after script evaluation.")
 
         return True

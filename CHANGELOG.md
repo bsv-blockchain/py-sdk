@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- **`OP_VERIF` and `OP_VERNOTIF` no longer consume an operand inside a skipped branch** — both opcodes fall in the `OP_IF..OP_ENDIF` range, so they are reached even when the surrounding branch is not being executed, and py-sdk popped the data stack regardless. That desynchronised the stack against the branch actually taken, so `OP_0 OP_IF OP_VERIF OP_ENDIF` consumed a value the script never should have touched. The TS SDK guards the pop with `isScriptExecuting` and the Go SDK returns before popping; py-sdk now matches on both VM paths, still pushing onto the conditional stack either way.
+- **An empty stack at the end of evaluation is reported as a script error** — the final truthiness check indexed the stack directly, so a script that ended empty raised a bare `IndexError` out of `Spend.validate()` on the pure-Python VM where the native VM returned a proper evaluation error. Reachable whenever the clean-stack rule is relaxed (transaction version > 1).
 
 ---
 
