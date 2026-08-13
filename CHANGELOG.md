@@ -42,7 +42,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **`OP_CODESEPARATOR` no longer leaves itself in the signed subscript** — the subscript a signature commits to started *at* the last separator instead of past it, so the `OP_CODESEPARATOR` byte (`0xab`) entered the sighash preimage. For `<pubkey> OP_CODESEPARATOR OP_CHECKSIG` the scriptCode was `abac` where the TS and Go SDKs both use `ac`, so a signature produced by either of them failed to verify here and one produced here failed there. Affects `OP_CHECKSIG`, `OP_CHECKSIGVERIFY`, `OP_CHECKMULTISIG` and `OP_CHECKMULTISIGVERIFY` on both VM paths. A separator in the very first position is unchanged: index 0 is indistinguishable from "no separator seen", so the whole script stays in the subscript, matching the Go SDK that Teranode builds on. (The TS SDK excludes the separator in that position as well — the one place the two references disagree.)
+- **`OP_CODESEPARATOR` no longer leaves itself in the signed subscript** — the subscript a signature commits to started *at* the last separator instead of past it, so the `OP_CODESEPARATOR` byte (`0xab`) entered the sighash preimage. For `<pubkey> OP_CODESEPARATOR OP_CHECKSIG` the scriptCode was `abac` where the TS and Go SDKs both use `ac`, so a signature produced by either of them failed to verify here and one produced here failed there. Affects `OP_CHECKSIG`, `OP_CHECKSIGVERIFY`, `OP_CHECKMULTISIG` and `OP_CHECKMULTISIGVERIFY` on both VM paths. The separator is excluded wherever it sits, first position included, as in the node (`interpreter.cpp` advances past the opcode before recording the position — "Hash starts after the code separator").
 
 ---
 

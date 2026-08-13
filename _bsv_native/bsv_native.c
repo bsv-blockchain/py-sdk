@@ -2652,10 +2652,9 @@ static int c_build_subscript(VMState *st,
                        ? st->unlock_chunks : st->lock_chunks;
     Py_ssize_t clen = PyList_GET_SIZE(chunks);
     /* Past the separator, not at it: including the OP_CODESEPARATOR byte would
-       change the sighash preimage. Index 0 reads as "none seen", so a separator
-       in the very first position leaves the whole script -- matching the Go SDK
-       that Teranode builds on. */
-    Py_ssize_t start = st->last_code_separator > 0 ? st->last_code_separator + 1 : 0;
+       change the sighash preimage. -1 means none was seen, so start at 0. The
+       node excludes the separator wherever it sits, first position included. */
+    Py_ssize_t start = st->last_code_separator + 1;
 
     size_t cap = 256;
     unsigned char *buf = (unsigned char *)malloc(cap);
@@ -4288,7 +4287,7 @@ static PyObject *pyfn_spend_validate(PyObject *self, PyObject *args) {
     st.lock_chunks = lock_chunks;
     st.program_counter = 0;
     st.context = VM_CTX_UNLOCK;
-    st.last_code_separator = 0;
+    st.last_code_separator = -1;  /* none seen yet */
     st.tx_version = tx_version;
     st.source_txid = source_txid;
     st.source_output_index = source_output_index;

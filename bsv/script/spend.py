@@ -907,11 +907,11 @@ class Spend:
         would change the sighash preimage and break signatures across SDKs.
         """
         chunks = self.unlocking_script.chunks if self.context == "UnlockingScript" else self.locking_script.chunks
-        # Index 0 reads as "none seen" here, so a separator in the very first
-        # position leaves the whole script in the subscript. That matches the Go
-        # SDK, and Teranode builds on it; the TS SDK excludes the separator in
-        # that position too, so the two references disagree only there.
-        start = self.last_code_separator + 1 if self.last_code_separator else 0
+        # The separator is excluded wherever it sits, including the first
+        # position. The node advances past the opcode before recording the
+        # position ("Hash starts after the code separator", interpreter.cpp),
+        # so there is no special case for index 0.
+        start = 0 if self.last_code_separator is None else self.last_code_separator + 1
         return Script.from_chunks(chunks[start:])
 
     def stacktop(self, i: int) -> bytes:

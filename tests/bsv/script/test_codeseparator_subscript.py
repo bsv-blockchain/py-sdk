@@ -110,14 +110,12 @@ def test_only_the_last_separator_counts(priv_key):
     assert all(_validates_on_both_paths(locking, unlocking))
 
 
-def test_separator_in_first_position_leaves_whole_script(priv_key):
-    # Index 0 is indistinguishable from "no separator seen", so a leading
-    # separator keeps the whole script in the subscript. The Go SDK behaves this
-    # way and Teranode builds on it; the TS SDK excludes the separator here too,
-    # so this is the one position where the references disagree.
+def test_separator_in_first_position_is_also_excluded(priv_key):
+    # No special case for index 0: the node advances past the opcode before
+    # recording the position, so a leading separator is excluded like any other.
     pubkey_push = encode_pushdata(priv_key.public_key().serialize())
     locking = Script(OpCode.OP_CODESEPARATOR + pubkey_push + OpCode.OP_CHECKSIG)
-    unlocking = _sign_over(priv_key, locking)
+    unlocking = _sign_over(priv_key, Script(pubkey_push + OpCode.OP_CHECKSIG))
     assert all(_validates_on_both_paths(locking, unlocking))
 
 
