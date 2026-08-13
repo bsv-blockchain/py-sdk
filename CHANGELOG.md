@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- **`OP_LSHIFT` / `OP_RSHIFT` now shift bits and preserve the operand width** — both opcodes shifted by whole *bytes* and, when the shift count reached the operand's length, sized the result to the shift count itself. Neither behaviour matched the TS SDK (`Spend.ts`) or the Go SDK (`interpreter/operations.go`), which shift by bits and always return an array as wide as the operand: `0xff00 OP_LSHIFT 1` returned `0x0000` instead of `0xfe00`. Scripts using either opcode could therefore validate on py-sdk and fail on the other SDKs, or the reverse. Both opcodes now consume both operands as the reference SDKs do; previously the shift count was left on the stack.
+
+### Security
+
+- **Bounded `OP_LSHIFT` / `OP_RSHIFT` allocation** — the shift count is read from the stack, and because the result was sized to that count a 6-byte script (`OP_0 <5-byte count> OP_LSHIFT`) could request a ~21 GB allocation. Under Linux memory overcommit the allocation succeeded and the subsequent zero-fill touched every page, so a single script could exhaust host memory rather than fail cleanly. The result now never exceeds the operand's width, and a shift wider than the operand short-circuits to zeros without allocating. Both the C extension (`_bsv_native`) and the pure-Python fallback were affected.
 
 ---
 

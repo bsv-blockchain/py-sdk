@@ -440,15 +440,23 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 2:
                     self.script_evaluation_error(f"{_codename} requires at least two items to be on the stack.")
-                n = self.bin2num(self.stacktop(-1))
+                n = self.bin2num(self.stack.pop(-1))
                 if n < 0:
                     self.script_evaluation_error(f"{_codename} requires the top stack item to be non-negative.")
-                x = self.stack.pop(-2)
-                if current_opcode == OpCode.OP_LSHIFT:
-                    x = x[n:] + b"\x00" * n
+                x = self.stack.pop(-1)
+                if len(x) == 0:
+                    self.stack.append(b"")
                 else:
-                    x = b"\x00" * n + x[:-n]
-                self.stack.append(x)
+                    width = len(x) * 8
+                    # A shift wider than the operand clears every bit, so an
+                    # out-of-range count must not build an oversized intermediate.
+                    if n >= width:
+                        v = 0
+                    elif current_opcode == OpCode.OP_LSHIFT:
+                        v = (int.from_bytes(x, "big") << n) & ((1 << width) - 1)
+                    else:
+                        v = int.from_bytes(x, "big") >> n
+                    self.stack.append(v.to_bytes(len(x), "big"))
 
             elif current_opcode in [OpCode.OP_EQUAL, OpCode.OP_EQUALVERIFY]:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
