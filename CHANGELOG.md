@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- **Numeric operands must be minimally encoded where minimal pushes are** — the node derives one `requireMinimal` from `VerifyMinimalData(flags) && EnforceNonMalleability(flags, version)` and uses it both for `CheckMinimalPush` and for every `CScriptNum` construction. py-sdk applied it to pushes only, so `0x0100` — a minimal *push* but a non-minimal *number* for 1 — was accepted as an operand where the node rejects it, as was negative zero (`0x80`). Now enforced on both VM paths, and relaxed for transaction version > 1 alongside minimal pushes. `OP_BIN2NUM` is deliberately exempt: minimising a non-minimal encoding is what it is for, and the node reads its input directly rather than through `CScriptNum`.
 
 ---
 

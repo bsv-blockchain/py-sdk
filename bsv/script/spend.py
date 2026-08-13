@@ -365,7 +365,7 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 2:
                     self.script_evaluation_error(f"{_codename} requires at least two items to be on the stack.")
-                n = self.bin2num(self.stacktop(-1))
+                n = self.read_script_number(self.stacktop(-1))
                 self.stack.pop()
                 if n < 0 or n >= len(self.stack):
                     _m = (
@@ -440,7 +440,7 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 2:
                     self.script_evaluation_error(f"{_codename} requires at least two items to be on the stack.")
-                n = self.bin2num(self.stacktop(-1))
+                n = self.read_script_number(self.stacktop(-1))
                 if n < 0:
                     self.script_evaluation_error(f"{_codename} requires the top stack item to be non-negative.")
                 x = self.stack.pop(-2)
@@ -475,7 +475,7 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 1:
                     self.script_evaluation_error(f"{_codename} requires at least one items to be on the stack.")
-                x = self.bin2num(self.stack.pop())
+                x = self.read_script_number(self.stack.pop())
                 if current_opcode == OpCode.OP_1ADD:
                     x += 1
                 elif current_opcode == OpCode.OP_1SUB:
@@ -494,7 +494,7 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 1:
                     self.script_evaluation_error(f"{_codename} requires at least one item to be on the stack.")
-                x = self.bin2num(self.stack.pop())
+                x = self.read_script_number(self.stack.pop())
                 if current_opcode == OpCode.OP_2MUL:
                     x = x * 2
                 else:
@@ -506,8 +506,8 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 2:
                     self.script_evaluation_error(f"{_codename} requires at least two items on the stack.")
-                shift = self.bin2num(self.stack.pop())
-                value = self.bin2num(self.stack.pop())
+                shift = self.read_script_number(self.stack.pop())
+                value = self.read_script_number(self.stack.pop())
                 if shift < 0:
                     self.script_evaluation_error(f"{_codename}: shift amount must be non-negative.")
                 if current_opcode == OpCode.OP_LSHIFTNUM:
@@ -540,8 +540,8 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 2:
                     self.script_evaluation_error(f"{_codename} requires at least two items to be on the stack.")
-                x1 = self.bin2num(self.stack.pop(-2))
-                x2 = self.bin2num(self.stack.pop())
+                x1 = self.read_script_number(self.stack.pop(-2))
+                x2 = self.read_script_number(self.stack.pop())
                 if current_opcode == OpCode.OP_ADD:
                     x = x1 + x2
                 elif current_opcode == OpCode.OP_SUB:
@@ -587,9 +587,9 @@ class Spend:
             elif current_opcode == OpCode.OP_WITHIN:
                 if len(self.stack) < 3:
                     self.script_evaluation_error("OP_WITHIN requires at least three items to be on the stack.")
-                x1 = self.bin2num(self.stack.pop(-3))
-                x2 = self.bin2num(self.stack.pop(-2))
-                x3 = self.bin2num(self.stack.pop())
+                x1 = self.read_script_number(self.stack.pop(-3))
+                x2 = self.read_script_number(self.stack.pop(-2))
+                x3 = self.read_script_number(self.stack.pop())
                 f = x2 <= x1 < x3
                 self.stack.append(self.encode_bool(f))
 
@@ -659,7 +659,7 @@ class Spend:
                 if len(self.stack) < i:
                     self.script_evaluation_error(f"{_codename} requires at least 1 item to be on the stack.")
 
-                keys_count = self.bin2num(self.stacktop(-i))
+                keys_count = self.read_script_number(self.stacktop(-i))
                 if keys_count < 0 or keys_count > MAX_MULTISIG_KEY_COUNT:
                     _m = f"${_codename} requires a key count between 0 and {MAX_MULTISIG_KEY_COUNT}."
                     self.script_evaluation_error(_m)
@@ -675,7 +675,7 @@ class Spend:
                     _m = f"{_codename} requires the number of stack items not to be less than the number of keys used."
                     self.script_evaluation_error(_m)
 
-                sigs_count = self.bin2num(self.stacktop(-i))
+                sigs_count = self.read_script_number(self.stacktop(-i))
                 if sigs_count < 0 or sigs_count > keys_count:
                     _m = f"{_codename} requires the number of signatures to be no greater than the number of keys."
                     self.script_evaluation_error(_m)
@@ -764,7 +764,7 @@ class Spend:
                     self.script_evaluation_error("OP_SPLIT requires at least two items to be on the stack.")
                 x1 = self.stack.pop(-2)
                 #  Make sure the split point is appropriate.
-                n = self.bin2num(self.stack.pop())
+                n = self.read_script_number(self.stack.pop())
                 if n < 0 or n > len(x1):
                     self.script_evaluation_error(
                         "OP_SPLIT requires the first stack item to be a non-negative number "
@@ -776,8 +776,8 @@ class Spend:
             elif current_opcode == OpCode.OP_SUBSTR:
                 if len(self.stack) < 3:
                     self.script_evaluation_error("OP_SUBSTR requires at least three items on the stack.")
-                length = self.bin2num(self.stack.pop())
-                start = self.bin2num(self.stack.pop())
+                length = self.read_script_number(self.stack.pop())
+                start = self.read_script_number(self.stack.pop())
                 data = self.stack.pop()
                 if len(data) == 0:
                     self.script_evaluation_error("OP_SUBSTR: source string is empty.")
@@ -790,7 +790,7 @@ class Spend:
             elif current_opcode == OpCode.OP_LEFT:
                 if len(self.stack) < 2:
                     self.script_evaluation_error("OP_LEFT requires at least two items on the stack.")
-                length = self.bin2num(self.stack.pop())
+                length = self.read_script_number(self.stack.pop())
                 data = self.stack.pop()
                 if length < 0 or length > len(data):
                     self.script_evaluation_error("OP_LEFT: length out of range.")
@@ -799,7 +799,7 @@ class Spend:
             elif current_opcode == OpCode.OP_RIGHT:
                 if len(self.stack) < 2:
                     self.script_evaluation_error("OP_RIGHT requires at least two items on the stack.")
-                length = self.bin2num(self.stack.pop())
+                length = self.read_script_number(self.stack.pop())
                 data = self.stack.pop()
                 if length < 0 or length > len(data):
                     self.script_evaluation_error("OP_RIGHT: length out of range.")
@@ -808,12 +808,12 @@ class Spend:
             elif current_opcode == OpCode.OP_NUM2BIN:
                 if len(self.stack) < 2:
                     self.script_evaluation_error("OP_NUM2BIN requires at least two items to be on the stack.")
-                size = self.bin2num(self.stack.pop())
+                size = self.read_script_number(self.stack.pop())
                 if size > MAX_SCRIPT_ELEMENT_SIZE:
                     self.script_evaluation_error(
                         f"It's not currently possible to push data larger than {MAX_SCRIPT_ELEMENT_SIZE} bytes."
                     )
-                n = self.bin2num(self.stack.pop())
+                n = self.read_script_number(self.stack.pop())
                 x = bytearray(self.minimally_encode(n))
 
                 # Try to see if we can fit that number in the number of byte requested.
@@ -982,6 +982,28 @@ class Spend:
         if negative:
             octets[-1] |= 0x80
         return octets
+
+    @staticmethod
+    def is_minimally_encoded_number(octets: bytes) -> bool:
+        """Whether an element is the shortest encoding of its value."""
+        if len(octets) == 0:
+            return True
+        # A zero most-significant byte (sign bit aside) is redundant unless the
+        # byte below it needs the extra room for its own sign bit.
+        if (octets[-1] & 0x7F) == 0 and (len(octets) <= 1 or (octets[-2] & 0x80) == 0):
+            return False
+        return True
+
+    def read_script_number(self, octets: bytes) -> int:
+        """Read a stack element as a numeric operand under the era's rules.
+
+        The node gates this on the same flag as minimal pushes and relaxes both
+        together after Chronicle, so a non-minimal number is only an error where
+        a non-minimal push would be.
+        """
+        if not self.is_relaxed() and REQUIRE_MINIMAL_PUSH and not self.is_minimally_encoded_number(octets):
+            self.script_evaluation_error("non-minimally encoded script number")
+        return self.bin2num(octets)
 
     @classmethod
     def bin2num(cls, octets: bytes) -> int:
