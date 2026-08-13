@@ -783,7 +783,9 @@ class Spend:
                     self.script_evaluation_error("OP_SUBSTR: source string is empty.")
                 if length < 0:
                     self.script_evaluation_error("OP_SUBSTR: length is negative.")
-                if start < 0 or start + length > len(data):
+                # Bound against the remaining bytes, matching the TS/Go range
+                # check; start == len(data) is out of range even for length 0.
+                if start < 0 or start >= len(data) or length > len(data) - start:
                     self.script_evaluation_error("OP_SUBSTR: specified range exceeds source string.")
                 self.stack.append(data[start : start + length])
 

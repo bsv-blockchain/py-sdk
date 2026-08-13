@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Security
+
+- **`OP_SUBSTR` out-of-bounds read in the C extension** — the offset and length both come off the stack, and the range check compared `start + length` against the operand size with both values held as `long long`. An offset near `LLONG_MAX` overflowed that sum to a negative value, which passed the bound, and the native VM then copied `length` bytes from `data + start`. A ~20-byte locking script was enough: small lengths returned live process memory onto the stack, where `OP_EQUAL` can read it back a byte at a time, and larger ones segfaulted the process. The check now bounds the offset against the operand and the length against the bytes remaining, so no addition can overflow, matching the TS and Go SDKs. The pure-Python VM was not memory-unsafe but shared the weaker bound, so the two paths disagreed on these inputs.
+
+### Fixed
+
+- **`OP_SUBSTR` accepted an offset equal to the operand length** — with a zero length this returned an empty result where the TS and Go SDKs both require `offset < size` and reject. Fixed on both VM paths as part of the range check above.
 
 ---
 
