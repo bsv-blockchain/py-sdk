@@ -2199,11 +2199,9 @@ static PyObject* pyfn_tx_preimage_otda(PyObject *self, PyObject *args) {
 /* ========================= Phase 3: Script VM ============================== */
 
 #define VM_MAX_ELEM_SIZE           (1024 * 1024 * 1024)
-/* Chronicle script-number ceiling; a numeric shift past its bit width can only
-   produce an unusable result, so shifts saturate here instead of allocating.
-   Mirrors MaxScriptNumberLengthAfterChronicle in the Go SDK. */
+/* Chronicle script-number ceiling, as returned by the node's
+   MaxScriptNumLength() for the post-Chronicle era. */
 #define VM_MAX_SCRIPT_NUM_LEN      (32 * 1024 * 1024)
-#define VM_MAX_SHIFT_BITS          ((unsigned long long)VM_MAX_SCRIPT_NUM_LEN * 8ULL)
 #define VM_STACK_INIT              64
 #define VM_IFSTACK_INIT            16
 #define VM_CTX_UNLOCK              0
@@ -3513,14 +3511,26 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s: shift amount must be non-negative.", name);
             return -1;
         }
-        /* Saturate the shift so an oversized count cannot drive the allocation. */
-        {
+        /* Left shift only: the node sizes the result before shifting and
+           rejects when it would pass the script-number ceiling, so an oversized
+           count never reaches the allocation (CScriptNum::operator<<=). */
+        if (op == 0xB6) {
             unsigned long long sv = PyLong_AsUnsignedLongLong(shift);
-            if (PyErr_Occurred() || sv > VM_MAX_SHIFT_BITS) {
-                PyErr_Clear();
-                PyObject *capped = PyLong_FromUnsignedLongLong(VM_MAX_SHIFT_BITS);
-                if (!capped) { Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz); return -1; }
-                Py_SETREF(shift, capped);
+            int overflows = PyErr_Occurred() != NULL;
+            if (overflows) PyErr_Clear();
+            if (!overflows) {
+                unsigned char *enc = NULL; Py_ssize_t enc_len = 0;
+                if (c_min_encode(value, &enc, &enc_len) < 0) {
+                    Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz); return -1;
+                }
+                if (enc) PyMem_Free(enc);
+                if ((unsigned long long)enc_len + sv / 8ULL > (unsigned long long)VM_MAX_SCRIPT_NUM_LEN)
+                    overflows = 1;
+            }
+            if (overflows) {
+                Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz);
+                vm_error(st, "script number overflow");
+                return -1;
             }
         }
         PyObject *r = NULL;

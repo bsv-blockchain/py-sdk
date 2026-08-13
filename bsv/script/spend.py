@@ -18,11 +18,9 @@ except ImportError:
     _USE_NATIVE_VM = False
 
 MAX_SCRIPT_ELEMENT_SIZE = 1024 * 1024 * 1024
-# Chronicle script-number ceiling; a numeric shift past its bit width can only
-# produce an unusable result, so shifts saturate here instead of allocating.
-# Mirrors MaxScriptNumberLengthAfterChronicle in the Go SDK.
+# Chronicle script-number ceiling, as returned by the node's
+# MaxScriptNumLength() for the post-Chronicle era.
 MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE = 32 * 1024 * 1024
-MAX_SHIFT_BITS = MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE * 8
 MAX_MULTISIG_KEY_COUNT = pow(2, 31) - 1
 REQUIRE_MINIMAL_PUSH = True
 REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS = True
@@ -523,9 +521,14 @@ class Spend:
                 value = self.bin2num(self.stack.pop())
                 if shift < 0:
                     self.script_evaluation_error(f"{_codename}: shift amount must be non-negative.")
-                # Saturate the shift so an oversized count cannot drive the allocation.
-                shift = min(shift, MAX_SHIFT_BITS)
                 if current_opcode == OpCode.OP_LSHIFTNUM:
+                    # The node sizes the result before shifting and rejects when
+                    # it would pass the script-number ceiling, so an oversized
+                    # count never reaches the allocation
+                    # (CScriptNum::operator<<=, script_num.cpp).
+                    value_size = len(self.minimally_encode(value))
+                    if value_size + shift // 8 > MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE:
+                        self.script_evaluation_error("script number overflow")
                     result = value << shift
                 # Right shift preserving sign: negate, shift, negate
                 elif value < 0:

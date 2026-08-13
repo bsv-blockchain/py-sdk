@@ -3,14 +3,14 @@
 `OP_LSHIFT` / `OP_RSHIFT` shift by *bits* and preserve the operand's byte
 width, matching the TS SDK (`Spend.ts`) and Go SDK
 (`interpreter/operations.go`).  The Chronicle numeric shifts
-(`OP_LSHIFTNUM` / `OP_RSHIFTNUM`) saturate their shift count at the Chronicle
-script-number ceiling, following the Go SDK.  Expected values are taken from
-those reference implementations.
+(`OP_LSHIFTNUM` / `OP_RSHIFTNUM`) reject a shift whose result would pass the
+Chronicle script-number ceiling, as the node does.  Expected values are taken
+from those implementations.
 """
 
 import pytest
 
-from bsv.script.spend import _USE_NATIVE_VM, MAX_SHIFT_BITS
+from bsv.script.spend import _USE_NATIVE_VM, MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE
 
 from .conftest import make_spend
 
@@ -116,22 +116,27 @@ def test_negative_shift_count_is_rejected(left):
 # Chronicle numeric shifts: OP_LSHIFTNUM / OP_RSHIFTNUM
 # ---------------------------------------------------------------------------
 
-# 1 << MAX_SHIFT_BITS encodes to 32 MiB plus one byte for the sign.
-SATURATED_LSHIFTNUM_SIZE = 33554433
+MAX_SHIFT_BITS = MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE * 8
 
 
-def test_max_shift_bits_matches_go_sdk():
-    # Go: MaxScriptNumberLengthAfterChronicle (32 MiB) * 8
-    assert MAX_SHIFT_BITS == 32 * 1024 * 1024 * 8
+def test_script_number_ceiling_matches_the_node():
+    # The node's MaxScriptNumLength() for the post-Chronicle era.
+    assert MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE == 32 * 1024 * 1024
 
 
 @pytest.mark.parametrize("shift", [MAX_SHIFT_BITS, MAX_SHIFT_BITS + 1, 0x0500000000])
-def test_numeric_shift_count_saturates(shift):
+def test_oversized_numeric_shift_is_rejected(shift):
     # Unsaturated, a shift count of 0x0500000000 (~21.5e9) would size the result
-    # at roughly 2.7 GB. Every count at or beyond the ceiling must instead yield
-    # the same result as the ceiling itself.
-    asm = f"OP_1 {_num_asm(shift)} OP_LSHIFTNUM OP_SIZE {_num_asm(SATURATED_LSHIFTNUM_SIZE)} OP_NUMEQUAL"
-    assert all(_run_both_paths(asm))
+    # at roughly 2.7 GB. The node checks `size + shift/8 > max_len` before it
+    # shifts and throws script number overflow, so nothing is allocated.
+    asm = f"OP_1 {_num_asm(shift)} OP_LSHIFTNUM OP_DROP OP_1"
+    python_spend = make_spend(asm, tx_version=2)
+    with pytest.raises(RuntimeError, match="script number overflow"):
+        python_spend._validate_python()
+    if _USE_NATIVE_VM:
+        native_spend = make_spend(asm, tx_version=2)
+        with pytest.raises(RuntimeError, match="script number overflow"):
+            native_spend._validate_native()
 
 
 def test_numeric_shift_below_ceiling_is_exact():
