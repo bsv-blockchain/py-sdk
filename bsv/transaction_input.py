@@ -16,9 +16,7 @@ _TXID_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
 def txid_to_bytes_le(txid: str) -> bytes:
     if not isinstance(txid, str) or not _TXID_RE.match(txid):
-        raise ValueError(
-            f"source_txid must be exactly 64 hex characters, got {txid!r}"
-        )
+        raise ValueError(f"source_txid must be exactly 64 hex characters, got {txid!r}")
     return bytes.fromhex(txid)[::-1]
 
 

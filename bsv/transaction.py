@@ -73,11 +73,7 @@ class Transaction:
                 {
                     "source_txid": tx_input.source_txid,
                     "source_output_index": tx_input.source_output_index,
-                    "unlocking_script": (
-                        tx_input.unlocking_script.serialize()
-                        if tx_input.unlocking_script
-                        else b""
-                    ),
+                    "unlocking_script": (tx_input.unlocking_script.serialize() if tx_input.unlocking_script else b""),
                     "sequence": tx_input.sequence,
                 }
                 for tx_input in self.inputs

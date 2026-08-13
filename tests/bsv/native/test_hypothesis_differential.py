@@ -111,6 +111,30 @@ def _toggle_preimage(tx, idx):
     return native, python
 
 
+def _assert_multi_input_preimage_equivalence(sighash, n_inputs, sign_idx):
+    """Shared body for the BIP143/OTDA multi-input equivalence tests."""
+    idx = sign_idx.draw(st.integers(min_value=0, max_value=n_inputs - 1))
+    p2pkh = bytes.fromhex("76a914c0a3c167a28cabb9fbb495affa0761e6e74ac60d88ac")
+    inputs = []
+    for i in range(n_inputs):
+        inp = TransactionInput(
+            source_txid=f"{i:02x}" * 32,
+            source_output_index=i,
+            unlocking_script=Script(b""),
+            sequence=0xFFFFFFFF,
+            sighash=sighash,
+        )
+        inp.locking_script = Script(p2pkh)
+        inp.satoshis = 50_000 * (i + 1)
+        inputs.append(inp)
+    # SIGHASH_SINGLE requires outputs[sign_idx] to exist
+    n_outputs = max(n_inputs, idx + 1)
+    outputs = [TransactionOutput(satoshis=10_000 * (i + 1), locking_script=Script(p2pkh)) for i in range(n_outputs)]
+    tx = Transaction(version=1, tx_inputs=inputs, tx_outputs=outputs, locktime=0)
+    native, python = _toggle_preimage(tx, idx)
+    assert native == python
+
+
 # ---------------------------------------------------------------------------
 # Differential: serialize
 # ---------------------------------------------------------------------------
@@ -137,9 +161,7 @@ class TestSerializeDifferential:
         locking_script=varint_boundary_scripts,
         unlocking_script=varint_boundary_scripts,
     )
-    def test_varint_boundary_serialize_equivalence(
-        self, version, locktime, n_inputs, locking_script, unlocking_script
-    ):
+    def test_varint_boundary_serialize_equivalence(self, version, locktime, n_inputs, locking_script, unlocking_script):
         inputs = [
             TransactionInput(
                 source_txid="ab" * 32,
@@ -205,9 +227,7 @@ class TestPreimageBIP143Differential:
         locking_script=st.binary(min_size=1, max_size=512),
         n_outputs=st.integers(min_value=1, max_value=4),
     )
-    def test_random_bip143_preimage_equivalence(
-        self, version, locktime, sighash, locking_script, n_outputs
-    ):
+    def test_random_bip143_preimage_equivalence(self, version, locktime, sighash, locking_script, n_outputs):
         inp = TransactionInput(
             source_txid="dd" * 32,
             source_output_index=0,
@@ -218,10 +238,7 @@ class TestPreimageBIP143Differential:
         inp.locking_script = Script(locking_script)
         inp.satoshis = 100_000
         p2pkh = bytes.fromhex("76a914c0a3c167a28cabb9fbb495affa0761e6e74ac60d88ac")
-        outputs = [
-            TransactionOutput(satoshis=1000 * (i + 1), locking_script=Script(p2pkh))
-            for i in range(n_outputs)
-        ]
+        outputs = [TransactionOutput(satoshis=1000 * (i + 1), locking_script=Script(p2pkh)) for i in range(n_outputs)]
         tx = Transaction(version=version, tx_inputs=[inp], tx_outputs=outputs, locktime=locktime)
         native, python = _toggle_preimage(tx, 0)
         assert native == python
@@ -233,29 +250,7 @@ class TestPreimageBIP143Differential:
         sign_idx=st.data(),
     )
     def test_multi_input_bip143_equivalence(self, sighash, n_inputs, sign_idx):
-        idx = sign_idx.draw(st.integers(min_value=0, max_value=n_inputs - 1))
-        p2pkh = bytes.fromhex("76a914c0a3c167a28cabb9fbb495affa0761e6e74ac60d88ac")
-        inputs = []
-        for i in range(n_inputs):
-            inp = TransactionInput(
-                source_txid=f"{i:02x}" * 32,
-                source_output_index=i,
-                unlocking_script=Script(b""),
-                sequence=0xFFFFFFFF,
-                sighash=sighash,
-            )
-            inp.locking_script = Script(p2pkh)
-            inp.satoshis = 50_000 * (i + 1)
-            inputs.append(inp)
-        # SIGHASH_SINGLE requires outputs[sign_idx] to exist
-        n_outputs = max(n_inputs, idx + 1)
-        outputs = [
-            TransactionOutput(satoshis=10_000 * (i + 1), locking_script=Script(p2pkh))
-            for i in range(n_outputs)
-        ]
-        tx = Transaction(version=1, tx_inputs=inputs, tx_outputs=outputs, locktime=0)
-        native, python = _toggle_preimage(tx, idx)
-        assert native == python
+        _assert_multi_input_preimage_equivalence(sighash, n_inputs, sign_idx)
 
 
 # ---------------------------------------------------------------------------
@@ -272,9 +267,7 @@ class TestPreimageOTDADifferential:
         locking_script=st.binary(min_size=1, max_size=512),
         n_outputs=st.integers(min_value=1, max_value=4),
     )
-    def test_random_otda_preimage_equivalence(
-        self, version, locktime, sighash, locking_script, n_outputs
-    ):
+    def test_random_otda_preimage_equivalence(self, version, locktime, sighash, locking_script, n_outputs):
         inp = TransactionInput(
             source_txid="ee" * 32,
             source_output_index=0,
@@ -285,10 +278,7 @@ class TestPreimageOTDADifferential:
         inp.locking_script = Script(locking_script)
         inp.satoshis = 200_000
         p2pkh = bytes.fromhex("76a914c0a3c167a28cabb9fbb495affa0761e6e74ac60d88ac")
-        outputs = [
-            TransactionOutput(satoshis=2000 * (i + 1), locking_script=Script(p2pkh))
-            for i in range(n_outputs)
-        ]
+        outputs = [TransactionOutput(satoshis=2000 * (i + 1), locking_script=Script(p2pkh)) for i in range(n_outputs)]
         tx = Transaction(version=version, tx_inputs=[inp], tx_outputs=outputs, locktime=locktime)
         native, python = _toggle_preimage(tx, 0)
         assert native == python
@@ -300,26 +290,4 @@ class TestPreimageOTDADifferential:
         sign_idx=st.data(),
     )
     def test_multi_input_otda_equivalence(self, sighash, n_inputs, sign_idx):
-        idx = sign_idx.draw(st.integers(min_value=0, max_value=n_inputs - 1))
-        p2pkh = bytes.fromhex("76a914c0a3c167a28cabb9fbb495affa0761e6e74ac60d88ac")
-        inputs = []
-        for i in range(n_inputs):
-            inp = TransactionInput(
-                source_txid=f"{i:02x}" * 32,
-                source_output_index=i,
-                unlocking_script=Script(b""),
-                sequence=0xFFFFFFFF,
-                sighash=sighash,
-            )
-            inp.locking_script = Script(p2pkh)
-            inp.satoshis = 50_000 * (i + 1)
-            inputs.append(inp)
-        # SIGHASH_SINGLE requires outputs[sign_idx] to exist
-        n_outputs = max(n_inputs, idx + 1)
-        outputs = [
-            TransactionOutput(satoshis=10_000 * (i + 1), locking_script=Script(p2pkh))
-            for i in range(n_outputs)
-        ]
-        tx = Transaction(version=1, tx_inputs=inputs, tx_outputs=outputs, locktime=0)
-        native, python = _toggle_preimage(tx, idx)
-        assert native == python
+        _assert_multi_input_preimage_equivalence(sighash, n_inputs, sign_idx)

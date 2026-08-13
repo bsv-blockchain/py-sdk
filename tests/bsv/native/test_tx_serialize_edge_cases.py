@@ -729,9 +729,7 @@ def _build_nft_tx(image_size, sighash, *, n_outputs=2):
 class TestPreimageLargeOutput:
     """BIP143 hashOutputs and OTDA preimage buffer with multi-MB outputs."""
 
-    @pytest.mark.parametrize(
-        "megabytes", [1, 4, 20], ids=["1MB", "4MB", "20MB"]
-    )
+    @pytest.mark.parametrize("megabytes", [1, 4, 20], ids=["1MB", "4MB", "20MB"])
     @pytest.mark.parametrize(
         "sighash",
         ALL_SIGHASH_FLAGS,
@@ -786,9 +784,7 @@ class TestPreimageLargeOutputMultiInput:
     """Multi-input tx with large outputs — ensures shared hash caches and
     per-input preimage buffers are all sized correctly."""
 
-    @pytest.mark.parametrize(
-        "sighash", ALL_SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}"
-    )
+    @pytest.mark.parametrize("sighash", ALL_SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}")
     def test_multi_input_large_output(self, sighash):
         image_data = b"\xcd" * (2 * 1024 * 1024)
         op_return_script = b"\x6a" + b"\x4e" + len(image_data).to_bytes(4, "little") + image_data
