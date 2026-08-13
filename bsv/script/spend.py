@@ -17,7 +17,15 @@ try:
 except ImportError:
     _USE_NATIVE_VM = False
 
+
+class ScriptNumberOverflow(ValueError):
+    """A stack element is too wide to be read as a script number."""
+
+
 MAX_SCRIPT_ELEMENT_SIZE = 1024 * 1024 * 1024
+# Chronicle script-number ceiling, as returned by the node's
+# MaxScriptNumLength() for the post-Chronicle era.
+MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE = 32 * 1024 * 1024
 MAX_MULTISIG_KEY_COUNT = pow(2, 31) - 1
 REQUIRE_MINIMAL_PUSH = True
 REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS = True
@@ -890,7 +898,11 @@ class Spend:
             self.script_evaluation_error("Unlocking scripts can only contain push operations, and no other opcodes.")
 
         while True:
-            self.step()
+            try:
+                self.step()
+            except ScriptNumberOverflow as e:
+                # bin2num is a classmethod and cannot raise a script error itself.
+                self.script_evaluation_error(str(e))
             if self.context == "LockingScript" and self.program_counter >= len(self.locking_script.chunks):
                 break
 
@@ -987,6 +999,11 @@ class Spend:
     def bin2num(cls, octets: bytes) -> int:
         if len(octets) == 0:
             return 0
+        # The node rejects an over-long element before it becomes a number
+        # (CScriptNum's span constructor), which is what keeps an arbitrarily
+        # wide operand from reaching the arithmetic.
+        if len(octets) > MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE:
+            raise ScriptNumberOverflow("script number overflow")
         negative = octets[-1] & 0x80
         octets = bytearray(octets)
         octets[-1] &= 0x7F

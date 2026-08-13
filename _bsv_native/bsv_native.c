@@ -2199,6 +2199,9 @@ static PyObject* pyfn_tx_preimage_otda(PyObject *self, PyObject *args) {
 /* ========================= Phase 3: Script VM ============================== */
 
 #define VM_MAX_ELEM_SIZE           (1024 * 1024 * 1024)
+/* Chronicle script-number ceiling, as returned by the node's
+   MaxScriptNumLength() for the post-Chronicle era. */
+#define VM_MAX_SCRIPT_NUM_LEN      (32 * 1024 * 1024)
 #define VM_STACK_INIT              64
 #define VM_IFSTACK_INIT            16
 #define VM_CTX_UNLOCK              0
@@ -2345,6 +2348,15 @@ static void ifs_free(IfStack *s) {
 
 static PyObject *c_bin2num(const unsigned char *data, Py_ssize_t len) {
     if (len == 0) return PyLong_FromLong(0);
+    /* The node rejects an over-long element before it becomes a number
+       (CScriptNum's span constructor), which is what keeps an arbitrarily wide
+       operand from reaching the arithmetic. */
+    if (len > VM_MAX_SCRIPT_NUM_LEN) {
+        /* Raised as a script error rather than a ValueError so both VM paths
+           fail the same way; vm_error is out of reach without the VMState. */
+        PyErr_SetString(PyExc_RuntimeError, "Script evaluation error: script number overflow");
+        return NULL;
+    }
     int negative = data[len - 1] & 0x80;
     if (len <= 8) {
         uint64_t val = 0;

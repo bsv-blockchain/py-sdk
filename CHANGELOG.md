@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Security
+
+- **Script numbers are bounded by the Chronicle ceiling** — `bin2num` read an operand of any length, so nothing stopped a script from building a huge element and feeding it to the arithmetic: `OP_DUP OP_MUL` repeated in a ~100-byte script doubles the operand each time, reaching megabytes in a dozen rounds and gigabytes shortly after. The node rejects an over-long element in `CScriptNum`'s span constructor (`if(span.size() > max_length) throw scriptnum_overflow_error`) before the bytes reach any arithmetic, and py-sdk now does the same at 32 MiB on both VM paths. `Spend.bin2num` raises `ScriptNumberOverflow`, which the VM reports as a script evaluation error rather than letting it escape `validate()`.
 
 ---
 
