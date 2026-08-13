@@ -42,11 +42,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **`OP_LSHIFT` / `OP_RSHIFT` now shift bits and preserve the operand width** — both opcodes shifted by whole *bytes* and, when the shift count reached the operand's length, sized the result to the shift count itself. Neither behaviour matched the TS SDK (`Spend.ts`) or the Go SDK (`interpreter/operations.go`), which shift by bits and always return an array as wide as the operand: `0xff00 OP_LSHIFT 1` returned `0x0000` instead of `0xfe00`. Scripts using either opcode could therefore validate on py-sdk and fail on the other SDKs, or the reverse. Both opcodes now consume both operands as the reference SDKs do; previously the shift count was left on the stack.
+- **`OP_LSHIFT` / `OP_RSHIFT` now shift bits and preserve the operand width** (#197) — both opcodes shifted by whole *bytes* and, when the shift count reached the operand's length, sized the result to the shift count itself. Neither behaviour matched the TS SDK (`Spend.ts`) or the Go SDK (`interpreter/operations.go`), which shift by bits and always return an array as wide as the operand: `0xff00 OP_LSHIFT 1` returned `0x0000` instead of `0xfe00`. Scripts using either opcode could therefore validate on py-sdk and fail on the other SDKs, or the reverse. Both opcodes now consume both operands as the reference SDKs do; previously the shift count was left on the stack.
 
 ### Security
 
 - **Bounded `OP_LSHIFT` / `OP_RSHIFT` allocation** — the shift count is read from the stack, and because the result was sized to that count a 6-byte script (`OP_0 <5-byte count> OP_LSHIFT`) could request a ~21 GB allocation. Under Linux memory overcommit the allocation succeeded and the subsequent zero-fill touched every page, so a single script could exhaust host memory rather than fail cleanly. The result now never exceeds the operand's width, and a shift wider than the operand short-circuits to zeros without allocating. Both the C extension (`_bsv_native`) and the pure-Python fallback were affected.
+- **Bounded `OP_LSHIFTNUM` / `OP_RSHIFTNUM` allocation** — the Chronicle numeric shifts applied the stack-supplied count directly to a big integer, so the result grew without limit: a shift of 400 million bits already cost 153 MB, and a 5-byte count would reach several GB. The count now saturates at the Chronicle script-number ceiling (32 MiB × 8 = 268,435,456 bits), matching `MaxScriptNumberLengthAfterChronicle` in the Go SDK — a shift past that width cannot produce a usable script number anyway. Both VM paths were affected.
 
 ---
 

@@ -2199,6 +2199,11 @@ static PyObject* pyfn_tx_preimage_otda(PyObject *self, PyObject *args) {
 /* ========================= Phase 3: Script VM ============================== */
 
 #define VM_MAX_ELEM_SIZE           (1024 * 1024 * 1024)
+/* Chronicle script-number ceiling; a numeric shift past its bit width can only
+   produce an unusable result, so shifts saturate here instead of allocating.
+   Mirrors MaxScriptNumberLengthAfterChronicle in the Go SDK. */
+#define VM_MAX_SCRIPT_NUM_LEN      (32 * 1024 * 1024)
+#define VM_MAX_SHIFT_BITS          ((unsigned long long)VM_MAX_SCRIPT_NUM_LEN * 8ULL)
 #define VM_STACK_INIT              64
 #define VM_IFSTACK_INIT            16
 #define VM_CTX_UNLOCK              0
@@ -3507,6 +3512,16 @@ static int vm_step(VMState *st) {
             Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz);
             vm_errorf(st, "%s: shift amount must be non-negative.", name);
             return -1;
+        }
+        /* Saturate the shift so an oversized count cannot drive the allocation. */
+        {
+            unsigned long long sv = PyLong_AsUnsignedLongLong(shift);
+            if (PyErr_Occurred() || sv > VM_MAX_SHIFT_BITS) {
+                PyErr_Clear();
+                PyObject *capped = PyLong_FromUnsignedLongLong(VM_MAX_SHIFT_BITS);
+                if (!capped) { Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz); return -1; }
+                Py_SETREF(shift, capped);
+            }
         }
         PyObject *r = NULL;
         if (op == 0xB6) {
