@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -34,6 +35,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - [1.0.0 - 2024-12-23](#100---2024-12-23)
 - [0.5.2 - 2024-09-02](#052---2024-09-02)
 - [0.1.0 - 2024-04-09](#010---2024-04-09)
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- **`OP_RETURN` inside a conditional no longer skips the grammar check** — it cleared the conditional stack and jumped to the end of the script, so an `OP_IF` left open after it was never reported and the spend validated. The node ends evaluation only when `OP_RETURN` is reached at the top level, where "the remaining of the script does not affect the validity (even in presence of unbalanced IFs, invalid opcodes etc)"; inside a conditional it sets `nonTopLevelReturnAfterGenesis`, which stops execution while the scan continues so the conditional grammar is still checked. Both VM paths now do the same.
+- **An empty stack at the end of evaluation is reported as a script error** — the final truthiness check indexed the stack directly, so a script that ended empty raised a bare `IndexError` out of `Spend.validate()` on the pure-Python VM where the native VM returned a proper evaluation error. A conditional `OP_RETURN` reaches exactly that state.
 
 ---
 
