@@ -150,10 +150,7 @@ class Transaction:
         :returns: digest of the input specified by index
         """
         assert 0 <= index < len(self.inputs), f"index out of range [0, {len(self.inputs)})"
-        if (
-            self._preimage_cache is not None
-            and self._preimage_scripts[index] is self.inputs[index].locking_script
-        ):
+        if self._preimage_cache is not None and self._preimage_scripts[index] is self.inputs[index].locking_script:
             return self._preimage_cache[index]
         return tx_preimage(index, self.inputs, self.outputs, self.version, self.locktime)
 
