@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
-from ..native import NATIVE_AVAILABLE as _USE_NATIVE, NATIVE_MODULE as _bsv_native
+from ..native import NATIVE_AVAILABLE as _USE_NATIVE
+from ..native import NATIVE_MODULE as _bsv_native
 
 
 @dataclass

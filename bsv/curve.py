@@ -20,7 +20,8 @@ curve = EllipticCurve(
 )
 
 # Crypto backend: _bsv_native (direct libsecp256k1) → pure Python fallback
-from .native import NATIVE_AVAILABLE, NATIVE_MODULE as _bsv_native
+from .native import NATIVE_AVAILABLE
+from .native import NATIVE_MODULE as _bsv_native
 
 _CRYPTO_BACKEND = "native" if NATIVE_AVAILABLE else "python"
 

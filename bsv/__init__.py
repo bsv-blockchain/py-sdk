@@ -42,6 +42,9 @@ from .keys import PrivateKey, PublicKey, verify_signed_text
 # Step 4: Data structures
 from .merkle_path import MerkleLeaf, MerklePath
 
+# Native acceleration diagnostics
+from .native import NATIVE_AVAILABLE, native_status
+
 # Step 6.7: script
 from .script import *
 from .signed_message import *
@@ -51,9 +54,6 @@ from .transaction import InsufficientFunds, Transaction
 from .transaction_input import TransactionInput
 from .transaction_output import TransactionOutput
 from .transaction_preimage import *
-
-# Native acceleration diagnostics
-from .native import NATIVE_AVAILABLE, native_status
 
 # Step 6.8: utils
 from .utils import *
