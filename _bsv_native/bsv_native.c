@@ -4059,17 +4059,24 @@ static int vm_step(VMState *st) {
         long long length = PyLong_AsLongLong(lobj);
         long long start  = PyLong_AsLongLong(sobj);
         Py_DECREF(lobj); Py_DECREF(sobj);
+        /* A value too wide for long long cannot address this buffer; without
+           this the failed conversion leaves -1 behind with the error still set. */
+        int too_wide = PyErr_Occurred() != NULL;
+        if (too_wide) PyErr_Clear();
         if (dat.len == 0) {
             se_free(&dat);
             vm_error(st, "OP_SUBSTR: source string is empty.");
             return -1;
         }
-        if (length < 0) {
+        if (!too_wide && length < 0) {
             se_free(&dat);
             vm_error(st, "OP_SUBSTR: length is negative.");
             return -1;
         }
-        if (start < 0 || start + length > dat.len) {
+        /* Compare against the remaining bytes rather than start + length: both
+           are attacker-supplied, and their sum overflows to a negative value
+           that slips past the bound. Mirrors the TS/Go range check. */
+        if (too_wide || start < 0 || start >= dat.len || length > dat.len - start) {
             se_free(&dat);
             vm_error(st, "OP_SUBSTR: specified range exceeds source string.");
             return -1;
