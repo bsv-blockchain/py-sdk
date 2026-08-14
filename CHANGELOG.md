@@ -40,13 +40,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Security
-
-- **`OP_SUBSTR` out-of-bounds read in the C extension** — the offset and length both come off the stack, and the range check compared `start + length` against the operand size with both values held as `long long`. An offset near `LLONG_MAX` overflowed that sum to a negative value, which passed the bound, and the native VM then copied `length` bytes from `data + start`. A ~20-byte locking script was enough: small lengths returned live process memory onto the stack, where `OP_EQUAL` can read it back a byte at a time, and larger ones segfaulted the process. The check now bounds the offset against the operand and the length against the bytes remaining, so no addition can overflow, matching the TS and Go SDKs. The pure-Python VM was not memory-unsafe but shared the weaker bound, so the two paths disagreed on these inputs.
-
 ### Fixed
 
-- **`OP_SUBSTR` accepted an offset equal to the operand length** — with a zero length this returned an empty result where the TS and Go SDKs both require `offset < size` and reject. Fixed on both VM paths as part of the range check above.
+- **`OP_LSHIFT` / `OP_RSHIFT` now shift bits and preserve the operand width** (#197) — both opcodes shifted by whole *bytes* and, when the shift count reached the operand's length, sized the result to the shift count itself. Neither behaviour matched the TS SDK (`Spend.ts`) or the Go SDK (`interpreter/operations.go`), which shift by bits and always return an array as wide as the operand: `0xff00 OP_LSHIFT 1` returned `0x0000` instead of `0xfe00`. Scripts using either opcode could therefore validate on py-sdk and fail on the other SDKs, or the reverse. Both opcodes now consume both operands as the reference SDKs do; previously the shift count was left on the stack.
+
+### Security
+
+- **Bounded `OP_LSHIFT` / `OP_RSHIFT` allocation** — the shift count is read from the stack, and because the result was sized to that count a 6-byte script (`OP_0 <5-byte count> OP_LSHIFT`) could request a ~21 GB allocation. Under Linux memory overcommit the allocation succeeded and the subsequent zero-fill touched every page, so a single script could exhaust host memory rather than fail cleanly. The result now never exceeds the operand's width, and a shift wider than the operand short-circuits to zeros without allocating. Both the C extension (`_bsv_native`) and the pure-Python fallback were affected.
+- **Bounded `OP_LSHIFTNUM` / `OP_RSHIFTNUM` allocation** — the Chronicle numeric shifts applied the stack-supplied count directly to a big integer, so the result grew without limit: a shift of 400 million bits already cost 153 MB, and a 5-byte count would reach several GB. A left shift whose result would pass the Chronicle script-number ceiling (32 MiB) is now rejected with `script number overflow`, sized before the shift so nothing is allocated — the node does the same in `CScriptNum::operator<<=`. Both VM paths were affected.
 
 ---
 

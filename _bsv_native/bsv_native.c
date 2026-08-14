@@ -2301,6 +2301,9 @@ static PyObject* pyfn_tx_preimage_otda(PyObject *self, PyObject *args) {
 /* ========================= Phase 3: Script VM ============================== */
 
 #define VM_MAX_ELEM_SIZE           (1024 * 1024 * 1024)
+/* Chronicle script-number ceiling, as returned by the node's
+   MaxScriptNumLength() for the post-Chronicle era. */
+#define VM_MAX_SCRIPT_NUM_LEN      (32 * 1024 * 1024)
 #define VM_STACK_INIT              64
 #define VM_IFSTACK_INIT            16
 #define VM_CTX_UNLOCK              0
@@ -3439,42 +3442,66 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least two items to be on the stack.", name);
             return -1;
         }
-        StackElem *ne = vms_top(&st->stack, -1);
-        PyObject *nobj = c_bin2num(ne->data, ne->len);
+        StackElem ne = {0};
+        vms_pop(&st->stack, &ne);
+        PyObject *nobj = c_bin2num(ne.data, ne.len);
+        se_free(&ne);
         if (!nobj) return -1;
-        long long n = PyLong_AsLongLong(nobj);
-        Py_DECREF(nobj);
-        if (PyErr_Occurred()) { PyErr_Clear(); n = -1; }
-        if (n < 0) {
+        int is_neg = 0;
+        {
+            PyObject *zero = PyLong_FromLong(0);
+            if (!zero) { Py_DECREF(nobj); return -1; }
+            is_neg = PyObject_RichCompareBool(nobj, zero, Py_LT);
+            Py_DECREF(zero);
+        }
+        if (is_neg < 0) { Py_DECREF(nobj); return -1; }
+        if (is_neg) {
+            Py_DECREF(nobj);
             vm_errorf(st, "%s requires the top stack item to be non-negative.", name);
             return -1;
         }
+        /* A shift wider than the operand clears every bit, so an out-of-range
+           count needs no allocation — clamp instead of trusting the value. */
+        unsigned long long n = 0;
+        int shifts_out_all = 0;
+        n = PyLong_AsUnsignedLongLong(nobj);
+        if (PyErr_Occurred()) { PyErr_Clear(); shifts_out_all = 1; }
+        Py_DECREF(nobj);
         StackElem x = {0};
-        vms_remove(&st->stack, st->stack.count - 2, &x);
-        unsigned char *res = NULL; Py_ssize_t rlen = 0;
-        if (op == 0x98) {
-            Py_ssize_t keep = (n < x.len) ? x.len - (Py_ssize_t)n : 0;
-            rlen = keep + (Py_ssize_t)n;
-            if (rlen > 0) {
-                res = (unsigned char *)PyMem_Malloc(rlen);
-                if (!res) { se_free(&x); PyErr_NoMemory(); return -1; }
-                if (keep > 0) memcpy(res, x.data + n, keep);
-                memset(res + keep, 0, (size_t)n);
-            }
-        } else {
-            if (n == 0) {
-                rlen = 0; res = NULL;
-            } else {
-                Py_ssize_t keep = ((Py_ssize_t)n < x.len) ? x.len - (Py_ssize_t)n : 0;
-                rlen = (Py_ssize_t)n + keep;
-                if (rlen > 0) {
-                    res = (unsigned char *)PyMem_Malloc(rlen);
-                    if (!res) { se_free(&x); PyErr_NoMemory(); return -1; }
-                    memset(res, 0, (size_t)n);
-                    if (keep > 0) memcpy(res + n, x.data, keep);
+        vms_pop(&st->stack, &x);
+        if (x.len == 0) {
+            se_free(&x);
+            return vms_push_take(&st->stack, NULL, 0) < 0 ? -1 : 0;
+        }
+        if (!shifts_out_all && n >= (unsigned long long)x.len * 8ULL) shifts_out_all = 1;
+        /* Result always keeps the operand's width (matches TS/Go SDK). */
+        unsigned char *res = (unsigned char *)PyMem_Malloc((size_t)x.len);
+        if (!res) { se_free(&x); PyErr_NoMemory(); return -1; }
+        memset(res, 0, (size_t)x.len);
+        if (!shifts_out_all) {
+            static const unsigned char lmask[8] = {0xFF, 0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01};
+            static const unsigned char rmask[8] = {0xFF, 0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80};
+            Py_ssize_t byte_shift = (Py_ssize_t)(n / 8);
+            unsigned bit_shift = (unsigned)(n % 8);
+            if (op == 0x98) { /* left: byte i moves to i - byte_shift, carry to the left */
+                for (Py_ssize_t i = x.len - 1; i >= byte_shift; i--) {
+                    Py_ssize_t k = i - byte_shift;
+                    res[k] |= (unsigned char)((x.data[i] & lmask[bit_shift]) << bit_shift);
+                    if (k >= 1 && bit_shift > 0) {
+                        res[k - 1] |= (unsigned char)((x.data[i] & (unsigned char)~lmask[bit_shift]) >> (8 - bit_shift));
+                    }
+                }
+            } else { /* right: byte i moves to i + byte_shift, carry to the right */
+                for (Py_ssize_t i = 0; i + byte_shift < x.len; i++) {
+                    Py_ssize_t k = i + byte_shift;
+                    res[k] |= (unsigned char)((x.data[i] & rmask[bit_shift]) >> bit_shift);
+                    if (k + 1 < x.len && bit_shift > 0) {
+                        res[k + 1] |= (unsigned char)((x.data[i] & (unsigned char)~rmask[bit_shift]) << (8 - bit_shift));
+                    }
                 }
             }
         }
+        Py_ssize_t rlen = x.len;
         se_free(&x);
         return vms_push_take(&st->stack, res, rlen) < 0 ? -1 : 0;
     }
@@ -3585,6 +3612,28 @@ static int vm_step(VMState *st) {
             Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz);
             vm_errorf(st, "%s: shift amount must be non-negative.", name);
             return -1;
+        }
+        /* Left shift only: the node sizes the result before shifting and
+           rejects when it would pass the script-number ceiling, so an oversized
+           count never reaches the allocation (CScriptNum::operator<<=). */
+        if (op == 0xB6) {
+            unsigned long long sv = PyLong_AsUnsignedLongLong(shift);
+            int overflows = PyErr_Occurred() != NULL;
+            if (overflows) PyErr_Clear();
+            if (!overflows) {
+                unsigned char *enc = NULL; Py_ssize_t enc_len = 0;
+                if (c_min_encode(value, &enc, &enc_len) < 0) {
+                    Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz); return -1;
+                }
+                if (enc) PyMem_Free(enc);
+                if ((unsigned long long)enc_len + sv / 8ULL > (unsigned long long)VM_MAX_SCRIPT_NUM_LEN)
+                    overflows = 1;
+            }
+            if (overflows) {
+                Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz);
+                vm_error(st, "script number overflow");
+                return -1;
+            }
         }
         PyObject *r = NULL;
         if (op == 0xB6) {
