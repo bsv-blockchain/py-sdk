@@ -654,11 +654,7 @@ class Spend:
                     _m = f"{_codename} requires correct encoding for the public key and signature."
                     self.script_evaluation_error(_m)
 
-                # Subset of script starting at the most recent code separator
-                if self.context == "UnlockingScript":
-                    sub_script = Script.from_chunks(self.unlocking_script.chunks[self.last_code_separator :])
-                else:
-                    sub_script = Script.from_chunks(self.locking_script.chunks[self.last_code_separator :])
+                sub_script = self.subscript_after_code_separator()
 
                 # Drop the signature, since there's no way for a signature to sign itself
                 sub_script = Script.find_and_delete(sub_script, Script.write_bin(sig))
@@ -714,11 +710,7 @@ class Spend:
                     )
                     self.script_evaluation_error(_m)
 
-                # Subset of script starting at the most recent code separator
-                if self.context == "UnlockingScript":
-                    sub_script = Script.from_chunks(self.unlocking_script.chunks[self.last_code_separator :])
-                else:
-                    sub_script = Script.from_chunks(self.locking_script.chunks[self.last_code_separator :])
+                sub_script = self.subscript_after_code_separator()
 
                 # Drop the signatures, since there's no way for a signature to sign itself
                 for j in range(sigs_count):
@@ -939,6 +931,20 @@ class Spend:
             self.script_evaluation_error("The top stack element must be truthy after script evaluation.")
 
         return True
+
+    def subscript_after_code_separator(self) -> Script:
+        """The script a signature commits to: everything past the last OP_CODESEPARATOR.
+
+        The separator itself is excluded, as in the TS/Go SDKs — including it
+        would change the sighash preimage and break signatures across SDKs.
+        """
+        chunks = self.unlocking_script.chunks if self.context == "UnlockingScript" else self.locking_script.chunks
+        # The separator is excluded wherever it sits, including the first
+        # position. The node advances past the opcode before recording the
+        # position ("Hash starts after the code separator", interpreter.cpp),
+        # so there is no special case for index 0.
+        start = 0 if self.last_code_separator is None else self.last_code_separator + 1
+        return Script.from_chunks(chunks[start:])
 
     def stacktop(self, i: int) -> bytes:
         return self.stack[len(self.stack) + i]
