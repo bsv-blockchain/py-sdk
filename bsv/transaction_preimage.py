@@ -217,6 +217,8 @@ def _otda_serialize_outputs(stream, outputs: list[TransactionOutput], input_inde
         _write_varint(stream, 0)
         return
     if base_type == int(SIGHASH.SINGLE):
+        if input_index >= len(outputs):
+            raise ValueError("SIGHASH_SINGLE with input_index >= len(outputs) in OTDA path")
         out_count = input_index + 1
         _write_varint(stream, out_count)
         for i in range(out_count):

@@ -2462,6 +2462,33 @@ static int c_is_minimal_num(const unsigned char *data, Py_ssize_t len) {
     return 1;
 }
 
+static PyObject *c_bin2num_unchecked(const unsigned char *data, Py_ssize_t len) {
+    if (len == 0) return PyLong_FromLong(0);
+    int negative = data[len - 1] & 0x80;
+    if (len <= 8) {
+        uint64_t val = 0;
+        for (Py_ssize_t i = len - 1; i >= 0; i--)
+            val = (val << 8) | data[i];
+        uint64_t mask = (uint64_t)0x80 << ((len - 1) * 8);
+        val &= ~mask;
+        if (negative) return PyLong_FromLongLong(-(long long)val);
+        return PyLong_FromUnsignedLongLong(val);
+    }
+    unsigned char *tmp = (unsigned char *)PyMem_Malloc(len);
+    if (!tmp) { PyErr_NoMemory(); return NULL; }
+    memcpy(tmp, data, len);
+    tmp[len - 1] &= 0x7F;
+    PyObject *n = bsv_long_from_unsigned_bytes(tmp, (size_t)len, 1);
+    PyMem_Free(tmp);
+    if (!n) return NULL;
+    if (negative) {
+        PyObject *neg = PyNumber_Negative(n);
+        Py_DECREF(n);
+        return neg;
+    }
+    return n;
+}
+
 static PyObject *c_bin2num(const unsigned char *data, Py_ssize_t len) {
     if (len == 0) return PyLong_FromLong(0);
     /* The node rejects an over-long element before it becomes a number
@@ -2834,6 +2861,42 @@ static int c_build_subscript(VMState *st,
         }
     }
 
+    /* Chronicle CHECKSIG: when executing inside the unlocking script,
+       scriptCode = (unlock tail after codeseparator) + (full locking script).
+       Append the entire locking script with the same find_and_delete. */
+    if (st->context == VM_CTX_UNLOCK) {
+        Py_ssize_t llen = PyList_GET_SIZE(st->lock_chunks);
+        for (Py_ssize_t i = 0; i < llen; i++) {
+            int lop; const unsigned char *ldata; Py_ssize_t ldlen;
+            if (parse_chunk(PyList_GET_ITEM(st->lock_chunks, i),
+                            &lop, &ldata, &ldlen) < 0) {
+                free(buf); return -1;
+            }
+            int skip = 0;
+            if (ldata != NULL) {
+                for (Py_ssize_t s = 0; s < n_sigs; s++) {
+                    if (ldlen == sig_lens[s] && (ldlen == 0 ||
+                            memcmp(ldata, sigs[s], ldlen) == 0)) {
+                        skip = 1; break;
+                    }
+                }
+            }
+            if (skip) continue;
+            size_t need = (ldata != NULL) ? (size_t)ldlen + 6 : 1;
+            while (pos + need > cap) {
+                cap *= 2;
+                unsigned char *nb = (unsigned char *)realloc(buf, cap);
+                if (!nb) { free(buf); PyErr_NoMemory(); return -1; }
+                buf = nb;
+            }
+            if (ldata != NULL) {
+                pos += c_encode_pushdata(ldata, ldlen, buf + pos);
+            } else {
+                buf[pos++] = (unsigned char)lop;
+            }
+        }
+    }
+
     *out_buf = buf;
     *out_len = pos;
     return 0;
@@ -2991,15 +3054,42 @@ static int c_build_otda_preimage(PreimageCtx *pctx,
     return 0;
 }
 
+static int c_is_valid_signature_encoding(const unsigned char *sig, Py_ssize_t n) {
+    if (n < 9 || n > 73) return 0;
+    if (sig[0] != 0x30) return 0;
+    if (sig[1] != n - 3) return 0;
+    unsigned int len_r = sig[3];
+    if (5 + len_r >= (unsigned int)n) return 0;
+    unsigned int len_s = sig[5 + len_r];
+    if (len_r + len_s + 7 != (unsigned int)n) return 0;
+    if (sig[2] != 0x02) return 0;
+    if (len_r == 0) return 0;
+    if (sig[4] & 0x80) return 0;
+    if (len_r > 1 && sig[4] == 0x00 && !(sig[5] & 0x80)) return 0;
+    if (sig[len_r + 4] != 0x02) return 0;
+    if (len_s == 0) return 0;
+    if (sig[len_r + 6] & 0x80) return 0;
+    if (len_s > 1 && sig[len_r + 6] == 0x00 && !(sig[len_r + 7] & 0x80)) return 0;
+    return 1;
+}
+
 static int c_checksig_verify(VMState *st,
                              const unsigned char *sig_raw, Py_ssize_t sig_len,
                              const unsigned char *pub_raw, Py_ssize_t pub_len,
                              const unsigned char *subscript, size_t sub_len) {
+    /* Always validate pubkey encoding, even if sig is empty */
+    secp256k1_pubkey parsed_pk;
+    if (!secp256k1_ec_pubkey_parse(g_ctx, &parsed_pk, pub_raw, pub_len))
+        return -4;
+
     if (sig_len == 0) return 0;
 
     uint8_t sighash_byte = sig_raw[sig_len - 1];
 
     if (!c_sighash_validate(sighash_byte)) return -1;
+
+    if (!c_is_valid_signature_encoding(sig_raw, sig_len))
+        return -3;
 
     secp256k1_ecdsa_signature parsed_sig;
     if (!secp256k1_ecdsa_signature_parse_der(g_ctx, &parsed_sig,
@@ -3012,9 +3102,13 @@ static int c_checksig_verify(VMState *st,
     if (was_high && !(st->tx_version > 1))
         return -2;
 
-    secp256k1_pubkey parsed_pk;
-    if (!secp256k1_ec_pubkey_parse(g_ctx, &parsed_pk, pub_raw, pub_len))
-        return -4;
+    if (c_sighash_use_otda(sighash_byte)
+        && (sighash_byte & 0x1F) == 0x03
+        && st->pctx.input_index >= st->pctx.n_outputs) {
+        unsigned char one[32] = {0};
+        one[0] = 0x01;
+        return secp256k1_ecdsa_verify(g_ctx, &norm_sig, one, &parsed_pk) ? 1 : 0;
+    }
 
     unsigned char *preimage;
     size_t pre_len;
@@ -3075,7 +3169,7 @@ static int vm_step(VMState *st) {
         vms_free(&st->alt_stack);
         ifs_free(&st->if_stack);
         ifs_free(&st->else_stack);
-        st->last_code_separator = 0;
+        st->last_code_separator = -1;
         st->non_top_level_return = 0;
         st->context = VM_CTX_LOCK;
         st->program_counter = 0;
@@ -3245,27 +3339,10 @@ static int vm_step(VMState *st) {
         return 1;
     }
 
-    /* ---- NOP variants --------------------------------------------------- */
+    /* ---- NOP variants (only OP_NOP, NOP1-3, NOP9-10 are valid) ---------- */
     case 0x61:
     case 0xB0: case 0xB1: case 0xB2:
-    case 0xB8: case 0xB9: case 0xBA: case 0xBB:
-    case 0xBC: case 0xBD: case 0xBE: case 0xBF:
-    case 0xC0: case 0xC1: case 0xC2: case 0xC3:
-    case 0xC4: case 0xC5: case 0xC6: case 0xC7:
-    case 0xC8: case 0xC9: case 0xCA: case 0xCB:
-    case 0xCC: case 0xCD: case 0xCE: case 0xCF:
-    case 0xD0: case 0xD1: case 0xD2: case 0xD3:
-    case 0xD4: case 0xD5: case 0xD6: case 0xD7:
-    case 0xD8: case 0xD9: case 0xDA: case 0xDB:
-    case 0xDC: case 0xDD: case 0xDE: case 0xDF:
-    case 0xE0: case 0xE1: case 0xE2: case 0xE3:
-    case 0xE4: case 0xE5: case 0xE6: case 0xE7:
-    case 0xE8: case 0xE9: case 0xEA: case 0xEB:
-    case 0xEC: case 0xED: case 0xEE: case 0xEF:
-    case 0xF0: case 0xF1: case 0xF2: case 0xF3:
-    case 0xF4: case 0xF5: case 0xF6: case 0xF7:
-    case 0xF8: case 0xF9: case 0xFA: case 0xFB:
-    case 0xFC:
+    case 0xB8: case 0xB9:
         return 0;
 
     /* ---- Stack manipulation --------------------------------------------- */
@@ -3750,6 +3827,16 @@ static int vm_step(VMState *st) {
         }
         Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz);
         if (!r) return -1;
+        if (op == 0xB6) {
+            unsigned char *re = NULL; Py_ssize_t re_len = 0;
+            if (c_min_encode(r, &re, &re_len) < 0) { Py_DECREF(r); return -1; }
+            if (re) PyMem_Free(re);
+            if (re_len > VM_MAX_SCRIPT_NUM_LEN) {
+                Py_DECREF(r);
+                vm_error(st, "script number overflow");
+                return -1;
+            }
+        }
         int rc = vms_push_num(&st->stack, r);
         Py_DECREF(r);
         return rc < 0 ? -1 : 0;
@@ -3921,10 +4008,14 @@ static int vm_step(VMState *st) {
         vms_pop(&st->stack, &pub_key);
         Py_ssize_t sig_len = sig.len;
 
+        /* Skip find_and_delete when signature has FORKID set (C++ CleanupScriptCode) */
+        int n_skip_sigs = 0;
         const unsigned char *sig_ptrs[1] = { sig.data };
         Py_ssize_t sig_lens[1] = { sig.len };
+        if (sig.len > 0 && !(sig.data[sig.len - 1] & 0x40))
+            n_skip_sigs = 1;
         unsigned char *subscript = NULL; size_t sub_len = 0;
-        if (c_build_subscript(st, sig_ptrs, sig_lens, 1,
+        if (c_build_subscript(st, sig_ptrs, sig_lens, n_skip_sigs,
                               &subscript, &sub_len) < 0) {
             se_free(&sig); se_free(&pub_key); return -1;
         }
@@ -3983,8 +4074,16 @@ static int vm_step(VMState *st) {
             return -1;
         }
 
-        /* Read keys_count */
+        /* Read keys_count (4-byte max, matching CScriptNum::MAXIMUM_ELEMENT_SIZE) */
         StackElem *kc_elem = vms_top(&st->stack, -(int)ii);
+        if (kc_elem->len > 4) {
+            vm_error(st, "Script evaluation error: script number overflow");
+            return -1;
+        }
+        if (!(st->tx_version > 1) && kc_elem->len > 0 && !c_is_minimal_num(kc_elem->data, kc_elem->len)) {
+            vm_error(st, "non-minimally encoded script number");
+            return -1;
+        }
         PyObject *kc_obj = c_bin2num(kc_elem->data, kc_elem->len);
         if (!kc_obj) return -1;
         long long keys_count = PyLong_AsLongLong(kc_obj);
@@ -4008,8 +4107,16 @@ static int vm_step(VMState *st) {
             return -1;
         }
 
-        /* Read sigs_count */
+        /* Read sigs_count (4-byte max) */
         StackElem *sc_elem = vms_top(&st->stack, -(int)ii);
+        if (sc_elem->len > 4) {
+            vm_error(st, "Script evaluation error: script number overflow");
+            return -1;
+        }
+        if (!(st->tx_version > 1) && sc_elem->len > 0 && !c_is_minimal_num(sc_elem->data, sc_elem->len)) {
+            vm_error(st, "non-minimally encoded script number");
+            return -1;
+        }
         PyObject *sc_obj = c_bin2num(sc_elem->data, sc_elem->len);
         if (!sc_obj) return -1;
         long long sigs_count = PyLong_AsLongLong(sc_obj);
@@ -4031,9 +4138,10 @@ static int vm_step(VMState *st) {
             return -1;
         }
 
-        /* Collect all sigs for subscript find_and_delete */
+        /* Collect sigs for subscript find_and_delete (skip FORKID sigs) */
         const unsigned char **all_sig_ptrs = NULL;
         Py_ssize_t *all_sig_lens = NULL;
+        Py_ssize_t n_skip = 0;
         if (sigs_count > 0) {
             all_sig_ptrs = (const unsigned char **)calloc(sigs_count, sizeof(unsigned char*));
             all_sig_lens = (Py_ssize_t *)calloc(sigs_count, sizeof(Py_ssize_t));
@@ -4043,15 +4151,18 @@ static int vm_step(VMState *st) {
             }
             for (Py_ssize_t j = 0; j < (Py_ssize_t)sigs_count; j++) {
                 StackElem *se = vms_top(&st->stack, -(int)(i_sig + j));
-                all_sig_ptrs[j] = se->data;
-                all_sig_lens[j] = se->len;
+                if (se->len > 0 && !(se->data[se->len - 1] & 0x40)) {
+                    all_sig_ptrs[n_skip] = se->data;
+                    all_sig_lens[n_skip] = se->len;
+                    n_skip++;
+                }
             }
         }
 
         /* Build subscript once */
         unsigned char *subscript = NULL; size_t sub_len = 0;
         if (c_build_subscript(st, all_sig_ptrs, all_sig_lens,
-                              (Py_ssize_t)sigs_count,
+                              n_skip,
                               &subscript, &sub_len) < 0) {
             free(all_sig_ptrs); free(all_sig_lens);
             return -1;
@@ -4294,10 +4405,9 @@ static int vm_step(VMState *st) {
         if (!sobj) return -1;
         long long size = PyLong_AsLongLong(sobj);
         Py_DECREF(sobj);
-        if (PyErr_Occurred()) { PyErr_Clear(); size = (long long)VM_MAX_ELEM_SIZE + 1; }
-        if (size > VM_MAX_ELEM_SIZE) {
-            vm_errorf(st, "It's not currently possible to push data larger than %d bytes.",
-                      VM_MAX_ELEM_SIZE);
+        if (PyErr_Occurred()) { PyErr_Clear(); size = (long long)0x7FFFFFFF + 1; }
+        if (size < 0 || size > 0x7FFFFFFF) {
+            vm_error(st, "OP_NUM2BIN: requested size out of range.");
             return -1;
         }
         PyObject *n = vms_pop_num(st);
@@ -4333,15 +4443,23 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_BIN2NUM requires at least one item to be on the stack.");
             return -1;
         }
-        /* Reads the element directly: minimising a non-minimal encoding is what
-           this opcode is for, so requiring one on input would defeat it. */
         StackElem raw = {0};
         if (vms_pop(&st->stack, &raw) < 0) return -1;
-        PyObject *x = c_bin2num(raw.data, raw.len);
+        /* Convert without length check — BIN2NUM minimizes first, then checks. */
+        PyObject *x = c_bin2num_unchecked(raw.data, raw.len);
         se_free(&raw);
         if (!x) return -1;
-        int rc = vms_push_num(&st->stack, x);
+        /* Minimally encode and check result size */
+        unsigned char *me = NULL; Py_ssize_t me_len = 0;
+        if (c_min_encode(x, &me, &me_len) < 0) { Py_DECREF(x); return -1; }
         Py_DECREF(x);
+        if (me_len > VM_MAX_SCRIPT_NUM_LEN) {
+            if (me) PyMem_Free(me);
+            vm_error(st, "script number overflow");
+            return -1;
+        }
+        int rc = vms_push(&st->stack, me, me_len);
+        if (me) PyMem_Free(me);
         return rc < 0 ? -1 : 0;
     }
 
