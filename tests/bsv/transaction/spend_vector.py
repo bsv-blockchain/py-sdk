@@ -27,16 +27,6 @@ SPEND_VALID_CASES = [
     ["5151", "64635167006868", "test"],
     ["5100", "64635167006867630067516868", "test"],
     ["0051", "64635167006867630067516868", "test"],
-    ["00", "63006751670068", "Multiple ELSE's are valid and executed inverts on each ELSE encountered"],
-    ["51", "635167006768", "test"],
-    ["51", "636700675168", "test"],
-    ["51", "63516700675168935287", "test"],
-    ["51", "64006751670068", "Multiple ELSE's are valid and execution inverts on each ELSE encountered"],
-    ["00", "645167006768", "test"],
-    ["00", "646700675168", "test"],
-    ["00", "64516700675168935287", "test"],
-    ["00", "6351636a676a676a6867516351676a675168676a68935287", "Nested ELSE ELSE"],
-    ["51", "6400646a676a676a6867006451676a675168676a68935287", "test"],
     ["00", "636a6851", "RETURN only works if executed"],
     ["5151", "69", "test"],
     ["51050100000000", "69", "values >4 bytes can be cast to boolean"],
@@ -255,4 +245,21 @@ SPEND_VALID_CASES = [
         "BIP66 example 4, without DERSIG",
     ],
     ["00", "21038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508ac91", "BIP66 example 4, with DERSIG"],
+]
+
+# Valid before Genesis only. The node's conditional_tracker allows one OP_ELSE
+# per OP_IF post-Genesis and rejects the rest with SCRIPT_ERR_UNBALANCED_CONDITIONAL
+# (`conditionals.has_op_else() && utxo_after_genesis`, interpreter.cpp). py-sdk
+# targets post-Chronicle, which is post-Genesis, so these must now be rejected.
+SPEND_MULTIPLE_ELSE_CASES = [
+    ["00", "63006751670068", "Multiple ELSE's are valid and executed inverts on each ELSE encountered"],
+    ["51", "64006751670068", "Multiple ELSE's are valid and execution inverts on each ELSE encountered"],
+    ["00", "6351636a676a676a6867516351676a675168676a68935287", "Nested ELSE ELSE"],
+    ["51", "6400646a676a676a6867006451676a675168676a68935287", "test"],
+    ["51", "635167006768", "test"],
+    ["51", "636700675168", "test"],
+    ["51", "63516700675168935287", "test"],
+    ["00", "645167006768", "test"],
+    ["00", "646700675168", "test"],
+    ["00", "64516700675168935287", "test"],
 ]

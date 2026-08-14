@@ -78,6 +78,8 @@ class Spend:
         self.stack = []
         self.alt_stack = []
         self.if_stack = []
+        # Whether each open conditional has already seen its OP_ELSE.
+        self.else_stack = []
 
     def step(self) -> None:
         # If the context is UnlockingScript, and we have reached the end,
@@ -150,16 +152,22 @@ class Spend:
                 self.stack.append(self.transaction_version.to_bytes(4, "little"))
 
             elif current_opcode in [OpCode.OP_VERIF, OpCode.OP_VERNOTIF]:
-                if len(self.stack) < 1:
-                    self.script_evaluation_error("OP_VERIF/OP_VERNOTIF requires at least one item on the stack.")
-                buf = self.stack.pop()
                 f_value = False
-                if len(buf) == 4:
-                    ver_bytes = self.transaction_version.to_bytes(4, "little")
-                    f_value = buf == ver_bytes
-                if current_opcode == OpCode.OP_VERNOTIF:
-                    f_value = not f_value
+                # These land in the OP_IF..OP_ENDIF range, so they are reached
+                # inside a skipped branch too. Only the conditional stack may be
+                # touched there -- consuming an operand would desynchronise the
+                # data stack against the branch that was actually taken.
+                if is_script_executing:
+                    if len(self.stack) < 1:
+                        self.script_evaluation_error("OP_VERIF/OP_VERNOTIF requires at least one item on the stack.")
+                    buf = self.stack.pop()
+                    if len(buf) == 4:
+                        ver_bytes = self.transaction_version.to_bytes(4, "little")
+                        f_value = buf == ver_bytes
+                    if current_opcode == OpCode.OP_VERNOTIF:
+                        f_value = not f_value
                 self.if_stack.append(self.encode_bool(f_value))
+                self.else_stack.append(False)
 
             elif current_opcode in [
                 OpCode.OP_NOP,
@@ -258,10 +266,17 @@ class Spend:
                         f = not f
                     self.stack.pop()
                 self.if_stack.append(self.encode_bool(f))
+                self.else_stack.append(False)
 
             elif current_opcode == OpCode.OP_ELSE:
                 if len(self.if_stack) == 0:
                     self.script_evaluation_error("OP_ELSE requires a preceeding OP_IF.")
+                # Post-Genesis grammar: one OP_ELSE per OP_IF. The node rejects
+                # the second with SCRIPT_ERR_UNBALANCED_CONDITIONAL.
+                if self.else_stack and self.else_stack[-1]:
+                    self.script_evaluation_error("OP_ELSE may only be used once for each OP_IF or OP_NOTIF.")
+                if self.else_stack:
+                    self.else_stack[-1] = True
                 f = not self.cast_to_bool(self.if_stack[-1])
                 self.if_stack[-1] = self.encode_bool(f)
 
@@ -269,6 +284,8 @@ class Spend:
                 if len(self.if_stack) == 0:
                     self.script_evaluation_error("OP_ENDIF requires a preceeding OP_IF.")
                 self.if_stack.pop()
+                if self.else_stack:
+                    self.else_stack.pop()
 
             elif current_opcode == OpCode.OP_VERIFY:
                 if len(self.stack) < 1:
@@ -939,7 +956,9 @@ class Spend:
                     "The clean stack rule requires exactly one item to be on the stack after script execution."
                 )
 
-        if not self.cast_to_bool(self.stacktop(-1)):
+        # An empty stack reaches here whenever the clean-stack rule is relaxed;
+        # indexing it would surface a raw IndexError instead of a script error.
+        if len(self.stack) < 1 or not self.cast_to_bool(self.stacktop(-1)):
             self.script_evaluation_error("The top stack element must be truthy after script evaluation.")
 
         return True
