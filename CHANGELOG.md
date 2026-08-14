@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -41,21 +42,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **C extension `tx_to_bytes` / `tx_preimages` / `tx_preimage_otda` silent truncation of version/locktime** — `PyArg_ParseTuple("I")` silently wrapped negative values and values > 2^32. Now raises `OverflowError`, matching Python's `int.to_bytes(4, "little")` contract.
-- **C extension silent type coercion for scripts** — non-bytes `unlocking_script` (e.g. `bytearray`, `str`) was silently treated as empty; non-bytes `locking_script` was silently zero-length. Now raises `TypeError` with a descriptive message.
-- **C extension `source_txid` validation** — arbitrary-length hex strings or non-hex were silently accepted. Now validates exactly 64 hex characters, matching the Python fallback.
-- **`source_txid` validation unified across Python codebase** — introduced `txid_to_bytes_le()` helper in `transaction_input.py`; all `bytes.fromhex(*.source_txid)[::-1]` sites (serialize, preimage, BEEF) now go through a single validated path.
-- **Varint boundary off-by-one in `SatoshisPerKilobyte` fee model** — `get_varint_size` used `> 253` / `> 2**16` / `> 2**32` which underestimated by 2–4 bytes when a script length landed exactly on a varint boundary (253, 65536, 4294967296). Aligned to `> 0xFC` / `> 0xFFFF` / `> 0xFFFFFFFF`, matching the canonical encoder in `binary.py` and the SV Node / Teranode / Go SDK implementations. The same bug exists in the TS SDK's `SatoshisPerKilobyte`.
-- **Fee model test fixes** — corrected pre-existing test failures in `fee_models_test_coverage.py` (wrong constructor kwarg `rate=` → `value=`, and `int` passed instead of `Transaction` to `compute_fee`).
-
-### Changed
-
-- **Subclass-safe native serialization** — `Transaction.serialize()` now checks `type(i) is TransactionInput` / `type(o) is TransactionOutput` before using the C fast path. Subclassed inputs/outputs automatically fall back to the Python path, preserving `serialize()` overrides regardless of whether the C extension is installed.
-
-### Added
-
-- **Hypothesis differential tests** — property-based tests generating random transactions and verifying C native and Python fallback produce identical bytes for serialization, BIP143 preimage, and OTDA preimage across all 12 sighash flag combinations.
-- **Comprehensive edge-case test suite** (`test_tx_serialize_edge_cases.py`, 190 tests) — varint boundaries, large scripts (up to 20MB NFT payloads), satoshi boundary values, version/locktime rejection, script type rejection, source_txid validation on both paths, subclass fallback verification.
+- **Numeric operands must be minimally encoded where minimal pushes are** — the node derives one `requireMinimal` from `VerifyMinimalData(flags) && EnforceNonMalleability(flags, version)` and uses it both for `CheckMinimalPush` and for every `CScriptNum` construction. py-sdk applied it to pushes only, so `0x0100` — a minimal *push* but a non-minimal *number* for 1 — was accepted as an operand where the node rejects it, as was negative zero (`0x80`). Now enforced on both VM paths, and relaxed for transaction version > 1 alongside minimal pushes. `OP_BIN2NUM` is deliberately exempt: minimising a non-minimal encoding is what it is for, and the node reads its input directly rather than through `CScriptNum`.
 
 ---
 

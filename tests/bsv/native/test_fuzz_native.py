@@ -991,13 +991,12 @@ class TestCrashHangRegression:
         assert "SURVIVED" in r.stdout
 
     def test_spend_validate_otda_single_bug_digest(self):
-        """A signature over hash256(0x01||0x00*31) must verify TRUE through the
-        SIGHASH_SINGLE-bug path, proving the C digest matches the Python path."""
+        """A signature over uint256(1) (0x01||0x00*31) must verify TRUE through
+        the SIGHASH_SINGLE-bug path. C++ returns this raw hash, not hash256 of it."""
         r = self._run("""
-            from bsv.hash import hash256
             sec = b'\\x02' * 32
             pub = _bsv_native.pubkey_from_secret(sec)
-            digest = hash256(b'\\x01' + b'\\x00' * 31)
+            digest = b'\\x01' + b'\\x00' * 31
             sig = _bsv_native.ecdsa_sign(digest, sec) + b'\\x63'
             unlock = [(len(sig), sig), (len(pub), pub)]
             lock = [(0xAC, None)]

@@ -7,7 +7,7 @@ from ..hash import hash160, hash256, ripemd160, sha1, sha256
 from ..keys import PublicKey
 from ..transaction_input import TransactionInput
 from ..transaction_preimage import tx_preimage
-from ..utils import deserialize_ecdsa_der, unsigned_to_bytes
+from ..utils import deserialize_ecdsa_der, serialize_ecdsa_der, unsigned_to_bytes
 from .script import Script, ScriptChunk
 
 try:
@@ -17,7 +17,15 @@ try:
 except ImportError:
     _USE_NATIVE_VM = False
 
+
+class ScriptNumberOverflow(ValueError):
+    """A stack element is too wide to be read as a script number."""
+
+
 MAX_SCRIPT_ELEMENT_SIZE = 1024 * 1024 * 1024
+# Chronicle script-number ceiling, as returned by the node's
+# MaxScriptNumLength() for the post-Chronicle era.
+MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE = 32 * 1024 * 1024
 MAX_MULTISIG_KEY_COUNT = pow(2, 31) - 1
 REQUIRE_MINIMAL_PUSH = True
 REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS = True
@@ -75,11 +83,26 @@ class Spend:
         self.stack = []
         self.alt_stack = []
         self.if_stack = []
+        # Whether each open conditional has already seen its OP_ELSE.
+        self.else_stack = []
+        # Set by an OP_RETURN reached inside a conditional: execution stops but
+        # the scan continues so unbalanced conditionals are still caught.
+        self.non_top_level_return = False
 
     def step(self) -> None:
         # If the context is UnlockingScript, and we have reached the end,
         # set the context to LockingScript and zero the program counter
         if self.context == "UnlockingScript" and self.program_counter >= len(self.unlocking_script.chunks):
+            if self.if_stack:
+                self.script_evaluation_error(
+                    "Every OP_IF, OP_NOTIF, or OP_ELSE must be terminated with "
+                    "OP_ENDIF prior to the end of the unlocking script."
+                )
+            self.alt_stack = []
+            self.if_stack = []
+            self.else_stack = []
+            self.last_code_separator = None
+            self.non_top_level_return = False
             self.context = "LockingScript"
             self.program_counter = 0
 
@@ -88,10 +111,13 @@ class Spend:
         else:
             operation = self.locking_script.chunks[self.program_counter]
 
-        is_script_executing = b"" not in self.if_stack
-
         # Read instruction
         current_opcode = operation.op
+        # After an OP_RETURN inside a conditional nothing runs but a further
+        # OP_RETURN; the conditional opcodes are still tracked below.
+        is_script_executing = (b"" not in self.if_stack) and (
+            not self.non_top_level_return or current_opcode == OpCode.OP_RETURN
+        )
         if current_opcode not in OPCODE_VALUE_NAME_DICT and not (b"\x01" <= current_opcode < OpCode.OP_PUSHDATA1):
             self.script_evaluation_error(f"An opcode is missing in this chunk of the {self.context}!")
         if operation.data is not None and len(operation.data) > MAX_SCRIPT_ELEMENT_SIZE:
@@ -135,16 +161,22 @@ class Spend:
                 self.stack.append(self.transaction_version.to_bytes(4, "little"))
 
             elif current_opcode in [OpCode.OP_VERIF, OpCode.OP_VERNOTIF]:
-                if len(self.stack) < 1:
-                    self.script_evaluation_error("OP_VERIF/OP_VERNOTIF requires at least one item on the stack.")
-                buf = self.stack.pop()
                 f_value = False
-                if len(buf) == 4:
-                    ver_bytes = self.transaction_version.to_bytes(4, "little")
-                    f_value = buf == ver_bytes
-                if current_opcode == OpCode.OP_VERNOTIF:
-                    f_value = not f_value
+                # These land in the OP_IF..OP_ENDIF range, so they are reached
+                # inside a skipped branch too. Only the conditional stack may be
+                # touched there -- consuming an operand would desynchronise the
+                # data stack against the branch that was actually taken.
+                if is_script_executing:
+                    if len(self.stack) < 1:
+                        self.script_evaluation_error("OP_VERIF/OP_VERNOTIF requires at least one item on the stack.")
+                    buf = self.stack.pop()
+                    if len(buf) == 4:
+                        ver_bytes = self.transaction_version.to_bytes(4, "little")
+                        f_value = buf == ver_bytes
+                    if current_opcode == OpCode.OP_VERNOTIF:
+                        f_value = not f_value
                 self.if_stack.append(self.encode_bool(f_value))
+                self.else_stack.append(False)
 
             elif current_opcode in [
                 OpCode.OP_NOP,
@@ -153,72 +185,7 @@ class Spend:
                 OpCode.OP_NOP3,
                 OpCode.OP_NOP9,
                 OpCode.OP_NOP10,
-                OpCode.OP_NOP11,
-                OpCode.OP_NOP12,
-                OpCode.OP_NOP13,
-                OpCode.OP_NOP14,
-                OpCode.OP_NOP15,
-                OpCode.OP_NOP16,
-                OpCode.OP_NOP17,
-                OpCode.OP_NOP18,
-                OpCode.OP_NOP19,
-                OpCode.OP_NOP20,
-                OpCode.OP_NOP21,
-                OpCode.OP_NOP22,
-                OpCode.OP_NOP23,
-                OpCode.OP_NOP24,
-                OpCode.OP_NOP25,
-                OpCode.OP_NOP26,
-                OpCode.OP_NOP27,
-                OpCode.OP_NOP28,
-                OpCode.OP_NOP29,
-                OpCode.OP_NOP30,
-                OpCode.OP_NOP31,
-                OpCode.OP_NOP32,
-                OpCode.OP_NOP33,
-                OpCode.OP_NOP34,
-                OpCode.OP_NOP35,
-                OpCode.OP_NOP36,
-                OpCode.OP_NOP37,
-                OpCode.OP_NOP38,
-                OpCode.OP_NOP39,
-                OpCode.OP_NOP40,
-                OpCode.OP_NOP41,
-                OpCode.OP_NOP42,
-                OpCode.OP_NOP43,
-                OpCode.OP_NOP44,
-                OpCode.OP_NOP45,
-                OpCode.OP_NOP46,
-                OpCode.OP_NOP47,
-                OpCode.OP_NOP48,
-                OpCode.OP_NOP49,
-                OpCode.OP_NOP50,
-                OpCode.OP_NOP51,
-                OpCode.OP_NOP52,
-                OpCode.OP_NOP53,
-                OpCode.OP_NOP54,
-                OpCode.OP_NOP55,
-                OpCode.OP_NOP56,
-                OpCode.OP_NOP57,
-                OpCode.OP_NOP58,
-                OpCode.OP_NOP59,
-                OpCode.OP_NOP60,
-                OpCode.OP_NOP61,
-                OpCode.OP_NOP62,
-                OpCode.OP_NOP63,
-                OpCode.OP_NOP64,
-                OpCode.OP_NOP65,
-                OpCode.OP_NOP66,
-                OpCode.OP_NOP67,
-                OpCode.OP_NOP68,
-                OpCode.OP_NOP69,
-                OpCode.OP_NOP70,
-                OpCode.OP_NOP71,
-                OpCode.OP_NOP72,
-                OpCode.OP_NOP73,
-                OpCode.OP_NOP77,
             ]:
-                # NOP opcodes intentionally do nothing; execution simply advances.
                 pass
 
             elif current_opcode in [OpCode.OP_IF, OpCode.OP_NOTIF]:
@@ -243,10 +210,17 @@ class Spend:
                         f = not f
                     self.stack.pop()
                 self.if_stack.append(self.encode_bool(f))
+                self.else_stack.append(False)
 
             elif current_opcode == OpCode.OP_ELSE:
                 if len(self.if_stack) == 0:
                     self.script_evaluation_error("OP_ELSE requires a preceeding OP_IF.")
+                # Post-Genesis grammar: one OP_ELSE per OP_IF. The node rejects
+                # the second with SCRIPT_ERR_UNBALANCED_CONDITIONAL.
+                if self.else_stack and self.else_stack[-1]:
+                    self.script_evaluation_error("OP_ELSE may only be used once for each OP_IF or OP_NOTIF.")
+                if self.else_stack:
+                    self.else_stack[-1] = True
                 f = not self.cast_to_bool(self.if_stack[-1])
                 self.if_stack[-1] = self.encode_bool(f)
 
@@ -254,6 +228,8 @@ class Spend:
                 if len(self.if_stack) == 0:
                     self.script_evaluation_error("OP_ENDIF requires a preceeding OP_IF.")
                 self.if_stack.pop()
+                if self.else_stack:
+                    self.else_stack.pop()
 
             elif current_opcode == OpCode.OP_VERIFY:
                 if len(self.stack) < 1:
@@ -265,12 +241,18 @@ class Spend:
                     self.script_evaluation_error("OP_VERIFY requires the top stack value to be truthy.")
 
             elif current_opcode == OpCode.OP_RETURN:
-                if self.context == "UnlockingScript":
-                    self.program_counter = len(self.unlocking_script.chunks)
+                if self.if_stack:
+                    # Inside a conditional the script keeps being scanned so the
+                    # grammar is still checked; only execution stops.
+                    self.non_top_level_return = True
                 else:
-                    self.program_counter = len(self.locking_script.chunks)
-                self.if_stack = []
-                return  # OP_RETURN stops execution, don't increment counter
+                    # At the top level evaluation ends here, and nothing after it
+                    # affects validity -- not even unbalanced OP_IFs.
+                    if self.context == "UnlockingScript":
+                        self.program_counter = len(self.unlocking_script.chunks)
+                    else:
+                        self.program_counter = len(self.locking_script.chunks)
+                    return  # don't increment the counter
 
             elif current_opcode == OpCode.OP_TOALTSTACK:
                 if len(self.stack) < 1:
@@ -365,7 +347,7 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 2:
                     self.script_evaluation_error(f"{_codename} requires at least two items to be on the stack.")
-                n = self.bin2num(self.stacktop(-1))
+                n = self.read_script_number(self.stacktop(-1))
                 self.stack.pop()
                 if n < 0 or n >= len(self.stack):
                     _m = (
@@ -440,15 +422,23 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 2:
                     self.script_evaluation_error(f"{_codename} requires at least two items to be on the stack.")
-                n = self.bin2num(self.stacktop(-1))
+                n = self.read_script_number(self.stack.pop(-1))
                 if n < 0:
                     self.script_evaluation_error(f"{_codename} requires the top stack item to be non-negative.")
-                x = self.stack.pop(-2)
-                if current_opcode == OpCode.OP_LSHIFT:
-                    x = x[n:] + b"\x00" * n
+                x = self.stack.pop(-1)
+                if len(x) == 0:
+                    self.stack.append(b"")
                 else:
-                    x = b"\x00" * n + x[:-n]
-                self.stack.append(x)
+                    width = len(x) * 8
+                    # A shift wider than the operand clears every bit, so an
+                    # out-of-range count must not build an oversized intermediate.
+                    if n >= width:
+                        v = 0
+                    elif current_opcode == OpCode.OP_LSHIFT:
+                        v = (int.from_bytes(x, "big") << n) & ((1 << width) - 1)
+                    else:
+                        v = int.from_bytes(x, "big") >> n
+                    self.stack.append(v.to_bytes(len(x), "big"))
 
             elif current_opcode in [OpCode.OP_EQUAL, OpCode.OP_EQUALVERIFY]:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
@@ -475,7 +465,7 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 1:
                     self.script_evaluation_error(f"{_codename} requires at least one items to be on the stack.")
-                x = self.bin2num(self.stack.pop())
+                x = self.read_script_number(self.stack.pop())
                 if current_opcode == OpCode.OP_1ADD:
                     x += 1
                 elif current_opcode == OpCode.OP_1SUB:
@@ -494,7 +484,7 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 1:
                     self.script_evaluation_error(f"{_codename} requires at least one item to be on the stack.")
-                x = self.bin2num(self.stack.pop())
+                x = self.read_script_number(self.stack.pop())
                 if current_opcode == OpCode.OP_2MUL:
                     x = x * 2
                 else:
@@ -506,18 +496,25 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 2:
                     self.script_evaluation_error(f"{_codename} requires at least two items on the stack.")
-                shift = self.bin2num(self.stack.pop())
-                value = self.bin2num(self.stack.pop())
+                shift = self.read_script_number(self.stack.pop())
+                value = self.read_script_number(self.stack.pop())
                 if shift < 0:
                     self.script_evaluation_error(f"{_codename}: shift amount must be non-negative.")
                 if current_opcode == OpCode.OP_LSHIFTNUM:
+                    value_size = len(self.minimally_encode(value))
+                    if value_size + shift // 8 > MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE:
+                        self.script_evaluation_error("script number overflow")
                     result = value << shift
-                # Right shift preserving sign: negate, shift, negate
-                elif value < 0:
-                    result = -((-value) >> shift)
+                    encoded = self.minimally_encode(result)
+                    if len(encoded) > MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE:
+                        self.script_evaluation_error("script number overflow")
+                    self.stack.append(encoded)
                 else:
-                    result = value >> shift
-                self.stack.append(self.minimally_encode(result))
+                    if value < 0:
+                        result = -((-value) >> shift)
+                    else:
+                        result = value >> shift
+                    self.stack.append(self.minimally_encode(result))
 
             elif current_opcode in [
                 OpCode.OP_ADD,
@@ -540,8 +537,8 @@ class Spend:
                 _codename = OPCODE_VALUE_NAME_DICT[current_opcode]
                 if len(self.stack) < 2:
                     self.script_evaluation_error(f"{_codename} requires at least two items to be on the stack.")
-                x1 = self.bin2num(self.stack.pop(-2))
-                x2 = self.bin2num(self.stack.pop())
+                x1 = self.read_script_number(self.stack.pop(-2))
+                x2 = self.read_script_number(self.stack.pop())
                 if current_opcode == OpCode.OP_ADD:
                     x = x1 + x2
                 elif current_opcode == OpCode.OP_SUB:
@@ -551,11 +548,18 @@ class Spend:
                 elif current_opcode == OpCode.OP_DIV:
                     if x2 == 0:
                         self.script_evaluation_error("OP_DIV cannot divide by zero!")
-                    x = x1 // x2
+                    # Truncate toward zero, not floor: `//` would round -7 // 2
+                    # to -4 where the TS/Go SDKs give -3.
+                    x = abs(x1) // abs(x2)
+                    if (x1 < 0) != (x2 < 0):
+                        x = -x
                 elif current_opcode == OpCode.OP_MOD:
                     if x2 == 0:
                         self.script_evaluation_error("OP_MOD cannot divide by zero!")
-                    x = x1 % x2
+                    # Remainder takes the dividend's sign, not the divisor's.
+                    x = abs(x1) % abs(x2)
+                    if x1 < 0:
+                        x = -x
                 elif current_opcode == OpCode.OP_BOOLAND:
                     x = 1 if x1 != 0 and x2 != 0 else 0
                 elif current_opcode == OpCode.OP_BOOLOR:
@@ -587,9 +591,9 @@ class Spend:
             elif current_opcode == OpCode.OP_WITHIN:
                 if len(self.stack) < 3:
                     self.script_evaluation_error("OP_WITHIN requires at least three items to be on the stack.")
-                x1 = self.bin2num(self.stack.pop(-3))
-                x2 = self.bin2num(self.stack.pop(-2))
-                x3 = self.bin2num(self.stack.pop())
+                x1 = self.read_script_number(self.stack.pop(-3))
+                x2 = self.read_script_number(self.stack.pop(-2))
+                x3 = self.read_script_number(self.stack.pop())
                 f = x2 <= x1 < x3
                 self.stack.append(self.encode_bool(f))
 
@@ -629,14 +633,10 @@ class Spend:
                     _m = f"{_codename} requires correct encoding for the public key and signature."
                     self.script_evaluation_error(_m)
 
-                # Subset of script starting at the most recent code separator
-                if self.context == "UnlockingScript":
-                    sub_script = Script.from_chunks(self.unlocking_script.chunks[self.last_code_separator :])
-                else:
-                    sub_script = Script.from_chunks(self.locking_script.chunks[self.last_code_separator :])
+                sub_script = self.subscript_after_code_separator()
 
-                # Drop the signature, since there's no way for a signature to sign itself
-                sub_script = Script.find_and_delete(sub_script, Script.write_bin(sig))
+                if len(sig) > 0 and not (sig[-1] & SIGHASH.FORKID):
+                    sub_script = Script.find_and_delete(sub_script, Script.write_bin(sig))
 
                 f = self.verify_signature(sig, pub_key, sub_script)
 
@@ -659,7 +659,7 @@ class Spend:
                 if len(self.stack) < i:
                     self.script_evaluation_error(f"{_codename} requires at least 1 item to be on the stack.")
 
-                keys_count = self.bin2num(self.stacktop(-i))
+                keys_count = self.read_script_number(self.stacktop(-i), max_length=4)
                 if keys_count < 0 or keys_count > MAX_MULTISIG_KEY_COUNT:
                     _m = f"${_codename} requires a key count between 0 and {MAX_MULTISIG_KEY_COUNT}."
                     self.script_evaluation_error(_m)
@@ -675,7 +675,7 @@ class Spend:
                     _m = f"{_codename} requires the number of stack items not to be less than the number of keys used."
                     self.script_evaluation_error(_m)
 
-                sigs_count = self.bin2num(self.stacktop(-i))
+                sigs_count = self.read_script_number(self.stacktop(-i), max_length=4)
                 if sigs_count < 0 or sigs_count > keys_count:
                     _m = f"{_codename} requires the number of signatures to be no greater than the number of keys."
                     self.script_evaluation_error(_m)
@@ -689,15 +689,12 @@ class Spend:
                     )
                     self.script_evaluation_error(_m)
 
-                # Subset of script starting at the most recent code separator
-                if self.context == "UnlockingScript":
-                    sub_script = Script.from_chunks(self.unlocking_script.chunks[self.last_code_separator :])
-                else:
-                    sub_script = Script.from_chunks(self.locking_script.chunks[self.last_code_separator :])
+                sub_script = self.subscript_after_code_separator()
 
-                # Drop the signatures, since there's no way for a signature to sign itself
                 for j in range(sigs_count):
-                    sub_script = Script.find_and_delete(sub_script, Script.write_bin(self.stacktop(-i_sig - j)))
+                    buf = self.stacktop(-i_sig - j)
+                    if len(buf) > 0 and not (buf[-1] & SIGHASH.FORKID):
+                        sub_script = Script.find_and_delete(sub_script, Script.write_bin(buf))
 
                 f = True
                 while f and sigs_count > 0:
@@ -722,6 +719,12 @@ class Spend:
 
                 # Clean up stack of actual arguments
                 while i > 1:
+                    # NULLFAIL: once the keys are exhausted the remaining items
+                    # are the signatures, and a failed check requires every one
+                    # of them to be empty. Chronicle relaxes this for
+                    # transaction version > 1, as it does for OP_CHECKSIG.
+                    if not f and not self.is_relaxed() and i_key2 == 0 and len(self.stacktop(-1)) > 0:
+                        self.script_evaluation_error(f"{_codename} requires a failed signature to be the empty vector.")
                     if i_key2 > 0:
                         i_key2 -= 1
 
@@ -764,7 +767,7 @@ class Spend:
                     self.script_evaluation_error("OP_SPLIT requires at least two items to be on the stack.")
                 x1 = self.stack.pop(-2)
                 #  Make sure the split point is appropriate.
-                n = self.bin2num(self.stack.pop())
+                n = self.read_script_number(self.stack.pop())
                 if n < 0 or n > len(x1):
                     self.script_evaluation_error(
                         "OP_SPLIT requires the first stack item to be a non-negative number "
@@ -776,21 +779,23 @@ class Spend:
             elif current_opcode == OpCode.OP_SUBSTR:
                 if len(self.stack) < 3:
                     self.script_evaluation_error("OP_SUBSTR requires at least three items on the stack.")
-                length = self.bin2num(self.stack.pop())
-                start = self.bin2num(self.stack.pop())
+                length = self.read_script_number(self.stack.pop())
+                start = self.read_script_number(self.stack.pop())
                 data = self.stack.pop()
                 if len(data) == 0:
                     self.script_evaluation_error("OP_SUBSTR: source string is empty.")
                 if length < 0:
                     self.script_evaluation_error("OP_SUBSTR: length is negative.")
-                if start < 0 or start + length > len(data):
+                # Bound against the remaining bytes, matching the TS/Go range
+                # check; start == len(data) is out of range even for length 0.
+                if start < 0 or start >= len(data) or length > len(data) - start:
                     self.script_evaluation_error("OP_SUBSTR: specified range exceeds source string.")
                 self.stack.append(data[start : start + length])
 
             elif current_opcode == OpCode.OP_LEFT:
                 if len(self.stack) < 2:
                     self.script_evaluation_error("OP_LEFT requires at least two items on the stack.")
-                length = self.bin2num(self.stack.pop())
+                length = self.read_script_number(self.stack.pop())
                 data = self.stack.pop()
                 if length < 0 or length > len(data):
                     self.script_evaluation_error("OP_LEFT: length out of range.")
@@ -799,7 +804,7 @@ class Spend:
             elif current_opcode == OpCode.OP_RIGHT:
                 if len(self.stack) < 2:
                     self.script_evaluation_error("OP_RIGHT requires at least two items on the stack.")
-                length = self.bin2num(self.stack.pop())
+                length = self.read_script_number(self.stack.pop())
                 data = self.stack.pop()
                 if length < 0 or length > len(data):
                     self.script_evaluation_error("OP_RIGHT: length out of range.")
@@ -808,12 +813,10 @@ class Spend:
             elif current_opcode == OpCode.OP_NUM2BIN:
                 if len(self.stack) < 2:
                     self.script_evaluation_error("OP_NUM2BIN requires at least two items to be on the stack.")
-                size = self.bin2num(self.stack.pop())
-                if size > MAX_SCRIPT_ELEMENT_SIZE:
-                    self.script_evaluation_error(
-                        f"It's not currently possible to push data larger than {MAX_SCRIPT_ELEMENT_SIZE} bytes."
-                    )
-                n = self.bin2num(self.stack.pop())
+                size = self.read_script_number(self.stack.pop())
+                if size < 0 or size > 0x7FFFFFFF:
+                    self.script_evaluation_error("OP_NUM2BIN: requested size out of range.")
+                n = self.read_script_number(self.stack.pop())
                 x = bytearray(self.minimally_encode(n))
 
                 # Try to see if we can fit that number in the number of byte requested.
@@ -824,20 +827,28 @@ class Spend:
                     )
                     self.script_evaluation_error(_m)
 
-                msb = b"\x00"
-                if len(x) > 0:
-                    msb = x[-1] & 0x80
-                    x[-1] &= 0x7F
-                octets = x + b"\x00" * (size - len(x))
-                octets[-1] |= msb
-
-                self.stack.append(octets)
+                # Already the requested width: the sign bit needs no relocating,
+                # and returning here keeps the zero-length case off the code
+                # below, which indexes the last byte.
+                if len(x) == size:
+                    self.stack.append(x)
+                else:
+                    msb = 0
+                    if len(x) > 0:
+                        msb = x[-1] & 0x80
+                        x[-1] &= 0x7F
+                    octets = x + b"\x00" * (size - len(x))
+                    octets[-1] |= msb
+                    self.stack.append(octets)
 
             elif current_opcode == OpCode.OP_BIN2NUM:
                 if len(self.stack) < 1:
                     self.script_evaluation_error("OP_BIN2NUM requires at least one item to be on the stack.")
                 x = self.stack.pop()
-                self.stack.append(self.minimally_encode(self.bin2num(x)))
+                encoded = self.minimally_encode(self.bin2num_unchecked(x))
+                if len(encoded) > MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE:
+                    self.script_evaluation_error("script number overflow")
+                self.stack.append(encoded)
 
             else:
                 self.script_evaluation_error("Invalid opcode!")
@@ -890,7 +901,11 @@ class Spend:
             self.script_evaluation_error("Unlocking scripts can only contain push operations, and no other opcodes.")
 
         while True:
-            self.step()
+            try:
+                self.step()
+            except ScriptNumberOverflow as e:
+                # bin2num is a classmethod and cannot raise a script error itself.
+                self.script_evaluation_error(str(e))
             if self.context == "LockingScript" and self.program_counter >= len(self.locking_script.chunks):
                 break
 
@@ -903,10 +918,30 @@ class Spend:
                     "The clean stack rule requires exactly one item to be on the stack after script execution."
                 )
 
-        if not self.cast_to_bool(self.stacktop(-1)):
+        # An empty stack reaches here whenever the clean-stack rule is relaxed;
+        # indexing it would surface a raw IndexError instead of a script error.
+        if len(self.stack) < 1 or not self.cast_to_bool(self.stacktop(-1)):
             self.script_evaluation_error("The top stack element must be truthy after script evaluation.")
 
         return True
+
+    def subscript_after_code_separator(self) -> Script:
+        """The script a signature commits to: everything past the last OP_CODESEPARATOR.
+
+        The separator itself is excluded, as in the C++ node — including it
+        would change the sighash preimage and break signatures across SDKs.
+
+        Post-Chronicle, when CHECKSIG executes inside the unlocking script the
+        committed scriptCode is the unlocking-script tail (after the last
+        codeseparator) concatenated with the full locking script.  This matches
+        the C++ node's ``checksigData`` path in ``EvalScript``.
+        """
+        chunks = self.unlocking_script.chunks if self.context == "UnlockingScript" else self.locking_script.chunks
+        start = 0 if self.last_code_separator is None else self.last_code_separator + 1
+        sub = Script.from_chunks(chunks[start:])
+        if self.context == "UnlockingScript":
+            sub = Script(sub.serialize() + self.locking_script.serialize())
+        return sub
 
     def stacktop(self, i: int) -> bytes:
         return self.stack[len(self.stack) + i]
@@ -983,8 +1018,31 @@ class Spend:
             octets[-1] |= 0x80
         return octets
 
+    @staticmethod
+    def is_minimally_encoded_number(octets: bytes) -> bool:
+        """Whether an element is the shortest encoding of its value."""
+        if len(octets) == 0:
+            return True
+        # A zero most-significant byte (sign bit aside) is redundant unless the
+        # byte below it needs the extra room for its own sign bit.
+        if (octets[-1] & 0x7F) == 0 and (len(octets) <= 1 or (octets[-2] & 0x80) == 0):
+            return False
+        return True
+
+    def read_script_number(self, octets: bytes, *, max_length: int | None = None) -> int:
+        """Read a stack element as a numeric operand under the era's rules.
+
+        ``max_length`` overrides the default era ceiling (e.g. 4 for
+        CHECKMULTISIG key/sig counts, which the node always parses with
+        ``CScriptNum::MAXIMUM_ELEMENT_SIZE``).
+        """
+        if not self.is_relaxed() and REQUIRE_MINIMAL_PUSH and not self.is_minimally_encoded_number(octets):
+            self.script_evaluation_error("non-minimally encoded script number")
+        return self.bin2num(octets, max_length=max_length)
+
     @classmethod
-    def bin2num(cls, octets: bytes) -> int:
+    def bin2num_unchecked(cls, octets: bytes) -> int:
+        """Convert script-number bytes to int without length checks."""
         if len(octets) == 0:
             return 0
         negative = octets[-1] & 0x80
@@ -993,22 +1051,64 @@ class Spend:
         n = int.from_bytes(octets, "little")
         return -n if negative else n
 
+    @classmethod
+    def bin2num(cls, octets: bytes, *, max_length: int | None = None) -> int:
+        if len(octets) == 0:
+            return 0
+        ceiling = max_length if max_length is not None else MAX_SCRIPT_NUMBER_LENGTH_AFTER_CHRONICLE
+        if len(octets) > ceiling:
+            raise ScriptNumberOverflow("script number overflow")
+        return cls.bin2num_unchecked(octets)
+
     def check_signature_encoding(self, octets: bytes) -> bool:
-        # Empty signature. Not strictly DER encoded, but allowed to provide a
-        # compact way to provide an invalid signature for use with CHECK(MULTI)SIG
         if octets == b"":
             return True
-        sig, sighash = octets[:-1], octets[-1]
 
-        if not SIGHASH.validate(sighash):
+        if not SIGHASH.validate(octets[-1]):
             self.script_evaluation_error("Invalid SIGHASH flag")
 
-        with suppress(Exception):
-            _, s = deserialize_ecdsa_der(sig)
-            if not self.is_relaxed() and REQUIRE_LOW_S_SIGNATURES and s > curve.n // 2:
-                self.script_evaluation_error("The signature must have a low S value.")
-            return True
-        self.script_evaluation_error("The signature format is invalid.")
+        if not self._is_valid_signature_encoding(octets):
+            self.script_evaluation_error("The signature format is invalid.")
+
+        sig = octets[:-1]
+        _, s = deserialize_ecdsa_der(sig)
+        if not self.is_relaxed() and REQUIRE_LOW_S_SIGNATURES and s > curve.n // 2:
+            self.script_evaluation_error("The signature must have a low S value.")
+        return True
+
+    @staticmethod
+    def _is_valid_signature_encoding(sig: bytes) -> bool:
+        """Strict DER check matching the C++ node's IsValidSignatureEncoding."""
+        n = len(sig)
+        if n < 9 or n > 73:
+            return False
+        if sig[0] != 0x30:
+            return False
+        if sig[1] != n - 3:
+            return False
+        len_r = sig[3]
+        if 5 + len_r >= n:
+            return False
+        len_s = sig[5 + len_r]
+        if len_r + len_s + 7 != n:
+            return False
+        if sig[2] != 0x02:
+            return False
+        if len_r == 0:
+            return False
+        if sig[4] & 0x80:
+            return False
+        if len_r > 1 and sig[4] == 0x00 and not (sig[5] & 0x80):
+            return False
+        if sig[len_r + 4] != 0x02:
+            return False
+        if len_s == 0:
+            return False
+        if sig[len_r + 6] & 0x80:
+            return False
+        if len_s > 1 and sig[len_r + 6] == 0x00 and not (sig[len_r + 7] & 0x80):
+            return False
+        return True
 
     @classmethod
     def check_public_key_encoding(cls, octets: bytes) -> bool:
@@ -1017,16 +1117,42 @@ class Spend:
             return True
         return False
 
+    @staticmethod
+    def normalize_low_s(der: bytes) -> bytes:
+        """Fold a high-S signature to its low-S equivalent.
+
+        Both encode the same valid signature, but `PublicKey.verify` rejects the
+        high-S form outright. Whether high-S is *allowed* is a policy question
+        `check_signature_encoding` already answers -- Chronicle relaxes it for
+        transaction version > 1 -- so verification itself must not re-impose it.
+        The native VM normalizes here too, via `secp256k1_ecdsa_signature_normalize`.
+        """
+        try:
+            r, s = deserialize_ecdsa_der(der)
+        except ValueError:
+            return der
+        if s <= curve.n // 2:
+            return der
+        return serialize_ecdsa_der((r, curve.n - s))
+
+    _SIGHASH_SINGLE_BUG_HASH = b"\x01" + b"\x00" * 31
+
     def verify_signature(self, sig: bytes, pub_key: bytes, sub_script: Script) -> bool:
         if sig == b"":
             return False
+
+        sighash_byte = sig[-1]
+        base_type = sighash_byte & 0x1F
+
+        if SIGHASH.use_otda(sighash_byte) and base_type == SIGHASH.SINGLE and self.input_index >= len(self.outputs):
+            return PublicKey(pub_key).verify(self.normalize_low_s(sig[:-1]), self._SIGHASH_SINGLE_BUG_HASH, hasher=None)
 
         current_input = TransactionInput(
             source_txid=self.source_txid,
             source_output_index=self.source_output_index,
             unlocking_script=self.unlocking_script,
             sequence=self.input_sequence,
-            sighash=SIGHASH(sig[-1]),
+            sighash=SIGHASH(sighash_byte),
         )
         current_input.locking_script = sub_script
         current_input.satoshis = self.source_satoshis
@@ -1035,7 +1161,7 @@ class Spend:
         inputs.insert(self.input_index, current_input)
 
         preimage = tx_preimage(self.input_index, inputs, self.outputs, self.transaction_version, self.lock_time)
-        return PublicKey(pub_key).verify(sig[:-1], preimage)
+        return PublicKey(pub_key).verify(self.normalize_low_s(sig[:-1]), preimage)
 
     @classmethod
     def encode_bool(cls, f: bool) -> bytes:

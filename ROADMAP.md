@@ -3,7 +3,16 @@
 Until version 1.0 of this library is released, the roadmap is being managed internally by the development team. Please reach out if you have
 any questions.
 
-## 直近の達成 (2026-07)
+## 直近の達成 (2026-08)
+
+- **Script VM 全面パリティ監査完了** — BSV Node C++ (`interpreter.cpp`) を基準に
+  全 87 オペコードを 1:1 照合。22 件の不一致を Python VM / native C 拡張の両方で修正。
+  149 テストを `test_vm_parity.py` に集約（うち 95 テストが全オペコードのデュアルパス等価テスト）。
+  TS-SDK / Go-SDK の問題 5 件も特定。詳細: [docs/vm-parity-audit-report.md](docs/vm-parity-audit-report.md)
+  - ブランチ: `fix/vm-full-parity`（11 fixブランチを統合 + 追加修正 6 件）
+  - 全テストスイート: 4,263 passed / 0 failed
+
+## 達成済み (2026-07)
 
 - **C拡張 `_bsv_native` (Phase 0-4 完了)** — libsecp256k1 統合、Tx パース/シリアライズ、
   Script チャンク、MerklePath、Preimage 構築、Script VM、BRC-42 鍵導出を C 化。
@@ -35,3 +44,12 @@ any questions.
 - **TS SDK に同一の varint off-by-one バグ** — `ts-sdk` の `SatoshisPerKilobyte.ts` 内
   `getVarIntSize` が py-sdk と同じ `> 253` / `> 2**16` / `> 2**32` を使用。
   Go SDK は正しい。upstream への issue/PR が必要
+- **TS-SDK: `OP_LSHIFTNUM` サイズ上限チェックなし** — BigInt の `<<` をそのまま使用。
+  C++ は `CScriptNum::operator<<=` で事前にサイズ検証。コンセンサス乖離の可能性あり (HIGH)
+- **Go-SDK: `OP_NOP11`+ を NOP 扱い** — `opcodeNop` にマッピングしているが、
+  C++ では `SCRIPT_ERR_BAD_OPCODE` で即エラー。コンセンサス乖離 (HIGH)
+- **Go-SDK: `OP_LSHIFTNUM` 上限の計算式が C++ と異なる** — `shift > MaxScriptNumberLength * 8`
+  でチェックするが、C++ はシフト量ではなく結果サイズを検証 (MEDIUM)
+- **py-sdk: スタックメモリ制限なし** — C++ はポリシーレベルで制限。DoS 保護の差異 (LOW)
+- **py-sdk: `MAX_SCRIPT_ELEMENT_SIZE` が 1GB フラットキャップ** — C++ は Post-Genesis で
+  スタック要素単体の上限なし (LOW)
