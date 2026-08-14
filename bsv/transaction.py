@@ -58,6 +58,7 @@ class Transaction:
         self._cached_hash: Optional[bytes] = None
         self._cached_txid: Optional[str] = None
         self._preimage_cache: Optional[list[bytes]] = None
+        self._preimage_scripts: Optional[list[Script]] = None
 
     def serialize(self) -> bytes:
         if (
@@ -149,7 +150,10 @@ class Transaction:
         :returns: digest of the input specified by index
         """
         assert 0 <= index < len(self.inputs), f"index out of range [0, {len(self.inputs)})"
-        if self._preimage_cache is not None:
+        if (
+            self._preimage_cache is not None
+            and self._preimage_scripts[index] is self.inputs[index].locking_script
+        ):
             return self._preimage_cache[index]
         return tx_preimage(index, self.inputs, self.outputs, self.version, self.locktime)
 
@@ -403,6 +407,7 @@ class Transaction:
         needs_signing = any(inp.unlocking_script is None or not bypass for inp in self.inputs)
         if needs_signing:
             self._preimage_cache = self._batch_preimages()
+            self._preimage_scripts = [inp.locking_script for inp in self.inputs]
         try:
             for i in range(len(self.inputs)):
                 tx_input = self.inputs[i]
@@ -410,6 +415,7 @@ class Transaction:
                     tx_input.unlocking_script = tx_input.unlocking_script_template.sign(self, i)
         finally:
             self._preimage_cache = None
+            self._preimage_scripts = None
         self._invalidate_hash_cache()
         return self
 
