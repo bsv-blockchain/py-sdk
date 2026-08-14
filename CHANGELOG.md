@@ -42,8 +42,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **`OP_RETURN` inside a conditional no longer skips the grammar check** — it cleared the conditional stack and jumped to the end of the script, so an `OP_IF` left open after it was never reported and the spend validated. The node ends evaluation only when `OP_RETURN` is reached at the top level, where "the remaining of the script does not affect the validity (even in presence of unbalanced IFs, invalid opcodes etc)"; inside a conditional it sets `nonTopLevelReturnAfterGenesis`, which stops execution while the scan continues so the conditional grammar is still checked. Both VM paths now do the same.
-- **An empty stack at the end of evaluation is reported as a script error** — the final truthiness check indexed the stack directly, so a script that ended empty raised a bare `IndexError` out of `Spend.validate()` on the pure-Python VM where the native VM returned a proper evaluation error. A conditional `OP_RETURN` reaches exactly that state.
+- **`OP_CHECKMULTISIG` now enforces NULLFAIL** — a failed signature check requires the signature to be the empty vector, which py-sdk applied to `OP_CHECKSIG` but not to `OP_CHECKMULTISIG`. The node applies it to both, in the multisig cleanup loop (`if (!fSuccess && VerifyNullFail(flags) && !ikey2 && !vchSig.empty())`), so a transaction the node rejects as malleable validated here. Chronicle relaxes it for transaction version > 1 exactly as it does for `OP_CHECKSIG`, and both VM paths now agree.
 
 ---
 

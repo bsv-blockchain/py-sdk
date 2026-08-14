@@ -4078,6 +4078,16 @@ static int vm_step(VMState *st) {
 
         /* Clean up stack of actual arguments */
         while (ii > 1) {
+            /* NULLFAIL: once the keys are exhausted the remaining items are the
+               signatures, and a failed check requires every one of them to be
+               empty. Chronicle relaxes this for tx version > 1, as for CHECKSIG. */
+            if (!f && !(st->tx_version > 1) && i_key2 == 0) {
+                StackElem *sig_top = vms_top(&st->stack, -1);
+                if (sig_top && sig_top->len > 0) {
+                    vm_errorf(st, "%s requires a failed signature to be the empty vector.", name);
+                    return -1;
+                }
+            }
             if (i_key2 > 0) i_key2--;
             vms_pop(&st->stack, NULL);
             ii--;
