@@ -42,7 +42,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **`OP_CODESEPARATOR` no longer leaves itself in the signed subscript** — the subscript a signature commits to started *at* the last separator instead of past it, so the `OP_CODESEPARATOR` byte (`0xab`) entered the sighash preimage. For `<pubkey> OP_CODESEPARATOR OP_CHECKSIG` the scriptCode was `abac` where the TS and Go SDKs both use `ac`, so a signature produced by either of them failed to verify here and one produced here failed there. Affects `OP_CHECKSIG`, `OP_CHECKSIGVERIFY`, `OP_CHECKMULTISIG` and `OP_CHECKMULTISIGVERIFY` on both VM paths. The separator is excluded wherever it sits, first position included, as in the node (`interpreter.cpp` advances past the opcode before recording the position — "Hash starts after the code separator").
+- **The pure-Python VM rejected high-S signatures the native VM accepts** — Chronicle relaxes the low-S requirement for transaction version > 1, and a high-S signature is mathematically valid, so the native VM folds it to its low-S equivalent (`secp256k1_ecdsa_signature_normalize`) before verifying. The pure-Python VM verified through `PublicKey.verify`, which rejects the high-S form outright, so an environment without the C extension refused transactions the network accepts. Script verification now normalizes on both paths; whether high-S is *allowed* stays with `check_signature_encoding`, which still rejects it for version ≤ 1. `PublicKey.verify` is unchanged and continues to require low-S.
+- **Low-S rejections no longer report as malformed signatures** — `check_signature_encoding` raised its low-S error from inside a `with suppress(Exception)` block, which swallowed it and fell through to "The signature format is invalid." The check now sits outside the suppression, so a high-S signature on a version-1 transaction says so.
 
 ---
 
