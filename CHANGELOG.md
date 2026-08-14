@@ -42,7 +42,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **`OP_CHECKMULTISIG` now enforces NULLFAIL** — a failed signature check requires the signature to be the empty vector, which py-sdk applied to `OP_CHECKSIG` but not to `OP_CHECKMULTISIG`. The node applies it to both, in the multisig cleanup loop (`if (!fSuccess && VerifyNullFail(flags) && !ikey2 && !vchSig.empty())`), so a transaction the node rejects as malleable validated here. Chronicle relaxes it for transaction version > 1 exactly as it does for `OP_CHECKSIG`, and both VM paths now agree.
+- **Numeric operands must be minimally encoded where minimal pushes are** — the node derives one `requireMinimal` from `VerifyMinimalData(flags) && EnforceNonMalleability(flags, version)` and uses it both for `CheckMinimalPush` and for every `CScriptNum` construction. py-sdk applied it to pushes only, so `0x0100` — a minimal *push* but a non-minimal *number* for 1 — was accepted as an operand where the node rejects it, as was negative zero (`0x80`). Now enforced on both VM paths, and relaxed for transaction version > 1 alongside minimal pushes. `OP_BIN2NUM` is deliberately exempt: minimising a non-minimal encoding is what it is for, and the node reads its input directly rather than through `CScriptNum`.
 
 ---
 

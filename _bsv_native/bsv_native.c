@@ -2450,6 +2450,18 @@ static void ifs_free(IfStack *s) {
 
 /* --- Script number helpers ---------------------------------------------- */
 
+/* Defined below, alongside the other VM error helpers. */
+static void vm_error(VMState *st, const char *msg);
+
+/* Whether an element is the shortest encoding of its value: a zero
+   most-significant byte (sign bit aside) is redundant unless the byte below it
+   needs the extra room for its own sign bit. */
+static int c_is_minimal_num(const unsigned char *data, Py_ssize_t len) {
+    if (len == 0) return 1;
+    if ((data[len - 1] & 0x7F) == 0 && (len <= 1 || (data[len - 2] & 0x80) == 0)) return 0;
+    return 1;
+}
+
 static PyObject *c_bin2num(const unsigned char *data, Py_ssize_t len) {
     if (len == 0) return PyLong_FromLong(0);
     /* The node rejects an over-long element before it becomes a number
@@ -2530,17 +2542,30 @@ static int vms_push_num(VmStack *s, PyObject *num) {
     return rc;
 }
 
-static PyObject *vms_pop_num(VmStack *s) {
+/* Reads a numeric operand under the era's rules. The node gates minimal
+   encoding on the same flag as minimal pushes and relaxes both together after
+   Chronicle, so this mirrors the tx_version test used for pushes. */
+static PyObject *vms_pop_num(VMState *st) {
     StackElem e = {0};
-    if (vms_pop(s, &e) < 0) return NULL;
+    if (vms_pop(&st->stack, &e) < 0) return NULL;
+    if (!(st->tx_version > 1) && !c_is_minimal_num(e.data, e.len)) {
+        se_free(&e);
+        vm_error(st, "non-minimally encoded script number");
+        return NULL;
+    }
     PyObject *n = c_bin2num(e.data, e.len);
     se_free(&e);
     return n;
 }
 
-static PyObject *vms_remove_num(VmStack *s, Py_ssize_t idx) {
+static PyObject *vms_remove_num(VMState *st, Py_ssize_t idx) {
     StackElem e = {0};
-    if (vms_remove(s, idx, &e) < 0) return NULL;
+    if (vms_remove(&st->stack, idx, &e) < 0) return NULL;
+    if (!(st->tx_version > 1) && !c_is_minimal_num(e.data, e.len)) {
+        se_free(&e);
+        vm_error(st, "non-minimally encoded script number");
+        return NULL;
+    }
     PyObject *n = c_bin2num(e.data, e.len);
     se_free(&e);
     return n;
@@ -3613,7 +3638,7 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least one items to be on the stack.", name);
             return -1;
         }
-        PyObject *x = vms_pop_num(&st->stack);
+        PyObject *x = vms_pop_num(st);
         if (!x) return -1;
         PyObject *r = NULL;
         switch (op) {
@@ -3642,7 +3667,7 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least one item to be on the stack.", name);
             return -1;
         }
-        PyObject *x = vms_pop_num(&st->stack);
+        PyObject *x = vms_pop_num(st);
         if (!x) return -1;
         PyObject *two = PyLong_FromLong(2);
         PyObject *r = NULL;
@@ -3675,8 +3700,8 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least two items on the stack.", name);
             return -1;
         }
-        PyObject *shift = vms_pop_num(&st->stack);
-        PyObject *value = vms_pop_num(&st->stack);
+        PyObject *shift = vms_pop_num(st);
+        PyObject *value = vms_pop_num(st);
         if (!shift || !value) {
             Py_XDECREF(shift); Py_XDECREF(value); return -1;
         }
@@ -3741,8 +3766,8 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least two items to be on the stack.", name);
             return -1;
         }
-        PyObject *x1 = vms_remove_num(&st->stack, st->stack.count - 2);
-        PyObject *x2 = vms_pop_num(&st->stack);
+        PyObject *x1 = vms_remove_num(st, st->stack.count - 2);
+        PyObject *x2 = vms_pop_num(st);
         if (!x1 || !x2) {
             Py_XDECREF(x1); Py_XDECREF(x2); return -1;
         }
@@ -3830,9 +3855,9 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_WITHIN requires at least three items to be on the stack.");
             return -1;
         }
-        PyObject *x1 = vms_remove_num(&st->stack, st->stack.count - 3);
-        PyObject *x2 = vms_remove_num(&st->stack, st->stack.count - 2);
-        PyObject *x3 = vms_pop_num(&st->stack);
+        PyObject *x1 = vms_remove_num(st, st->stack.count - 3);
+        PyObject *x2 = vms_remove_num(st, st->stack.count - 2);
+        PyObject *x3 = vms_pop_num(st);
         if (!x1 || !x2 || !x3) {
             Py_XDECREF(x1); Py_XDECREF(x2); Py_XDECREF(x3); return -1;
         }
@@ -4160,7 +4185,7 @@ static int vm_step(VMState *st) {
         }
         StackElem x1 = {0};
         vms_remove(&st->stack, st->stack.count - 2, &x1);
-        PyObject *nobj = vms_pop_num(&st->stack);
+        PyObject *nobj = vms_pop_num(st);
         if (!nobj) { se_free(&x1); return -1; }
         long long n = PyLong_AsLongLong(nobj);
         Py_DECREF(nobj);
@@ -4183,8 +4208,8 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_SUBSTR requires at least three items on the stack.");
             return -1;
         }
-        PyObject *lobj = vms_pop_num(&st->stack);
-        PyObject *sobj = vms_pop_num(&st->stack);
+        PyObject *lobj = vms_pop_num(st);
+        PyObject *sobj = vms_pop_num(st);
         StackElem dat = {0}; vms_pop(&st->stack, &dat);
         if (!lobj || !sobj) {
             Py_XDECREF(lobj); Py_XDECREF(sobj); se_free(&dat); return -1;
@@ -4223,7 +4248,7 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_LEFT requires at least two items on the stack.");
             return -1;
         }
-        PyObject *lobj = vms_pop_num(&st->stack);
+        PyObject *lobj = vms_pop_num(st);
         StackElem dat = {0}; vms_pop(&st->stack, &dat);
         if (!lobj) { se_free(&dat); return -1; }
         long long length = PyLong_AsLongLong(lobj);
@@ -4243,7 +4268,7 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_RIGHT requires at least two items on the stack.");
             return -1;
         }
-        PyObject *lobj = vms_pop_num(&st->stack);
+        PyObject *lobj = vms_pop_num(st);
         StackElem dat = {0}; vms_pop(&st->stack, &dat);
         if (!lobj) { se_free(&dat); return -1; }
         long long length = PyLong_AsLongLong(lobj);
@@ -4265,7 +4290,7 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_NUM2BIN requires at least two items to be on the stack.");
             return -1;
         }
-        PyObject *sobj = vms_pop_num(&st->stack);
+        PyObject *sobj = vms_pop_num(st);
         if (!sobj) return -1;
         long long size = PyLong_AsLongLong(sobj);
         Py_DECREF(sobj);
@@ -4275,7 +4300,7 @@ static int vm_step(VMState *st) {
                       VM_MAX_ELEM_SIZE);
             return -1;
         }
-        PyObject *n = vms_pop_num(&st->stack);
+        PyObject *n = vms_pop_num(st);
         if (!n) return -1;
         unsigned char *me; Py_ssize_t me_len;
         if (c_min_encode(n, &me, &me_len) < 0) { Py_DECREF(n); return -1; }
@@ -4308,7 +4333,12 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_BIN2NUM requires at least one item to be on the stack.");
             return -1;
         }
-        PyObject *x = vms_pop_num(&st->stack);
+        /* Reads the element directly: minimising a non-minimal encoding is what
+           this opcode is for, so requiring one on input would defeat it. */
+        StackElem raw = {0};
+        if (vms_pop(&st->stack, &raw) < 0) return -1;
+        PyObject *x = c_bin2num(raw.data, raw.len);
+        se_free(&raw);
         if (!x) return -1;
         int rc = vms_push_num(&st->stack, x);
         Py_DECREF(x);
