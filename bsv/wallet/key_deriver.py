@@ -14,12 +14,7 @@ from bsv.keys import PrivateKey, PublicKey
 # secp256k1 curve order (same as coincurve.curve.n)
 CURVE_ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 
-try:
-    import _bsv_native
-
-    _USE_NATIVE = True
-except ImportError:
-    _USE_NATIVE = False
+from ..native import NATIVE_AVAILABLE as _USE_NATIVE, NATIVE_MODULE as _bsv_native
 
 
 @dataclass

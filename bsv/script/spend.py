@@ -10,12 +10,7 @@ from ..transaction_preimage import tx_preimage
 from ..utils import deserialize_ecdsa_der, serialize_ecdsa_der, unsigned_to_bytes
 from .script import Script, ScriptChunk
 
-try:
-    import _bsv_native
-
-    _USE_NATIVE_VM = True
-except ImportError:
-    _USE_NATIVE_VM = False
+from ..native import NATIVE_AVAILABLE as _USE_NATIVE_VM, NATIVE_MODULE as _bsv_native
 
 
 class ScriptNumberOverflow(ValueError):

@@ -23,12 +23,7 @@ from .transaction_output import TransactionOutput
 from .transaction_preimage import _outputs_to_bytes_for_input, tx_preimage
 from .utils import Reader, Writer, unsigned_to_varint
 
-try:
-    import _bsv_native
-
-    _USE_NATIVE_TX = True
-except ImportError:
-    _USE_NATIVE_TX = False
+from .native import NATIVE_AVAILABLE as _USE_NATIVE_TX, NATIVE_MODULE as _bsv_native
 
 
 # Lazy import to avoid circular dependency

@@ -52,6 +52,9 @@ from .transaction_input import TransactionInput
 from .transaction_output import TransactionOutput
 from .transaction_preimage import *
 
+# Native acceleration diagnostics
+from .native import NATIVE_AVAILABLE, native_status
+
 # Step 6.8: utils
 from .utils import *
 
