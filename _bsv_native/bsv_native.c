@@ -3078,6 +3078,8 @@ static int c_checksig_verify(VMState *st,
                              const unsigned char *pub_raw, Py_ssize_t pub_len,
                              const unsigned char *subscript, size_t sub_len) {
     /* Always validate pubkey encoding, even if sig is empty */
+    if (pub_len == 0 || pub_raw == NULL)
+        return -4;
     secp256k1_pubkey parsed_pk;
     if (!secp256k1_ec_pubkey_parse(g_ctx, &parsed_pk, pub_raw, pub_len))
         return -4;
