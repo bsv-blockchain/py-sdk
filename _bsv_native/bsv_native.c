@@ -2346,8 +2346,8 @@ typedef struct {
     VmStack     stack;
     VmStack     alt_stack;
     IfStack     if_stack;
-    /* Whether each open conditional has already seen its OP_ELSE. */
     IfStack     else_stack;
+    int         non_top_level_return;
     PyObject   *unlock_chunks;
     PyObject   *lock_chunks;
     Py_ssize_t  program_counter;
@@ -3042,17 +3042,16 @@ static int vm_step(VMState *st) {
     Py_ssize_t ulen = PyList_GET_SIZE(st->unlock_chunks);
 
     if (st->context == VM_CTX_UNLOCK && st->program_counter >= ulen) {
-        /* Only the data stack survives the boundary. Everything else is
-           per-script in the TS/Go SDKs, so leaving it in place let an unlocking
-           script open a conditional, stash to the alt stack, or move the code
-           separator and have the locking script inherit it. */
         if (st->if_stack.count != 0) {
             vm_error(st, "Every OP_IF, OP_NOTIF, or OP_ELSE must be terminated with "
                          "OP_ENDIF prior to the end of the unlocking script.");
             return -1;
         }
         vms_free(&st->alt_stack);
+        ifs_free(&st->if_stack);
+        ifs_free(&st->else_stack);
         st->last_code_separator = 0;
+        st->non_top_level_return = 0;
         st->context = VM_CTX_LOCK;
         st->program_counter = 0;
     }
@@ -3066,7 +3065,10 @@ static int vm_step(VMState *st) {
     int op; const unsigned char *data; Py_ssize_t dlen;
     if (parse_chunk(chunk, &op, &data, &dlen) < 0) return -1;
 
-    int is_exec = ifs_all_true(&st->if_stack);
+    /* After an OP_RETURN inside a conditional nothing runs but a further
+       OP_RETURN; the conditional opcodes are still tracked below. */
+    int is_exec = ifs_all_true(&st->if_stack) &&
+                  (!st->non_top_level_return || op == 0x6A);
 
     if (op < 0x00 || op > 0xFF) {
         vm_errorf(st, "An opcode is missing in this chunk of the %s!",
@@ -3204,10 +3206,17 @@ static int vm_step(VMState *st) {
         return -1;
     }
     case 0x6A: { /* OP_RETURN */
+        if (st->if_stack.count != 0) {
+            /* Inside a conditional the script keeps being scanned so the
+               grammar is still checked; only execution stops. */
+            st->non_top_level_return = 1;
+            return 0;
+        }
+        /* At the top level evaluation ends here, and nothing after it affects
+           validity -- not even unbalanced OP_IFs. */
         PyObject *ch = (st->context == VM_CTX_UNLOCK)
                        ? st->unlock_chunks : st->lock_chunks;
         st->program_counter = PyList_GET_SIZE(ch);
-        st->if_stack.count = 0;
         return 1;
     }
 
@@ -4508,7 +4517,8 @@ static PyObject *pyfn_spend_validate(PyObject *self, PyObject *args) {
     st.lock_chunks = lock_chunks;
     st.program_counter = 0;
     st.context = VM_CTX_UNLOCK;
-    st.last_code_separator = -1;  /* none seen yet */
+    st.last_code_separator = -1;
+    st.non_top_level_return = 0;
     st.tx_version = tx_version;
     st.source_txid = source_txid;
     st.source_output_index = source_output_index;

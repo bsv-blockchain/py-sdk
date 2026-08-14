@@ -40,9 +40,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Security
+### Fixed
 
-- **Script numbers are bounded by the Chronicle ceiling** — `bin2num` read an operand of any length, so nothing stopped a script from building a huge element and feeding it to the arithmetic: `OP_DUP OP_MUL` repeated in a ~100-byte script doubles the operand each time, reaching megabytes in a dozen rounds and gigabytes shortly after. The node rejects an over-long element in `CScriptNum`'s span constructor (`if(span.size() > max_length) throw scriptnum_overflow_error`) before the bytes reach any arithmetic, and py-sdk now does the same at 32 MiB on both VM paths. `Spend.bin2num` raises `ScriptNumberOverflow`, which the VM reports as a script evaluation error rather than letting it escape `validate()`.
+- **`OP_RETURN` inside a conditional no longer skips the grammar check** — it cleared the conditional stack and jumped to the end of the script, so an `OP_IF` left open after it was never reported and the spend validated. The node ends evaluation only when `OP_RETURN` is reached at the top level, where "the remaining of the script does not affect the validity (even in presence of unbalanced IFs, invalid opcodes etc)"; inside a conditional it sets `nonTopLevelReturnAfterGenesis`, which stops execution while the scan continues so the conditional grammar is still checked. Both VM paths now do the same.
+- **An empty stack at the end of evaluation is reported as a script error** — the final truthiness check indexed the stack directly, so a script that ended empty raised a bare `IndexError` out of `Spend.validate()` on the pure-Python VM where the native VM returned a proper evaluation error. A conditional `OP_RETURN` reaches exactly that state.
 
 ---
 

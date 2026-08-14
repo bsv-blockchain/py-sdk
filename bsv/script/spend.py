@@ -85,15 +85,14 @@ class Spend:
         self.if_stack = []
         # Whether each open conditional has already seen its OP_ELSE.
         self.else_stack = []
+        # Set by an OP_RETURN reached inside a conditional: execution stops but
+        # the scan continues so unbalanced conditionals are still caught.
+        self.non_top_level_return = False
 
     def step(self) -> None:
         # If the context is UnlockingScript, and we have reached the end,
         # set the context to LockingScript and zero the program counter
         if self.context == "UnlockingScript" and self.program_counter >= len(self.unlocking_script.chunks):
-            # Only the data stack survives the boundary. Everything else is
-            # per-script in the TS/Go SDKs, so leaving it in place let an
-            # unlocking script open a conditional, stash to the alt stack, or
-            # move the code separator and have the locking script inherit it.
             if self.if_stack:
                 self.script_evaluation_error(
                     "Every OP_IF, OP_NOTIF, or OP_ELSE must be terminated with "
@@ -101,7 +100,9 @@ class Spend:
                 )
             self.alt_stack = []
             self.if_stack = []
+            self.else_stack = []
             self.last_code_separator = None
+            self.non_top_level_return = False
             self.context = "LockingScript"
             self.program_counter = 0
 
@@ -110,10 +111,13 @@ class Spend:
         else:
             operation = self.locking_script.chunks[self.program_counter]
 
-        is_script_executing = b"" not in self.if_stack
-
         # Read instruction
         current_opcode = operation.op
+        # After an OP_RETURN inside a conditional nothing runs but a further
+        # OP_RETURN; the conditional opcodes are still tracked below.
+        is_script_executing = (b"" not in self.if_stack) and (
+            not self.non_top_level_return or current_opcode == OpCode.OP_RETURN
+        )
         if current_opcode not in OPCODE_VALUE_NAME_DICT and not (b"\x01" <= current_opcode < OpCode.OP_PUSHDATA1):
             self.script_evaluation_error(f"An opcode is missing in this chunk of the {self.context}!")
         if operation.data is not None and len(operation.data) > MAX_SCRIPT_ELEMENT_SIZE:
@@ -302,12 +306,18 @@ class Spend:
                     self.script_evaluation_error("OP_VERIFY requires the top stack value to be truthy.")
 
             elif current_opcode == OpCode.OP_RETURN:
-                if self.context == "UnlockingScript":
-                    self.program_counter = len(self.unlocking_script.chunks)
+                if self.if_stack:
+                    # Inside a conditional the script keeps being scanned so the
+                    # grammar is still checked; only execution stops.
+                    self.non_top_level_return = True
                 else:
-                    self.program_counter = len(self.locking_script.chunks)
-                self.if_stack = []
-                return  # OP_RETURN stops execution, don't increment counter
+                    # At the top level evaluation ends here, and nothing after it
+                    # affects validity -- not even unbalanced OP_IFs.
+                    if self.context == "UnlockingScript":
+                        self.program_counter = len(self.unlocking_script.chunks)
+                    else:
+                        self.program_counter = len(self.locking_script.chunks)
+                    return  # don't increment the counter
 
             elif current_opcode == OpCode.OP_TOALTSTACK:
                 if len(self.stack) < 1:
