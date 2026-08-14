@@ -63,6 +63,7 @@ skip-string-normalization = false
 [tool.ruff]
 line-length = 120
 target-version = "py310"
+exclude = ["_bsv_native/secp256k1"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "ANN", "B", "A", "C4", "C901", "ISC", "PIE", "T20", "SIM", "ARG", "PTH", "ERA", "PL", "RUF"]
