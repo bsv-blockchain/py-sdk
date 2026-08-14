@@ -20,7 +20,7 @@ from .script.script import Script
 from .script.type import P2PKH
 from .transaction_input import TransactionInput, txid_to_bytes_le
 from .transaction_output import TransactionOutput
-from .transaction_preimage import _outputs_to_bytes_for_input, tx_preimage
+from .transaction_preimage import _outputs_to_bytes_for_input, tx_preimage, tx_preimages
 from .utils import Reader, Writer, unsigned_to_varint
 
 from .native import NATIVE_AVAILABLE as _USE_NATIVE_TX, NATIVE_MODULE as _bsv_native
@@ -57,6 +57,7 @@ class Transaction:
 
         self._cached_hash: Optional[bytes] = None
         self._cached_txid: Optional[str] = None
+        self._preimage_cache: Optional[list[bytes]] = None
 
     def serialize(self) -> bytes:
         if (
@@ -148,6 +149,8 @@ class Transaction:
         :returns: digest of the input specified by index
         """
         assert 0 <= index < len(self.inputs), f"index out of range [0, {len(self.inputs)})"
+        if self._preimage_cache is not None:
+            return self._preimage_cache[index]
         return tx_preimage(index, self.inputs, self.outputs, self.version, self.locktime)
 
     def calc_input_signature_hash(
@@ -381,7 +384,7 @@ class Transaction:
         """Serialize the modified transaction and append hash type."""
         return tx_copy.serialize() + hash_type.to_bytes(4, "little")
 
-    def sign(self, bypass: bool = True) -> "Transaction":  # pragma: no cover
+    def sign(self, bypass: bool = True) -> "Transaction":
         """
         :bypass: if True then ONLY sign inputs which unlocking script is None, otherwise sign all the inputs
         sign all inputs according to their script type
@@ -397,12 +400,40 @@ class Transaction:
                         "One or more transaction outputs is missing an amount. Ensure all output amounts are provided before signing."
                     )
 
-        for i in range(len(self.inputs)):
-            tx_input = self.inputs[i]
-            if tx_input.unlocking_script is None or not bypass:
-                tx_input.unlocking_script = tx_input.unlocking_script_template.sign(self, i)
+        needs_signing = any(inp.unlocking_script is None or not bypass for inp in self.inputs)
+        if needs_signing:
+            self._preimage_cache = self._batch_preimages()
+        try:
+            for i in range(len(self.inputs)):
+                tx_input = self.inputs[i]
+                if tx_input.unlocking_script is None or not bypass:
+                    tx_input.unlocking_script = tx_input.unlocking_script_template.sign(self, i)
+        finally:
+            self._preimage_cache = None
         self._invalidate_hash_cache()
         return self
+
+    def _batch_preimages(self) -> list[bytes]:
+        """Compute all input preimages in a single O(N) pass."""
+        has_otda = any(SIGHASH.use_otda(inp.sighash) for inp in self.inputs)
+
+        if not has_otda:
+            return tx_preimages(self.inputs, self.outputs, self.version, self.locktime)
+
+        if all(SIGHASH.use_otda(inp.sighash) for inp in self.inputs):
+            return [
+                tx_preimage(i, self.inputs, self.outputs, self.version, self.locktime) for i in range(len(self.inputs))
+            ]
+
+        bip143 = tx_preimages(self.inputs, self.outputs, self.version, self.locktime)
+        return [
+            (
+                tx_preimage(i, self.inputs, self.outputs, self.version, self.locktime)
+                if SIGHASH.use_otda(self.inputs[i].sighash)
+                else bip143[i]
+            )
+            for i in range(len(self.inputs))
+        ]
 
     def total_value_in(self) -> int:
         return sum([tx_input.satoshis for tx_input in self.inputs])
