@@ -177,3 +177,18 @@ BSV Node C++ の `interpreter.cpp` を基準とした全オペコードの 1:1 �
 特に重要な点として、`validate()` が環境に応じて片方のパスのみを実行する設計上、従来のテストでは Python / native C の等価性が保証されていなかった。`TestDualPathOpcodes`（95 テスト）により、全オペコードを明示的に両パスで実行して結果一致を検証している。
 
 結果として、py-sdk のスクリプト評価エンジンは C++ ノードのコンセンサス動作と機能的に一致している。残る 2 件の差異はリソース制限（DoS 保護）に関するものであり、現実的なトランザクションサイズにおいてスクリプト評価の結果が食い違うことはない。全テストスイート 4,263 テスト合格、0 失敗。
+
+---
+
+## 追加監査: CHECKSIG VM パス sighash カバレッジ (2026-08-14)
+
+上記監査後のレビューで、CHECKSIG / CHECKMULTISIG の VM パステストが 12 種の有効な sighash タイプのうち `ALL_FORKID` (0x41) のみを通していたことが判明。preimage 計算自体は全 12 種テスト済みだったが、署名→CHECKSIG→検証の完全なパスは 1 種のみだった。
+
+| 追加テスト | 数 |
+|-----------|-----|
+| CHECKSIG (P2PK + P2PKH + CHECKSIGVERIFY) × 12 sighash | 36 |
+| CHECKMULTISIG + CHECKMULTISIGVERIFY × 12 sighash | 24 |
+| SIGHASH_SINGLE BIP143 edge case (0x43, 0xC3) | 2 |
+| **計** | **62** |
+
+同時に C 拡張の公開関数 29 個のカバレッジ監査を実施。`seckey_verify`（正確性テスト 4 件）、`ecdsa_recover`（拡張テスト 5 件）、`context_randomize`（正確性テスト 3 件）を追加し、全 29 関数が STRONG カバレッジに到達した。

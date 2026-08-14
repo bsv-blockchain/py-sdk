@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
@@ -24,7 +25,11 @@ class BuildExtFallback(build_ext):
         except Exception:
             if REQUIRE_NATIVE:
                 raise
-            print("WARNING: C extension build failed — installing pure Python fallback")
+            warnings.warn(
+                "C extension build failed — installing pure Python fallback",
+                RuntimeWarning,
+                stacklevel=1,
+            )
 
     def build_extension(self, ext):
         try:
@@ -32,7 +37,11 @@ class BuildExtFallback(build_ext):
         except Exception:
             if REQUIRE_NATIVE:
                 raise
-            print(f"WARNING: Failed to build {ext.name} — skipping")
+            warnings.warn(
+                f"Failed to build {ext.name} — skipping",
+                RuntimeWarning,
+                stacklevel=1,
+            )
 
 
 ext_modules = []

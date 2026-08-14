@@ -2726,18 +2726,124 @@ static void c_hash256_hash(const unsigned char *in, Py_ssize_t len,
     c_sha256_hash(tmp, 32, out);
 }
 
-static PyObject *c_ripemd160_hash(const unsigned char *in, Py_ssize_t len) {
-    PyObject *mod = PyImport_ImportModule("Cryptodome.Hash.RIPEMD160");
-    if (!mod) return NULL;
-    PyObject *data = PyBytes_FromStringAndSize(
-        (const char *)(in ? in : (const unsigned char *)""), len);
-    if (!data) { Py_DECREF(mod); return NULL; }
-    PyObject *hasher = PyObject_CallMethod(mod, "new", "O", data);
-    Py_DECREF(data); Py_DECREF(mod);
-    if (!hasher) return NULL;
-    PyObject *digest = PyObject_CallMethod(hasher, "digest", NULL);
-    Py_DECREF(hasher);
-    return digest;
+/* --- RIPEMD-160 (pure C, no external dependency) -------------------------- */
+
+static inline uint32_t rmd_rol(uint32_t x, unsigned int n) {
+    return (x << n) | (x >> (32 - n));
+}
+
+static void rmd160_compress(uint32_t h[5], const unsigned char blk[64]) {
+    static const unsigned char rl[80] = {
+         0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,
+         7, 4,13, 1,10, 6,15, 3,12, 0, 9, 5, 2,14,11, 8,
+         3,10,14, 4, 9,15, 8, 1, 2, 7, 0, 6,13,11, 5,12,
+         1, 9,11,10, 0, 8,12, 4,13, 3, 7,15,14, 5, 6, 2,
+         4, 0, 5, 9, 7,12, 2,10,14, 1, 3, 8,11, 6,15,13
+    };
+    static const unsigned char rr[80] = {
+         5,14, 7, 0, 9, 2,11, 4,13, 6,15, 8, 1,10, 3,12,
+         6,11, 3, 7, 0,13, 5,10,14,15, 8,12, 4, 9, 1, 2,
+        15, 5, 1, 3, 7,14, 6, 9,11, 8,12, 2,10, 0, 4,13,
+         8, 6, 4, 1, 3,11,15, 0, 5,12, 2,13, 9, 7,10,14,
+        12,15,10, 4, 1, 5, 8, 7, 6, 2,13,14, 0, 3, 9,11
+    };
+    static const unsigned char sl[80] = {
+        11,14,15,12, 5, 8, 7, 9,11,13,14,15, 6, 7, 9, 8,
+         7, 6, 8,13,11, 9, 7,15, 7,12,15, 9,11, 7,13,12,
+        11,13, 6, 7,14, 9,13,15,14, 8,13, 6, 5,12, 7, 5,
+        11,12,14,15,14,15, 9, 8, 9,14, 5, 6, 8, 6, 5,12,
+         9,15, 5,11, 6, 8,13,12, 5,12,13,14,11, 8, 5, 6
+    };
+    static const unsigned char sr[80] = {
+         8, 9, 9,11,13,15,15, 5, 7, 7, 8,11,14,14,12, 6,
+         9,13,15, 7,12, 8, 9,11, 7, 7,12, 7, 6,15,13,11,
+         9, 7,15,11, 8, 6, 6,14,12,13, 5,14,13,13, 7, 5,
+        15, 5, 8,11,14,14, 6,14, 6, 9,12, 9,12, 5,15, 8,
+         8, 5,12, 9,12, 5,14, 6, 8,13, 6, 5,15,13,11,11
+    };
+
+    uint32_t w[16];
+    for (int i = 0; i < 16; i++)
+        w[i] = (uint32_t)blk[4*i] | ((uint32_t)blk[4*i+1] << 8) |
+               ((uint32_t)blk[4*i+2] << 16) | ((uint32_t)blk[4*i+3] << 24);
+
+    uint32_t al = h[0], bl = h[1], cl = h[2], dl = h[3], el = h[4];
+    uint32_t ar = h[0], br = h[1], cr = h[2], dr = h[3], er = h[4];
+    uint32_t t;
+
+    for (int j = 0; j < 80; j++) {
+        uint32_t fl, fr, kl_v, kr_v;
+        switch (j >> 4) {
+        case 0: fl = bl ^ cl ^ dl;
+                fr = br ^ (cr | ~dr);
+                kl_v = 0x00000000u; kr_v = 0x50A28BE6u; break;
+        case 1: fl = (bl & cl) | (~bl & dl);
+                fr = (br & dr) | (cr & ~dr);
+                kl_v = 0x5A827999u; kr_v = 0x5C4DD124u; break;
+        case 2: fl = (bl | ~cl) ^ dl;
+                fr = (br | ~cr) ^ dr;
+                kl_v = 0x6ED9EBA1u; kr_v = 0x6D703EF3u; break;
+        case 3: fl = (bl & dl) | (cl & ~dl);
+                fr = (br & cr) | (~br & dr);
+                kl_v = 0x8F1BBCDCu; kr_v = 0x7A6D76E9u; break;
+        default:fl = bl ^ (cl | ~dl);
+                fr = br ^ cr ^ dr;
+                kl_v = 0xA953FD4Eu; kr_v = 0x00000000u; break;
+        }
+        t = rmd_rol(al + fl + w[rl[j]] + kl_v, sl[j]) + el;
+        al = el; el = dl; dl = rmd_rol(cl, 10); cl = bl; bl = t;
+
+        t = rmd_rol(ar + fr + w[rr[j]] + kr_v, sr[j]) + er;
+        ar = er; er = dr; dr = rmd_rol(cr, 10); cr = br; br = t;
+    }
+
+    t = h[1] + cl + dr;
+    h[1] = h[2] + dl + er;
+    h[2] = h[3] + el + ar;
+    h[3] = h[4] + al + br;
+    h[4] = h[0] + bl + cr;
+    h[0] = t;
+}
+
+static void c_ripemd160_hash(const unsigned char *in, Py_ssize_t len,
+                             unsigned char out[20]) {
+    uint32_t h[5] = {
+        0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u
+    };
+
+    const unsigned char *ptr = in;
+    size_t remaining = (size_t)len;
+    while (remaining >= 64) {
+        rmd160_compress(h, ptr);
+        ptr += 64;
+        remaining -= 64;
+    }
+
+    unsigned char pad[128];
+    memset(pad, 0, sizeof(pad));
+    if (remaining > 0) memcpy(pad, ptr, remaining);
+    pad[remaining] = 0x80;
+
+    size_t padlen = (remaining < 56) ? 64 : 128;
+    uint64_t bits = (uint64_t)len * 8;
+    pad[padlen - 8] = (unsigned char)(bits);
+    pad[padlen - 7] = (unsigned char)(bits >> 8);
+    pad[padlen - 6] = (unsigned char)(bits >> 16);
+    pad[padlen - 5] = (unsigned char)(bits >> 24);
+    pad[padlen - 4] = (unsigned char)(bits >> 32);
+    pad[padlen - 3] = (unsigned char)(bits >> 40);
+    pad[padlen - 2] = (unsigned char)(bits >> 48);
+    pad[padlen - 1] = (unsigned char)(bits >> 56);
+
+    rmd160_compress(h, pad);
+    if (padlen > 64) rmd160_compress(h, pad + 64);
+
+    for (int i = 0; i < 5; i++) {
+        out[4*i]     = (unsigned char)(h[i]);
+        out[4*i + 1] = (unsigned char)(h[i] >> 8);
+        out[4*i + 2] = (unsigned char)(h[i] >> 16);
+        out[4*i + 3] = (unsigned char)(h[i] >> 24);
+    }
 }
 
 static PyObject *c_sha1_hash(const unsigned char *in, Py_ssize_t len) {
@@ -3975,16 +4081,20 @@ static int vm_step(VMState *st) {
             se_free(&e);
             return vms_push(&st->stack, hash, 32) < 0 ? -1 : 0;
         }
-        PyObject *digest = NULL;
-        if (op == 0xA6) {
-            digest = c_ripemd160_hash(inp, ilen);
-        } else if (op == 0xA7) {
-            digest = c_sha1_hash(inp, ilen);
-        } else {
-            unsigned char sha[32];
-            c_sha256_hash(inp, ilen, sha);
-            digest = c_ripemd160_hash(sha, 32);
+        if (op == 0xA6 || op == 0xA9) {
+            unsigned char hash[20];
+            if (op == 0xA6) {
+                c_ripemd160_hash(inp, ilen, hash);
+            } else {
+                unsigned char sha[32];
+                c_sha256_hash(inp, ilen, sha);
+                c_ripemd160_hash(sha, 32, hash);
+            }
+            se_free(&e);
+            return vms_push(&st->stack, hash, 20) < 0 ? -1 : 0;
         }
+        /* OP_SHA1 (0xA7) — still uses Python hashlib */
+        PyObject *digest = c_sha1_hash(inp, ilen);
         se_free(&e);
         if (!digest) return -1;
         int rc = vms_push(&st->stack,
