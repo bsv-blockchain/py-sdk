@@ -133,10 +133,13 @@ class TestBatchPreimage:
 
     def test_tx_preimage_not_called_per_input(self):
         """tx_preimage (singular) should NOT be called when all inputs are BIP143."""
+        import sys
+
         priv_key = PrivateKey()
         tx = _build_tx(priv_key, 4)
 
-        with patch("bsv._legacy_transaction.tx_preimage", wraps=tx_preimage_original) as mock_single:
+        tx_mod = sys.modules["bsv._legacy_transaction"]
+        with patch.object(tx_mod, "tx_preimage", wraps=tx_preimage_original) as mock_single:
             tx.sign()
             assert mock_single.call_count == 0, (
                 f"tx_preimage was called {mock_single.call_count} times; " "batch path should use tx_preimages instead"
