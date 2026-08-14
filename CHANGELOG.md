@@ -40,11 +40,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
+### Security
 
-- **`OP_VERIF` and `OP_VERNOTIF` no longer consume an operand inside a skipped branch** — both opcodes fall in the `OP_IF..OP_ENDIF` range, so they are reached even when the surrounding branch is not being executed, and py-sdk popped the data stack regardless. That desynchronised the stack against the branch actually taken, so `OP_0 OP_IF OP_VERIF OP_ENDIF` consumed a value the script never should have touched. The TS SDK guards the pop with `isScriptExecuting` and the Go SDK returns before popping; py-sdk now matches on both VM paths, still pushing onto the conditional stack either way.
-- **A second `OP_ELSE` for the same `OP_IF` is rejected** — the node's `conditional_tracker` keeps an `elses_` flag per open conditional expressly to "prevent duplicate OP_ELSE at the same level (post-Genesis)", and the interpreter rejects with `SCRIPT_ERR_UNBALANCED_CONDITIONAL`. py-sdk toggled the branch on every `OP_ELSE` with no limit. Ten Bitcoin Core vectors in `tests/bsv/transaction/spend_vector.py` asserted the permissive behaviour; they are valid before Genesis only, and now assert rejection instead.
-- **An empty stack at the end of evaluation is reported as a script error** — the final truthiness check indexed the stack directly, so a script that ended empty raised a bare `IndexError` out of `Spend.validate()` on the pure-Python VM where the native VM returned a proper evaluation error. Reachable whenever the clean-stack rule is relaxed (transaction version > 1).
+- **Script numbers are bounded by the Chronicle ceiling** — `bin2num` read an operand of any length, so nothing stopped a script from building a huge element and feeding it to the arithmetic: `OP_DUP OP_MUL` repeated in a ~100-byte script doubles the operand each time, reaching megabytes in a dozen rounds and gigabytes shortly after. The node rejects an over-long element in `CScriptNum`'s span constructor (`if(span.size() > max_length) throw scriptnum_overflow_error`) before the bytes reach any arithmetic, and py-sdk now does the same at 32 MiB on both VM paths. `Spend.bin2num` raises `ScriptNumberOverflow`, which the VM reports as a script evaluation error rather than letting it escape `validate()`.
 
 ---
 

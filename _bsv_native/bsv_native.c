@@ -2452,6 +2452,15 @@ static void ifs_free(IfStack *s) {
 
 static PyObject *c_bin2num(const unsigned char *data, Py_ssize_t len) {
     if (len == 0) return PyLong_FromLong(0);
+    /* The node rejects an over-long element before it becomes a number
+       (CScriptNum's span constructor), which is what keeps an arbitrarily wide
+       operand from reaching the arithmetic. */
+    if (len > VM_MAX_SCRIPT_NUM_LEN) {
+        /* Raised as a script error rather than a ValueError so both VM paths
+           fail the same way; vm_error is out of reach without the VMState. */
+        PyErr_SetString(PyExc_RuntimeError, "Script evaluation error: script number overflow");
+        return NULL;
+    }
     int negative = data[len - 1] & 0x80;
     if (len <= 8) {
         uint64_t val = 0;
