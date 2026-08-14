@@ -1,3 +1,4 @@
+import re
 from contextlib import suppress
 from io import BytesIO
 from typing import Optional, Union
@@ -9,6 +10,14 @@ from .constants import (
 from .script.script import Script
 from .script.unlocking_template import UnlockingScriptTemplate
 from .utils import Reader
+
+_TXID_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+
+
+def txid_to_bytes_le(txid: str) -> bytes:
+    if not isinstance(txid, str) or not _TXID_RE.match(txid):
+        raise ValueError(f"source_txid must be exactly 64 hex characters, got {txid!r}")
+    return bytes.fromhex(txid)[::-1]
 
 
 class TransactionInput:
@@ -41,7 +50,7 @@ class TransactionInput:
 
     def serialize(self) -> bytes:
         stream = BytesIO()
-        stream.write(bytes.fromhex(self.source_txid)[::-1])
+        stream.write(txid_to_bytes_le(self.source_txid))
         stream.write(self.source_output_index.to_bytes(4, "little"))
         stream.write(self.unlocking_script.byte_length_varint() if self.unlocking_script else b"\x00")
         stream.write(self.unlocking_script.serialize() if self.unlocking_script else b"")

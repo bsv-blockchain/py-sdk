@@ -196,9 +196,21 @@ class TestBenchTx:
             parsed["locktime"],
         )
 
-    def test_tx_serialize_python(self, benchmark):
+    def test_tx_serialize_native_public(self, benchmark):
         tx = Transaction.from_hex(TX_1IN_2OUT)
         benchmark(tx.serialize)
+
+    def test_tx_serialize_python(self, benchmark):
+        tx = Transaction.from_hex(TX_1IN_2OUT)
+        benchmark(tx._serialize_python)
+
+    def test_tx_serialize_100in_native_public(self, benchmark):
+        tx = Transaction.from_hex(self.TX_100IN)
+        benchmark(tx.serialize)
+
+    def test_tx_serialize_100in_python(self, benchmark):
+        tx = Transaction.from_hex(self.TX_100IN)
+        benchmark(tx._serialize_python)
 
 
 # ═══════════════════════════════════════════════════════════════════════

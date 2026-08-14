@@ -5,6 +5,8 @@ Every function that has a C path and a Python fallback is tested here.
 Both paths are called directly with the same input and outputs compared.
 """
 
+import sys
+
 import pytest
 
 _bsv_native = pytest.importorskip("_bsv_native")
@@ -166,6 +168,61 @@ class TestTxEquivalence:
         c_txid = _bsv_native.tx_txid(raw)
         py_txid = py_hash256(raw)[::-1].hex()
         assert c_txid == py_txid
+
+    @pytest.mark.parametrize("tx_hex", [TX_1IN_2OUT, TX_2IN_3OUT])
+    def test_public_serialize_native_matches_python_fallback(self, monkeypatch, tx_hex):
+        tx = Transaction.from_hex(tx_hex)
+        transaction_mod = sys.modules[Transaction.__module__]
+
+        monkeypatch.setattr(transaction_mod, "_USE_NATIVE_TX", False)
+        python_serialized = tx.serialize()
+
+        monkeypatch.setattr(transaction_mod, "_USE_NATIVE_TX", True)
+        native_serialized = tx.serialize()
+
+        assert native_serialized == python_serialized == bytes.fromhex(tx_hex)
+
+    def test_public_serialize_dispatches_to_native(self, monkeypatch):
+        tx = Transaction.from_hex(TX_1IN_2OUT)
+        transaction_mod = sys.modules[Transaction.__module__]
+        original = _bsv_native.tx_to_bytes
+        calls = 0
+
+        def recording_tx_to_bytes(*args):
+            nonlocal calls
+            calls += 1
+            return original(*args)
+
+        monkeypatch.setattr(_bsv_native, "tx_to_bytes", recording_tx_to_bytes)
+        monkeypatch.setattr(transaction_mod, "_USE_NATIVE_TX", True)
+
+        assert tx.serialize() == bytes.fromhex(TX_1IN_2OUT)
+        assert calls == 1
+
+    @pytest.mark.parametrize("source_txid", [None, "00", "gg" * 32])
+    def test_native_serialize_rejects_invalid_source_txid_safely(self, source_txid):
+        inputs = [
+            {
+                "source_txid": source_txid,
+                "source_output_index": 0,
+                "unlocking_script": b"",
+                "sequence": 0xFFFFFFFF,
+            }
+        ]
+        with pytest.raises((TypeError, ValueError)):
+            _bsv_native.tx_to_bytes(1, inputs, [], 0)
+
+    @pytest.mark.parametrize("field", ["source_output_index", "sequence"])
+    def test_native_serialize_rejects_uint32_overflow(self, field):
+        tx_input = {
+            "source_txid": "00" * 32,
+            "source_output_index": 0,
+            "unlocking_script": b"",
+            "sequence": 0xFFFFFFFF,
+        }
+        tx_input[field] = 0x1_0000_0000
+        with pytest.raises(OverflowError):
+            _bsv_native.tx_to_bytes(1, [tx_input], [], 0)
 
 
 # ═══════════════════════════════════════════════════════════════════════

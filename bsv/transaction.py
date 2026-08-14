@@ -18,10 +18,10 @@ from .hash import hash256
 from .merkle_path import MerklePath
 from .script.script import Script
 from .script.type import P2PKH
-from .transaction_input import TransactionInput
+from .transaction_input import TransactionInput, txid_to_bytes_le
 from .transaction_output import TransactionOutput
 from .transaction_preimage import _outputs_to_bytes_for_input, tx_preimage
-from .utils import Reader, Writer, reverse_hex_byte_order, unsigned_to_varint
+from .utils import Reader, Writer, unsigned_to_varint
 
 try:
     import _bsv_native
@@ -64,6 +64,38 @@ class Transaction:
         self._cached_txid: Optional[str] = None
 
     def serialize(self) -> bytes:
+        if (
+            _USE_NATIVE_TX
+            and all(type(i) is TransactionInput for i in self.inputs)
+            and all(type(o) is TransactionOutput for o in self.outputs)
+        ):
+            inputs = [
+                {
+                    "source_txid": tx_input.source_txid,
+                    "source_output_index": tx_input.source_output_index,
+                    "unlocking_script": (tx_input.unlocking_script.serialize() if tx_input.unlocking_script else b""),
+                    "sequence": tx_input.sequence,
+                }
+                for tx_input in self.inputs
+            ]
+            outputs = [
+                {
+                    "satoshis": tx_output.satoshis,
+                    "locking_script": tx_output.locking_script.serialize(),
+                }
+                for tx_output in self.outputs
+            ]
+            return _bsv_native.tx_to_bytes(
+                self.version,
+                inputs,
+                outputs,
+                self.locktime,
+            )
+
+        return self._serialize_python()
+
+    def _serialize_python(self) -> bytes:
+        """Serialize using the pure-Python fallback."""
         raw = self.version.to_bytes(4, "little")
         raw += unsigned_to_varint(len(self.inputs))
         for tx_input in self.inputs:
@@ -199,7 +231,7 @@ class Transaction:
 
         prevouts_data = b""
         for inp in self.inputs:
-            prevouts_data += bytes.fromhex(inp.source_txid)[::-1]
+            prevouts_data += txid_to_bytes_le(inp.source_txid)
             prevouts_data += inp.source_output_index.to_bytes(4, "little")
         return hash256(prevouts_data)
 
@@ -252,7 +284,7 @@ class Transaction:
         # 3. hashSequence (32 bytes)
         stream.write(hash_sequence)
         # 4. outpoint (32-byte hash + 4-byte little endian)
-        stream.write(bytes.fromhex(tx_input.source_txid)[::-1])
+        stream.write(txid_to_bytes_le(tx_input.source_txid))
         stream.write(tx_input.source_output_index.to_bytes(4, "little"))
         # 5. scriptCode (varint length + bytes)
         script_bytes = tx_input.locking_script.serialize()
@@ -564,7 +596,7 @@ class Transaction:
             if i.source_transaction is None:
                 raise ValueError("All inputs must have source transactions when serializing to EF format")
             if i.source_txid and i.source_txid != "00" * 32:
-                writer.write(bytes.fromhex(reverse_hex_byte_order(i.source_txid)))
+                writer.write(txid_to_bytes_le(i.source_txid))
             else:
                 writer.write(i.source_transaction.hash())
             writer.write_uint32_le(i.source_output_index)
