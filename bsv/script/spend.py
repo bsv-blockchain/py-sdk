@@ -5,12 +5,12 @@ from ..constants import OPCODE_VALUE_NAME_DICT, SIGHASH, OpCode
 from ..curve import curve
 from ..hash import hash160, hash256, ripemd160, sha1, sha256
 from ..keys import PublicKey
+from ..native import NATIVE_AVAILABLE as _USE_NATIVE_VM
+from ..native import NATIVE_MODULE as _bsv_native
 from ..transaction_input import TransactionInput
 from ..transaction_preimage import tx_preimage
 from ..utils import deserialize_ecdsa_der, serialize_ecdsa_der, unsigned_to_bytes
 from .script import Script, ScriptChunk
-
-from ..native import NATIVE_AVAILABLE as _USE_NATIVE_VM, NATIVE_MODULE as _bsv_native
 
 
 class ScriptNumberOverflow(ValueError):
