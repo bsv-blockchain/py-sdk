@@ -20,14 +20,10 @@ curve = EllipticCurve(
 )
 
 # Crypto backend: _bsv_native (direct libsecp256k1) → pure Python fallback
-_CRYPTO_BACKEND = None
+from .native import NATIVE_AVAILABLE
+from .native import NATIVE_MODULE as _bsv_native
 
-try:
-    import _bsv_native
-
-    _CRYPTO_BACKEND = "native"
-except ImportError:
-    _CRYPTO_BACKEND = "python"
+_CRYPTO_BACKEND = "native" if NATIVE_AVAILABLE else "python"
 
 
 def _point_to_pubkey_bytes(point: Point) -> bytes:
