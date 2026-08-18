@@ -879,3 +879,263 @@ class TestDualPathOpcodes:
         if _USE_NATIVE_VM:
             s2 = _spend(lock, unlock)
             assert s2._validate_native() is True
+
+
+# ---------------------------------------------------------------------------
+# CHECKSIG VM path: all 12 sighash types (sign -> CHECKSIG -> verify)
+# ---------------------------------------------------------------------------
+
+ALL_SIGHASH_FLAGS = [
+    SIGHASH.ALL_FORKID,
+    SIGHASH.NONE_FORKID,
+    SIGHASH.SINGLE_FORKID,
+    SIGHASH.ALL_FORKID | SIGHASH.ANYONECANPAY,
+    SIGHASH.NONE_FORKID | SIGHASH.ANYONECANPAY,
+    SIGHASH.SINGLE_FORKID | SIGHASH.ANYONECANPAY,
+    SIGHASH.ALL_FORKID_CHRONICLE,
+    SIGHASH.NONE_FORKID_CHRONICLE,
+    SIGHASH.SINGLE_FORKID_CHRONICLE,
+    SIGHASH.ALL_ANYONECANPAY_FORKID_CHRONICLE,
+    SIGHASH.NONE_ANYONECANPAY_FORKID_CHRONICLE,
+    SIGHASH.SINGLE_ANYONECANPAY_FORKID_CHRONICLE,
+]
+
+
+def _tx_version_for_sighash(sh: int) -> int:
+    """Chronicle (OTDA) sighash types require tx version 2."""
+    return 2 if SIGHASH.use_otda(sh) else 1
+
+
+class TestChecksigAllSighashTypes:
+    """CHECKSIG VM path must pass for all 12 valid sighash types on both paths."""
+
+    @pytest.mark.parametrize("sighash_flag", ALL_SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}")
+    def test_p2pk_checksig(self, sighash_flag):
+        """P2PK (pubkey OP_CHECKSIG) validates with each sighash type."""
+        priv = PrivateKey()
+        pub = priv.public_key().serialize()
+        lock = Script(encode_pushdata(pub) + OpCode.OP_CHECKSIG)
+        tx_ver = _tx_version_for_sighash(sighash_flag)
+
+        inp = TransactionInput(
+            source_txid=SOURCE_TXID,
+            source_output_index=0,
+            unlocking_script=Script(),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH(int(sighash_flag)),
+        )
+        inp.locking_script = lock
+        inp.satoshis = SOURCE_SATOSHIS
+
+        preimage = tx_preimage(0, [inp], _outputs(), tx_ver, 0)
+        sig_bytes = priv.sign(preimage)
+        sig_with_hashtype = sig_bytes + int(sighash_flag).to_bytes(1, "little")
+        unlock = Script(encode_pushdata(sig_with_hashtype))
+
+        s = _spend(lock, unlock, tx_version=tx_ver)
+        assert s._validate_python() is True, f"Python path failed for sighash 0x{int(sighash_flag):02x}"
+        if _USE_NATIVE_VM:
+            s2 = _spend(lock, unlock, tx_version=tx_ver)
+            assert s2._validate_native() is True, f"Native path failed for sighash 0x{int(sighash_flag):02x}"
+
+    @pytest.mark.parametrize("sighash_flag", ALL_SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}")
+    def test_p2pkh_checksig(self, sighash_flag):
+        """P2PKH validates with each sighash type."""
+        priv = PrivateKey()
+        pkh = hash160(priv.public_key().serialize())
+        lock = Script(
+            OpCode.OP_DUP + OpCode.OP_HASH160 + encode_pushdata(pkh) + OpCode.OP_EQUALVERIFY + OpCode.OP_CHECKSIG
+        )
+        tx_ver = _tx_version_for_sighash(sighash_flag)
+
+        inp = TransactionInput(
+            source_txid=SOURCE_TXID,
+            source_output_index=0,
+            unlocking_script=Script(),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH(int(sighash_flag)),
+        )
+        inp.locking_script = lock
+        inp.satoshis = SOURCE_SATOSHIS
+
+        preimage = tx_preimage(0, [inp], _outputs(), tx_ver, 0)
+        sig_bytes = priv.sign(preimage)
+        sig_with_hashtype = sig_bytes + int(sighash_flag).to_bytes(1, "little")
+        unlock = Script(encode_pushdata(sig_with_hashtype) + encode_pushdata(priv.public_key().serialize()))
+
+        s = _spend(lock, unlock, tx_version=tx_ver)
+        assert s._validate_python() is True, f"Python path failed for sighash 0x{int(sighash_flag):02x}"
+        if _USE_NATIVE_VM:
+            s2 = _spend(lock, unlock, tx_version=tx_ver)
+            assert s2._validate_native() is True, f"Native path failed for sighash 0x{int(sighash_flag):02x}"
+
+    @pytest.mark.parametrize("sighash_flag", ALL_SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}")
+    def test_checksigverify(self, sighash_flag):
+        """OP_CHECKSIGVERIFY validates with each sighash type."""
+        priv = PrivateKey()
+        pub = priv.public_key().serialize()
+        lock = Script(encode_pushdata(pub) + OpCode.OP_CHECKSIGVERIFY + OpCode.OP_TRUE)
+        tx_ver = _tx_version_for_sighash(sighash_flag)
+
+        inp = TransactionInput(
+            source_txid=SOURCE_TXID,
+            source_output_index=0,
+            unlocking_script=Script(),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH(int(sighash_flag)),
+        )
+        inp.locking_script = lock
+        inp.satoshis = SOURCE_SATOSHIS
+
+        preimage = tx_preimage(0, [inp], _outputs(), tx_ver, 0)
+        sig_bytes = priv.sign(preimage)
+        sig_with_hashtype = sig_bytes + int(sighash_flag).to_bytes(1, "little")
+        unlock = Script(encode_pushdata(sig_with_hashtype))
+
+        s = _spend(lock, unlock, tx_version=tx_ver)
+        assert s._validate_python() is True, f"Python path failed for sighash 0x{int(sighash_flag):02x}"
+        if _USE_NATIVE_VM:
+            s2 = _spend(lock, unlock, tx_version=tx_ver)
+            assert s2._validate_native() is True, f"Native path failed for sighash 0x{int(sighash_flag):02x}"
+
+
+# ---------------------------------------------------------------------------
+# CHECKMULTISIG VM path: all 12 sighash types
+# ---------------------------------------------------------------------------
+
+
+class TestCheckmultisigAllSighashTypes:
+    """CHECKMULTISIG VM path must pass for all 12 valid sighash types."""
+
+    @pytest.mark.parametrize("sighash_flag", ALL_SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}")
+    def test_checkmultisig(self, sighash_flag):
+        """1-of-1 CHECKMULTISIG validates with each sighash type."""
+        priv = PrivateKey()
+        pub = priv.public_key().serialize()
+        lock = Script(OpCode.OP_1 + encode_pushdata(pub) + OpCode.OP_1 + OpCode.OP_CHECKMULTISIG)
+        tx_ver = _tx_version_for_sighash(sighash_flag)
+
+        inp = TransactionInput(
+            source_txid=SOURCE_TXID,
+            source_output_index=0,
+            unlocking_script=Script(),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH(int(sighash_flag)),
+        )
+        inp.locking_script = lock
+        inp.satoshis = SOURCE_SATOSHIS
+
+        preimage = tx_preimage(0, [inp], _outputs(), tx_ver, 0)
+        sig_bytes = priv.sign(preimage)
+        sig_with_hashtype = sig_bytes + int(sighash_flag).to_bytes(1, "little")
+        unlock = Script(OpCode.OP_0 + encode_pushdata(sig_with_hashtype))
+
+        s = _spend(lock, unlock, tx_version=tx_ver)
+        assert s._validate_python() is True, f"Python path failed for sighash 0x{int(sighash_flag):02x}"
+        if _USE_NATIVE_VM:
+            s2 = _spend(lock, unlock, tx_version=tx_ver)
+            assert s2._validate_native() is True, f"Native path failed for sighash 0x{int(sighash_flag):02x}"
+
+    @pytest.mark.parametrize("sighash_flag", ALL_SIGHASH_FLAGS, ids=lambda s: f"0x{int(s):02x}")
+    def test_checkmultisigverify(self, sighash_flag):
+        """1-of-1 CHECKMULTISIGVERIFY validates with each sighash type."""
+        priv = PrivateKey()
+        pub = priv.public_key().serialize()
+        lock = Script(OpCode.OP_1 + encode_pushdata(pub) + OpCode.OP_1 + OpCode.OP_CHECKMULTISIGVERIFY + OpCode.OP_TRUE)
+        tx_ver = _tx_version_for_sighash(sighash_flag)
+
+        inp = TransactionInput(
+            source_txid=SOURCE_TXID,
+            source_output_index=0,
+            unlocking_script=Script(),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH(int(sighash_flag)),
+        )
+        inp.locking_script = lock
+        inp.satoshis = SOURCE_SATOSHIS
+
+        preimage = tx_preimage(0, [inp], _outputs(), tx_ver, 0)
+        sig_bytes = priv.sign(preimage)
+        sig_with_hashtype = sig_bytes + int(sighash_flag).to_bytes(1, "little")
+        unlock = Script(OpCode.OP_0 + encode_pushdata(sig_with_hashtype))
+
+        s = _spend(lock, unlock, tx_version=tx_ver)
+        assert s._validate_python() is True, f"Python path failed for sighash 0x{int(sighash_flag):02x}"
+        if _USE_NATIVE_VM:
+            s2 = _spend(lock, unlock, tx_version=tx_ver)
+            assert s2._validate_native() is True, f"Native path failed for sighash 0x{int(sighash_flag):02x}"
+
+
+# ---------------------------------------------------------------------------
+# SIGHASH_SINGLE edge case (BIP143 path): input_index >= len(outputs)
+# ---------------------------------------------------------------------------
+
+
+class TestSighashSingleBugBip143:
+    """BIP143 SIGHASH_SINGLE with input_index >= len(outputs).
+
+    Unlike OTDA (which returns uint256(1)), BIP143 handles this gracefully
+    by using hash_outputs = 0x00*32 in the preimage. The signature is
+    computed against the actual preimage, not a special sentinel value.
+    """
+
+    @pytest.mark.parametrize(
+        "sighash_flag",
+        [SIGHASH.SINGLE_FORKID, SIGHASH.SINGLE_FORKID | SIGHASH.ANYONECANPAY],
+        ids=lambda s: f"0x{int(s):02x}",
+    )
+    def test_single_no_outputs_bip143(self, sighash_flag):
+        """BIP143 SINGLE with 0 outputs validates on both paths."""
+        priv = PrivateKey()
+        pub = priv.public_key().serialize()
+        lock = Script(encode_pushdata(pub) + OpCode.OP_CHECKSIG)
+
+        inp = TransactionInput(
+            source_txid=SOURCE_TXID,
+            source_output_index=0,
+            unlocking_script=Script(),
+            sequence=0xFFFFFFFF,
+            sighash=SIGHASH(int(sighash_flag)),
+        )
+        inp.locking_script = lock
+        inp.satoshis = SOURCE_SATOSHIS
+
+        no_outputs = []
+        preimage = tx_preimage(0, [inp], no_outputs, 1, 0)
+        sig_bytes = priv.sign(preimage)
+        sig_with_hashtype = sig_bytes + int(sighash_flag).to_bytes(1, "little")
+        unlock = Script(encode_pushdata(sig_with_hashtype))
+
+        s = Spend(
+            {
+                "sourceTXID": SOURCE_TXID,
+                "sourceOutputIndex": 0,
+                "sourceSatoshis": SOURCE_SATOSHIS,
+                "lockingScript": lock,
+                "transactionVersion": 1,
+                "otherInputs": [],
+                "outputs": no_outputs,
+                "inputIndex": 0,
+                "unlockingScript": unlock,
+                "inputSequence": 0xFFFFFFFF,
+                "lockTime": 0,
+            }
+        )
+        assert s._validate_python() is True, f"Python path failed for sighash 0x{int(sighash_flag):02x}"
+        if _USE_NATIVE_VM:
+            s2 = Spend(
+                {
+                    "sourceTXID": SOURCE_TXID,
+                    "sourceOutputIndex": 0,
+                    "sourceSatoshis": SOURCE_SATOSHIS,
+                    "lockingScript": lock,
+                    "transactionVersion": 1,
+                    "otherInputs": [],
+                    "outputs": no_outputs,
+                    "inputIndex": 0,
+                    "unlockingScript": unlock,
+                    "inputSequence": 0xFFFFFFFF,
+                    "lockTime": 0,
+                }
+            )
+            assert s2._validate_native() is True, f"Native path failed for sighash 0x{int(sighash_flag):02x}"

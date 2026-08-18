@@ -1,12 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
-try:
-    import _bsv_native
-
-    _USE_NATIVE = True
-except ImportError:
-    _USE_NATIVE = False
+from ..native import NATIVE_AVAILABLE as _USE_NATIVE
+from ..native import NATIVE_MODULE as _bsv_native
 
 
 @dataclass

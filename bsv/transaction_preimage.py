@@ -3,15 +3,10 @@ from typing import List
 
 from .constants import SIGHASH
 from .hash import hash256
+from .native import NATIVE_AVAILABLE as _USE_NATIVE
+from .native import NATIVE_MODULE as _bsv_native
 from .transaction_input import TransactionInput, txid_to_bytes_le
 from .transaction_output import TransactionOutput
-
-try:
-    import _bsv_native
-
-    _USE_NATIVE = True
-except ImportError:
-    _USE_NATIVE = False
 
 
 def _preimage(
