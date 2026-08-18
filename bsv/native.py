@@ -12,9 +12,13 @@ import warnings
 try:
     import _bsv_native
 
+    # Guard against namespace-package imports: the _bsv_native/ source
+    # directory can be importable without a compiled extension present.
+    _bsv_native.seckey_verify  # noqa: B018
+
     NATIVE_AVAILABLE = True
     NATIVE_MODULE = _bsv_native
-except ImportError:
+except (ImportError, AttributeError):
     NATIVE_AVAILABLE = False
     NATIVE_MODULE = None  # type: ignore[assignment]
     warnings.warn(
