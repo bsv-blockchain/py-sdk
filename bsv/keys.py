@@ -352,22 +352,20 @@ class PrivateKey:
         """
         :returns: ECDSA signature in bitcoin strict DER (low-s) format
         """
+        msg32 = hasher(message) if hasher else message
         if k:
             if _CRYPTO_BACKEND == "native":
-                msg32 = hasher(message) if hasher else message
                 k_bytes = (k % curve.n).to_bytes(32, "big")
                 return _bsv_native.ecdsa_sign_with_k(msg32, self._secret, k_bytes)
-            return self._sign_custom_k(message, hasher, k)
+            return self._sign_digest_with_k(msg32, k)
         if _CRYPTO_BACKEND == "native":
-            msg32 = hasher(message) if hasher else message
             return _bsv_native.ecdsa_sign(msg32, self._secret)
-        msg32 = hasher(message) if hasher else message
         k_val = _rfc6979_k(msg32, self._secret)
-        return self._sign_custom_k(message, hasher, k_val)
+        return self._sign_digest_with_k(msg32, k_val)
 
-    def _sign_custom_k(self, message: bytes, hasher: Callable[[bytes], bytes], k: int) -> bytes:
-        """Pure Python fallback for ECDSA signing with custom nonce k."""
-        z = int.from_bytes(hasher(message), "big")
+    def _sign_digest_with_k(self, digest: bytes, k: int) -> bytes:
+        """Sign an already-hashed message with a custom nonce in pure Python."""
+        z = int.from_bytes(digest, "big")
 
         k = k % curve.n
         if k == 0:
