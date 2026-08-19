@@ -1,3 +1,7 @@
+import subprocess
+import sys
+import textwrap
+
 import pytest
 
 from bsv.constants import SIGHASH, OpCode
@@ -8,6 +12,8 @@ from bsv.script.spend import Spend
 from bsv.script.type import P2PK, P2PKH, BareMultisig, OpReturn, RPuzzle
 from bsv.transaction import Transaction, TransactionInput, TransactionOutput
 from bsv.utils import address_to_public_key_hash, encode_int, encode_pushdata
+
+GENERATOR_PUBLIC_KEY = bytes.fromhex("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798")
 
 
 def test_script():
@@ -35,6 +41,8 @@ def test_p2pkh():
     with pytest.raises(TypeError, match=r"unsupported type to parse P2PKH locking script"):
         # noinspection PyTypeChecker
         p2pkh_template.lock(1)
+    with pytest.raises(ValueError, match=r"invalid byte length of public key hash"):
+        p2pkh_template.lock(b"\x00" * 19)
 
     key_compressed = PrivateKey("L5agPjZKceSTkhqZF2dmFptT5LFrbr6ZGPvP7u4A6dvhTrr71WZ9")
     key_uncompressed = PrivateKey("5KiANv9EHEU4o9oLzZ6A7z4xJJ3uvfK2RLEubBtTz1fSwAbpJ2U")
@@ -148,6 +156,8 @@ def test_p2pk():
     with pytest.raises(TypeError, match=r"unsupported type to parse P2PK locking script"):
         # noinspection PyTypeChecker
         p2pk_template.lock(1)
+    with pytest.raises(ValueError, match=r"invalid byte length of public key"):
+        p2pk_template.lock(b"\x02" * 32)
 
     source_tx = Transaction([], [TransactionOutput(locking_script=P2PK().lock(public_key.hex()), satoshis=1000)])
     tx = Transaction(
@@ -229,6 +239,88 @@ def test_bare_multisig():
         }
     )
     assert spend.validate()
+
+
+@pytest.mark.parametrize(
+    ("participants", "threshold", "exception", "message"),
+    [
+        ([], 0, ValueError, "bad threshold or number of participants"),
+        ([GENERATOR_PUBLIC_KEY], 0, ValueError, "bad threshold or number of participants"),
+        ([GENERATOR_PUBLIC_KEY], 2, ValueError, "bad threshold or number of participants"),
+        ([b"\x02\x03"], 1, ValueError, "invalid byte length of public key"),
+        ([object()], 1, TypeError, "unsupported public key type"),
+    ],
+)
+def test_bare_multisig_rejects_invalid_lock_parameters(participants, threshold, exception, message):
+    with pytest.raises(exception, match=message):
+        BareMultisig().lock(participants, threshold)
+
+
+@pytest.mark.parametrize("puzzle_type", ["", "sha256", "unknown", None])
+def test_r_puzzle_rejects_unsupported_type(puzzle_type):
+    with pytest.raises(ValueError, match=r"unsupported R puzzle type"):
+        RPuzzle(puzzle_type)
+
+
+def test_script_template_validation_is_preserved_under_python_optimization():
+    code = textwrap.dedent("""\
+        from bsv.script.type import BareMultisig, P2PK, P2PKH, RPuzzle
+
+        if __debug__:
+            raise RuntimeError("subprocess is not running with optimization enabled")
+        public_key = bytes.fromhex(
+            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+        )
+        invalid_cases = [
+            ([], 0, ValueError),
+            ([public_key], 0, ValueError),
+            ([public_key], 2, ValueError),
+            ([b"\\x02\\x03"], 1, ValueError),
+            ([object()], 1, TypeError),
+        ]
+
+        for participants, threshold, expected_exception in invalid_cases:
+            try:
+                BareMultisig().lock(participants, threshold)
+            except expected_exception:
+                pass
+            else:
+                raise AssertionError(
+                    f"accepted invalid multisig parameters: {participants!r}, {threshold}"
+                )
+
+        invalid_operations = [
+            (lambda: P2PKH().lock(b"\\x00" * 19), ValueError),
+            (lambda: P2PK().lock(b"\\x02" * 32), ValueError),
+            (lambda: RPuzzle("unknown"), ValueError),
+        ]
+        for operation, expected_exception in invalid_operations:
+            try:
+                operation()
+            except expected_exception:
+                pass
+            else:
+                raise AssertionError("accepted invalid script-template input")
+
+        expected = "51" + "21" + public_key.hex() + "51ae"
+        if BareMultisig().lock([public_key], 1).hex() != expected:
+            raise AssertionError("valid multisig script changed under optimization")
+        if P2PKH().lock(b"\\x00" * 20).hex() != "76a914" + "00" * 20 + "88ac":
+            raise AssertionError("valid P2PKH script changed under optimization")
+        if P2PK().lock(public_key).hex() != "21" + public_key.hex() + "ac":
+            raise AssertionError("valid P2PK script changed under optimization")
+        if RPuzzle("raw").type != "raw" or RPuzzle("SHA256").type != "SHA256":
+            raise AssertionError("valid R puzzle type changed under optimization")
+        """)
+
+    result = subprocess.run(
+        [sys.executable, "-O", "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def _make_multisig_spend(sign_privkeys, all_privkeys, threshold):
