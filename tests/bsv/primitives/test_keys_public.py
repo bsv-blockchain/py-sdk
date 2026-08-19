@@ -5,7 +5,7 @@ Ported from ts-sdk/src/primitives/__tests/PublicKey.test.ts
 
 import pytest
 
-from bsv.curve import Point
+from bsv.curve import Point, curve, curve_get_y
 from bsv.keys import PrivateKey, PublicKey
 
 
@@ -151,6 +151,25 @@ class TestPublicKey:
         invalid_point = Point(10, 13)  # Not on curve
         with pytest.raises(ValueError):
             PublicKey(invalid_point)
+
+    def test_noncanonical_public_key_coordinates_are_rejected(self, monkeypatch):
+        """Reject field coordinates outside the canonical secp256k1 range."""
+        monkeypatch.setattr("bsv.keys._CRYPTO_BACKEND", "python")
+        noncanonical_x = curve.p + 1
+        y_for_x_one = curve_get_y(1, True)
+        x_bytes = noncanonical_x.to_bytes(32, "big")
+        y_bytes = y_for_x_one.to_bytes(32, "big")
+
+        malformed_keys = [
+            Point(noncanonical_x, y_for_x_one),
+            Point(1, curve.p),
+            b"\x02" + x_bytes,
+            b"\x04" + x_bytes + y_bytes,
+        ]
+
+        for malformed_key in malformed_keys:
+            with pytest.raises(ValueError):
+                PublicKey(malformed_key)
 
     def test_public_key_equality(self):
         """Test public key equality comparison"""

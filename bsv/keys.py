@@ -92,23 +92,33 @@ def _ecdsa_recover_py(r: int, s: int, recovery_id: int, z: int) -> Point:
     return Q
 
 
+def _validate_public_key_point(point: Point) -> None:
+    """Reject malformed or non-canonical secp256k1 public-key points."""
+    if not isinstance(point.x, int) or not isinstance(point.y, int):
+        raise ValueError("public key coordinates must be integers")
+    if not (0 <= point.x < curve.p and 0 <= point.y < curve.p):
+        raise ValueError("public key coordinates out of range")
+    if not on_curve(point):
+        raise ValueError("public key not on curve")
+
+
 def _pubkey_validate_and_compress(pk: bytes) -> tuple[bytes, bytes | None]:
     if len(pk) == 33:
         prefix = pk[0]
         if prefix not in (0x02, 0x03):
             raise ValueError("invalid compressed public key prefix")
         x = int.from_bytes(pk[1:33], "big")
+        if not 0 <= x < curve.p:
+            raise ValueError("public key coordinates out of range")
         y = curve_get_y(x, prefix == 0x02)
-        if not on_curve(Point(x, y)):
-            raise ValueError("public key not on curve")
+        _validate_public_key_point(Point(x, y))
         return pk, None
     if len(pk) == 65:
         if pk[0] != 0x04:
             raise ValueError("invalid uncompressed public key prefix")
         x = int.from_bytes(pk[1:33], "big")
         y = int.from_bytes(pk[33:65], "big")
-        if not on_curve(Point(x, y)):
-            raise ValueError("public key not on curve")
+        _validate_public_key_point(Point(x, y))
         prefix = b"\x02" if y % 2 == 0 else b"\x03"
         return prefix + pk[1:33], pk
     raise ValueError("invalid public key length")
@@ -131,6 +141,7 @@ class PublicKey:
             self._init_from_serialized(public_key)
 
     def _init_from_point(self, point: Point) -> None:
+        _validate_public_key_point(point)
         x_bytes = point.x.to_bytes(32, "big")
         y_bytes = point.y.to_bytes(32, "big")
         uncompressed = b"\x04" + x_bytes + y_bytes
