@@ -152,7 +152,8 @@ class Transaction:
         """
         :returns: digest of the input specified by index
         """
-        assert 0 <= index < len(self.inputs), f"index out of range [0, {len(self.inputs)})"
+        if not isinstance(index, int) or not 0 <= index < len(self.inputs):
+            raise ValueError(f"index out of range [0, {len(self.inputs)})")
         return tx_preimage(index, self.inputs, self.outputs, self.version, self.locktime)
 
     def calc_input_signature_hash(
