@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from io import BytesIO
 from typing import List
 
@@ -7,6 +8,103 @@ from .native import NATIVE_AVAILABLE as _USE_NATIVE
 from .native import NATIVE_MODULE as _bsv_native
 from .transaction_input import TransactionInput, txid_to_bytes_le
 from .transaction_output import TransactionOutput
+
+_ZEROES_32 = b"\x00" * 32
+
+
+@dataclass(slots=True)
+class SignatureHashCache:
+    # BIP143 hashes shared by every input of one transaction.
+    hash_prevouts: bytes
+    hash_sequence: bytes
+    hash_outputs_all: bytes
+    hash_outputs_single: dict[int, bytes] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class PreparedVerificationContext:
+    # Owned by a single verify() pass; never stored on Transaction.
+    all_inputs: tuple
+    native_inputs: tuple
+    serialized_outputs: list
+    sighash_cache: SignatureHashCache
+
+    @property
+    def shared_hashes(self) -> bytes:
+        c = self.sighash_cache
+        return c.hash_prevouts + c.hash_sequence + c.hash_outputs_all
+
+
+def build_verification_context(
+    inputs: list[TransactionInput],
+    outputs: list[TransactionOutput],
+) -> PreparedVerificationContext:
+    hash_prevouts = hash256(
+        b"".join(txid_to_bytes_le(inp.source_txid) + inp.source_output_index.to_bytes(4, "little") for inp in inputs)
+    )
+    hash_sequence = hash256(b"".join(inp.sequence.to_bytes(4, "little") for inp in inputs))
+    serialized_outputs = [out.serialize() for out in outputs]
+    hash_outputs_all = hash256(b"".join(serialized_outputs))
+
+    cache = SignatureHashCache(
+        hash_prevouts=hash_prevouts,
+        hash_sequence=hash_sequence,
+        hash_outputs_all=hash_outputs_all,
+    )
+
+    native_inputs = tuple(
+        _input_to_tuple(inp, inp.locking_script.serialize() if inp.locking_script else b"") for inp in inputs
+    )
+
+    return PreparedVerificationContext(
+        all_inputs=tuple(inputs),
+        native_inputs=native_inputs,
+        serialized_outputs=serialized_outputs,
+        sighash_cache=cache,
+    )
+
+
+def tx_preimage_cached(
+    input_index: int,
+    current_input: TransactionInput,
+    all_inputs: tuple,
+    outputs: list[TransactionOutput],
+    serialized_outputs: list,
+    tx_version: int,
+    tx_locktime: int,
+    sighash_cache: SignatureHashCache,
+) -> bytes:
+    sighash = int(current_input.sighash)
+
+    if SIGHASH.use_otda(sighash):
+        inputs = list(all_inputs)
+        inputs[input_index] = current_input
+        return _preimage_otda(input_index, inputs, outputs, tx_version, tx_locktime)
+
+    if not (sighash & SIGHASH.ANYONECANPAY):
+        hash_prevouts = sighash_cache.hash_prevouts
+    else:
+        hash_prevouts = _ZEROES_32
+
+    base = sighash & 0x1F
+    if not (sighash & SIGHASH.ANYONECANPAY) and base != SIGHASH.SINGLE and base != SIGHASH.NONE:
+        hash_sequence = sighash_cache.hash_sequence
+    else:
+        hash_sequence = _ZEROES_32
+
+    if base != SIGHASH.SINGLE and base != SIGHASH.NONE:
+        hash_outputs = sighash_cache.hash_outputs_all
+    elif base == SIGHASH.SINGLE and input_index < len(serialized_outputs):
+        cached = sighash_cache.hash_outputs_single.get(input_index)
+        if cached is not None:
+            hash_outputs = cached
+        else:
+            hash_outputs = hash256(serialized_outputs[input_index])
+            sighash_cache.hash_outputs_single[input_index] = hash_outputs
+    else:
+        hash_outputs = _ZEROES_32
+
+    return _preimage(current_input, tx_version, tx_locktime, hash_prevouts, hash_sequence, hash_outputs)
 
 
 def _preimage(

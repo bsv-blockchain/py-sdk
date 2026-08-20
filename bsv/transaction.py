@@ -22,7 +22,7 @@ from .script.script import Script
 from .script.type import P2PKH
 from .transaction_input import TransactionInput, txid_to_bytes_le
 from .transaction_output import TransactionOutput
-from .transaction_preimage import _outputs_to_bytes_for_input, tx_preimage, tx_preimages
+from .transaction_preimage import _outputs_to_bytes_for_input, build_verification_context, tx_preimage, tx_preimages
 from .utils import Reader, Writer, unsigned_to_varint
 
 
@@ -786,6 +786,7 @@ class Transaction:
             if proof_valid:
                 return True
 
+        source_outputs = []
         for i, tx_input in enumerate(self.inputs):
             if not tx_input.source_transaction:
                 raise ValueError(
@@ -803,34 +804,39 @@ class Transaction:
                 )
 
             source_output = tx_input.source_transaction.outputs[tx_input.source_output_index]
+            source_outputs.append(source_output)
 
             input_verified = await tx_input.source_transaction.verify(chaintracker, scripts_only=scripts_only)
             if not input_verified:
                 return False
 
-            other_inputs = [inp for j, inp in enumerate(self.inputs) if j != i]
+        if not self.inputs:
+            return True
 
+        ctx = build_verification_context(self.inputs, self.outputs)
+
+        for i, tx_input in enumerate(self.inputs):
             try:
                 Spend(
                     {
                         "sourceTXID": tx_input.source_txid or tx_input.source_transaction.txid(),
                         "sourceOutputIndex": tx_input.source_output_index,
-                        "sourceSatoshis": source_output.satoshis,
-                        "lockingScript": source_output.locking_script,
+                        "sourceSatoshis": source_outputs[i].satoshis,
+                        "lockingScript": source_outputs[i].locking_script,
                         "transactionVersion": self.version,
-                        "otherInputs": other_inputs,
+                        "otherInputs": [],
                         "inputIndex": i,
                         "unlockingScript": tx_input.unlocking_script,
                         "outputs": self.outputs,
                         "inputSequence": tx_input.sequence,
                         "lockTime": self.locktime,
+                        "allInputs": ctx.all_inputs,
+                        "verificationContext": ctx,
                     }
                 ).validate()
             except RuntimeError:
                 return False
 
-        # All inputs verified successfully
-        # Note: Fee validation would be done separately if needed
         return True
 
     def signature_hash(self, index: int) -> bytes:

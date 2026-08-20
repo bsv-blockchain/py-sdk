@@ -1901,6 +1901,14 @@ static int parse_input_tuple(PyObject *tup,
     }
     *script = (const unsigned char *)PyBytes_AS_STRING(o_script);
     *script_len = PyBytes_GET_SIZE(o_script);
+    /* Must be an exact int: PyLong_AsLongLong would honour __index__ and run
+     * arbitrary Python here, which can shrink the very list a caller is
+     * iterating with cached lengths and PyList_GET_ITEM.  The other three
+     * numeric fields already reject non-ints via PyLong_AsUnsignedLong. */
+    if (!PyLong_Check(o_sats)) {
+        PyErr_SetString(PyExc_TypeError, "satoshis must be int");
+        return -1;
+    }
     *satoshis = PyLong_AsLongLong(o_sats);
     if (PyErr_Occurred()) return -1;
     *sequence = (uint32_t)PyLong_AsUnsignedLong(o_seq);
@@ -2337,9 +2345,13 @@ typedef struct {
     Py_ssize_t n_other;
     PyObject *outputs_list;
     Py_ssize_t n_outputs;
+    PyObject *all_inputs_py;
+    Py_ssize_t n_all_inputs;
     unsigned char hash_prevouts[32];
     unsigned char hash_sequence[32];
     unsigned char hash_outputs[32];
+    unsigned char hash_outputs_single[32];
+    int has_single_cache;
 } PreimageCtx;
 
 typedef struct {
@@ -3019,15 +3031,21 @@ static int c_build_bip143_preimage(PreimageCtx *pctx,
     const unsigned char *hs = ((sighash & 0x80) || base == 0x02 || base == 0x03)
                               ? zeroes32 : pctx->hash_sequence;
 
-    unsigned char single_ho[32];
     const unsigned char *ho;
     if (base != 0x03 && base != 0x02) {
         ho = pctx->hash_outputs;
     } else if (base == 0x03 && pctx->input_index < pctx->n_outputs) {
-        PyObject *ob = PyList_GET_ITEM(pctx->outputs_list, pctx->input_index);
-        hash256_var((const unsigned char *)PyBytes_AS_STRING(ob),
-                    PyBytes_GET_SIZE(ob), single_ho);
-        ho = single_ho;
+        if (!pctx->has_single_cache) {
+            PyObject *ob = PyList_GET_ITEM(pctx->outputs_list, pctx->input_index);
+            if (!PyBytes_Check(ob)) {
+                PyErr_SetString(PyExc_TypeError, "output must be bytes");
+                return -1;
+            }
+            hash256_var((const unsigned char *)PyBytes_AS_STRING(ob),
+                        PyBytes_GET_SIZE(ob), pctx->hash_outputs_single);
+            pctx->has_single_cache = 1;
+        }
+        ho = pctx->hash_outputs_single;
     } else {
         ho = zeroes32;
     }
@@ -3056,20 +3074,35 @@ static int c_build_bip143_preimage(PreimageCtx *pctx,
     return 0;
 }
 
+static int pctx_materialize_inputs(PreimageCtx *pctx);
+
 static int c_build_otda_preimage(PreimageCtx *pctx,
                                  const unsigned char *subscript, size_t sub_len,
                                  uint32_t sighash,
                                  unsigned char **out, size_t *out_len) {
+    if (pctx_materialize_inputs(pctx) < 0) return -1;
+
     uint32_t base_type = sighash & 0x1F;
     int anyonecanpay = sighash & 0x80;
     Py_ssize_t total = pctx->n_other + 1;
 
-    /* SIGHASH_SINGLE out-of-range bug: when signing input i and there is no
-     * output i, the original Bitcoin algorithm uses the preimage 0x01 padded
-     * with 31 zero bytes. Without this guard the SINGLE branch below would
-     * read outputs_list past its end (PyList_GET_ITEM does no bounds check)
-     * and under-budget `est`, crashing the process. Matches the pure-Python
-     * Transaction._calc_input_preimage_legacy path. */
+    /* Guards the 11/12-arg compat paths where all_inputs is absent: without
+     * this, input_index past the sibling count reads other_inputs (possibly
+     * NULL) out of bounds in the serialization loop below. */
+    if (pctx->input_index >= total) {
+        PyErr_Format(PyExc_ValueError,
+            "input_index %d out of range for transaction with %zd inputs",
+            (int)pctx->input_index, total);
+        return -1;
+    }
+
+    for (Py_ssize_t i = 0; i < pctx->n_outputs; i++) {
+        if (!PyBytes_Check(PyList_GET_ITEM(pctx->outputs_list, i))) {
+            PyErr_SetString(PyExc_TypeError, "output must be bytes");
+            return -1;
+        }
+    }
+
     if (base_type == 0x03 && pctx->input_index >= pctx->n_outputs) {
         unsigned char *one = (unsigned char *)malloc(32);
         if (!one) { PyErr_NoMemory(); return -1; }
@@ -3091,7 +3124,11 @@ static int c_build_otda_preimage(PreimageCtx *pctx,
     est += 9;
     for (Py_ssize_t i = 0; i < pctx->n_outputs; i++) {
         PyObject *ob = PyList_GET_ITEM(pctx->outputs_list, i);
-        est += PyBytes_GET_SIZE(ob);
+        /* +9: under SIGHASH_SINGLE every output before input_index is written as
+         * a 9-byte placeholder (0xFFFFFFFFFFFFFFFF + empty script), which is
+         * larger than the serialized output whenever that output is shorter
+         * than 9 bytes.  Budget for whichever of the two is written. */
+        est += PyBytes_GET_SIZE(ob) + 9;
     }
     est += 4 + 4 + 100;
 
@@ -4632,11 +4669,57 @@ static int vm_run(VMState *st) {
 
 /* --- Python entry point ------------------------------------------------- */
 
+/* Lazy-parse all_inputs_py into pctx->other_inputs (skipping input_index).
+ * Called only when an OTDA CHECKSIG is encountered.  Returns 0 on success. */
+static int pctx_materialize_inputs(PreimageCtx *pctx) {
+    if (pctx->other_inputs || !pctx->all_inputs_py) return 0;
+    Py_ssize_t n_all = pctx->n_all_inputs;
+    Py_ssize_t n_other = n_all - 1;
+    pctx->n_other = n_other;
+    if (n_other <= 0) return 0;
+
+    pctx->other_inputs = (PCtxInput *)calloc(n_other, sizeof(PCtxInput));
+    if (!pctx->other_inputs) { PyErr_NoMemory(); return -1; }
+
+    Py_ssize_t oi = 0;
+    for (Py_ssize_t i = 0; i < n_all; i++) {
+        if (i == pctx->input_index) continue;
+        const char *txid_hex;
+        uint32_t vout, seq, sh;
+        int64_t sats;
+        const unsigned char *scr;
+        Py_ssize_t scr_len;
+        PyObject *item = PyTuple_Check(pctx->all_inputs_py)
+            ? PyTuple_GET_ITEM(pctx->all_inputs_py, i)
+            : PyList_GET_ITEM(pctx->all_inputs_py, i);
+        if (parse_input_tuple(item,
+                &txid_hex, &vout, &scr, &scr_len, &sats, &seq, &sh) < 0) {
+            free(pctx->other_inputs); pctx->other_inputs = NULL;
+            return -1;
+        }
+        if (hex_to_bytes_reversed(txid_hex, pctx->other_inputs[oi].txid_le, 32) < 0) {
+            free(pctx->other_inputs); pctx->other_inputs = NULL;
+            PyErr_SetString(PyExc_ValueError, "invalid txid hex in all_inputs");
+            return -1;
+        }
+        pctx->other_inputs[oi].vout = vout;
+        pctx->other_inputs[oi].script = scr;
+        pctx->other_inputs[oi].script_len = scr_len;
+        pctx->other_inputs[oi].satoshis = sats;
+        pctx->other_inputs[oi].sequence = seq;
+        pctx->other_inputs[oi].sighash = sh;
+        oi++;
+    }
+    return 0;
+}
+
 static int pctx_init(PreimageCtx *pctx, uint32_t version, uint32_t locktime,
                      int32_t input_index, const char *source_txid,
                      uint32_t source_vout, uint32_t input_sequence,
                      int64_t source_satoshis,
-                     PyObject *other_inputs_py, PyObject *outputs_py) {
+                     PyObject *other_inputs_py, PyObject *outputs_py,
+                     const unsigned char *shared_hashes,
+                     PyObject *all_inputs_py) {
     memset(pctx, 0, sizeof(*pctx));
     pctx->version = version;
     pctx->locktime = locktime;
@@ -4647,17 +4730,97 @@ static int pctx_init(PreimageCtx *pctx, uint32_t version, uint32_t locktime,
     pctx->outputs_list = outputs_py;
     pctx->n_outputs = PyList_GET_SIZE(outputs_py);
 
+    if (input_index < 0) {
+        PyErr_Format(PyExc_ValueError,
+            "input_index must be non-negative, got %d", (int)input_index);
+        return -1;
+    }
+
     if (hex_to_bytes_reversed(source_txid, pctx->cur_txid_le, 32) < 0) {
         PyErr_SetString(PyExc_ValueError, "invalid source_txid hex");
         return -1;
     }
 
     Py_ssize_t n_other = PyList_GET_SIZE(other_inputs_py);
+
+    /* Prepared path: shared hashes + deferred all_inputs for lazy OTDA parse.
+     * BIP143 CHECKSIG uses shared_hashes directly — O(1), no input parsing.
+     * OTDA CHECKSIG triggers pctx_materialize_inputs() on first encounter. */
+    if (shared_hashes && all_inputs_py && all_inputs_py != Py_None) {
+        Py_ssize_t n_all = PyTuple_Check(all_inputs_py)
+            ? PyTuple_GET_SIZE(all_inputs_py)
+            : PyList_GET_SIZE(all_inputs_py);
+        if (input_index >= n_all) {
+            PyErr_Format(PyExc_ValueError,
+                "input_index %d out of range for all_inputs of length %zd",
+                (int)input_index, n_all);
+            return -1;
+        }
+        memcpy(pctx->hash_prevouts, shared_hashes, 32);
+        memcpy(pctx->hash_sequence, shared_hashes + 32, 32);
+        memcpy(pctx->hash_outputs, shared_hashes + 64, 32);
+        pctx->all_inputs_py = all_inputs_py;
+        pctx->n_all_inputs = n_all;
+        pctx->n_other = 0;
+        pctx->other_inputs = NULL;
+        return 0;
+    }
+
+    /* Fast path: shared hashes, no inputs at all (standalone BIP143 Spend). */
+    if (shared_hashes && n_other == 0) {
+        memcpy(pctx->hash_prevouts, shared_hashes, 32);
+        memcpy(pctx->hash_sequence, shared_hashes + 32, 32);
+        memcpy(pctx->hash_outputs, shared_hashes + 64, 32);
+        pctx->n_other = 0;
+        pctx->other_inputs = NULL;
+        return 0;
+    }
+
+    /* Legacy path: parse other_inputs eagerly.  Here other_inputs must be
+     * the full sibling list, so input_index beyond n_other reads past the
+     * array in the hash loops below. */
+    if (input_index >= n_other + 1) {
+        PyErr_Format(PyExc_ValueError,
+            "input_index %d out of range for transaction with %zd inputs",
+            (int)input_index, n_other + 1);
+        return -1;
+    }
     pctx->n_other = n_other;
     pctx->other_inputs = NULL;
     if (n_other > 0) {
         pctx->other_inputs = (PCtxInput *)calloc(n_other, sizeof(PCtxInput));
         if (!pctx->other_inputs) { PyErr_NoMemory(); return -1; }
+    }
+
+    for (Py_ssize_t i = 0; i < n_other; i++) {
+        const char *txid_hex;
+        uint32_t vout, seq, sh;
+        int64_t sats;
+        const unsigned char *scr;
+        Py_ssize_t scr_len;
+        if (parse_input_tuple(PyList_GET_ITEM(other_inputs_py, i),
+                &txid_hex, &vout, &scr, &scr_len, &sats, &seq, &sh) < 0) {
+            free(pctx->other_inputs); pctx->other_inputs = NULL;
+            return -1;
+        }
+        if (hex_to_bytes_reversed(txid_hex, pctx->other_inputs[i].txid_le, 32) < 0) {
+            free(pctx->other_inputs); pctx->other_inputs = NULL;
+            PyErr_SetString(PyExc_ValueError, "invalid txid hex in other_inputs");
+            return -1;
+        }
+        pctx->other_inputs[i].vout = vout;
+        pctx->other_inputs[i].script = scr;
+        pctx->other_inputs[i].script_len = scr_len;
+        pctx->other_inputs[i].satoshis = sats;
+        pctx->other_inputs[i].sequence = seq;
+        pctx->other_inputs[i].sighash = sh;
+    }
+
+    if (shared_hashes) {
+        memcpy(pctx->hash_prevouts, shared_hashes, 32);
+        memcpy(pctx->hash_sequence, shared_hashes + 32, 32);
+        memcpy(pctx->hash_outputs, shared_hashes + 64, 32);
+        return 0;
     }
 
     Py_ssize_t total = n_other + 1;
@@ -4669,32 +4832,6 @@ static int pctx_init(PreimageCtx *pctx, uint32_t version, uint32_t locktime,
         free(prevouts_buf); free(seq_buf);
         free(pctx->other_inputs); pctx->other_inputs = NULL;
         PyErr_NoMemory(); return -1;
-    }
-
-    for (Py_ssize_t i = 0; i < n_other; i++) {
-        const char *txid_hex;
-        uint32_t vout, seq, sh;
-        int64_t sats;
-        const unsigned char *scr;
-        Py_ssize_t scr_len;
-        if (parse_input_tuple(PyList_GET_ITEM(other_inputs_py, i),
-                &txid_hex, &vout, &scr, &scr_len, &sats, &seq, &sh) < 0) {
-            free(prevouts_buf); free(seq_buf);
-            free(pctx->other_inputs); pctx->other_inputs = NULL;
-            return -1;
-        }
-        if (hex_to_bytes_reversed(txid_hex, pctx->other_inputs[i].txid_le, 32) < 0) {
-            free(prevouts_buf); free(seq_buf);
-            free(pctx->other_inputs); pctx->other_inputs = NULL;
-            PyErr_SetString(PyExc_ValueError, "invalid txid hex in other_inputs");
-            return -1;
-        }
-        pctx->other_inputs[i].vout = vout;
-        pctx->other_inputs[i].script = scr;
-        pctx->other_inputs[i].script_len = scr_len;
-        pctx->other_inputs[i].satoshis = sats;
-        pctx->other_inputs[i].sequence = seq;
-        pctx->other_inputs[i].sighash = sh;
     }
 
     for (Py_ssize_t i = 0; i < total; i++) {
@@ -4754,17 +4891,20 @@ static void pctx_free(PreimageCtx *pctx) {
 
 static PyObject *pyfn_spend_validate(PyObject *self, PyObject *args) {
     PyObject *unlock_chunks, *lock_chunks, *other_inputs_py, *outputs_py;
+    PyObject *shared_hashes_py = Py_None;
+    PyObject *all_inputs_py = Py_None;
     int tx_version, source_output_index, input_index;
     unsigned int lock_time, input_sequence;
     long long source_satoshis;
     const char *source_txid;
 
-    if (!PyArg_ParseTuple(args, "OOisiIiILOO",
+    if (!PyArg_ParseTuple(args, "OOisiIiILOO|OO",
             &unlock_chunks, &lock_chunks,
             &tx_version, &source_txid, &source_output_index,
             &lock_time, &input_index, &input_sequence,
             &source_satoshis,
-            &other_inputs_py, &outputs_py))
+            &other_inputs_py, &outputs_py,
+            &shared_hashes_py, &all_inputs_py))
         return NULL;
 
     if (!PyList_Check(unlock_chunks) || !PyList_Check(lock_chunks)) {
@@ -4775,6 +4915,26 @@ static PyObject *pyfn_spend_validate(PyObject *self, PyObject *args) {
         PyErr_SetString(PyExc_TypeError, "other_inputs and outputs must be lists");
         return NULL;
     }
+
+    const unsigned char *shared_hashes = NULL;
+    if (shared_hashes_py != Py_None) {
+        if (!PyBytes_Check(shared_hashes_py)) {
+            PyErr_SetString(PyExc_TypeError, "shared_hashes must be bytes or None");
+            return NULL;
+        }
+        if (PyBytes_GET_SIZE(shared_hashes_py) != 96) {
+            PyErr_SetString(PyExc_ValueError, "shared_hashes must be exactly 96 bytes");
+            return NULL;
+        }
+        shared_hashes = (const unsigned char *)PyBytes_AS_STRING(shared_hashes_py);
+    }
+
+    if (all_inputs_py != Py_None &&
+        !PyTuple_Check(all_inputs_py) && !PyList_Check(all_inputs_py)) {
+        PyErr_SetString(PyExc_TypeError, "all_inputs must be a tuple, list, or None");
+        return NULL;
+    }
+
     if (!ensure_context()) return NULL;
 
     VMState st;
@@ -4797,7 +4957,9 @@ static PyObject *pyfn_spend_validate(PyObject *self, PyObject *args) {
                   (int32_t)input_index, source_txid,
                   (uint32_t)source_output_index, (uint32_t)input_sequence,
                   (int64_t)source_satoshis,
-                  other_inputs_py, outputs_py) < 0) {
+                  other_inputs_py, outputs_py,
+                  shared_hashes,
+                  (all_inputs_py != Py_None) ? all_inputs_py : NULL) < 0) {
         vms_free(&st.stack);
         vms_free(&st.alt_stack);
         ifs_free(&st.if_stack);
@@ -4925,8 +5087,14 @@ static PyMethodDef bsv_native_methods[] = {
     {"spend_validate", pyfn_spend_validate, METH_VARARGS,
      "spend_validate(unlock_chunks, lock_chunks, tx_version, source_txid, "
      "source_output_index, lock_time, input_index, input_sequence, "
-     "source_satoshis, other_inputs, outputs) -> True\n\n"
-     "Run script VM with CHECKSIG internalized in C. "
+     "source_satoshis, other_inputs, outputs"
+     "[, shared_hashes[, all_inputs]]) -> bool\\n\\n"
+     "Validate a script spend.  Optional shared_hashes (96 bytes) supplies "
+     "pre-computed hash_prevouts+hash_sequence+hash_outputs.  Optional "
+     "all_inputs (tuple/list of input tuples) is stored by reference; "
+     "BIP143 never parses it, OTDA lazy-parses on first CHECKSIG.  "
+     "When both are given with empty other_inputs, input parsing is "
+     "fully deferred.\\n\\n"
      "Raises RuntimeError on validation failure."},
 
     {NULL, NULL, 0, NULL}

@@ -1007,7 +1007,9 @@ libsecp256k1 統合済みの場合:
 | **品質** | — | ✅ 完了 | ファズ46件 + ASAN + ecdsa_recover バグ修正 |
 | **CI** | — | ✅ 完了 | cibuildwheel 5プラットフォーム × Py3.10-3.13、sdist、純Python フォールバック |
 | **F8** | — | ✅ 完了 | Python 3.13/3.14 対応: 私的API `_PyLong_*` を公開 `PyLong_*NativeBytes` へ移行。x86_64/arm64 の 3.13 で検証 |
-| **3.14** | — | 🔶 標準検証済 | 標準ビルド: arm64 3.14.6 で native ビルド + 159 テスト通過。残: CI 組込 (cibuildwheel bump) + cp314t (freethreading) |
+| **3.14** | — | ✅ 標準+CI完了 | 標準ビルド検証済 + CI 組込 (cibuildwheel 3.4.1, cp314 追加)。残: cp314t (freethreading) |
+| **F11** | — | ✅ 完了 | Transaction.sign() O(N²) → O(N)。`_batch_preimages()` で全 preimage を一括キャッシュ。OTDA 混在対応 |
+| **F6** | — | ✅ 完了 | 純 C RIPEMD-160 組み込み。OP_RIPEMD160/OP_HASH160 が C 内完結 |
 | **監査** | — | ✅ 完了 | c-extension-plan.md 全量監査、11箇所修正 |
 | **等価性** | — | ✅ 完了 | 65テスト9カテゴリ、C⇔Python全関数の出力一致検証 |
 | **ベンチマーク** | — | ✅ 完了 | 31ベンチマーク、C vs Python 全 dispatch ポイントの速度計測 |
@@ -1017,9 +1019,9 @@ libsecp256k1 統合済みの場合:
 | **全面監査** | — | ✅ 完了 | 全29関数リーク/クラッシュ監査。リーク残存なし。クラッシュ級2件 (sign_with_k ハング, OTDA SINGLE SIGSEGV) 修正 + 回帰44件 |
 
 **合計: 約 14〜20週間** (3.5〜5ヶ月)
-**進捗: Phase 0-4 + SE統合 + 品質テスト + CI/wheel + 監査 + 等価性 + ベンチマーク + lazy chunks + merkle 改修 + レビュー検証 + 全面リーク/クラッシュ監査 完了 (2026-07-02)**
+**進捗: Phase 0-4 + SE統合 + 品質テスト + CI/wheel + 監査 + 等価性 + ベンチマーク + lazy chunks + merkle 改修 + レビュー検証 + 全面リーク/クラッシュ監査 完了 (2026-07-02)。F11 + F6 + 3.14-CI + SonarCloud 完了 (2026-08-14)**
 **テスト: 3,589 passed (等価性65 + ファズ46 + crash/hang回帰4 + 全関数memory scan40 + メモリ増加4 含む), 259 skipped, ベンチ31 別途**
-**残り (優先順): ~~① Py3.13 コンパイル修正 (F8)~~ ✅ 完了 (2026-07-02) → ① Transaction.sign() O(N²)解消 (F11/ordinalx直結) → ② tx_to_bytes 入力検証 (F4) → 以降は「残タスク一覧」参照**
+**残り (優先順): ① `Transaction.verify()` BIP143 経路の O(N²)解消 ([F11b 詳細計画](f11b-transaction-verify-plan.md)) → ② PublicKey 冗長 pubkey_parse 除去 (F10) → 以降は「残タスク一覧」参照**
 
 ---
 
@@ -2807,7 +2809,7 @@ Py_buffer ライフサイクル監査 (全 `y*` パース関数の `PyBuffer_Rel
 
 ---
 
-## 残タスク一覧 (PM バックログ, 2026-07-02 時点)
+## 残タスク一覧 (PM バックログ, 2026-08-17 更新)
 
 Phase 0-4 + 全付随作業は完了。以下が全残タスクの統合リスト (レビュー・監査で確定した検証済み
 優先順)。散在していた項目をここに集約する。**修正済みのクラッシュ級バグ (P0 リーク、
@@ -2817,17 +2819,24 @@ sign_with_k ハング、OTDA SIGSEGV) はすべて対応完了済み**。
 
 | 優先 | ID | タスク | 分類 | 根拠/効果 | 工数 |
 |------|----|--------|------|-----------|------|
-| **1** | F11 | `Transaction.sign()` の O(N²) 解消 (sign() 内で `tx_preimages()` を1回だけ呼ぶバッチキャッシュ) | 性能 | **ordinalx 大量署名に直結**。N=1000 で 345ms→~25ms 見込み | 半日 |
-| **2** | F4 | `tx_to_bytes` 入力検証 (NULL/型/hex チェック) + 未使用関数の去就判断 | 堅牢性 | segfault + 未初期化ヒープ流出。SDK 未使用だが公開シンボル | 30-60分 |
-| ✅ | F6 | C 実装 RIPEMD160 の組み込み (Python import 経由を排除) | 性能 | **完了 (2026-08-14)**。純 C RIPEMD-160 組み込み、C 内完結 | 実績 ~30min |
-| 4 | F10 | `PublicKey.__init__` の冗長 `pubkey_parse` 除去 | 性能 | 構築コストの ~48%、CHECKSIG パスで6回パース | 半日 |
-| 5 | F16b | crash/hang 回帰を Linux CI に組込 + `detect_leaks=1` ASAN | テスト基盤 | 今回の subprocess 回帰は追加済み。CI での常時実行が未整備 | 半日 |
-| 6 | 3.14-CI | 3.14 標準ビルドを CI に組込: cibuildwheel 2.22.0 → ≥3.2.1、`cp314-*` 追加、`skip=cp3??t-*`、フルスイートを `-W error::DeprecationWarning` で実行 | 互換/CI | 標準ビルドは arm64 3.14.6 で検証済 (159 テスト)。CI 化と SDK レベル非推奨(asyncio等)の洗い出しが残 | 半日 |
-| 7 | 3.14-FT | フリースレッド cp314t 対応: `PyUnstable_Module_SetGIL(Py_MOD_GIL_NOT_USED)` + `g_ctx` を init 時一括生成で不変化 (スレッド安全) | 互換/正当性 | PEP779 で 3.14 FT 正式化。g_ctx 安全化は監査 R1/R7 指摘の解消も兼ねる。wheel 配布は依存 pycryptodomex の cp314t 整備待ち (coincurve 廃止済につき依存から除外) | 1-2日 |
-| 8 | 4.4 | `context_randomize` 定期呼び出し | セキュリティ | 初期化時のみ実行中。定期化は任意 | 小 |
-| 9 | 4.5 | Schnorr 署名 API 公開 | 機能準備 | BSV で現在未使用。将来のプロトコル拡張用 | 小 |
-| 10 | — | musllinux wheel | 配布 | Alpine 対応。需要次第 | 小 |
-| 11 | DOC | 3段フォールバック記述の整合 (coincurve 廃止の反映残) | ドキュメント | 課題 #6 参照。図表4箇所が未整合。コード側は正しい (P3) | 小 |
+| ~~1~~ | F11b | ~~`Transaction.verify()` BIP143 経路の O(N²) 解消~~ ([詳細計画](f11b-transaction-verify-plan.md)) | 性能 | ✅ **実装完了** (2026-08-20)。SignatureHashCache + PreparedVerificationContext で共有ハッシュ/入力/出力を1回構築。C は `all_inputs` を参照保持し BIP143 では parse 不要、OTDA 時のみ遅延パース。入力ゼロ source は context スキップ。input_index の負値検査は全 arity、上限検査は 11/13-arg（12-arg fast path は OTDA CHECKSIG 時）。C 監査で既存のメモリ破壊2件（OTDA SINGLE の `est` 過少見積り、`satoshis` の `__index__` 再入 UAF）も修正。F11b テスト 45/46、全回帰 4391 テスト通過 | — |
+| **2** | F10 | `PublicKey.__init__` の冗長 `pubkey_parse` 除去 | 性能 | 構築コストの ~48%、CHECKSIG パスで6回パース | 半日 |
+| 3 | F16b | crash/hang 回帰を Linux CI に組込 + `detect_leaks=1` ASAN | テスト基盤 | subprocess 回帰はローカル追加済み。CI での常時実行が未整備 | 半日 |
+| 4 | 3.14-FT | フリースレッド cp314t 対応: `PyUnstable_Module_SetGIL(Py_MOD_GIL_NOT_USED)` + `g_ctx` を init 時一括生成で不変化 (スレッド安全) | 互換/正当性 | PEP779 で 3.14 FT 正式化。g_ctx 安全化は監査 R1/R7 指摘の解消も兼ねる。wheel 配布は依存 pycryptodomex の cp314t 整備待ち (coincurve 廃止済につき依存から除外) | 1-2日 |
+| 5 | 4.4 | `context_randomize` 定期呼び出し | セキュリティ | 初期化時のみ実行中。定期化は任意 | 小 |
+| 6 | 4.5 | Schnorr 署名 API 公開 | 機能準備 | BSV で現在未使用。将来のプロトコル拡張用 | 小 |
+| 7 | — | musllinux wheel | 配布 | Alpine 対応。需要次第 | 小 |
+| 8 | DOC | 3段フォールバック記述の整合 (coincurve 廃止の反映残) | ドキュメント | 課題 #6 参照。図表4箇所が未整合。コード側は正しい (P3) | 小 |
+
+### 完了 (2026-08-14)
+
+| ID | タスク | 結果 |
+|----|--------|------|
+| F11 | `Transaction.sign()` の O(N²) 解消 | `sign()` 開始時に `_batch_preimages()` で全 preimage を一括計算しキャッシュ。`preimage(i)` はキャッシュヒット (script identity チェック付き OP_CODESEPARATOR 対応)。BIP143: `tx_preimages()` で共有ハッシュ 1 回。OTDA 混在も対応。テンプレート API 変更なし。テスト 6 件追加 |
+| F6 | C 実装 RIPEMD160 の組み込み | 純 C RIPEMD-160 を `bsv_native.c` に組み込み、Python (Cryptodome) 経由を排除。OP_RIPEMD160 / OP_HASH160 が SHA256/HASH256 と同様にバッファベースで C 内完結 |
+| F4 | `tx_to_bytes` 入力検証 | Python 側で `type(i) is TransactionInput` / `type(o) is TransactionOutput` の型ガードを追加。C 側でも inputs/outputs リスト・dict 型・bytes 型を検証。SDK 本体経由では到達不能に |
+| 3.14-CI | cp314 を wheels パイプラインに追加 | cibuildwheel 2.22.0 → 3.4.1 へ bump、`cp314-*` 追加、`skip=cp3??t-*`。フルスイートを `-W error::DeprecationWarning` で実行。build.yml マトリクスにも 3.14 追加 |
+| — | SonarCloud cpd.exclusions 追加 | `.sonarcloud.properties` に `sonar.cpd.exclusions=tests/**` を追加。テストコードの重複率 (13.6%) で Quality Gate が落ちていた問題を解消 |
 
 ### 完了 (2026-07-02)
 

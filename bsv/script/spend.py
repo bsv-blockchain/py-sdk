@@ -8,7 +8,7 @@ from ..keys import PublicKey
 from ..native import NATIVE_AVAILABLE as _USE_NATIVE_VM
 from ..native import NATIVE_MODULE as _bsv_native
 from ..transaction_input import TransactionInput
-from ..transaction_preimage import tx_preimage
+from ..transaction_preimage import tx_preimage, tx_preimage_cached
 from ..utils import deserialize_ecdsa_der, serialize_ecdsa_der, unsigned_to_bytes
 from .script import Script, ScriptChunk
 
@@ -71,6 +71,8 @@ class Spend:
         self.unlocking_script: Script = params["unlockingScript"]
         self.input_sequence = params["inputSequence"]
         self.lock_time = params["lockTime"]
+        self.all_inputs = params.get("allInputs")
+        self._verification_context = params.get("verificationContext")
 
         self.context: Literal["UnlockingScript", "LockingScript"] = "UnlockingScript"
         self.program_counter = 0
@@ -864,6 +866,24 @@ class Spend:
         unlock_chunks = [(int.from_bytes(c.op, "big"), c.data) for c in self.unlocking_script.chunks]
         lock_chunks = [(int.from_bytes(c.op, "big"), c.data) for c in self.locking_script.chunks]
 
+        ctx = self._verification_context
+        if ctx is not None:
+            return _bsv_native.spend_validate(
+                unlock_chunks,
+                lock_chunks,
+                self.transaction_version,
+                self.source_txid,
+                self.source_output_index,
+                self.lock_time,
+                self.input_index,
+                self.input_sequence,
+                self.source_satoshis,
+                [],
+                ctx.serialized_outputs,
+                ctx.shared_hashes,
+                ctx.native_inputs,
+            )
+
         other_inputs_tuples = [
             (
                 inp.source_txid,
@@ -1152,10 +1172,29 @@ class Spend:
         current_input.locking_script = sub_script
         current_input.satoshis = self.source_satoshis
 
-        inputs = self.other_inputs[:]
-        inputs.insert(self.input_index, current_input)
+        ctx = self._verification_context
+        if ctx is not None:
+            preimage = tx_preimage_cached(
+                self.input_index,
+                current_input,
+                ctx.all_inputs,
+                self.outputs,
+                ctx.serialized_outputs,
+                self.transaction_version,
+                self.lock_time,
+                ctx.sighash_cache,
+            )
+        elif self.all_inputs is not None:
+            # allInputs without a context: honour it rather than silently falling
+            # back to otherInputs, which would build a wrong (short) preimage.
+            inputs = list(self.all_inputs)
+            inputs[self.input_index] = current_input
+            preimage = tx_preimage(self.input_index, inputs, self.outputs, self.transaction_version, self.lock_time)
+        else:
+            inputs = self.other_inputs[:]
+            inputs.insert(self.input_index, current_input)
+            preimage = tx_preimage(self.input_index, inputs, self.outputs, self.transaction_version, self.lock_time)
 
-        preimage = tx_preimage(self.input_index, inputs, self.outputs, self.transaction_version, self.lock_time)
         return PublicKey(pub_key).verify(self.normalize_low_s(sig[:-1]), preimage)
 
     @classmethod
