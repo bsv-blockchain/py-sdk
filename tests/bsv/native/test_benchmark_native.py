@@ -7,7 +7,14 @@ Run: pytest tests/bsv/native/test_benchmark_native.py --benchmark-only -v
 
 import pytest
 
-_bsv_native = pytest.importorskip("_bsv_native")
+from bsv.native import NATIVE_AVAILABLE
+from bsv.native import NATIVE_MODULE as _bsv_native
+
+# Not pytest.importorskip: the _bsv_native/ source directory imports fine as a
+# namespace package when no extension is compiled, so a successful import proves
+# nothing. bsv.native probes for a real symbol.
+if not NATIVE_AVAILABLE:
+    pytest.skip("native extension not available", allow_module_level=True)
 from bsv.constants import SIGHASH
 from bsv.hash import hash256 as py_hash256
 from bsv.hash import sha256 as py_sha256
