@@ -13,6 +13,7 @@ import pytest
 from bsv.constants import SIGHASH
 from bsv.hash import hash256
 from bsv.keys import PrivateKey
+from bsv.native import NATIVE_AVAILABLE
 from bsv.script.script import Script
 from bsv.script.spend import Spend
 from bsv.script.type import P2PKH
@@ -27,6 +28,11 @@ from bsv.transaction_preimage import (
     tx_preimage,
     tx_preimage_cached,
 )
+
+# Tests that drive the C extension directly (or spy on it) cannot run when the
+# extension is absent — BSV_NO_NATIVE=1 or a pure-Python install.
+requires_native = pytest.mark.skipif(not NATIVE_AVAILABLE, reason="native extension not available")
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -264,6 +270,50 @@ class TestLegacySpend:
         ).validate()
         assert result is True
 
+    @pytest.mark.parametrize("use_native", [True, False], ids=["native", "pure"])
+    def test_standalone_spend_with_all_inputs_only(self, use_native):
+        """allInputs without a verificationContext must digest the full input
+        list on both backends. The native path used to ignore it and fall back
+        to the (empty) otherInputs, disagreeing with pure Python on the same
+        signature."""
+        if use_native and not NATIVE_AVAILABLE:
+            pytest.skip("native extension not available")
+
+        priv_key = PrivateKey()
+        source_tx = _make_source(priv_key, 2)
+        addr = priv_key.address()
+        tx = Transaction(
+            tx_inputs=[
+                TransactionInput(
+                    source_transaction=source_tx,
+                    source_output_index=i,
+                    unlocking_script_template=P2PKH().unlock(priv_key),
+                )
+                for i in range(2)
+            ],
+            tx_outputs=[TransactionOutput(locking_script=P2PKH().lock(addr), satoshis=100_000)],
+        )
+        tx.sign()
+
+        source_output_0 = source_tx.outputs[0]
+        params = {
+            "sourceTXID": tx.inputs[0].source_txid or source_tx.txid(),
+            "sourceOutputIndex": 0,
+            "sourceSatoshis": source_output_0.satoshis,
+            "lockingScript": source_output_0.locking_script,
+            "transactionVersion": tx.version,
+            "otherInputs": [],
+            "inputIndex": 0,
+            "unlockingScript": tx.inputs[0].unlocking_script,
+            "outputs": tx.outputs,
+            "inputSequence": tx.inputs[0].sequence,
+            "lockTime": tx.locktime,
+            "allInputs": tx.inputs,
+        }
+
+        with patch("bsv.script.spend._USE_NATIVE_VM", use_native):
+            assert Spend(params).validate() is True
+
 
 # ---------------------------------------------------------------------------
 # Context lifetime / mutation (C11)
@@ -302,6 +352,69 @@ class TestContextLifetime:
         tx1.outputs[0] = TransactionOutput(locking_script=P2PKH().lock(PrivateKey().address()), satoshis=50_000)
         assert await tx1.verify(ct, scripts_only=True) is False
         assert await tx2.verify(ct, scripts_only=True) is True
+
+
+class TestVerifyOrdering:
+    """Scripts are validated before ancestors, so a bad signature costs nothing
+    in ancestor-graph work. Verifying every source first would let an attacker
+    make a transaction with one bad signature pay for N expensive ancestors."""
+
+    @pytest.mark.asyncio
+    async def test_bad_script_skips_ancestor_verification(self):
+        priv_key = PrivateKey()
+        tx = _make_spending_tx(priv_key, 5)
+        source_tx = tx.inputs[0].source_transaction
+
+        # A well-formed P2PKH unlock, but signed for a different input index.
+        tx.inputs[0].unlocking_script = tx.inputs[1].unlocking_script
+
+        calls = {"n": 0}
+        original_verify = source_tx.verify
+
+        async def spy(*a, **kw):
+            calls["n"] += 1
+            return await original_verify(*a, **kw)
+
+        source_tx.verify = spy
+        ct = GullibleHeadersClient()
+
+        assert await tx.verify(ct, scripts_only=True) is False
+        assert calls["n"] == 0, f"ancestors must not be verified when a script fails, got {calls['n']} call(s)"
+
+    @pytest.mark.asyncio
+    async def test_valid_tx_still_verifies_ancestors(self):
+        """The reordering must not skip ancestor verification for a good tx."""
+        priv_key = PrivateKey()
+        tx = _make_spending_tx(priv_key, 3)
+        source_tx = tx.inputs[0].source_transaction
+
+        calls = {"n": 0}
+        original_verify = source_tx.verify
+
+        async def spy(*a, **kw):
+            calls["n"] += 1
+            return await original_verify(*a, **kw)
+
+        source_tx.verify = spy
+        ct = GullibleHeadersClient()
+
+        assert await tx.verify(ct, scripts_only=True) is True
+        assert calls["n"] == 3, f"every input's source must still be verified, got {calls['n']}"
+
+    @pytest.mark.asyncio
+    async def test_invalid_ancestor_still_fails(self):
+        """A tx whose scripts pass but whose ancestor fails must return False."""
+        priv_key = PrivateKey()
+        tx = _make_spending_tx(priv_key, 2)
+        source_tx = tx.inputs[0].source_transaction
+
+        async def always_false(*a, **kw):
+            return False
+
+        source_tx.verify = always_false
+        ct = GullibleHeadersClient()
+
+        assert await tx.verify(ct, scripts_only=True) is False
 
 
 # ---------------------------------------------------------------------------
@@ -555,15 +668,13 @@ class TestOTDA:
 # ---------------------------------------------------------------------------
 
 
+@requires_native
 class TestNativeErrorCleanup:
     """Malformed optional args to native spend_validate."""
 
     def test_shared_hashes_wrong_type_raises(self):
         """shared_hashes must be bytes, not str."""
-        from bsv.native import NATIVE_AVAILABLE, NATIVE_MODULE
-
-        if not NATIVE_AVAILABLE:
-            pytest.skip("native not available")
+        from bsv.native import NATIVE_MODULE
 
         with pytest.raises(TypeError, match="shared_hashes must be bytes"):
             NATIVE_MODULE.spend_validate(
@@ -583,10 +694,7 @@ class TestNativeErrorCleanup:
 
     def test_shared_hashes_wrong_length_raises(self):
         """shared_hashes must be exactly 96 bytes."""
-        from bsv.native import NATIVE_AVAILABLE, NATIVE_MODULE
-
-        if not NATIVE_AVAILABLE:
-            pytest.skip("native not available")
+        from bsv.native import NATIVE_MODULE
 
         with pytest.raises(ValueError, match="96 bytes"):
             NATIVE_MODULE.spend_validate(
@@ -704,6 +812,7 @@ class TestEmptyInputsNoContext:
 # ---------------------------------------------------------------------------
 
 
+@requires_native
 class TestNativeLazyParse:
     """Verify native call args and lazy parse behavior."""
 
@@ -745,10 +854,7 @@ class TestNativeLazyParse:
     def test_bip143_ignores_garbage_all_inputs(self):
         """BIP143-only Spend succeeds even if all_inputs contains garbage tuples,
         proving C never parses them for BIP143."""
-        from bsv.native import NATIVE_AVAILABLE, NATIVE_MODULE
-
-        if not NATIVE_AVAILABLE:
-            pytest.skip("native not available")
+        from bsv.native import NATIVE_MODULE
 
         priv_key = PrivateKey()
         tx = _make_spending_tx(priv_key, 2)
@@ -781,10 +887,7 @@ class TestNativeLazyParse:
         """Mirror of the BIP143 test: an OTDA signature MUST reach the lazy parse,
         so the same garbage all_inputs that BIP143 ignores has to be rejected here.
         Together the two tests pin lazy parsing in both directions."""
-        from bsv.native import NATIVE_AVAILABLE, NATIVE_MODULE
-
-        if not NATIVE_AVAILABLE:
-            pytest.skip("native not available")
+        from bsv.native import NATIVE_MODULE
 
         priv_key = PrivateKey()
         tx = _make_spending_tx(priv_key, 2, sighash=SIGHASH.ALL_FORKID_CHRONICLE)
@@ -833,15 +936,13 @@ _BAD_INDEX_CASES = [
 ]
 
 
+@requires_native
 class TestBoundsCheckSubprocess:
     """Bad input_index must raise ValueError in every arity path, never crash."""
 
     @pytest.mark.parametrize("label,extra,index,match", _BAD_INDEX_CASES, ids=[c[0] for c in _BAD_INDEX_CASES])
     def test_bad_index_raises_in_process(self, label, extra, index, match):
-        from bsv.native import NATIVE_AVAILABLE, NATIVE_MODULE
-
-        if not NATIVE_AVAILABLE:
-            pytest.skip("native not available")
+        from bsv.native import NATIVE_MODULE
 
         shared = b"\x00" * 96
         all_inputs = (("ab" * 32, 0, b"", 0, 0xFFFFFFFF, 0x41),)
@@ -855,10 +956,7 @@ class TestBoundsCheckSubprocess:
             NATIVE_MODULE.spend_validate(*args)
 
     def test_all_inputs_wrong_type_raises(self):
-        from bsv.native import NATIVE_AVAILABLE, NATIVE_MODULE
-
-        if not NATIVE_AVAILABLE:
-            pytest.skip("native not available")
+        from bsv.native import NATIVE_MODULE
 
         with pytest.raises(TypeError, match="all_inputs must be"):
             NATIVE_MODULE.spend_validate(
@@ -956,6 +1054,7 @@ print("OK")
 # ---------------------------------------------------------------------------
 
 
+@requires_native
 class TestNativeMemorySafety:
     """Hostile arguments at the C API boundary must not corrupt memory.
 
@@ -967,10 +1066,7 @@ class TestNativeMemorySafety:
     def test_satoshis_index_callback_rejected(self):
         """A satoshis field with __index__ used to run arbitrary Python mid-parse,
         letting the callback shrink a list whose length C had already cached."""
-        from bsv.native import NATIVE_AVAILABLE, NATIVE_MODULE
-
-        if not NATIVE_AVAILABLE:
-            pytest.skip("native not available")
+        from bsv.native import NATIVE_MODULE
 
         victim = [("ab" * 32, 0, b"", 0, 0xFFFFFFFF, 0x41) for _ in range(4)]
 

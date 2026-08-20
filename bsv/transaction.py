@@ -803,16 +803,17 @@ class Transaction:
                     f"merkle proof for the transaction spending the UTXO."
                 )
 
-            source_output = tx_input.source_transaction.outputs[tx_input.source_output_index]
-            source_outputs.append(source_output)
-
-            input_verified = await tx_input.source_transaction.verify(chaintracker, scripts_only=scripts_only)
-            if not input_verified:
-                return False
+            source_outputs.append(tx_input.source_transaction.outputs[tx_input.source_output_index])
 
         if not self.inputs:
             return True
 
+        # Scripts first, ancestors second. Script validation only needs the source
+        # outputs, not their provenance, and it is cheap and synchronous; verifying
+        # ancestors is recursive and unbounded. Checking scripts first means a
+        # transaction with a bad signature is rejected without walking any ancestor
+        # graph. The whole loop runs without an await, so the shared context cannot
+        # observe a transaction mutated mid-pass.
         ctx = build_verification_context(self.inputs, self.outputs)
 
         for i, tx_input in enumerate(self.inputs):
@@ -835,6 +836,10 @@ class Transaction:
                     }
                 ).validate()
             except RuntimeError:
+                return False
+
+        for tx_input in self.inputs:
+            if not await tx_input.source_transaction.verify(chaintracker, scripts_only=scripts_only):
                 return False
 
         return True

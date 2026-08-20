@@ -884,6 +884,14 @@ class Spend:
                 ctx.native_inputs,
             )
 
+        # Mirror verify_signature(): allInputs without a context is authoritative,
+        # otherwise native would digest a short input list and disagree with the
+        # pure-Python path on the very same signature.
+        if self.all_inputs is not None:
+            siblings = [inp for i, inp in enumerate(self.all_inputs) if i != self.input_index]
+        else:
+            siblings = self.other_inputs
+
         other_inputs_tuples = [
             (
                 inp.source_txid,
@@ -893,7 +901,7 @@ class Spend:
                 inp.sequence,
                 int(inp.sighash),
             )
-            for inp in self.other_inputs
+            for inp in siblings
         ]
         outputs_bytes = [out.serialize() for out in self.outputs]
 
