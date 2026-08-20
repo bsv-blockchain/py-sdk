@@ -787,6 +787,7 @@ class Transaction:
                 return True
 
         source_outputs = []
+        source_transactions = []
         for i, tx_input in enumerate(self.inputs):
             if not tx_input.source_transaction:
                 raise ValueError(
@@ -803,7 +804,18 @@ class Transaction:
                     f"merkle proof for the transaction spending the UTXO."
                 )
 
-            source_outputs.append(tx_input.source_transaction.outputs[tx_input.source_output_index])
+            source_output = tx_input.source_transaction.outputs[tx_input.source_output_index]
+            # Scripts are validated before ancestors now, so a malformed source
+            # output is reached even when an ancestor would have failed first.
+            # Report it as missing data rather than letting it surface as a
+            # TypeError/AttributeError from inside the script engine.
+            if source_output.locking_script is None or source_output.satoshis is None:
+                raise ValueError(
+                    f"Verification failed because the input at index {i} of transaction {self.txid()} "
+                    f"refers to a source output that is missing its locking script or amount."
+                )
+            source_outputs.append(source_output)
+            source_transactions.append(tx_input.source_transaction)
 
         if not self.inputs:
             return True
@@ -838,8 +850,12 @@ class Transaction:
             except RuntimeError:
                 return False
 
-        for tx_input in self.inputs:
-            if not await tx_input.source_transaction.verify(chaintracker, scripts_only=scripts_only):
+        # Release before recursing: the ancestor walk below is recursive, so a
+        # context held here would be held once per level of the chain.
+        del ctx, source_outputs
+
+        for source_transaction in source_transactions:
+            if not await source_transaction.verify(chaintracker, scripts_only=scripts_only):
                 return False
 
         return True

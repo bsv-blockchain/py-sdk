@@ -29,8 +29,9 @@ from bsv.transaction_preimage import (
     tx_preimage_cached,
 )
 
-# Tests that drive the C extension directly (or spy on it) cannot run when the
-# extension is absent — BSV_NO_NATIVE=1 or a pure-Python install.
+# Tests that drive the C extension directly (or spy on it) cannot run on a
+# pure-Python install. NATIVE_AVAILABLE is purely "did `import _bsv_native`
+# succeed" — BSV_NO_NATIVE is a build-time flag and is never read at runtime.
 requires_native = pytest.mark.skipif(not NATIVE_AVAILABLE, reason="native extension not available")
 
 
@@ -399,7 +400,10 @@ class TestVerifyOrdering:
         ct = GullibleHeadersClient()
 
         assert await tx.verify(ct, scripts_only=True) is True
-        assert calls["n"] == 3, f"every input's source must still be verified, got {calls['n']}"
+        # Only that ancestors are still reached. The exact count is deliberately
+        # not pinned: verify() currently re-verifies a shared source once per
+        # input, and memoizing that (F11c) should not have to touch this test.
+        assert calls["n"] >= 1, "ancestors must still be verified for a valid transaction"
 
     @pytest.mark.asyncio
     async def test_invalid_ancestor_still_fails(self):
