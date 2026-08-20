@@ -70,6 +70,34 @@ def test_transaction_input_init_large_index():
     assert inp.source_output_index == 999
 
 
+@pytest.mark.parametrize("source_output_index", [-1, 0x100000000])
+def test_transaction_input_rejects_non_uint32_source_output_index(source_output_index):
+    with pytest.raises(ValueError, match=r"source_output_index must be a uint32"):
+        TransactionInput(source_txid="0" * 64, source_output_index=source_output_index)
+
+
+def test_transaction_input_validates_attached_source_transaction_output_index():
+    source_tx = Transaction(
+        tx_outputs=[
+            TransactionOutput(satoshis=111, locking_script=Script()),
+            TransactionOutput(satoshis=222, locking_script=Script()),
+        ]
+    )
+
+    assert TransactionInput(source_transaction=source_tx, source_output_index=0).satoshis == 111
+    assert TransactionInput(source_transaction=source_tx, source_output_index=1).satoshis == 222
+
+    with pytest.raises(ValueError, match=r"source_output_index must be a uint32"):
+        TransactionInput(source_transaction=source_tx, source_output_index=-1)
+    with pytest.raises(ValueError, match=r"does not reference an existing"):
+        TransactionInput(source_transaction=source_tx, source_output_index=len(source_tx.outputs))
+
+
+def test_transaction_input_accepts_max_uint32_without_source_transaction():
+    tx_input = TransactionInput(source_txid="0" * 64, source_output_index=0xFFFFFFFF)
+    assert tx_input.source_output_index == 0xFFFFFFFF
+
+
 def test_transaction_input_init_empty_script():
     """Test TransactionInput with empty unlocking script."""
     inp = TransactionInput(

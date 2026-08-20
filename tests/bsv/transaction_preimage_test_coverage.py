@@ -2,6 +2,10 @@
 Coverage tests for transaction_preimage.py - untested branches.
 """
 
+import subprocess
+import sys
+import textwrap
+
 import pytest
 
 from bsv.script.script import Script
@@ -115,8 +119,49 @@ def test_transaction_preimage_index_bounds():
     tx.inputs[0].satoshis = 1000
 
     if hasattr(tx, "preimage"):
-        with pytest.raises(AssertionError):
-            _ = tx.preimage(99)  # Out of bounds
+        for index in (-1, 1, 99):
+            with pytest.raises(ValueError, match=r"index out of range"):
+                _ = tx.preimage(index)
+
+
+def test_transaction_preimage_index_validation_is_preserved_under_python_optimization():
+    code = textwrap.dedent("""\
+        from bsv.script.script import Script
+        from bsv.transaction import Transaction
+        from bsv.transaction_input import TransactionInput
+        from bsv.transaction_output import TransactionOutput
+
+        if __debug__:
+            raise RuntimeError("subprocess is not running with optimization enabled")
+
+        tx_input = TransactionInput(source_txid="0" * 64)
+        tx_input.locking_script = Script()
+        tx_input.satoshis = 1000
+        tx = Transaction(
+            tx_inputs=[tx_input],
+            tx_outputs=[TransactionOutput(satoshis=1000, locking_script=Script())],
+        )
+
+        for index in (-1, 1, 99):
+            try:
+                tx.preimage(index)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError(f"accepted invalid preimage index: {index}")
+
+        if not tx.preimage(0):
+            raise AssertionError("valid preimage index changed under optimization")
+        """)
+
+    result = subprocess.run(
+        [sys.executable, "-O", "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_transaction_preimage_deterministic():
