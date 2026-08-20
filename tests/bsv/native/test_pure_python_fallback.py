@@ -19,7 +19,11 @@ import sys
 
 import pytest
 
-import _bsv_native
+try:
+    import _bsv_native
+except ImportError:  # pure-Python install: only the native-comparison class needs it
+    _bsv_native = None
+
 import bsv.curve  # ensure the submodule is imported into sys.modules
 import bsv.keys
 from bsv.hash import hash256 as py_hash256
@@ -117,6 +121,7 @@ class TestPurePythonRoundTrips:
 # ═══════════════════════════════════════════════════════════════════════
 
 
+@pytest.mark.skipif(_bsv_native is None, reason="native extension not available")
 class TestNativePythonEquivalence:
     @pytest.mark.parametrize("secret_hex", SECRETS)
     def test_pubkey_and_address_match_native(self, monkeypatch, secret_hex):
@@ -184,6 +189,7 @@ class TestNativePythonEquivalence:
 # ═══════════════════════════════════════════════════════════════════════
 
 
+@pytest.mark.skipif(_bsv_native is None, reason="native extension not available")
 class TestCurveMathEquivalence:
     @pytest.mark.parametrize("scalar", [1, 2, 7, 255, 0x123456789ABCDEF, curve_mod.curve.n - 1])
     def test_curve_multiply_matches_native(self, monkeypatch, scalar):

@@ -420,6 +420,114 @@ class TestVerifyOrdering:
 
         assert await tx.verify(ct, scripts_only=True) is False
 
+    @pytest.mark.asyncio
+    async def test_context_released_before_ancestor_recursion(self):
+        """The shared context must be dropped before the ancestor walk.
+
+        The walk recurses, so a context still referenced here is pinned once per
+        level of the chain. Observed with a weakref: PreparedVerificationContext
+        uses __slots__, so a subclass is needed to make it weak-referenceable.
+        """
+        import gc
+        import weakref
+
+        class _Tracked(PreparedVerificationContext):
+            pass
+
+        priv_key = PrivateKey()
+        tx = _make_spending_tx(priv_key, 3)
+        source_tx = tx.inputs[0].source_transaction
+
+        refs = []
+        original_build = build_verification_context
+
+        def tracking_build(inputs, outputs):
+            ctx = original_build(inputs, outputs)
+            tracked = _Tracked(ctx.all_inputs, ctx.native_inputs, ctx.serialized_outputs, ctx.sighash_cache)
+            refs.append(weakref.ref(tracked))
+            return tracked
+
+        alive_at_ancestor = []
+        original_verify = source_tx.verify
+
+        async def spy(*a, **kw):
+            gc.collect()
+            alive_at_ancestor.append([r for r in refs if r() is not None])
+            return await original_verify(*a, **kw)
+
+        source_tx.verify = spy
+        ct = GullibleHeadersClient()
+
+        with patch("bsv._legacy_transaction.build_verification_context", side_effect=tracking_build):
+            assert await tx.verify(ct, scripts_only=True) is True
+
+        assert refs, "the tracking builder was never called"
+        assert alive_at_ancestor, "ancestor verification was never reached"
+        for alive in alive_at_ancestor:
+            assert alive == [], f"{len(alive)} context(s) still alive during ancestor verification"
+
+
+class TestMalformedSourceOutput:
+    """A source output missing its amount or script is missing data, not a
+    script failure. Scripts are now validated before ancestors, so such an
+    output is reached even when an ancestor would have failed first; without
+    an explicit check it surfaces as TypeError/AttributeError from the script
+    engine instead of the ValueError the other missing-data cases raise."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("field", ["satoshis", "locking_script"])
+    async def test_missing_source_output_field_raises_value_error(self, field):
+        priv_key = PrivateKey()
+        tx = _make_spending_tx(priv_key, 2)
+        source_tx = tx.inputs[0].source_transaction
+        setattr(source_tx.outputs[0], field, None)
+
+        ct = GullibleHeadersClient()
+        with pytest.raises(ValueError, match="missing its locking script or amount"):
+            await tx.verify(ct, scripts_only=True)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("field", ["satoshis", "locking_script"])
+    async def test_raises_even_when_an_ancestor_would_fail(self, field):
+        """The old order returned False here because the ancestor was checked
+        first; it must not resurface as TypeError/AttributeError now."""
+        priv_key = PrivateKey()
+        tx = _make_spending_tx(priv_key, 2)
+        source_tx = tx.inputs[0].source_transaction
+        setattr(source_tx.outputs[0], field, None)
+
+        async def always_false(*a, **kw):
+            return False
+
+        source_tx.verify = always_false
+        ct = GullibleHeadersClient()
+
+        with pytest.raises(ValueError, match="missing its locking script or amount"):
+            await tx.verify(ct, scripts_only=True)
+
+    @pytest.mark.asyncio
+    async def test_ancestor_walk_uses_snapshot(self):
+        """The ancestor loop walks the list captured during the presence check,
+        not tx_input.source_transaction re-read afterwards, so a mutation
+        between the two phases cannot turn into an AttributeError."""
+        priv_key = PrivateKey()
+        tx = _make_spending_tx(priv_key, 2)
+
+        original_validate = Spend.validate
+        dropped = {"done": False}
+
+        def validate_then_drop(self_spend):
+            result = original_validate(self_spend)
+            if not dropped["done"]:
+                tx.inputs[0].source_transaction = None
+                dropped["done"] = True
+            return result
+
+        ct = GullibleHeadersClient()
+        with patch.object(Spend, "validate", validate_then_drop):
+            assert await tx.verify(ct, scripts_only=True) is True
+        assert dropped["done"], "the mutation hook never fired"
+
 
 # ---------------------------------------------------------------------------
 # Complexity assertions (C1-C5)
