@@ -65,7 +65,8 @@ class P2PKH(ScriptTemplate):
         else:
             raise TypeError("unsupported type to parse P2PKH locking script")
 
-        assert len(pkh) == PUBLIC_KEY_HASH_BYTE_LENGTH, "invalid byte length of public key hash"
+        if len(pkh) != PUBLIC_KEY_HASH_BYTE_LENGTH:
+            raise ValueError("invalid byte length of public key hash")
 
         return Script(
             OpCode.OP_DUP + OpCode.OP_HASH160 + encode_pushdata(pkh) + OpCode.OP_EQUALVERIFY + OpCode.OP_CHECKSIG
@@ -128,7 +129,8 @@ class P2PK(ScriptTemplate):
         else:
             raise TypeError("unsupported type to parse P2PK locking script")
 
-        assert len(pk) in PUBLIC_KEY_BYTE_LENGTH_LIST, "invalid byte length of public key"
+        if len(pk) not in PUBLIC_KEY_BYTE_LENGTH_LIST:
+            raise ValueError("invalid byte length of public key")
 
         return Script(encode_pushdata(pk) + OpCode.OP_CHECKSIG)
 
@@ -154,18 +156,20 @@ class BareMultisig(ScriptTemplate):
         return self.__str__()
 
     def lock(self, participants: list[str | bytes], threshold: int) -> Script:
-        assert 1 <= threshold <= len(participants), "bad threshold or number of participants"
+        if not 1 <= threshold <= len(participants):
+            raise ValueError("bad threshold or number of participants")
 
-        participants_parsed = []
+        participants_parsed: list[bytes] = []
         for participant in participants:
-            assert type(participant).__name__ in [
-                "str",
-                "bytes",
-            ], "unsupported public key type"
             if isinstance(participant, str):
-                participant = bytes.fromhex(participant)
-            assert len(participant) in PUBLIC_KEY_BYTE_LENGTH_LIST, "invalid byte length of public key"
-            participants_parsed.append(participant)
+                participant_bytes = bytes.fromhex(participant)
+            elif isinstance(participant, bytes):
+                participant_bytes = participant
+            else:
+                raise TypeError("unsupported public key type")
+            if len(participant_bytes) not in PUBLIC_KEY_BYTE_LENGTH_LIST:
+                raise ValueError("invalid byte length of public key")
+            participants_parsed.append(participant_bytes)
         script: bytes = encode_int(threshold)
         for participant in participants_parsed:
             script += encode_pushdata(participant)
@@ -195,7 +199,8 @@ class RPuzzle(ScriptTemplate):
 
         :param puzzle_type: Denotes the type of puzzle to create ('raw', 'SHA1', 'SHA256', 'HASH256', 'RIPEMD160', 'HASH160')
         """
-        assert puzzle_type in ["raw", "SHA1", "SHA256", "HASH256", "RIPEMD160", "HASH160"]
+        if puzzle_type not in ("raw", "SHA1", "SHA256", "HASH256", "RIPEMD160", "HASH160"):
+            raise ValueError(f"unsupported R puzzle type: {puzzle_type!r}")
         self.type = puzzle_type
 
     def lock(self, value: bytes) -> Script:

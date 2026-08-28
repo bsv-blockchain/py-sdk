@@ -69,6 +69,42 @@ class TestPurePythonRoundTrips:
         assert pub.verify(sig, message)
         assert not pub.verify(sig, message + b"x")
 
+    def test_sign_prehashed_message(self, force_python):
+        secret = bytes.fromhex(SECRETS[1])
+        digest = b"\x01" + b"\x00" * 31
+        private_key = PrivateKey(secret)
+
+        signature = private_key.sign(digest, hasher=None)
+
+        assert private_key.public_key().verify(signature, digest, hasher=None)
+        assert signature == _bsv_native.ecdsa_sign(digest, secret)
+
+    def test_sign_prehashed_message_with_custom_k(self, force_python):
+        secret = bytes.fromhex(SECRETS[1])
+        digest = b"\x02" + b"\x00" * 31
+        private_key = PrivateKey(secret)
+        k = 7
+
+        signature = private_key.sign(digest, hasher=None, k=k)
+
+        assert private_key.public_key().verify(signature, digest, hasher=None)
+        assert signature == _bsv_native.ecdsa_sign_with_k(digest, secret, k.to_bytes(32, "big"))
+
+    @pytest.mark.parametrize("k", [None, 7])
+    def test_sign_hashes_message_once(self, force_python, k):
+        calls = 0
+
+        def counting_hasher(message: bytes) -> bytes:
+            nonlocal calls
+            calls += 1
+            return py_hash256(message)
+
+        private_key = PrivateKey(bytes.fromhex(SECRETS[1]))
+        signature = private_key.sign(b"hash me once", hasher=counting_hasher, k=k)
+
+        assert calls == 1
+        assert private_key.public_key().verify(signature, b"hash me once")
+
     @pytest.mark.parametrize("secret_hex", SECRETS)
     def test_sign_recoverable_recover(self, force_python, secret_hex):
         pk = PrivateKey(bytes.fromhex(secret_hex))

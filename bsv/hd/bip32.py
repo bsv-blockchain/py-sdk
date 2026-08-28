@@ -73,13 +73,14 @@ class Xpub(Xkey):
         elif isinstance(index, str):
             index = bytes.fromhex(index)
         assert len(index) == 4, "index should be a 4 bytes integer"
-        assert index[0] < 0x80, (
-            "can't make hardened derivation from xpub. "
-            "If you use hardened key, please set xpub with path from xpriv first. Example:\n"
-            "  master_xprv = master_xprv_from_seed(seed)\n"
-            "  account_xprv = ckd(master_xprv, \"m/44'/0'/0'\")\n"
-            "  account_xpub = account_xprv.xpub()"
-        )
+        if index[0] >= 0x80:
+            raise ValueError(
+                "can't make hardened derivation from xpub. "
+                "If you use hardened key, please set xpub with path from xpriv first. Example:\n"
+                "  master_xprv = master_xprv_from_seed(seed)\n"
+                "  account_xprv = ckd(master_xprv, \"m/44'/0'/0'\")\n"
+                "  account_xpub = account_xprv.xpub()"
+            )
 
         payload: bytes = self.prefix
         payload += (self.depth + 1).to_bytes(1, "big")
@@ -202,9 +203,8 @@ def ckd(xkey: Xprv | Xpub, path: str) -> Xprv | Xpub:
 
     if steps[0] == "m":
         # should be master key
-        assert (
-            xkey.depth == 0 and xkey.fingerprint == b"\x00\x00\x00\x00" and xkey.index == 0
-        ), "absolute path for non-master key"
+        if not (xkey.depth == 0 and xkey.fingerprint == b"\x00\x00\x00\x00" and xkey.index == 0):
+            raise ValueError("absolute path for non-master key")
 
     child = xkey
     for step in steps[1:]:

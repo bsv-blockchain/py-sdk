@@ -1,3 +1,7 @@
+import subprocess
+import sys
+import textwrap
+
 import pytest
 
 from bsv.hd.bip32 import Xprv, Xpub, ckd, master_xprv_from_seed
@@ -81,12 +85,46 @@ def test_ckd():
     assert ckd(Xpub(master_xpub), "./0") == Xpub(normal_xpub)
 
     non_master_xpub = Xpub(normal_xpub)
-    with pytest.raises(AssertionError, match=r"absolute path for non-master key"):
+    with pytest.raises(ValueError, match=r"absolute path for non-master key"):
         ckd(non_master_xpub, "m/0")
 
     master_xpub_obj = Xpub(master_xpub)
-    with pytest.raises(AssertionError, match=r"can't make hardened derivation from xpub"):
+    with pytest.raises(ValueError, match=r"can't make hardened derivation from xpub"):
         ckd(master_xpub_obj, "m/0'")
+
+
+def test_bip32_derivation_validation_is_preserved_under_python_optimization():
+    code = textwrap.dedent(f"""\
+        from bsv.hd.bip32 import Xpub, ckd
+
+        if __debug__:
+            raise RuntimeError("subprocess is not running with optimization enabled")
+
+        master = Xpub({master_xpub!r})
+        non_master = Xpub({normal_xpub!r})
+        for operation in (
+            lambda: master.ckd(0x80000000),
+            lambda: ckd(non_master, "m/0"),
+        ):
+            try:
+                operation()
+            except ValueError:
+                pass
+            else:
+                raise AssertionError("accepted invalid BIP32 derivation")
+
+        if str(ckd(master, "m/0")) != {normal_xpub!r}:
+            raise AssertionError("valid BIP32 derivation changed under optimization")
+        """)
+
+    result = subprocess.run(
+        [sys.executable, "-O", "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_wordlist():
@@ -223,5 +261,5 @@ def test_derive():
 
     assert [xpub.address() for xpub in derive_xkeys_from_xkey(xpub, 0, 1)] == ["1NDA9czdzkaJFA5Cj1TRyKeews5GrJ9QKR"]
 
-    with pytest.raises(AssertionError, match=r"can't make hardened derivation from xpub"):
+    with pytest.raises(ValueError, match=r"can't make hardened derivation from xpub"):
         derive_xkeys_from_xkey(xpub, "0'", "1'")

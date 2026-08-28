@@ -31,6 +31,11 @@ class TransactionInput:
         sequence: int = TRANSACTION_SEQUENCE,
         sighash: SIGHASH = SIGHASH.ALL_FORKID,
     ):
+        if not isinstance(source_output_index, int) or not 0 <= source_output_index <= 0xFFFFFFFF:
+            raise ValueError("source_output_index must be a uint32")
+        if source_transaction and source_output_index >= len(source_transaction.outputs):
+            raise ValueError("source_output_index does not reference an existing source transaction output")
+
         utxo = None
         if source_transaction:
             utxo = source_transaction.outputs[source_output_index]
