@@ -72,13 +72,17 @@ if USE_C_EXTENSION:
     ext_modules.append(
         Extension(
             "_bsv_native",
-            sources=[os.path.join("_bsv_native", "bsv_native.c")],
+            sources=[
+                os.path.join("_bsv_native", "bsv_native.c"),
+                os.path.join("_bsv_native", "ripemd160.c"),
+            ],
             include_dirs=[
                 "_bsv_native",
                 SECP256K1_DIR,
                 SECP256K1_SRC,
                 SECP256K1_INC,
             ],
+            depends=[os.path.join("_bsv_native", "ripemd160.h")],
             extra_compile_args=compile_args,
             language="c",
         )

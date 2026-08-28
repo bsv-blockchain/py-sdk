@@ -205,3 +205,48 @@ class TestCurveMathEquivalence:
         assert py_sum == native_sum
         # 7G + 11G == 18G
         assert py_sum == curve_mod.curve_multiply(18, g)
+
+
+class TestNamespacePackageGuard:
+    """Regression: _bsv_native/ dir must not be importable as a namespace package."""
+
+    def test_namespace_import_falls_back_to_python(self, tmp_path):
+        """A directory named _bsv_native with no compiled extension must not
+        trick bsv.native into setting NATIVE_AVAILABLE = True."""
+        import subprocess
+        import textwrap
+
+        (tmp_path / "_bsv_native").mkdir()
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                textwrap.dedent("""\
+                    import sys, types
+
+                    # Ensure _bsv_native resolves to a bare namespace package
+                    # (no compiled extension, no __init__.py).
+                    if "_bsv_native" in sys.modules:
+                        del sys.modules["_bsv_native"]
+                    ns = types.ModuleType("_bsv_native")
+                    ns.__path__ = []  # looks like a namespace package
+                    sys.modules["_bsv_native"] = ns
+
+                    # Now reload bsv.native — it must detect the fake module.
+                    for key in list(sys.modules):
+                        if key.startswith("bsv"):
+                            del sys.modules[key]
+
+                    from bsv.native import NATIVE_AVAILABLE
+                    assert not NATIVE_AVAILABLE, (
+                        "NATIVE_AVAILABLE should be False for namespace-only _bsv_native"
+                    )
+                    print("OK")
+                """),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, result.stderr
