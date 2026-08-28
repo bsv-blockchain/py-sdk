@@ -5,6 +5,8 @@ include README.md
 
 # C extension source
 include _bsv_native/bsv_native.c
+include _bsv_native/ripemd160.c
+include _bsv_native/ripemd160.h
 
 # Vendored libsecp256k1 (required for compilation)
 recursive-include _bsv_native/secp256k1/src *.c *.h

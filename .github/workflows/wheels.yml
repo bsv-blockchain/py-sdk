@@ -11,6 +11,7 @@ on:
       - "setup.py"
       - "pyproject.toml"
       - "MANIFEST.in"
+      - "tests/bsv/native/**"
       - ".github/workflows/wheels.yml"
   workflow_dispatch:
 
@@ -33,10 +34,8 @@ jobs:
       - run: pip install build
       - run: python -m build --sdist
 
-      - name: Verify sdist contains C sources
-        run: |
-          tar tzf dist/*.tar.gz | grep bsv_native.c
-          tar tzf dist/*.tar.gz | grep secp256k1/src/secp256k1.c
+      - name: Verify sdist builds the native extension
+        run: BSV_REQUIRE_NATIVE=1 python -m pip wheel --no-deps dist/*.tar.gz
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
