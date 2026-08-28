@@ -7,6 +7,7 @@ import when the C extension is absent; callers just read the flag.
 
 from __future__ import annotations
 
+import os
 import warnings
 
 try:
@@ -21,14 +22,15 @@ try:
 except (ImportError, AttributeError):
     NATIVE_AVAILABLE = False
     NATIVE_MODULE = None  # type: ignore[assignment]
-    warnings.warn(
-        "_bsv_native C extension not available — "
-        "falling back to pure Python (significantly slower). "
-        "Set BSV_NO_NATIVE=1 to silence this warning, "
-        "or install from a pre-built wheel for native acceleration.",
-        RuntimeWarning,
-        stacklevel=2,
-    )
+    if os.environ.get("BSV_NO_NATIVE", "0") != "1":
+        warnings.warn(
+            "_bsv_native C extension not available — "
+            "falling back to pure Python (significantly slower). "
+            "Set BSV_NO_NATIVE=1 to silence this warning, "
+            "or install from a pre-built wheel for native acceleration.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
 
 
 def native_status() -> dict[str, object]:
