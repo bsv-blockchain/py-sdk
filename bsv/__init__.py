@@ -58,4 +58,4 @@ from .transaction_preimage import *
 # Step 6.8: utils
 from .utils import *
 
-__version__ = "2.3.3"
+__version__ = "2.4.0"
