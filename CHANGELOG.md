@@ -7,6 +7,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Table of Contents
 
 - [Unreleased](#unreleased)
+- [2.4.0 - 2026-08-28](#240---2026-08-28)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
 - [2.3.0 - 2026-07-21](#230---2026-07-21)
@@ -40,9 +41,34 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [2.4.0] - 2026-08-28
+
+### Added
+
+- **Native acceleration diagnostics** (#210) — exposed `bsv.NATIVE_AVAILABLE` and `bsv.native_status()` for reporting the active cryptographic backend and native-extension version.
+- **Python 3.14 support** (#211) — added CPython 3.14 testing, package metadata, and native wheel builds. Free-threaded builds are not yet included.
+
+### Changed
+
+- **Native fallback and build reporting** (#210, #215) — native capability detection is now centralized; unavailable or failed native builds emit a `RuntimeWarning`; `BSV_NO_NATIVE=1` suppresses the warning for intentional pure-Python use; and source-distribution checks verify that the extension can be built from generated sources.
+- **Optimization-safe API validation** (#216, #218, #219) — P2PKH, P2PK, BareMultisig, and RPuzzle script templates, hardened extended-public-key and absolute-path BIP32 derivation, and `Transaction.preimage()` input-index checks now use explicit exceptions and remain active under `python -O`.
+
 ### Fixed
 
-- **Numeric operands must be minimally encoded where minimal pushes are** — the node derives one `requireMinimal` from `VerifyMinimalData(flags) && EnforceNonMalleability(flags, version)` and uses it both for `CheckMinimalPush` and for every `CScriptNum` construction. py-sdk applied it to pushes only, so `0x0100` — a minimal *push* but a non-minimal *number* for 1 — was accepted as an operand where the node rejects it, as was negative zero (`0x80`). Now enforced on both VM paths, and relaxed for transaction version > 1 alongside minimal pushes. `OP_BIN2NUM` is deliberately exempt: minimising a non-minimal encoding is what it is for, and the node reads its input directly rather than through `CScriptNum`.
+- **Fee calculation at CompactSize boundaries** (#190) — `SatoshisPerKilobyte` now uses the correct encoded sizes at 253, 65,536, and 4,294,967,296 bytes, preventing transaction-size and fee underestimation.
+- **Native transaction encoding parity** (#190) — native serialization and preimage generation now reject invalid uint32 fields, script values, and source transaction IDs instead of silently wrapping or coercing them. The serializer continues to use the Python fallback for custom input and output serialization overrides.
+- **Script VM parity with BSV Node** (#209) — corrected 22 consensus and safety mismatches across the pure-Python and native validators, covering opcode semantics, numeric and slice bounds, conditional and script-boundary state, signature rules, opcode validity, and OTDA `SIGHASH_SINGLE` behavior. Malformed scripts now fail predictably instead of risking excessive allocation, out-of-bounds native reads, or process aborts.
+- **Native detection in source checkouts** (#215) — a source-only `_bsv_native` namespace package is no longer mistaken for the compiled extension, preventing `AttributeError` crashes and preserving the pure-Python fallback.
+- **Pure-Python public-key validation** (#213) — `PublicKey` now rejects malformed, non-canonical, out-of-range, and off-curve secp256k1 coordinates when constructed from serialized keys or `Point` objects.
+- **Pure-Python prehashed signing** (#214) — `PrivateKey.sign()` now supports prehashed messages with `hasher=None`, invokes the selected hasher exactly once when one is provided, and preserves custom-nonce signing behavior.
+- **Transaction source-output validation** (#220) — `TransactionInput.source_output_index` is now validated as a uint32 when an input is created and, when a source transaction is provided, must reference an existing output. Negative indexes can no longer select the final output implicitly.
+
+### Performance
+
+- **O(N) multi-input BIP143 signing** (#211) — `Transaction.sign()` now computes shared preimage commitments once, instead of recomputing them for every input, while safely bypassing the cache when the locking script changes.
+- **Faster native RIPEMD-160 and HASH160** (#211, #215) — moved the project-maintained RIPEMD-160 implementation into a dedicated, audited C unit and removed Python/C boundary crossings from native `OP_RIPEMD160` and `OP_HASH160` execution.
 
 ---
 

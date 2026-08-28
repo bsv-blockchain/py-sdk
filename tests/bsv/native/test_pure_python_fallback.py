@@ -15,6 +15,7 @@ Item (2) is what guards the RFC 6979 nonce and low-S normalization in the Python
 code against silent drift from libsecp256k1.
 """
 
+import os
 import sys
 
 import pytest
@@ -246,17 +247,17 @@ class TestCurveMathEquivalence:
 class TestNamespacePackageGuard:
     """Regression: _bsv_native/ dir must not be importable as a namespace package."""
 
-    def test_namespace_import_falls_back_to_python(self, tmp_path):
-        """A directory named _bsv_native with no compiled extension must not
-        trick bsv.native into setting NATIVE_AVAILABLE = True."""
+    def test_disabled_native_namespace_import_falls_back_without_warning(self):
+        """Intentional pure-Python use must ignore a source-only namespace
+        package without emitting the native fallback warning."""
         import subprocess
         import textwrap
-
-        (tmp_path / "_bsv_native").mkdir()
 
         result = subprocess.run(
             [
                 sys.executable,
+                "-W",
+                "error::RuntimeWarning",
                 "-c",
                 textwrap.dedent("""\
                     import sys, types
@@ -282,6 +283,7 @@ class TestNamespacePackageGuard:
                 """),
             ],
             capture_output=True,
+            env={**os.environ, "BSV_NO_NATIVE": "1"},
             text=True,
             timeout=30,
         )
