@@ -2616,7 +2616,7 @@ Python 3.13 ヘッダでの実コンパイル) し、P0/P1 確定項目は第二
 | F3 | pubkey_point デッドストア | P1 | P3 に格下げ → ✅ 修正済み | 同上 (キャッシュ済み int 0)、デッドコード2行 |
 | F4 | tx_to_bytes NULL deref | P0 | P1 (一部過大、新規発見あり) | source_txid 経由の SIGSEGV 実証 (exit=139)。int 系3キーは SystemError で crash せず。**新規発見: 非 hex txid で未初期化ヒープメモリ流出 + ~62B OOB read**。SDK 本体からは未使用 (テストのみ) |
 | F5 | PUSHDATA4 符号拡張 | P2 | **棄却** | 64bit では `(Py_ssize_t)` キャストがシフト前のため符号拡張なし。32bit ビルド限定の潜在 UB (未出荷) のみ |
-| F6 | RIPEMD160 毎回 import | P2 | P2 確定 (修正方針は変更) | import 自体は ~0.3µs で無害。Cryptodome ハッシャー生成込みで 3.2µs/回 = P2PKH validate の ~10%。修正はモジュールキャッシュではなく **C 実装 RIPEMD160 の組み込み** が必要 |
+| F6 | RIPEMD160 毎回 import | P2 | **✅ 修正済み (2026-08-14)** | 純 C 実装の RIPEMD-160 を `bsv_native.c` に組み込み、Python (Cryptodome) 経由を排除。OP_RIPEMD160 / OP_HASH160 が SHA256/HASH256 と同様にバッファベースで C 内完結。テストスイート全パス (1213 passed)、デュアルパス等価テスト 95 件全パス |
 | F7 | g_ctx スレッド安全性 | P1 | P3 に格下げ | `Py_BEGIN_ALLOW_THREADS` が 0 件 = 拡張全体が GIL 保持下で動作、race は現状発生不可能。free-threaded Python / GIL 解放最適化導入時の注意点として記録 |
 | F8 | `_PyLong_*` 私的 API | P3 | **P2 に格上げ → ✅ 修正済み (2026-07-02)** | 3.13 で `_PyLong_AsByteArray` が 6 引数化 → cp313 native ビルド不能を実測確認。**同日修正**: 私的 API を公開 `PyLong_FromUnsignedNativeBytes`/`AsNativeBytes` へ移行 (≥3.13)、≤3.12 は従来 API を `#if PY_VERSION_HEX` で維持。x86_64/arm64 の 3.13 で native ビルド + 159 テスト通過、3.11 回帰なし。詳細は末尾「F8 完了記録」参照 |
 | F10 | PublicKey 冗長パース | P2 | P2 確定 | `pubkey_parse` は完全冗長 (構築コストの ~48%)。CHECKSIG ホットパスで公開鍵が6回パースされる |
@@ -2685,7 +2685,7 @@ Python 3.13 ヘッダでの実コンパイル) し、P0/P1 確定項目は第二
 | **2** | F11: Transaction.sign() の O(N²) 解消 | **ordinalx 大量署名に直結**。sign() 内で `tx_preimages()` を1回だけ呼ぶバッチキャッシュ方式で O(N) 化 (単一 index C 関数の追加だけではタプル変換 O(N) が残るため不十分)。N=1000 で 345ms → ~25ms 見込み | 半日 |
 | **3** | F4: tx_to_bytes 入力検証 | segfault + 未初期化ヒープ流出。SDK 未使用だが公開シンボル。NULL/型/hex 検証 ~40-50行。あわせて「未使用関数を Transaction.serialize() に接続するか削除するか」の方針判断 | 30-60分 |
 | **4** | F16: メモリ増加テストの拡充 + CI | TestMemoryGrowth 4件は追加済み。全エクスポート関数へのパラメトライズ展開 + Linux CI での `detect_leaks=1` ASAN | 1日 |
-| **5** | F6: C 実装 RIPEMD160 組み込み | P2PKH validate の ~10% (3.2µs/回)。OP_HASH160 は最頻 opcode | 半日-1日 |
+| ✅ | F6: C 実装 RIPEMD160 組み込み | **完了 (2026-08-14)**。純 C RIPEMD-160 を bsv_native.c に組み込み、Python import 経由を排除。OP_RIPEMD160/OP_HASH160 が C 内完結 | 実績 ~30min |
 | **6** | F10: PublicKey 冗長パース除去 | 構築コストの ~48%、CHECKSIG パスで6回パース | 半日 |
 | 却下 | F12 (raw bytes キャッシュ) | 正当性リスク > 効果 1.6µs | — |
 | 却下 | F15 (key_deriver 一本化) | 提案の方が 1.37倍遅い | — |
@@ -2819,7 +2819,7 @@ sign_with_k ハング、OTDA SIGSEGV) はすべて対応完了済み**。
 |------|----|--------|------|-----------|------|
 | **1** | F11 | `Transaction.sign()` の O(N²) 解消 (sign() 内で `tx_preimages()` を1回だけ呼ぶバッチキャッシュ) | 性能 | **ordinalx 大量署名に直結**。N=1000 で 345ms→~25ms 見込み | 半日 |
 | **2** | F4 | `tx_to_bytes` 入力検証 (NULL/型/hex チェック) + 未使用関数の去就判断 | 堅牢性 | segfault + 未初期化ヒープ流出。SDK 未使用だが公開シンボル | 30-60分 |
-| 3 | F6 | C 実装 RIPEMD160 の組み込み (Python import 経由を排除) | 性能 | P2PKH validate の ~10% (3.2µs/回)。OP_HASH160 は最頻 opcode | 半日-1日 |
+| ✅ | F6 | C 実装 RIPEMD160 の組み込み (Python import 経由を排除) | 性能 | **完了 (2026-08-14)**。純 C RIPEMD-160 組み込み、C 内完結 | 実績 ~30min |
 | 4 | F10 | `PublicKey.__init__` の冗長 `pubkey_parse` 除去 | 性能 | 構築コストの ~48%、CHECKSIG パスで6回パース | 半日 |
 | 5 | F16b | crash/hang 回帰を Linux CI に組込 + `detect_leaks=1` ASAN | テスト基盤 | 今回の subprocess 回帰は追加済み。CI での常時実行が未整備 | 半日 |
 | 6 | 3.14-CI | 3.14 標準ビルドを CI に組込: cibuildwheel 2.22.0 → ≥3.2.1、`cp314-*` 追加、`skip=cp3??t-*`、フルスイートを `-W error::DeprecationWarning` で実行 | 互換/CI | 標準ビルドは arm64 3.14.6 で検証済 (159 テスト)。CI 化と SDK レベル非推奨(asyncio等)の洗い出しが残 | 半日 |
