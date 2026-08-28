@@ -16,19 +16,14 @@ from .constants import (
 from .fee_models import LivePolicy
 from .hash import hash256
 from .merkle_path import MerklePath
+from .native import NATIVE_AVAILABLE as _USE_NATIVE_TX
+from .native import NATIVE_MODULE as _bsv_native
 from .script.script import Script
 from .script.type import P2PKH
 from .transaction_input import TransactionInput, txid_to_bytes_le
 from .transaction_output import TransactionOutput
 from .transaction_preimage import _outputs_to_bytes_for_input, tx_preimage
 from .utils import Reader, Writer, unsigned_to_varint
-
-try:
-    import _bsv_native
-
-    _USE_NATIVE_TX = True
-except ImportError:
-    _USE_NATIVE_TX = False
 
 
 # Lazy import to avoid circular dependency

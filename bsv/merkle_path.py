@@ -2,14 +2,9 @@ from typing import List, Optional, TypedDict
 
 from .chaintracker import ChainTracker
 from .hash import hash256
+from .native import NATIVE_AVAILABLE as _USE_NATIVE
+from .native import NATIVE_MODULE as _bsv_native
 from .utils import Reader, Writer, to_bytes, to_hex
-
-try:
-    import _bsv_native
-
-    _USE_NATIVE = True
-except ImportError:
-    _USE_NATIVE = False
 
 
 class MerkleLeaf(TypedDict, total=False):

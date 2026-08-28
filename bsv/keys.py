@@ -9,6 +9,12 @@ from .base58 import base58check_encode
 from .constants import NETWORK_ADDRESS_PREFIX_DICT, NETWORK_WIF_PREFIX_DICT, PUBLIC_KEY_COMPRESSED_PREFIX_LIST, Network
 from .curve import Point, curve, curve_add, curve_get_y, curve_multiply, on_curve
 from .hash import hash160, hash256, hmac_sha256, hmac_sha512
+
+# ---------------------------------------------------------------------------
+# Crypto backend: _bsv_native (direct libsecp256k1) → pure Python fallback
+# ---------------------------------------------------------------------------
+from .native import NATIVE_AVAILABLE
+from .native import NATIVE_MODULE as _bsv_native
 from .polynomial import KeyShares, PointInFiniteField, Polynomial
 from .utils import (
     decode_wif,
@@ -20,17 +26,7 @@ from .utils import (
     unstringify_ecdsa_recoverable,
 )
 
-# ---------------------------------------------------------------------------
-# Crypto backend: _bsv_native (direct libsecp256k1) → pure Python fallback
-# ---------------------------------------------------------------------------
-_CRYPTO_BACKEND = None
-
-try:
-    import _bsv_native
-
-    _CRYPTO_BACKEND = "native"
-except ImportError:
-    _CRYPTO_BACKEND = "python"
+_CRYPTO_BACKEND = "native" if NATIVE_AVAILABLE else "python"
 
 
 # ---------------------------------------------------------------------------
