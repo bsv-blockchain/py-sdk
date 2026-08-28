@@ -11,6 +11,7 @@ on:
       - "setup.py"
       - "pyproject.toml"
       - "MANIFEST.in"
+      - "tests/bsv/native/**"
       - ".github/workflows/wheels.yml"
   workflow_dispatch:
 
@@ -33,10 +34,8 @@ jobs:
       - run: pip install build
       - run: python -m build --sdist
 
-      - name: Verify sdist contains C sources
-        run: |
-          tar tzf dist/*.tar.gz | grep bsv_native.c
-          tar tzf dist/*.tar.gz | grep secp256k1/src/secp256k1.c
+      - name: Verify sdist builds the native extension
+        run: BSV_REQUIRE_NATIVE=1 python -m pip wheel --no-deps dist/*.tar.gz
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -93,18 +92,18 @@ jobs:
           python-version: "3.12"
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel==2.22.0
+        run: pip install cibuildwheel==3.4.1
 
       - name: Build wheels
         env:
-          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
-          CIBW_SKIP: "*-musllinux_* *-win32 *-manylinux_i686"
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+          CIBW_SKIP: "*-musllinux_* *-win32 *-manylinux_i686 cp3??t-*"
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_ENVIRONMENT: "BSV_REQUIRE_NATIVE=1"
           CIBW_TEST_REQUIRES: "pytest pytest-asyncio pytest-benchmark pycryptodomex hypothesis"
           CIBW_TEST_COMMAND: >-
             python -c "import _bsv_native; print(_bsv_native.BACKEND, _bsv_native.__version__)" &&
-            pytest {project}/tests/bsv/native/ -x -q
+            pytest {project}/tests/bsv/native/ -x -q -W error::DeprecationWarning
           # x86_64 macOS wheels are cross-built on arm64 runners and cannot be
           # executed there, so skip their test phase. arm64 wheels are tested
           # natively, and the C sources are identical across arches.

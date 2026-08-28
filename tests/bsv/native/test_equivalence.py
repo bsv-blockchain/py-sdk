@@ -256,6 +256,66 @@ class TestCryptoEquivalence:
         recovered = _bsv_native.ecdsa_recover(sig65, msg)
         assert recovered == pubkey
 
+    def test_recover_uncompressed(self, keypair):
+        secret, pubkey_compressed = keypair
+        msg = py_hash256(b"recover uncompressed test")
+        sig65 = _bsv_native.ecdsa_sign_recoverable(msg, secret)
+        recovered = _bsv_native.ecdsa_recover(sig65, msg, False)
+        assert len(recovered) == 65
+        assert recovered[0] == 0x04
+        re_compressed = _bsv_native.pubkey_serialize(_bsv_native.pubkey_parse(recovered), True)
+        assert re_compressed == pubkey_compressed
+
+    def test_recover_multiple_keys_recid_coverage(self):
+        recids_seen = set()
+        for i in range(1, 50):
+            secret = i.to_bytes(32, "big")
+            if not _bsv_native.seckey_verify(secret):
+                continue
+            pubkey = _bsv_native.pubkey_from_secret(secret)
+            msg = py_hash256(f"recid coverage {i}".encode())
+            sig65 = _bsv_native.ecdsa_sign_recoverable(msg, secret)
+            recid = sig65[64]
+            recids_seen.add(recid)
+            recovered = _bsv_native.ecdsa_recover(sig65, msg)
+            assert recovered == pubkey, f"recovery failed for key {i}, recid={recid}"
+        assert 0 in recids_seen, "recid 0 was never produced"
+        assert 1 in recids_seen, "recid 1 was never produced"
+
+    def test_recover_matches_python(self, keypair):
+        from bsv.curve import curve
+        from bsv.keys import _ecdsa_recover_py
+
+        secret, pubkey = keypair
+        msg = py_hash256(b"c-vs-python recovery")
+        sig65 = _bsv_native.ecdsa_sign_recoverable(msg, secret)
+        r = int.from_bytes(sig65[:32], "big")
+        s = int.from_bytes(sig65[32:64], "big")
+        recid = sig65[64]
+        z = int.from_bytes(msg, "big")
+        py_point = _ecdsa_recover_py(r, s, recid, z)
+        py_prefix = b"\x02" if py_point.y % 2 == 0 else b"\x03"
+        py_pubkey = py_prefix + py_point.x.to_bytes(32, "big")
+        c_pubkey = _bsv_native.ecdsa_recover(sig65, msg)
+        assert c_pubkey == py_pubkey
+
+    def test_recover_invalid_recid(self):
+        secret = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000001")
+        msg = py_hash256(b"bad recid")
+        sig65 = _bsv_native.ecdsa_sign_recoverable(msg, secret)
+        for bad_recid in [4, 5, 9, 255]:
+            bad_sig = sig65[:64] + bytes([bad_recid])
+            with pytest.raises(ValueError, match="recovery id must be 0, 1, 2, or 3"):
+                _bsv_native.ecdsa_recover(bad_sig, msg)
+
+    def test_recover_wrong_message_fails(self, keypair):
+        secret, pubkey = keypair
+        msg = py_hash256(b"original message")
+        sig65 = _bsv_native.ecdsa_sign_recoverable(msg, secret)
+        wrong_msg = py_hash256(b"different message")
+        recovered = _bsv_native.ecdsa_recover(sig65, wrong_msg)
+        assert recovered != pubkey
+
     def test_pubkey_point_roundtrip(self, keypair):
         _, pubkey = keypair
         x, y = _bsv_native.pubkey_point(pubkey)
@@ -287,6 +347,69 @@ class TestCryptoEquivalence:
             bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000003")
         )
         assert _bsv_native.pubkey_from_secret(result) == expected_pk
+
+    def test_seckey_verify_valid(self):
+        valid_keys = [
+            bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000001"),
+            bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000002"),
+            bytes.fromhex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140"),
+        ]
+        for key in valid_keys:
+            assert _bsv_native.seckey_verify(key) is True
+
+    def test_seckey_verify_invalid(self):
+        invalid_keys = [
+            b"\x00" * 32,
+            bytes.fromhex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"),
+            bytes.fromhex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+        ]
+        for key in invalid_keys:
+            assert _bsv_native.seckey_verify(key) is False
+
+    def test_seckey_verify_wrong_length(self):
+        assert _bsv_native.seckey_verify(b"\x01" * 31) is False
+        assert _bsv_native.seckey_verify(b"\x01" * 33) is False
+        assert _bsv_native.seckey_verify(b"") is False
+
+    def test_seckey_verify_matches_python(self):
+        from bsv.curve import curve
+
+        test_values = [
+            b"\x00" * 32,
+            b"\x00" * 31 + b"\x01",
+            curve.n.to_bytes(32, "big"),
+            (curve.n - 1).to_bytes(32, "big"),
+            b"\xff" * 32,
+        ]
+        for val in test_values:
+            c_result = _bsv_native.seckey_verify(val)
+            n = int.from_bytes(val, "big")
+            py_result = 0 < n < curve.n
+            assert c_result == py_result, f"mismatch for {val.hex()}: C={c_result}, Py={py_result}"
+
+    def test_context_randomize_succeeds(self):
+        _bsv_native.context_randomize(b"\x42" * 32)
+        secret = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000001")
+        msg = py_hash256(b"post-randomize sign test")
+        sig = _bsv_native.ecdsa_sign(msg, secret)
+        pub = _bsv_native.pubkey_from_secret(secret)
+        assert _bsv_native.ecdsa_verify(sig, msg, pub)
+
+    def test_context_randomize_wrong_length(self):
+        with pytest.raises(ValueError, match="seed must be 32 bytes"):
+            _bsv_native.context_randomize(b"\x00" * 31)
+        with pytest.raises(ValueError, match="seed must be 32 bytes"):
+            _bsv_native.context_randomize(b"\x00" * 33)
+
+    def test_context_randomize_different_seeds(self):
+        for i in range(4):
+            seed = i.to_bytes(1, "big") * 32
+            _bsv_native.context_randomize(seed)
+        secret = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000001")
+        msg = py_hash256(b"still works after multiple randomizations")
+        sig = _bsv_native.ecdsa_sign(msg, secret)
+        pub = _bsv_native.pubkey_from_secret(secret)
+        assert _bsv_native.ecdsa_verify(sig, msg, pub)
 
     def test_pubkey_tweak_add(self):
         secret = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000001")

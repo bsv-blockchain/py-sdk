@@ -11,6 +11,8 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "ripemd160.h"
+
 /* ---------- libsecp256k1 configuration (before including the source) ------ */
 /* These macros are passed via compiler flags in setup.py / pyproject.toml.
  * Guard with #ifndef so the source can still be compiled standalone. */
@@ -2726,20 +2728,6 @@ static void c_hash256_hash(const unsigned char *in, Py_ssize_t len,
     c_sha256_hash(tmp, 32, out);
 }
 
-static PyObject *c_ripemd160_hash(const unsigned char *in, Py_ssize_t len) {
-    PyObject *mod = PyImport_ImportModule("Cryptodome.Hash.RIPEMD160");
-    if (!mod) return NULL;
-    PyObject *data = PyBytes_FromStringAndSize(
-        (const char *)(in ? in : (const unsigned char *)""), len);
-    if (!data) { Py_DECREF(mod); return NULL; }
-    PyObject *hasher = PyObject_CallMethod(mod, "new", "O", data);
-    Py_DECREF(data); Py_DECREF(mod);
-    if (!hasher) return NULL;
-    PyObject *digest = PyObject_CallMethod(hasher, "digest", NULL);
-    Py_DECREF(hasher);
-    return digest;
-}
-
 static PyObject *c_sha1_hash(const unsigned char *in, Py_ssize_t len) {
     PyObject *mod = PyImport_ImportModule("hashlib");
     if (!mod) return NULL;
@@ -3975,16 +3963,20 @@ static int vm_step(VMState *st) {
             se_free(&e);
             return vms_push(&st->stack, hash, 32) < 0 ? -1 : 0;
         }
-        PyObject *digest = NULL;
-        if (op == 0xA6) {
-            digest = c_ripemd160_hash(inp, ilen);
-        } else if (op == 0xA7) {
-            digest = c_sha1_hash(inp, ilen);
-        } else {
-            unsigned char sha[32];
-            c_sha256_hash(inp, ilen, sha);
-            digest = c_ripemd160_hash(sha, 32);
+        if (op == 0xA6 || op == 0xA9) {
+            unsigned char hash[20];
+            if (op == 0xA6) {
+                bsv_ripemd160(inp, (size_t)ilen, hash);
+            } else {
+                unsigned char sha[32];
+                c_sha256_hash(inp, ilen, sha);
+                bsv_ripemd160(sha, sizeof(sha), hash);
+            }
+            se_free(&e);
+            return vms_push(&st->stack, hash, 20) < 0 ? -1 : 0;
         }
+        /* OP_SHA1 (0xA7) — still uses Python hashlib */
+        PyObject *digest = c_sha1_hash(inp, ilen);
         se_free(&e);
         if (!digest) return -1;
         int rc = vms_push(&st->stack,

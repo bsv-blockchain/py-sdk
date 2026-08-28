@@ -631,21 +631,26 @@ class TestFuzzSpendValidate:
 
     @fuzz_settings
     @given(
-        hash_op=st.sampled_from([0xA7, 0xA8, 0xA9, 0xAA, 0xAB]),
+        hash_op=st.sampled_from([0xA6, 0xA7, 0xA8, 0xA9, 0xAA]),
         data=short_bytes,
     )
     def test_spend_validate_hash_ops_no_crash(self, hash_op, data):
-        if data:
-            unlock = [(len(data), data)]
-        else:
+        size = len(data)
+        if size == 0:
             unlock = [(0, None)]
+        elif size <= 75:
+            unlock = [(size, data)]
+        elif size <= 0xFF:
+            unlock = [(0x4C, data)]  # OP_PUSHDATA1
+        else:
+            unlock = [(0x4D, data)]  # OP_PUSHDATA2
         lock = [(hash_op, None), (0x75, None), (0x51, None)]  # hash, DROP, OP_1
         txid = "00" * 32
-        try:
+        assert (
             _bsv_native.spend_validate(
                 unlock,
                 lock,
-                1,
+                2,
                 txid,
                 0,
                 0,
@@ -655,8 +660,8 @@ class TestFuzzSpendValidate:
                 [],
                 [],
             )
-        except (RuntimeError, ValueError, TypeError, OverflowError):
-            pass
+            is True
+        )
 
     @fuzz_settings
     @given(
