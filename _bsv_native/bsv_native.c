@@ -2394,7 +2394,11 @@ static int vms_push(VmStack *s, const unsigned char *data, Py_ssize_t len) {
     return 0;
 }
 static int vms_push_take(VmStack *s, unsigned char *data, Py_ssize_t len) {
-    if (vms_ensure(s, 1) < 0) return -1;
+    /* Ownership is transferred at the call boundary, including on failure. */
+    if (vms_ensure(s, 1) < 0) {
+        PyMem_Free(data);
+        return -1;
+    }
     s->items[s->count].data = data;
     s->items[s->count].len = len;
     s->count++;
@@ -2566,9 +2570,7 @@ static int c_min_encode(PyObject *num, unsigned char **out, Py_ssize_t *out_len)
 static int vms_push_num(VmStack *s, PyObject *num) {
     unsigned char *data; Py_ssize_t len;
     if (c_min_encode(num, &data, &len) < 0) return -1;
-    int rc = vms_push_take(s, data, len);
-    if (rc < 0 && data) PyMem_Free(data);
-    return rc;
+    return vms_push_take(s, data, len);
 }
 
 /* Reads a numeric operand under the era's rules. The node gates minimal
@@ -4535,6 +4537,10 @@ static int pctx_init(PreimageCtx *pctx, uint32_t version, uint32_t locktime,
     }
 
     Py_ssize_t n_other = PyList_GET_SIZE(other_inputs_py);
+    if (input_index < 0 || input_index > n_other) {
+        PyErr_SetString(PyExc_IndexError, "input_index out of range");
+        return -1;
+    }
     pctx->n_other = n_other;
     pctx->other_inputs = NULL;
     if (n_other > 0) {
@@ -4814,12 +4820,24 @@ static PyMethodDef bsv_native_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static void bsv_native_free(void *module) {
+    (void)module;
+    if (g_ctx != NULL) {
+        secp256k1_context_destroy(g_ctx);
+        g_ctx = NULL;
+    }
+}
+
 static struct PyModuleDef bsv_native_module = {
     PyModuleDef_HEAD_INIT,
     "_bsv_native",
     "CPython C extension for bsv-sdk: libsecp256k1 integration, SHA256, ECDSA, ECDH.",
     -1,
-    bsv_native_methods
+    bsv_native_methods,
+    NULL,
+    NULL,
+    NULL,
+    bsv_native_free
 };
 
 PyMODINIT_FUNC PyInit__bsv_native(void) {

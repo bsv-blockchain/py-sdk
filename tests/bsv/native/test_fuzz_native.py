@@ -899,6 +899,22 @@ def _all_export_cases():
         ("merkle_hash_pair", lambda: N.merkle_hash_pair("aa" * 32, "bb" * 32)),
         ("merkle_compute_root", lambda: N.merkle_compute_root(txid, mpath)),
         ("context_randomize", lambda: N.context_randomize(b"\x42" * 32)),
+        (
+            "spend_validate",
+            lambda: N.spend_validate(
+                [(1, b"x")],
+                [(0x6B, None), (0x6C, None)],  # TOALTSTACK, FROMALTSTACK
+                1,
+                "00" * 32,
+                0,
+                0,
+                0,
+                0xFFFFFFFF,
+                1000,
+                [],
+                [],
+            ),
+        ),
         # error paths
         ("ERR_pubkey_parse", swallow(lambda: N.pubkey_parse(b"\xff" * 33))),
         ("ERR_pubkey_tweak_add", swallow(lambda: N.pubkey_tweak_add(b"\xff" * 33, tweak))),
@@ -913,6 +929,10 @@ def _all_export_cases():
         (
             "ERR_tx_preimage_otda_single",
             swallow(lambda: N.tx_preimage_otda(0, 2, 0, [(txid, 0, b"", 1, 0xFFFFFFFF, 0x63)], [])),
+        ),
+        (
+            "ERR_spend_validate",
+            swallow(lambda: N.spend_validate([], [(0x6A, None)], 1, "00" * 32, 0, 0, 0, 0xFFFFFFFF, 1000, [], [])),
         ),
     ]
 
@@ -1025,3 +1045,26 @@ class TestCrashHangRegression:
             """)
         assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
         assert "INDEXERROR" in r.stdout
+
+    @pytest.mark.parametrize("input_index", [-1, 1])
+    def test_spend_validate_input_index_out_of_range_raises(self, input_index):
+        r = self._run(f"""
+            try:
+                _bsv_native.spend_validate([], [(0x51, None)], 2, '00'*32, 0, 0,
+                                           {input_index}, 0xffffffff, 1000, [], [])
+                print('NOEXC')
+            except IndexError:
+                print('INDEXERROR')
+            """)
+        assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
+        assert "INDEXERROR" in r.stdout
+
+    def test_spend_validate_last_input_index_is_valid(self):
+        r = self._run("""
+            other = [('11'*32, 0, b'', 1000, 0xffffffff, 0x41)]
+            ok = _bsv_native.spend_validate([], [(0x51, None)], 2, '00'*32, 0, 0,
+                                            1, 0xffffffff, 1000, other, [])
+            print('OK' if ok else 'FALSE')
+            """)
+        assert r.returncode == 0, f"crashed: rc={r.returncode} {r.stderr[-300:]}"
+        assert "OK" in r.stdout
