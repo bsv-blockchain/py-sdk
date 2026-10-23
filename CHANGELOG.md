@@ -44,6 +44,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Security
 
 - **V1 BEEF verification** — `new_beef_from_bytes()` and `parse_beef()` now keep every transaction and BUMP of a V1 (BRC-62) BEEF, including V1 wrapped in Atomic BEEF. Previously only the subject transaction was kept, so `Beef.verify()` and `Beef.is_valid()` returned `True` without consulting the `ChainTracker`. Entries without transaction data are now reported as not valid instead of being skipped.
+- **BEEF proofs go through the bump index** — as in the TS SDK, a transaction counts as proven only through its bump index. A raw transaction whose txid merely appears among the level-0 hashes of a BUMP is no longer treated as proven without its root being checked.
+
+### Changed
+
+- **`allow_txid_only` follows the TS SDK** — with `allow_txid_only=True`, TxIDOnly entries are treated as known-valid parents whether or not a BUMP proves them, and `get_valid_txids()` includes them.
 
 ### Fixed
 

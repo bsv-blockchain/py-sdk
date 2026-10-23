@@ -104,8 +104,37 @@ def test_unknown_version_is_not_serialized():
         Beef(version=ATOMIC_BEEF).to_binary()
 
 
+def test_unflagged_level0_hash_without_bump_index_is_not_a_proof():
+    """A format-0 tx is proven only through its bump index, not by appearing in a bump (TS parity)."""
+    parent, _ = _pair(txid_flag=False)
+    data = (
+        BEEF_V2.to_bytes(4, "little")
+        + b"\x01"
+        + parent.merkle_path.to_binary()
+        + b"\x01"
+        + b"\x00"  # RawTx, no bump index
+        + parent.serialize()
+    )
+    beef = new_beef_from_bytes(data)
+    assert beef.txs[parent.txid()].bump_index is None
+    assert beef.is_valid() is False
+    assert _verify(beef, True)[0] is False
+
+
 def test_entry_without_tx_data_is_not_valid():
     beef = Beef(version=BEEF_V2)
     txid = "aa" * 32
     beef.txs[txid] = BeefTx(txid=txid)
     assert beef.verify_valid() == (False, {})
+
+
+def test_allow_txid_only_assumes_txid_valid():
+    """allow_txid_only treats TxIDOnly entries as known-valid parents (TS parity)."""
+    parent, child = _pair()
+    child.inputs[0].source_transaction = None
+    beef = Beef(version=BEEF_V2)
+    beef.merge_txid_only(parent.txid())
+    beef.merge_raw_tx(child.serialize())
+
+    assert beef.is_valid() is False
+    assert beef.is_valid(allow_txid_only=True) is True
