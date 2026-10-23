@@ -18,10 +18,10 @@ def test_beef_serialize_exists():
 
 def test_beef_serialize_beef():
     """Test BEEF serialization."""
-    from bsv.transaction.beef import Beef
+    from bsv.transaction.beef import BEEF_V2, Beef
     from bsv.transaction.beef_serialize import to_binary, to_hex
 
-    beef = Beef(version=4)
+    beef = Beef(version=BEEF_V2)
 
     # Use to_binary function
     serialized = to_binary(beef)

@@ -45,6 +45,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **V1 BEEF verification** — `new_beef_from_bytes()` and `parse_beef()` now keep every transaction and BUMP of a V1 (BRC-62) BEEF, including V1 wrapped in Atomic BEEF. Previously only the subject transaction was kept, so `Beef.verify()` and `Beef.is_valid()` returned `True` without consulting the `ChainTracker`. Entries without transaction data are now reported as not valid instead of being skipped.
 
+### Fixed
+
+- **`Beef.to_binary()` honours the version** — `Beef(BEEF_V1)` now serializes in the V1 layout instead of writing a V2 body under a V1 header, so a BEEF can be converted between V1 and V2 by parsing it, changing `version`, and calling `to_binary()`. Serializing TxIDOnly entries as V1, or an unknown version, raises `ValueError`.
+
 ---
 
 ## [2.4.0] - 2026-08-28

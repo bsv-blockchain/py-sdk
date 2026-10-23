@@ -37,9 +37,9 @@ def test_beef_init_with_transactions():
 
 def test_beef_serialize():
     """Test BEEF serialization."""
-    from bsv.transaction.beef import Beef
+    from bsv.transaction.beef import BEEF_V2, Beef
 
-    beef = Beef(version=4)
+    beef = Beef(version=BEEF_V2)
 
     if hasattr(beef, "to_binary"):
         serialized = beef.to_binary()
@@ -112,9 +112,9 @@ def test_beef_validate():
 
 def test_beef_empty():
     """Test empty BEEF."""
-    from bsv.transaction.beef import Beef
+    from bsv.transaction.beef import BEEF_V2, Beef
 
-    beef = Beef(version=4)
+    beef = Beef(version=BEEF_V2)
 
     if hasattr(beef, "to_binary"):
         serialized = beef.to_binary()

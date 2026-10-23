@@ -76,6 +76,34 @@ def test_v1_verify_consults_chain_tracker(atomic):
     assert _verify(new_beef_from_bytes(data), True)[0] is True
 
 
+def test_v1_round_trip_and_version_conversion():
+    _, child = _pair()
+    v1 = child.to_beef()
+    v2 = _v2(child).to_binary()
+
+    beef = new_beef_from_bytes(v1)
+    assert beef.to_binary() == v1
+    beef.version = BEEF_V2
+    assert beef.to_binary() == v2
+
+    beef = new_beef_from_bytes(v2)
+    assert beef.to_binary() == v2
+    beef.version = BEEF_V1
+    assert beef.to_binary() == v1
+
+
+def test_v1_cannot_hold_txid_only():
+    beef = Beef(version=BEEF_V1)
+    beef.merge_txid_only("22" * 32)
+    with pytest.raises(ValueError, match="TxIDOnly"):
+        beef.to_binary()
+
+
+def test_unknown_version_is_not_serialized():
+    with pytest.raises(ValueError, match="version"):
+        Beef(version=ATOMIC_BEEF).to_binary()
+
+
 def test_entry_without_tx_data_is_not_valid():
     beef = Beef(version=BEEF_V2)
     txid = "aa" * 32
