@@ -102,6 +102,9 @@ def _handle_format_0(btx: BeefTx, txid: str, beef: Beef, ctx: _ValidationContext
             ctx.with_missing.append(btx)
         else:
             ctx.needs_validation.append(btx)
+    else:
+        # No transaction data to check: fail closed.
+        ctx.needs_validation.append(btx)
 
 
 def _check_missing_inputs(btx: BeefTx, beef: Beef, ctx: _ValidationContext) -> bool:
@@ -163,8 +166,7 @@ def _collect_results(result: ValidationResult, ctx: _ValidationContext):
             result.with_missing_inputs.append(btx.tx_obj.txid())
 
     for btx in ctx.needs_validation:
-        if btx.tx_obj is not None:
-            result.not_valid.append(btx.tx_obj.txid())
+        result.not_valid.append(btx.txid)
 
     result.txid_only = [b.txid for b in ctx.txid_only]
     result.valid = list(ctx.valid_txids)
