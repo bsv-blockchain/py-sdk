@@ -121,7 +121,8 @@ The `bsv` package is organized into functional submodules:
 
   - `Broadcaster`: Interface for transaction broadcasting
   - `arc.py`: ARC broadcaster implementation
-  - `arcade.py`: Arcade broadcaster (Teranode-native, ARC-compatible; root-level `/tx` endpoints, EF submission)
+  - `bsv_broadcaster.py`: BSV Broadcaster (formerly Arcade; Teranode-native, ARC-compatible; root-level `/tx` endpoints, EF submission)
+  - `arcade.py`: deprecated `Arcade` / `ArcadeConfig` aliases of `BsvBroadcaster` / `BsvBroadcasterConfig`
   - `whatsonchain.py`: WhatsOnChain broadcaster
   - `default_broadcaster.py`: Default broadcaster selection
 
