@@ -26,6 +26,17 @@ from .wallet_interface import (
 )
 
 
+def _hmac_key(symmetric_key: bytes) -> bytes:
+    """Encode a derived symmetric key as the HMAC key for create_hmac/verify_hmac.
+
+    The key is the minimal-length big-endian encoding of the shared point's X
+    coordinate (leading zero bytes dropped), matching the established ts-sdk
+    convention (`key.toArray()`) for both creation and verification. Encryption
+    keeps the full 32-byte encoding. See bsv-blockchain/BRCs#362.
+    """
+    return symmetric_key.lstrip(b"\x00") or b"\x00"
+
+
 class ProtoWallet:
     """Core wallet implementation providing cryptographic operations.
 
@@ -491,7 +502,7 @@ class ProtoWallet:
                 data = bytes(data)
 
             # Create HMAC using the derived key
-            hmac_value = hmac.new(symmetric_key, data, hashlib.sha256).digest()
+            hmac_value = hmac.new(_hmac_key(symmetric_key), data, hashlib.sha256).digest()
 
             return {"hmac": hmac_value}
         except Exception as e:
@@ -569,7 +580,7 @@ class ProtoWallet:
             shared_secret = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
             print(f"[ProtoWallet.verify_hmac] Shared secret length: {len(shared_secret)}")
             print("[ProtoWallet.verify_hmac] Computing expected HMAC...")
-            expected = hmac.new(shared_secret, data, hashlib.sha256).digest()
+            expected = hmac.new(_hmac_key(shared_secret), data, hashlib.sha256).digest()
             print(f"[ProtoWallet.verify_hmac] Expected HMAC: {expected.hex()}")
             print(
                 f"[ProtoWallet.verify_hmac] Received HMAC: {hmac_value.hex() if isinstance(hmac_value, bytes) else hmac_value}"
