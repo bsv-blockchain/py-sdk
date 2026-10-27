@@ -116,7 +116,7 @@ def test_verify_hmac_accepts_minimal_length_key_tag(wallet, counterparty, key_id
 @pytest.mark.parametrize(
     "counterparty,key_id,_lz,_hmac_key,tag_32,tag_min",
     [v for v in VECTORS if v[5] is not None],
-    ids=[i for i, v in zip(IDS, VECTORS) if v[5] is not None],
+    ids=[i for i, v in zip(IDS, VECTORS, strict=True) if v[5] is not None],
 )
 def test_verify_hmac_refuses_32_byte_key_tag(wallet, counterparty, key_id, _lz, _hmac_key, tag_32, tag_min):
     result = wallet.verify_hmac(_args(counterparty, key_id, hmac=bytes.fromhex(tag_32)), "test")
