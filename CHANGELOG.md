@@ -43,6 +43,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`Transaction` BEEF API matches the TS SDK** — `Transaction.from_beef()` reads BEEF V1, V2 and Atomic BEEF and takes an optional `txid`; it returns that transaction, else the Atomic subject, else the last one. `Transaction.from_atomic_beef()` and `Transaction.to_atomic_beef()` are new, and `to_beef()` / `to_atomic_beef()` take `allow_partial`.
 - **`Beef` API** — `Beef.from_binary()`, `Beef.from_string()` (hex or base64), `Beef.sort_txs()`, and `Beef.atomic_txid` (set when parsed from Atomic BEEF). `Beef.merge_beef()` also accepts serialized bytes, which fixes `BeefParty.merge_beef_from_party()` for bytes.
 - **`MerklePath(..., legal_offsets_only=True)`** — BEEF readers pass `False`, so BUMPs extended by `add_computed_leaves()` can be read, as in the TS SDK.
 
@@ -61,6 +62,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - **`Beef.to_binary()` honours the version** — `Beef(BEEF_V1)` now serializes in the V1 layout instead of writing a V2 body under a V1 header, so a BEEF can be converted between V1 and V2 by parsing it, changing `version`, and calling `to_binary()`. Serializing TxIDOnly entries as V1, or an unknown version, raises `ValueError`.
+- **`Transaction.to_beef()` writes each ancestor once** — a transaction shared by several inputs was written once per path. A partial BEEF no longer raises `KeyError` in `from_beef()`; missing source transactions are left unset.
 - **`MerklePath.compute_root()`** handles a block with a single transaction and compound paths that hold every txid at level 0 (TS SDK).
 - **`build_beef_v2_from_raw_hexes()`** writes the transaction count after skipping entries that are not hex.
 
