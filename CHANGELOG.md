@@ -43,12 +43,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`Beef` API** — `Beef.from_binary()`, `Beef.from_string()` (hex or base64), `Beef.sort_txs()`, and `Beef.atomic_txid` (set when parsed from Atomic BEEF). `Beef.merge_beef()` also accepts serialized bytes, which fixes `BeefParty.merge_beef_from_party()` for bytes.
 - **`MerklePath(..., legal_offsets_only=True)`** — BEEF readers pass `False`, so BUMPs extended by `add_computed_leaves()` can be read, as in the TS SDK.
 
 ### Changed
 
 - **Arcade broadcaster renamed to `BsvBroadcaster`** (`bsv/broadcasters/bsv_broadcaster.py`) — follows the service's rename to BSV Broadcaster ([bsv-blockchain/broadcaster](https://github.com/bsv-blockchain/broadcaster)). `BsvBroadcasterConfig`, `BSV_BROADCASTER_*_TX_STATUSES` and `bsv_broadcaster_post_data_indicates_failure` replace the `Arcade*` names. Behaviour, the `ARCADE_TX_STATUS` failure code and the `arcade_json` result key are unchanged. The guide moved to `docs/bsv_broadcaster.md`.
-- **`allow_txid_only` follows the TS SDK** — with `allow_txid_only=True`, TxIDOnly entries are treated as known-valid parents whether or not a BUMP proves them, and `get_valid_txids()` includes them.
+- **`allow_txid_only` follows the TS SDK** — with `allow_txid_only=True`, TxIDOnly entries are treated as known-valid parents whether or not a BUMP proves them, and `get_valid_txids()` includes them. Without it, a Beef holding any TxIDOnly entry is not valid, even one a BUMP proves.
+- **`Beef()` defaults to `BEEF_V2`**, as in the TS SDK.
+- **`Beef.to_binary()` sorts transactions like TS `Beef.sortTxs`** before writing, so a Beef built or parsed in any order serializes to the same bytes as the TS SDK.
+- **`Beef.merge_beef_tx()` replaces only TxIDOnly entries** — an existing transaction is kept, as in the TS SDK. `Beef.merge_bump()` records the bump index (and sets the leaf's txid flag) on every transaction the merged BUMP proves, including when it is combined with an existing BUMP. `trim_known_txids()` also drops BUMPs no transaction references.
 
 ### Deprecated
 
@@ -63,6 +67,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **V1 BEEF verification** — `new_beef_from_bytes()` and `parse_beef()` now keep every transaction and BUMP of a V1 (BRC-62) BEEF, including V1 wrapped in Atomic BEEF. Previously only the subject transaction was kept, so `Beef.verify()` and `Beef.is_valid()` returned `True` without consulting the `ChainTracker`. Entries without transaction data are now reported as not valid instead of being skipped.
 - **BEEF proofs go through the bump index** — as in the TS SDK, a transaction counts as proven only through its bump index. A raw transaction whose txid merely appears among the level-0 hashes of a BUMP is no longer treated as proven without its root being checked. Every bump index now also contributes the computed root of its leaf, so a bump index that points at a leaf without the txid flag still goes to the `ChainTracker`.
+- **Atomic BEEF is checked like the TS SDK** — `parse_beef_ex()` raises `ValueError` when an Atomic BEEF does not contain its subject transaction, instead of returning another transaction or `None`, and Atomic BEEF nested inside Atomic BEEF is rejected. `Beef.to_binary_atomic()` raises for a txid that is not in the Beef and leaves out transactions sorted after the subject.
 - **Coinbase maturity** — `MerklePath.verify()` (and so `Transaction.verify()`) returns `False` for the transaction at offset 0 of a block until it is 100 blocks deep, as in the TS SDK. This calls `ChainTracker.current_height()`.
 
 ---

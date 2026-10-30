@@ -12,6 +12,7 @@ class ValidationResult:
         self.txid_only: list[str] = []
         self.with_missing_inputs: list[str] = []
         self.missing_inputs: list[str] = []
+        self.order: list[str] = []
 
     def __str__(self) -> str:
         return f"{{valid: {self.valid}, not_valid: {self.not_valid}, txid_only: {self.txid_only}, with_missing_inputs: {self.with_missing_inputs}, missing_inputs: {self.missing_inputs}}}"
@@ -22,29 +23,35 @@ def validate_transactions(beef: Beef) -> ValidationResult:
     Classify transactions the way TS Beef.sortTxs does. A transaction is valid when it has a bump
     index (proof claim), is TxIDOnly, or all of its inputs chain back to valid transactions.
     Entries without transaction data are not valid (fail closed).
+
+    result.order lists the txids in TS sort order: missing inputs, unsortable, TxIDOnly, then the
+    rest with every parent before its children.
     """
     result = ValidationResult()
-    valid: set[str] = set()
+    valid: dict[str, None] = {}  # insertion-ordered set
     missing: set[str] = set()
     queue = _classify_entries(beef, result, valid, missing)
-    _resolve_input_chains(queue, valid)
+    no_data = list(result.not_valid)
+    proven = [txid for txid, btx in beef.txs.items() if btx.bump_index is not None]
+    chained, unanchored = _resolve_input_chains(queue, valid)
 
-    result.not_valid += [txid for txid, _ in queue]
+    result.not_valid += [txid for txid, _ in queue] + unanchored
     result.valid = list(valid)
     result.missing_inputs = list(missing)
+    result.order = result.with_missing_inputs + no_data + [t for t, _ in queue] + result.txid_only + proven + chained
     return result
 
 
 def _classify_entries(
-    beef: Beef, result: ValidationResult, valid: set[str], missing: set[str]
+    beef: Beef, result: ValidationResult, valid: dict[str, None], missing: set[str]
 ) -> list[tuple[str, set[str]]]:
     """Sort entries into valid, TxIDOnly, not valid or missing inputs; return the rest with their inputs."""
     queue: list[tuple[str, set[str]]] = []
     for txid, btx in getattr(beef, "txs", {}).items():
         if btx.bump_index is not None:
-            valid.add(txid)
+            valid[txid] = None
         elif btx.data_format == 2 and btx.tx_obj is None:
-            valid.add(txid)
+            valid[txid] = None
             result.txid_only.append(txid)
         elif btx.tx_obj is None:
             result.not_valid.append(txid)
@@ -58,18 +65,39 @@ def _classify_entries(
     return queue
 
 
-def _resolve_input_chains(queue: list[tuple[str, set[str]]], valid: set[str]) -> None:
-    """Move queued transactions whose inputs are all valid into valid until nothing changes."""
+def _resolve_input_chains(queue: list[tuple[str, set[str]]], valid: dict[str, None]) -> tuple[list[str], list[str]]:
+    """
+    Take each queued transaction out of queue once all its inputs are placed, until nothing changes.
+    Returns (placed txids in order, placed txids that are not valid). A placed transaction is valid
+    when it has inputs and all of them are valid. TS sorts an unproven tx without inputs as valid;
+    it keeps that place in the order, but it is not valid here: nothing anchors it to a proof.
+    """
+    placed = dict(valid)
+    chained: list[str] = []
+    unanchored: list[str] = []
     progress = True
     while queue and progress:
         progress = False
         for item in list(queue):
             txid, inputs = item
-            # An unproven tx without inputs has nothing to anchor it to a proof.
-            if inputs and inputs <= valid:
-                valid.add(txid)
-                queue.remove(item)
-                progress = True
+            if not all(i in placed for i in inputs):
+                continue
+            queue.remove(item)
+            placed[txid] = None
+            chained.append(txid)
+            progress = True
+            if inputs and all(i in valid for i in inputs):
+                valid[txid] = None
+            else:
+                unanchored.append(txid)
+    return chained, unanchored
+
+
+def sort_txs(beef: Beef) -> ValidationResult:
+    """Reorder beef.txs into the TS Beef.sortTxs order and return the classification."""
+    result = validate_transactions(beef)
+    beef.txs = {txid: beef.txs[txid] for txid in result.order}
+    return result
 
 
 def verify_valid(beef: Beef, allow_txid_only: bool = False) -> tuple[bool, dict[int, str]]:
@@ -78,7 +106,9 @@ def verify_valid(beef: Beef, allow_txid_only: bool = False) -> tuple[bool, dict[
     Returns (valid, roots_map); the roots must then be confirmed by a ChainTracker.
     """
     vr = validate_transactions(beef)
-    if vr.missing_inputs or vr.not_valid or vr.with_missing_inputs or (vr.txid_only and not allow_txid_only):
+    # Any TxIDOnly entry needs allow_txid_only, even one a bump proves (TS collectTxidOnlyTxids).
+    has_txid_only = any(btx.data_format == 2 and btx.tx_obj is None for btx in beef.txs.values())
+    if vr.missing_inputs or vr.not_valid or vr.with_missing_inputs or (has_txid_only and not allow_txid_only):
         return False, {}
 
     roots: dict[int, str] = {}
