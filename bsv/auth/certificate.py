@@ -41,11 +41,31 @@ class Certificate:
         index = r.read_uint32_le()
         revocation_outpoint = Outpoint(txid, index)
         num_fields = r.read_var_int_num()
+        # Guard against a malformed/hostile field count. The Reader used here is
+        # non-strict: read_bytes() past EOF returns b"" instead of raising, so an
+        # attacker-supplied varint (up to 2**64-1) would otherwise spin this loop
+        # the full declared count on a truncated certificate, exhausting CPU
+        # (a DoS primitive for any consumer of this public wire-format parser).
+        # Each field needs at least one byte on the wire, so a count larger than
+        # the bytes remaining cannot describe a well-formed certificate.
+        remaining = len(r.getvalue()) - r.tell()
+        if num_fields is None or num_fields < 0 or num_fields > remaining:
+            raise ValueError(f"Invalid certificate: field count {num_fields} exceeds {remaining} remaining byte(s)")
         fields = {}
         for _ in range(num_fields):
             name_len = r.read_var_int_num()
+            remaining = len(r.getvalue()) - r.tell()
+            if name_len is None or name_len < 0 or name_len > remaining:
+                raise ValueError(
+                    f"Invalid certificate: field name length {name_len} exceeds {remaining} remaining byte(s)"
+                )
             name = r.read_bytes(name_len).decode()
             value_len = r.read_var_int_num()
+            remaining = len(r.getvalue()) - r.tell()
+            if value_len is None or value_len < 0 or value_len > remaining:
+                raise ValueError(
+                    f"Invalid certificate: field value length {value_len} exceeds {remaining} remaining byte(s)"
+                )
             value = r.read_bytes(value_len).decode()
             fields[name] = value
         signature = r.read_bytes(72) if not r.eof() else None
