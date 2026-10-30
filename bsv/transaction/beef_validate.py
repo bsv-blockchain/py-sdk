@@ -26,8 +26,20 @@ def validate_transactions(beef: Beef) -> ValidationResult:
     result = ValidationResult()
     valid: set[str] = set()
     missing: set[str] = set()
-    queue: list[tuple[str, set[str]]] = []
+    queue = _classify_entries(beef, result, valid, missing)
+    _resolve_input_chains(queue, valid)
 
+    result.not_valid += [txid for txid, _ in queue]
+    result.valid = list(valid)
+    result.missing_inputs = list(missing)
+    return result
+
+
+def _classify_entries(
+    beef: Beef, result: ValidationResult, valid: set[str], missing: set[str]
+) -> list[tuple[str, set[str]]]:
+    """Sort entries into valid, TxIDOnly, not valid or missing inputs; return the rest with their inputs."""
+    queue: list[tuple[str, set[str]]] = []
     for txid, btx in getattr(beef, "txs", {}).items():
         if btx.bump_index is not None:
             valid.add(txid)
@@ -43,7 +55,11 @@ def validate_transactions(beef: Beef) -> ValidationResult:
                 result.with_missing_inputs.append(txid)
             else:
                 queue.append((txid, inputs))
+    return queue
 
+
+def _resolve_input_chains(queue: list[tuple[str, set[str]]], valid: set[str]) -> None:
+    """Move queued transactions whose inputs are all valid into valid until nothing changes."""
     progress = True
     while queue and progress:
         progress = False
@@ -54,11 +70,6 @@ def validate_transactions(beef: Beef) -> ValidationResult:
                 valid.add(txid)
                 queue.remove(item)
                 progress = True
-
-    result.not_valid += [txid for txid, _ in queue]
-    result.valid = list(valid)
-    result.missing_inputs = list(missing)
-    return result
 
 
 def verify_valid(beef: Beef, allow_txid_only: bool = False) -> tuple[bool, dict[int, str]]:
@@ -72,25 +83,36 @@ def verify_valid(beef: Beef, allow_txid_only: bool = False) -> tuple[bool, dict[
 
     roots: dict[int, str] = {}
     bumps = getattr(beef, "bumps", []) or []
+    if not _confirm_flagged_leaf_roots(bumps, roots) or not _confirm_bump_index_roots(beef, bumps, roots):
+        return False, {}
+    return True, roots
+
+
+def _confirm_flagged_leaf_roots(bumps: list[MerklePath], roots: dict[int, str]) -> bool:
+    """Compute the root of every level-0 leaf with the txid flag."""
     for bump in bumps:
         for leaf in bump.path[0]:
             if leaf.get("txid") and leaf.get("hash_str") and not _confirm_computed_root(bump, leaf["hash_str"], roots):
-                return False, {}
+                return False
+    return True
 
-    # Every bump index must point at a leaf for its txid (TS verifyBumpIndexLeaves), and that leaf's
-    # root must go to the ChainTracker even when the leaf has no txid flag.
+
+def _confirm_bump_index_roots(beef: Beef, bumps: list[MerklePath], roots: dict[int, str]) -> bool:
+    """
+    Every bump index must point at a leaf for its txid (TS verifyBumpIndexLeaves), and that leaf's
+    root must go to the ChainTracker even when the leaf has no txid flag.
+    """
     for txid, btx in beef.txs.items():
         if btx.bump_index is None:
             continue
         if not 0 <= btx.bump_index < len(bumps):
-            return False, {}
+            return False
         bump = bumps[btx.bump_index]
         if not any(leaf.get("hash_str") == txid for leaf in bump.path[0]):
-            return False, {}
+            return False
         if not _confirm_computed_root(bump, txid, roots):
-            return False, {}
-
-    return True, roots
+            return False
+    return True
 
 
 def _confirm_computed_root(mp: MerklePath, txid: str, roots: dict[int, str]) -> bool:

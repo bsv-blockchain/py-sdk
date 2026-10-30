@@ -100,8 +100,9 @@ def test_v1_cannot_hold_txid_only():
 
 
 def test_unknown_version_is_not_serialized():
+    beef = Beef(version=ATOMIC_BEEF)
     with pytest.raises(ValueError, match="version"):
-        Beef(version=ATOMIC_BEEF).to_binary()
+        beef.to_binary()
 
 
 def test_unflagged_level0_hash_without_bump_index_is_not_a_proof():
