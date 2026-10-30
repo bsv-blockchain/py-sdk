@@ -561,17 +561,14 @@ class AuthFetch:
         if not action_result:
             raise RuntimeError("wallet.create_action did not return a transaction")
 
-        # Handle both direct tx and signableTransaction.tx formats
-        if "tx" in action_result:
-            tx_bytes = action_result["tx"]
-        elif "signableTransaction" in action_result and "tx" in action_result["signableTransaction"]:
-            tx_bytes = action_result["signableTransaction"]["tx"]
-        else:
-            raise RuntimeError("wallet.create_action did not return a transaction")
+        # The payment is the signed AtomicBEEF in result.tx (TS AuthFetch). A signableTransaction
+        # is unsigned, so the server could not accept it.
+        tx_bytes = action_result.get("tx")
+        if not tx_bytes:
+            raise RuntimeError("wallet.create_action did not return a signed transaction")
         if isinstance(tx_bytes, str):
             return tx_bytes
-        else:
-            return base64.b64encode(tx_bytes).decode()
+        return base64.b64encode(bytes(tx_bytes)).decode()  # wallets may return list[int]
 
     def _set_payment_header(self, config, payment_info, derivation_suffix, tx_b64):
         import json

@@ -15,10 +15,18 @@ STATUS_TO_CODE: dict[str, int] = {
 CODE_TO_STATUS: dict[int, str] = {v: k for k, v in STATUS_TO_CODE.items()}
 
 
+def txid_wire_bytes(txid: str | bytes) -> bytes:
+    """32 txid bytes as Go writes them: bytes pass through, a hex txid string is reversed."""
+    raw = bytes.fromhex(txid)[::-1] if isinstance(txid, str) else bytes(txid)
+    if len(raw) != 32:
+        raise ValueError("txid must be 32 bytes")
+    return raw
+
+
 def write_txid_slice_with_status(writer: Writer, results: list[dict[str, bytes]]) -> None:
     """Write a slice of {txid, status} pairs.
 
-    - txid: 32-byte little-endian hash as bytes (written as-is, not reversed)
+    - txid: 32-byte little-endian hash as bytes (written as-is), or a hex txid string
     - status: one of {"unproven", "sending", "failed"}
     Layout: varint(len) then for each item: 32 bytes txid + 1 byte status code.
     """
@@ -28,10 +36,10 @@ def write_txid_slice_with_status(writer: Writer, results: list[dict[str, bytes]]
 
     writer.write_varint(len(results))
     for item in results:
-        txid = item.get("txid", b"")
-        if not isinstance(txid, (bytes, bytearray)) or len(txid) != 32:
+        try:
+            writer.write_bytes(txid_wire_bytes(item.get("txid", b"")))
+        except (TypeError, ValueError):
             raise ValueError("sendWithResults.txid must be 32 bytes")
-        writer.write_bytes(txid)
 
         status_str = item.get("status")
         code = STATUS_TO_CODE.get(status_str)
@@ -58,5 +66,6 @@ __all__ = [
     "CODE_TO_STATUS",
     "STATUS_TO_CODE",
     "read_txid_slice_with_status",
+    "txid_wire_bytes",
     "write_txid_slice_with_status",
 ]

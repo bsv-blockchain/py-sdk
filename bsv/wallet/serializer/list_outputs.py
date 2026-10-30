@@ -88,7 +88,7 @@ def serialize_list_outputs_result(result: dict[str, Any]) -> bytes:
     w = Writer()
     outputs: list[dict[str, Any]] = result.get("outputs", [])
     w.write_varint(len(outputs))
-    _serialize_beef(w, result.get("beef"))
+    _serialize_beef(w, result.get("BEEF", result.get("beef")))  # BRC-100 names it BEEF
     for out in outputs:
         _serialize_output(w, out)
     return w.to_bytes()
@@ -144,7 +144,7 @@ def deserialize_list_outputs_result(data: bytes) -> dict[str, Any]:
     outputs = [_deserialize_output(r) for _ in range(int(cnt))]
     result = {"totalOutputs": int(cnt), "outputs": outputs}
     if beef is not None:
-        result["beef"] = beef
+        result["BEEF"] = beef
     return result
 
 
