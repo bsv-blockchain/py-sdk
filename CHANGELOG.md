@@ -62,6 +62,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **`Beef.to_binary()` honours the version** — `Beef(BEEF_V1)` now serializes in the V1 layout instead of writing a V2 body under a V1 header, so a BEEF can be converted between V1 and V2 by parsing it, changing `version`, and calling `to_binary()`. Serializing TxIDOnly entries as V1, or an unknown version, raises `ValueError`.
 - **`MerklePath.compute_root()`** handles a block with a single transaction and compound paths that hold every txid at level 0 (TS SDK).
+- **`build_beef_v2_from_raw_hexes()`** writes the transaction count after skipping entries that are not hex.
 
 ### Security
 
