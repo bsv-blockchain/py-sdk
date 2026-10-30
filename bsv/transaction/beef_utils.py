@@ -135,11 +135,21 @@ def _compute_parent_leaf(leafL, leafR, hash_fn) -> dict:  # NOSONAR - Binary tre
     return {"offset": offset_on_row, "hash_str": hash_fn(leafR["hash_str"] + leafL["hash_str"])}
 
 
-def trim_known_txids(beef: Beef, known_txids: list[str]) -> None:  # NOSONAR - Complexity (23), requires refactoring
+def trim_known_txids(beef: Beef, known_txids: list[str]) -> None:
+    """Drop TxIDOnly entries in known_txids, then the bumps no transaction references (TS)."""
     known = set(known_txids)
     to_delete = [txid for txid, btx in beef.txs.items() if btx.data_format == 2 and txid in known]
     for txid in to_delete:
         beef.txs.pop(txid, None)
+
+    used = sorted({btx.bump_index for btx in beef.txs.values() if btx.bump_index is not None})
+    if len(used) == len(beef.bumps):
+        return
+    new_index = {old: new for new, old in enumerate(used)}
+    beef.bumps = [beef.bumps[i] for i in used]
+    for btx in beef.txs.values():
+        if btx.bump_index is not None:
+            btx.bump_index = new_index[btx.bump_index]
 
 
 def _attach_input_transaction(beef: Beef, txin) -> None:

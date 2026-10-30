@@ -1327,12 +1327,11 @@ def test_parse_beef_ex_selection_priority():
     from bsv.transaction import parse_beef_ex
     from bsv.transaction.beef import ATOMIC_BEEF, BEEF_V2
 
-    # Build V2 with TxIDOnly wrapped in Atomic; parse_beef_ex should return (beef, subject, last_tx)
+    # An Atomic subject held only as TxIDOnly has no transaction to return (TS fromAtomicBEEF throws)
     v2 = int(BEEF_V2).to_bytes(4, "little") + b"\x00" + b"\x01" + b"\x02" + (b"\x22" * 32)
     atomic = int(ATOMIC_BEEF).to_bytes(4, "little") + (b"\x22" * 32) + v2
-    _, subject, last_tx = parse_beef_ex(atomic)
-    assert subject == (b"\x22" * 32)[::-1].hex()
-    assert last_tx is None  # last_tx is for V1 only
+    with pytest.raises(ValueError, match="does not contain its subject"):
+        parse_beef_ex(atomic)
 
 
 def _check_histogram_bounds(hist):
