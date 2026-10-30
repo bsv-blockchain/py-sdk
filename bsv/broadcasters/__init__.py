@@ -8,6 +8,7 @@ from .broadcaster import (
     is_broadcast_failure,
     is_broadcast_response,
 )
+from .bsv_broadcaster import BsvBroadcaster, BsvBroadcasterConfig
 from .default_broadcaster import default_broadcaster
 from .teranode import Teranode
 from .whatsonchain import WhatsOnChainBroadcaster, WhatsOnChainBroadcasterSync
@@ -21,6 +22,8 @@ __all__ = [
     "BroadcastResponse",
     "Broadcaster",
     "BroadcasterInterface",
+    "BsvBroadcaster",
+    "BsvBroadcasterConfig",
     "Teranode",
     "WhatsOnChainBroadcaster",
     "WhatsOnChainBroadcasterSync",
