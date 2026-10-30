@@ -41,6 +41,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Arcade broadcaster renamed to `BsvBroadcaster`** (`bsv/broadcasters/bsv_broadcaster.py`) — follows the service's rename to BSV Broadcaster ([bsv-blockchain/broadcaster](https://github.com/bsv-blockchain/broadcaster)). `BsvBroadcasterConfig`, `BSV_BROADCASTER_*_TX_STATUSES` and `bsv_broadcaster_post_data_indicates_failure` replace the `Arcade*` names. Behaviour, the `ARCADE_TX_STATUS` failure code and the `arcade_json` result key are unchanged. The guide moved to `docs/bsv_broadcaster.md`.
+
+### Deprecated
+
+- **`Arcade`, `ArcadeConfig` and `bsv.broadcasters.arcade`** — still work as aliases of the new names, and emit `DeprecationWarning` when constructed. Use `BsvBroadcaster` / `BsvBroadcasterConfig`.
+
 ---
 
 ## [2.4.0] - 2026-08-28
