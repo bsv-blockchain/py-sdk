@@ -584,9 +584,9 @@ def test_merklepath_verify_with_mock_chaintracker():
             # Accept any root for height 100
             return height == 100
 
-    # Build a simple path with two leaves
-    leaf0 = {"offset": 0, "hash_str": "11" * 32, "txid": True}
-    leaf1 = {"offset": 1, "hash_str": "22" * 32}
+    # Build a simple path with two leaves; the txid is not at offset 0, which is the coinbase
+    leaf0 = {"offset": 0, "hash_str": "22" * 32}
+    leaf1 = {"offset": 1, "hash_str": "11" * 32, "txid": True}
     mp = MerklePath(100, [[leaf0, leaf1]])
     # Verify using mock chaintracker
     import asyncio
@@ -595,7 +595,7 @@ def test_merklepath_verify_with_mock_chaintracker():
     loop = asyncio.new_event_loop()
     try:
         # MockChainTracker is intentionally not a real ChainTracker type for testing
-        loop.run_until_complete(mp.verify(leaf0["hash_str"], cast(Any, MockChainTracker())))
+        assert loop.run_until_complete(mp.verify(leaf1["hash_str"], cast(Any, MockChainTracker())))
     finally:
         loop.close()
 
