@@ -328,8 +328,12 @@ class MerklePath:
 
         Returns:
             bool: True if the transaction ID is valid within the Merkle Path at the specified block height.
+                A coinbase (offset 0) is valid only once it is 100 blocks deep, as in the TS SDK.
         """
         root = self.compute_root(txid)
+        if next(leaf["offset"] for leaf in self.path[0] if leaf.get("hash_str") == txid) == 0:
+            if self.block_height + 100 > await chaintracker.current_height():
+                return False
         res = await chaintracker.is_valid_root_for_height(root, self.block_height)
         return res
 
