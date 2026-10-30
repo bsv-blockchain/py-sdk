@@ -54,6 +54,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`Beef()` defaults to `BEEF_V2`**, as in the TS SDK.
 - **`Beef.to_binary()` sorts transactions like TS `Beef.sortTxs`** before writing, so a Beef built or parsed in any order serializes to the same bytes as the TS SDK.
 - **`Beef.merge_beef_tx()` replaces only TxIDOnly entries** — an existing transaction is kept, as in the TS SDK. `Beef.merge_bump()` records the bump index (and sets the leaf's txid flag) on every transaction the merged BUMP proves, including when it is combined with an existing BUMP. `trim_known_txids()` also drops BUMPs no transaction references.
+- **Consumers read V2 and Atomic BEEF** — the registry client reads each listed output from its own transaction in the listOutputs BEEF, `LookupResolver` returns an Atomic BEEF per output (TS `extractAtomicOutputs`), `LocalKVStore` reads the transaction named by the output's outpoint, and `WalletImpl` recognises V2 and Atomic BEEF.
 
 ### Deprecated
 

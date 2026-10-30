@@ -3,6 +3,7 @@ import hmac
 import os
 import time
 import warnings
+from contextlib import suppress
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
@@ -1536,7 +1537,13 @@ class ProtoWallet:
             outputs_desc = [o for o in outputs_desc if not self._is_output_expired(o, now_epoch)]
 
         beef_bytes = self._build_beef_for_outputs(outputs_desc)
-        res = {"outputs": self._format_outputs_result(outputs_desc, basket)}
+        # The outputs live in the synthetic transaction of beef_bytes; name it in each outpoint.
+        txid = "00" * 32
+        with suppress(Exception):
+            from bsv.transaction import Transaction
+
+            txid = Transaction.from_beef(beef_bytes).txid()
+        res = {"outputs": self._format_outputs_result(outputs_desc, basket, txid)}
 
         if "entire" in include or "transaction" in include:
             res["BEEF"] = beef_bytes
@@ -1604,7 +1611,9 @@ class ProtoWallet:
         except Exception:
             return b""
 
-    def _format_outputs_result(self, outputs_desc: list[dict[str, Any]], basket: str) -> list[dict[str, Any]]:
+    def _format_outputs_result(
+        self, outputs_desc: list[dict[str, Any]], basket: str, txid: str = "00" * 32
+    ) -> list[dict[str, Any]]:
         result_outputs: list[dict[str, Any]] = []
         for idx, o in enumerate(outputs_desc):
             ls_hex = o.get("lockingScript")
@@ -1620,7 +1629,8 @@ class ProtoWallet:
                     "basket": o.get("basket", basket),
                     "tags": o.get("tags") or [],
                     "customInstructions": o.get("customInstructions"),
-                    "txid": "00" * 32,
+                    "txid": txid,
+                    "outpoint": f"{txid}.{idx}",
                     "createdAt": int(o.get("createdAt", 0)),
                 }
             )
@@ -1964,7 +1974,7 @@ class ProtoWallet:
         from bsv.transaction import Transaction
         from bsv.utils import Reader
 
-        if tx_bytes[:4] == b"\x01\x00\xbe\xef":  # BEEF magic
+        if tx_bytes[:4] in (b"\x01\x00\xbe\xef", b"\x02\x00\xbe\xef", b"\x01\x01\x01\x01"):  # BEEF V1/V2/Atomic
             return Transaction.from_beef(tx_bytes)
         else:
             return Transaction.from_reader(Reader(tx_bytes))
