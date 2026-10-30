@@ -55,6 +55,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`Beef.to_binary()` sorts transactions like TS `Beef.sortTxs`** before writing, so a Beef built or parsed in any order serializes to the same bytes as the TS SDK.
 - **`Beef.merge_beef_tx()` replaces only TxIDOnly entries** — an existing transaction is kept, as in the TS SDK. `Beef.merge_bump()` records the bump index (and sets the leaf's txid flag) on every transaction the merged BUMP proves, including when it is combined with an existing BUMP. `trim_known_txids()` also drops BUMPs no transaction references.
 - **Consumers read V2 and Atomic BEEF** — the registry client reads each listed output from its own transaction in the listOutputs BEEF, `LookupResolver` returns an Atomic BEEF per output (TS `extractAtomicOutputs`), `LocalKVStore` reads the transaction named by the output's outpoint, and `WalletImpl` recognises V2 and Atomic BEEF.
+- **Wallet wire** — the listOutputs result uses the BRC-100 key `BEEF` (was `beef`). The createAction result is serialized in the Go `SerializeCreateActionResult` layout (txid, tx, noSendChange, sendWithResults, signableTransaction). signAction and createAction results accept a hex txid string and a `list[int]` tx.
 
 ### Deprecated
 
@@ -65,6 +66,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`Beef.to_binary()` honours the version** — `Beef(BEEF_V1)` now serializes in the V1 layout instead of writing a V2 body under a V1 header, so a BEEF can be converted between V1 and V2 by parsing it, changing `version`, and calling `to_binary()`. Serializing TxIDOnly entries as V1, or an unknown version, raises `ValueError`.
 - **`Transaction.to_beef()` writes each ancestor once** — a transaction shared by several inputs was written once per path. A partial BEEF no longer raises `KeyError` in `from_beef()`; missing source transactions are left unset.
 - **`MerklePath.compute_root()`** handles a block with a single transaction and compound paths that hold every txid at level 0 (TS SDK).
+- **SHIP broadcasting** — `X-Topics` is sent as a JSON array, which overlay-express parses with `JSON.parse`, and sending off-chain values no longer raises `AttributeError`.
+- **AuthFetch payments** — the payment is the signed `tx` from `createAction`, also when the wallet returns it as `list[int]`. The unsigned `signableTransaction` is no longer sent as a payment.
 - **`build_beef_v2_from_raw_hexes()`** writes the transaction count after skipping entries that are not hex.
 
 ### Security
