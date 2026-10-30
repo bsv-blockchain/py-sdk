@@ -393,7 +393,7 @@ class TestSerializeListOutputsResult:
 
     def test_serialize_with_beef(self):
         """Test serializing with BEEF data."""
-        result = {"beef": b"beef_data_here", "outputs": []}
+        result = {"BEEF": b"beef_data_here", "outputs": []}
         serialized = serialize_list_outputs_result(result)
         assert isinstance(serialized, bytes)
         assert b"beef_data_here" in serialized
@@ -501,12 +501,12 @@ class TestDeserializeListOutputsResult:
 
     def test_deserialize_with_beef(self):
         """Test deserializing with BEEF data."""
-        result = {"beef": b"test_beef", "outputs": []}
+        result = {"BEEF": b"test_beef", "outputs": []}
         serialized = serialize_list_outputs_result(result)
         deserialized = deserialize_list_outputs_result(serialized)
 
-        assert "beef" in deserialized
-        assert deserialized["beef"] == b"test_beef"
+        assert "BEEF" in deserialized
+        assert deserialized["BEEF"] == b"test_beef"
 
     def test_deserialize_without_beef(self):
         """Test deserializing without BEEF data."""
@@ -515,7 +515,7 @@ class TestDeserializeListOutputsResult:
         deserialized = deserialize_list_outputs_result(serialized)
 
         # beef should not be in result when not provided
-        assert "beef" not in deserialized or deserialized.get("beef") is None
+        assert deserialized.get("BEEF") is None
 
 
 class TestResultRoundTrip:
@@ -585,12 +585,12 @@ class TestResultRoundTrip:
     def test_with_beef_round_trip(self):
         """Test round trip with BEEF data."""
         result = {
-            "beef": b"sample_beef_data",
+            "BEEF": b"sample_beef_data",
             "outputs": [{"outpoint": {"txid": b"\xff" * 32, "index": 0}, "satoshis": 100, "tags": [], "labels": []}],
         }
         serialized = serialize_list_outputs_result(result)
         deserialized = deserialize_list_outputs_result(serialized)
 
-        assert "beef" in deserialized
-        assert deserialized["beef"] == b"sample_beef_data"
+        assert "BEEF" in deserialized
+        assert deserialized["BEEF"] == b"sample_beef_data"
         assert deserialized["totalOutputs"] == 1

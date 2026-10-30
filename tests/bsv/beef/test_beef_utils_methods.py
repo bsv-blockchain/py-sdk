@@ -1,15 +1,13 @@
+from bsv.merkle_path import MerklePath
+
+
 def test_find_bump_returns_matching_bump():
     from bsv.transaction.beef import BEEF_V2, Beef
     from bsv.transaction.beef_utils import find_bump
 
-    class DummyBump:
-        def __init__(self, height, txid):
-            self.block_height = height
-            self.path = [[{"offset": 0, "hash_str": txid, "txid": True}]]
-
     beef = Beef(version=BEEF_V2)
     txid = "44" * 32
-    beef.bumps.append(DummyBump(100, txid))
+    beef.bumps.append(MerklePath(100, [[{"offset": 0, "hash_str": txid, "txid": True}]]))
     assert find_bump(beef, txid) is not None
     assert find_bump(beef, "55" * 32) is None
 
@@ -18,26 +16,18 @@ def test_add_computed_leaves_adds_row_node():
     from bsv.transaction.beef import BEEF_V2, Beef
     from bsv.transaction.beef_utils import add_computed_leaves
 
-    class DummyBump:
-        def __init__(self, height, left_hash, right_hash):
-            self.block_height = height
-            # row0: two leaves with even offset 0 and odd offset 1
-            self.path = [
-                [
-                    {"offset": 0, "hash_str": left_hash},
-                    {"offset": 1, "hash_str": right_hash},
-                ],
-                [],
-            ]  # row1: empty initially
-
     beef = Beef(version=BEEF_V2)
     left = "01" * 32
     right = "02" * 32
-    bump = DummyBump(123, left, right)
+    # row0: two leaves; row1: only the sibling the proof needs
+    bump = MerklePath(
+        123,
+        [[{"offset": 0, "hash_str": left}, {"offset": 1, "hash_str": right}], [{"offset": 1, "hash_str": "03" * 32}]],
+    )
     beef.bumps.append(bump)
     add_computed_leaves(beef)
-    # Expect one computed node added to row1
-    assert len(beef.bumps[0].path[1]) == 1
+    # Expect the parent of the row-0 pair added to row1
+    assert sorted(leaf["offset"] for leaf in beef.bumps[0].path[1]) == [0, 1]
 
 
 def test_trim_known_txids_removes_only_txid_only_entries():

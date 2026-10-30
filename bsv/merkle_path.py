@@ -26,6 +26,13 @@ def _next_computed_offsets(cos: list[int]) -> list[int]:
     return ncos
 
 
+def _hash_pair(left: str, right: str) -> str:
+    """Merkle parent of two hex hashes (display byte order)."""
+    if _USE_NATIVE:
+        return _bsv_native.merkle_hash_pair(left, right)
+    return to_hex(hash256(to_bytes(left + right, "hex")[::-1])[::-1])
+
+
 class MerklePath:
     """
     Represents a Merkle Path, which is used to provide a compact proof of inclusion for a
@@ -48,33 +55,41 @@ class MerklePath:
         and verifying these proofs.
     """
 
-    def __init__(self, block_height: int, path: list[list[MerkleLeaf]]):
+    def __init__(self, block_height: int, path: list[list[MerkleLeaf]], legal_offsets_only: bool = True):
+        """
+        Args:
+            legal_offsets_only: reject leaves above level 0 that no level-0 leaf needs. BEEF
+                readers pass False, since add_computed_leaves() adds such leaves (TS parity).
+        """
         self.block_height = block_height
         self.path = path
 
-        self._validate_path_structure()
+        self._validate_path_structure(legal_offsets_only)
         self._validate_root_consistency()
 
-    def _validate_path_structure(self) -> None:
+    def _validate_path_structure(self, legal_offsets_only: bool = True) -> None:
         """Validate the structure and offsets of the Merkle path."""
         legal_offsets = [set() for _ in range(len(self.path))]
 
         for height, leaves in enumerate(self.path):
             self._validate_level_not_empty(height, leaves)
-            self._validate_level_offsets(height, leaves, legal_offsets)
+            self._validate_level_offsets(height, leaves, legal_offsets, legal_offsets_only)
 
     def _validate_level_not_empty(self, height: int, leaves: list[MerkleLeaf]) -> None:
         """Validate that level 0 is not empty."""
         if not leaves and height == 0:
             raise ValueError(f"Empty level at height: {height}")
 
-    def _validate_level_offsets(self, height: int, leaves: list[MerkleLeaf], legal_offsets: list[set]) -> None:
+    def _validate_level_offsets(
+        self, height: int, leaves: list[MerkleLeaf], legal_offsets: list[set], legal_offsets_only: bool = True
+    ) -> None:
         """Validate offsets for a single level."""
         offsets_at_this_height = set()
 
         for leaf in leaves:
             self._validate_unique_offset(leaf, height, offsets_at_this_height)
-            self._validate_legal_offset(leaf, height, legal_offsets)
+            if legal_offsets_only:
+                self._validate_legal_offset(leaf, height, legal_offsets)
             self._update_legal_offsets_for_higher_levels(leaf, height, legal_offsets)
 
     def _validate_unique_offset(self, leaf: MerkleLeaf, height: int, offsets_at_height: set) -> None:
@@ -124,12 +139,13 @@ class MerklePath:
         return MerklePath.from_binary(to_bytes(hex_str, "hex"))
 
     @staticmethod
-    def from_reader(reader: Reader) -> "MerklePath":
+    def from_reader(reader: Reader, legal_offsets_only: bool = True) -> "MerklePath":
         """
         Creates a MerklePath instance from a Reader object.
 
         Args:
             reader (Reader): The Reader object.
+            legal_offsets_only (bool): see MerklePath.__init__.
 
         Returns:
             MerklePath: A new MerklePath instance.
@@ -157,7 +173,7 @@ class MerklePath:
 
             path[level].sort(key=lambda e: e["offset"])
 
-        return MerklePath(block_height, path)
+        return MerklePath(block_height, path, legal_offsets_only)
 
     @staticmethod
     def from_binary(bump: bytes) -> "MerklePath":
@@ -227,7 +243,9 @@ class MerklePath:
             ValueError: If the transaction ID is not part of the Merkle Path.
         """
         if not isinstance(txid, str):
-            txid = next(leaf["hash_str"] for leaf in self.path[0] if leaf and "hash_str" in leaf)
+            txid = next((leaf["hash_str"] for leaf in self.path[0] if leaf.get("hash_str")), None)
+            if txid is None:
+                raise ValueError("No valid leaf found in the Merkle Path")
 
         # Find the index of the txid at the lowest level of the Merkle tree
         try:
@@ -235,62 +253,44 @@ class MerklePath:
         except StopIteration:
             raise ValueError(f"This proof does not contain the txid: {txid}")
 
-        if _USE_NATIVE:
-            return self._compute_root_native(txid, index)
+        # A block with a single transaction: its txid is the root.
+        if len(self.path) == 1 and len(self.path[0]) == 1:
+            return txid
 
-        # Calculate the root using the index as a way to determine which direction to concatenate.
-        def hash_fn(m: str) -> str:
-            return to_hex(hash256(to_bytes(m, "hex")[::-1])[::-1])
+        # A compound path may hold every txid at level 0, so the tree can be taller than the path.
+        max_offset = max(leaf["offset"] for leaf in self.path[0])
+        tree_height = max(len(self.path), max_offset.bit_length())
+
+        if _USE_NATIVE and len(self.path) > 1 and tree_height == len(self.path):
+            try:
+                return _bsv_native.merkle_compute_root(txid, self.path)
+            except (ValueError, TypeError):
+                pass
 
         working_hash = txid
-        for height in range(len(self.path)):
+        for height in range(tree_height):
             offset = (index >> height) ^ 1
             leaf = self.find_or_compute_leaf(height, offset)
             if not isinstance(leaf, dict):
+                # The last odd node of a level-0-only path has no sibling; Bitcoin duplicates it.
+                if len(self.path) == 1 and (index >> height) == (max_offset >> height):
+                    working_hash = _hash_pair(working_hash, working_hash)
+                    continue
                 raise ValueError(f"Missing hash for index {index} at height {height}")
 
             if leaf.get("duplicate"):
-                working_hash = hash_fn(working_hash + working_hash)
+                working_hash = _hash_pair(working_hash, working_hash)
             elif offset % 2 != 0:
-                working_hash = hash_fn(leaf["hash_str"] + working_hash)
+                working_hash = _hash_pair(leaf["hash_str"], working_hash)
             else:
-                working_hash = hash_fn(working_hash + leaf["hash_str"])
-
-        return working_hash
-
-    def _compute_root_native(self, txid: str, index: int) -> str:
-        """Compute root using C extension. Full-C path for complete proofs, per-level fallback otherwise."""
-        try:
-            return _bsv_native.merkle_compute_root(txid, self.path)
-        except (ValueError, TypeError):
-            pass
-
-        working_hash = txid
-        for height in range(len(self.path)):
-            offset = (index >> height) ^ 1
-            leaf = self.find_or_compute_leaf(height, offset)
-            if not isinstance(leaf, dict):
-                raise ValueError(f"Missing hash for index {index} at height {height}")
-
-            if leaf.get("duplicate"):
-                working_hash = _bsv_native.merkle_hash_pair(working_hash, working_hash)
-            elif offset % 2 != 0:
-                working_hash = _bsv_native.merkle_hash_pair(leaf["hash_str"], working_hash)
-            else:
-                working_hash = _bsv_native.merkle_hash_pair(working_hash, leaf["hash_str"])
+                working_hash = _hash_pair(working_hash, leaf["hash_str"])
 
         return working_hash
 
     def find_or_compute_leaf(self, height: int, offset: int) -> Optional[MerkleLeaf]:
-        if _USE_NATIVE:
-            return self._find_or_compute_leaf_native(height, offset)
-        return self._find_or_compute_leaf_py(height, offset)
-
-    def _find_or_compute_leaf_py(self, height: int, offset: int) -> Optional[MerkleLeaf]:
-        def hash_fn(m: str) -> str:
-            return to_hex(hash256(to_bytes(m, "hex")[::-1])[::-1])
-
-        leaf = next((e for e in self.path[height] if e["offset"] == offset), None)
+        leaf = None
+        if height < len(self.path):
+            leaf = next((e for e in self.path[height] if e["offset"] == offset), None)
         if leaf:
             return leaf
 
@@ -300,44 +300,21 @@ class MerklePath:
         h = height - 1
         e = offset << 1
 
-        leaf0 = self._find_or_compute_leaf_py(h, e)
+        leaf0 = self.find_or_compute_leaf(h, e)
         if not leaf0 or not leaf0.get("hash_str"):
             return None
 
-        leaf1 = self._find_or_compute_leaf_py(h, e + 1)
+        leaf1 = self.find_or_compute_leaf(h, e + 1)
         if not leaf1:
+            # On a level-0-only path, leaf0 may be the last odd node at height h.
+            if len(self.path) == 1 and e == max(n["offset"] for n in self.path[0]) >> h:
+                return {"offset": offset, "hash_str": _hash_pair(leaf0["hash_str"], leaf0["hash_str"])}
             return None
 
         if leaf1.get("duplicate"):
-            working_hash = hash_fn(leaf0["hash_str"] + leaf0["hash_str"])
+            working_hash = _hash_pair(leaf0["hash_str"], leaf0["hash_str"])
         else:
-            working_hash = hash_fn(leaf1["hash_str"] + leaf0["hash_str"])
-
-        return {"offset": offset, "hash_str": working_hash}
-
-    def _find_or_compute_leaf_native(self, height: int, offset: int) -> Optional[MerkleLeaf]:
-        leaf = next((e for e in self.path[height] if e["offset"] == offset), None)
-        if leaf:
-            return leaf
-
-        if height == 0:
-            return None
-
-        h = height - 1
-        e = offset << 1
-
-        leaf0 = self._find_or_compute_leaf_native(h, e)
-        if not leaf0 or not leaf0.get("hash_str"):
-            return None
-
-        leaf1 = self._find_or_compute_leaf_native(h, e + 1)
-        if not leaf1:
-            return None
-
-        if leaf1.get("duplicate"):
-            working_hash = _bsv_native.merkle_hash_pair(leaf0["hash_str"], leaf0["hash_str"])
-        else:
-            working_hash = _bsv_native.merkle_hash_pair(leaf1["hash_str"], leaf0["hash_str"])
+            working_hash = _hash_pair(leaf1["hash_str"], leaf0["hash_str"])
 
         return {"offset": offset, "hash_str": working_hash}
 
@@ -351,8 +328,12 @@ class MerklePath:
 
         Returns:
             bool: True if the transaction ID is valid within the Merkle Path at the specified block height.
+                A coinbase (offset 0) is valid only once it is 100 blocks deep, as in the TS SDK.
         """
         root = self.compute_root(txid)
+        if next(leaf["offset"] for leaf in self.path[0] if leaf.get("hash_str") == txid) == 0:
+            if self.block_height + 100 > await chaintracker.current_height():
+                return False
         res = await chaintracker.is_valid_root_for_height(root, self.block_height)
         return res
 

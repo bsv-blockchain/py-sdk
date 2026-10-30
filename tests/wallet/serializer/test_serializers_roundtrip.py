@@ -273,3 +273,29 @@ def test_abort_action_result_roundtrip():
     data = serialize_abort_action_result(src)
     out = deserialize_abort_action_result(data)
     assert out == {}
+
+
+def test_create_action_result_full_roundtrip():
+    """All CreateActionResult fields survive the wire (Go SerializeCreateActionResult layout)."""
+    txid = "ab" * 31 + "cd"
+    src = {
+        "txid": txid,
+        "tx": [1, 2, 3],
+        "noSendChange": [f"{'11' * 32}.2"],
+        "sendWithResults": [{"txid": txid, "status": "unproven"}],
+        "signableTransaction": {"tx": b"\x00\x01", "reference": "AQI="},
+    }
+    out = deserialize_create_action_result(serialize_create_action_result(src))
+    assert out["txid"] == txid
+    assert out["tx"] == b"\x01\x02\x03"
+    assert out["noSendChange"] == [f"{'11' * 32}.2"]
+    assert out["sendWithResults"] == [{"txid": bytes.fromhex(txid)[::-1], "status": "unproven"}]
+    assert out["signableTransaction"] == {"tx": b"\x00\x01", "reference": b"\x01\x02"}
+
+
+def test_sign_action_result_accepts_hex_txid_and_list_tx():
+    """Wallets return txid as a hex string and tx as list[int]."""
+    txid = "ab" * 31 + "cd"
+    out = deserialize_sign_action_result(serialize_sign_action_result({"txid": txid, "tx": [1, 2]}))
+    assert out["txid"] == bytes.fromhex(txid)[::-1]
+    assert out["tx"] == b"\x01\x02"

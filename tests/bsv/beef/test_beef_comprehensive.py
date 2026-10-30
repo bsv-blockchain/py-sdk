@@ -139,13 +139,8 @@ def test_beef_to_log_string():
     """Test log string generation with transaction and bump information (GO: TestBeefToLogString)."""
     beef = Beef(version=BEEF_V2)
 
-    class DummyBump:
-        def __init__(self, height, txid):
-            self.block_height = height
-            self.path = [[{"offset": 0, "hash_str": txid, "txid": True}]]
-
     txid = "cc" * 32
-    beef.bumps.append(DummyBump(100, txid))
+    beef.bumps.append(MerklePath(100, [[{"offset": 0, "hash_str": txid, "txid": True}]]))
     beef.merge_txid_only(txid)
 
     log_str = to_log_string(beef)
@@ -168,13 +163,8 @@ def test_beef_clone():
     """Test BEEF cloning (GO: TestBeefClone)"""
     beef = Beef(version=BEEF_V2)
 
-    class DummyBump:
-        def __init__(self, height, txid):
-            self.block_height = height
-            self.path = [[{"offset": 0, "hash_str": txid, "txid": True}]]
-
     txid = "dd" * 32
-    beef.bumps.append(DummyBump(200, txid))
+    beef.bumps.append(MerklePath(200, [[{"offset": 0, "hash_str": txid, "txid": True}]]))
     beef.merge_txid_only(txid)
 
     # Clone the object
@@ -244,16 +234,11 @@ def test_beef_get_valid_txids():
     """Test getting valid TXIDs (GO: TestBeefGetValidTxids)"""
     beef = Beef(version=BEEF_V2)
 
-    class DummyBump:
-        def __init__(self, height, txid):
-            self.block_height = height
-            self.path = [[{"offset": 0, "hash_str": txid, "txid": True}]]
-
     txid1 = "11" * 32
     txid2 = "22" * 32
 
     # Add bump with txid1
-    beef.bumps.append(DummyBump(300, txid1))
+    beef.bumps.append(MerklePath(300, [[{"offset": 0, "hash_str": txid1, "txid": True}]]))
     beef.merge_txid_only(txid1)
     beef.merge_txid_only(txid2)
 
@@ -322,19 +307,7 @@ def test_beef_merge_bump():
     beef1 = Beef(version=BEEF_V2)
     _ = Beef(version=BEEF_V2)
 
-    class DummyBump:
-        def __init__(self, height, txid):
-            self.block_height = height
-            self.path = [[{"offset": 0, "hash_str": txid, "txid": True}]]
-
-        def compute_root(self):
-            return "root"
-
-        def combine(self, other):
-            """Intentionally empty: test stub."""
-            # NOSONAR
-
-    bump = DummyBump(400, "33" * 32)
+    bump = MerklePath(400, [[{"offset": 0, "hash_str": "33" * 32, "txid": True}]])
 
     # Record initial state
     initial_bump_count = len(beef1.bumps)
@@ -455,9 +428,7 @@ def test_beef_merge_beef_tx():
     from typing import Any, cast
 
     nil_btx = cast(Any, None)
-    with pytest.raises(
-        (TypeError, AttributeError, ValueError), match="'NoneType' object has no attribute 'data_format'"
-    ):
+    with pytest.raises((TypeError, AttributeError, ValueError), match="'NoneType' object has no attribute"):
         beef.merge_beef_tx(nil_btx)
 
     # Test handle BeefTx with nil Transaction (txid-only)
@@ -486,12 +457,7 @@ def test_beef_find_atomic_transaction_with_source_transactions():
     beef.merge_transaction(main_tx)
 
     # Create a BUMP for the source transaction
-    class DummyBump:
-        def __init__(self, height, txid):
-            self.block_height = height
-            self.path = [[{"offset": 0, "hash_str": txid, "txid": True}]]
-
-    bump = DummyBump(500, source_id)
+    bump = MerklePath(500, [[{"offset": 0, "hash_str": source_id, "txid": True}]])
     beef.bumps.append(bump)
 
     # Test FindAtomicTransaction
@@ -594,27 +560,28 @@ def test_beef_add_computed_leaves():
     left_hash = "01" * 32
     right_hash = "02" * 32
 
-    # Create a BUMP with two leaves in row 0 and no computed parent in row 1
-    class DummyBump:
-        def __init__(self, height, left, right):
-            self.block_height = height
-            self.path = [
-                [
-                    {"offset": 0, "hash_str": left},
-                    {"offset": 1, "hash_str": right},
-                ],
-                [],  # Empty row for parent
-            ]
-
-    bump = DummyBump(600, left_hash, right_hash)
+    # A BUMP whose row 1 lacks the parent of the two row-0 leaves
+    bump = MerklePath(
+        600,
+        [
+            [{"offset": 0, "hash_str": left_hash, "txid": True}, {"offset": 1, "hash_str": right_hash}],
+            [{"offset": 1, "hash_str": "03" * 32}],
+        ],
+    )
     beef.bumps.append(bump)
 
     # Call AddComputedLeaves
     add_computed_leaves(beef)
 
-    # Verify the parent hash was computed and added
-    assert len(beef.bumps[0].path[1]) == 1
-    assert beef.bumps[0].path[1][0].get("offset") == 0
+    # The parent of the two row-0 leaves is computed and added at offset 0
+    added = [leaf for leaf in beef.bumps[0].path[1] if leaf["offset"] == 0]
+    from bsv.merkle_path import _hash_pair
+
+    assert added == [{"offset": 0, "hash_str": _hash_pair(right_hash, left_hash)}]
+    # Its root is unchanged, and a BEEF reader accepts the BUMP although offset 0 is not a legal offset
+    root = bump.compute_root(left_hash)
+    beef.merge_txid_only(left_hash)
+    assert new_beef_from_bytes(beef.to_binary()).bumps[0].compute_root(left_hash) == root
 
 
 def test_beef_from_v1():
@@ -623,7 +590,9 @@ def test_beef_from_v1():
     beef = new_beef_from_bytes(beef_data)
     assert beef is not None
     assert beef.version == BEEF_V1
-    assert beef.is_valid(allow_txid_only=False) or beef.is_valid(allow_txid_only=True)
+    assert len(beef.bumps) == 1 and len(beef.txs) == 2
+    ok, roots = beef.verify_valid()
+    assert ok and len(roots) == 1
 
 
 def test_beef_make_txid_only_and_bytes():

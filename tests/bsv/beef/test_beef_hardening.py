@@ -10,31 +10,15 @@ def test_beef_unknown_version_errors():
         parse_beef(data)
 
 
-def test_atomic_subject_missing_returns_none_last_tx():
-    """AtomicBEEF with missing subject tx should return None for last_tx (Go/TS parity)."""
+def test_atomic_subject_missing_raises():
+    """AtomicBEEF without its subject tx is rejected (TS Transaction.fromAtomicBEEF)."""
     from bsv.transaction import parse_beef_ex
     from bsv.transaction.beef import ATOMIC_BEEF, BEEF_V2
 
-    # Build Atomic with subject txid 0x33.. and valid empty BEEF V2 inner
-    # BEEF V2: version (4) + bumps count (1) + tx count (1)
     inner_beef = int(BEEF_V2).to_bytes(4, "little") + b"\x00" + b"\x00"  # Empty BEEF V2
-    subject_txid = b"\x33" * 32
-    atomic = int(ATOMIC_BEEF).to_bytes(4, "little") + subject_txid + inner_beef
-
-    # Parse should succeed but last_tx should be None when subject is not in inner BEEF
-    beef, subject, last_tx = parse_beef_ex(atomic)
-
-    # Verify subject txid is correctly extracted
-    expected_subject = subject_txid[::-1].hex()
-    assert subject == expected_subject, f"Expected subject {expected_subject}, got {subject}"
-
-    # Verify last_tx is None when subject transaction is missing from inner BEEF
-    assert last_tx is None, "Expected last_tx to be None when subject is not found in inner BEEF"
-
-    # Verify beef structure is valid
-    assert beef is not None, "BEEF should be parsed successfully"
-    assert hasattr(beef, "txs"), "BEEF should have txs attribute"
-    assert len(beef.txs) == 0, "Inner BEEF should be empty"
+    atomic = int(ATOMIC_BEEF).to_bytes(4, "little") + b"\x33" * 32 + inner_beef
+    with pytest.raises(ValueError, match="does not contain its subject"):
+        parse_beef_ex(atomic)
 
 
 def test_beef_v2_txidonly_then_raw_deduplicate():
@@ -150,8 +134,8 @@ def test_beef_bump_normalization_merging():
     assert beef.txs["c"].bump_index == 1
 
 
-def test_atomicbeef_nested_parsing():
-    """AtomicBEEF: Nested AtomicBEEF should be parsed recursively (Go/TS parity)."""
+def test_atomicbeef_parsing():
+    """AtomicBEEF wrapping a V1 BEEF returns its subject."""
     from bsv.script.script import Script
 
     # Build inner BEEF V1
@@ -169,24 +153,18 @@ def test_atomicbeef_nested_parsing():
     assert last_tx.txid() == t.txid()
 
 
-def test_atomicbeef_deeply_nested():
-    """AtomicBEEF: Deeply nested AtomicBEEF (3+ levels) should parse recursively or raise."""
+def test_atomicbeef_nested_is_rejected():
+    """AtomicBEEF inside AtomicBEEF is rejected: the inner version must be V1 or V2 (TS Beef.fromReader)."""
     from bsv.script.script import Script
     from bsv.transaction import Transaction, TransactionOutput
     from bsv.transaction.beef import ATOMIC_BEEF, parse_beef_ex
 
-    # Build innermost tx
     t = Transaction()
     t.outputs = [TransactionOutput(Script(b"\x51"), 1)]
-    beef_bytes = t.to_beef()
-    # Wrap 3 times
-    atomic1 = int(ATOMIC_BEEF).to_bytes(4, "little") + bytes.fromhex(t.txid())[::-1] + beef_bytes
+    atomic1 = int(ATOMIC_BEEF).to_bytes(4, "little") + bytes.fromhex(t.txid())[::-1] + t.to_beef()
     atomic2 = int(ATOMIC_BEEF).to_bytes(4, "little") + bytes.fromhex(t.txid())[::-1] + atomic1
-    atomic3 = int(ATOMIC_BEEF).to_bytes(4, "little") + bytes.fromhex(t.txid())[::-1] + atomic2
-    _, subject, last_tx = parse_beef_ex(atomic3)
-    assert subject == t.txid()
-    assert last_tx is not None
-    assert last_tx.txid() == t.txid()
+    with pytest.raises(ValueError, match="unsupported BEEF version"):
+        parse_beef_ex(atomic2)
 
 
 def test_beef_v2_bump_index_out_of_range():
@@ -263,13 +241,10 @@ def test_beef_v2_txidonly_only():
 
 
 def test_atomicbeef_subject_not_in_inner():
-    """AtomicBEEF: subject txid not present in inner BEEF should return last_tx=None."""
+    """AtomicBEEF: subject txid not present in inner BEEF is rejected."""
     from bsv.transaction.beef import ATOMIC_BEEF, parse_beef_ex
 
-    # subject=0xdd.., inner is empty BEEF V2
-    subject = b"\xdd" * 32
     v2 = (4022206466).to_bytes(4, "little") + b"\x00" + b"\x00"
-    atomic = int(ATOMIC_BEEF).to_bytes(4, "little") + subject + v2
-    _, subj, last_tx = parse_beef_ex(atomic)
-    assert subj == subject[::-1].hex()
-    assert last_tx is None
+    atomic = int(ATOMIC_BEEF).to_bytes(4, "little") + b"\xdd" * 32 + v2
+    with pytest.raises(ValueError, match="does not contain its subject"):
+        parse_beef_ex(atomic)

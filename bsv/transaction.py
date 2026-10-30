@@ -563,58 +563,41 @@ class Transaction:
             return None
 
     @classmethod
-    def from_beef(cls, stream: str | bytes | Reader) -> "Transaction":
+    def from_beef(cls, stream: str | bytes | Reader, txid: Optional[str] = None) -> "Transaction":
+        """
+        Parse BEEF V1, V2 or Atomic BEEF and return one transaction linked to its source
+        transactions and merkle paths (TS Transaction.fromBEEF).
+
+        Returns the transaction with txid, else the Atomic BEEF subject, else the last transaction.
+        Source transactions missing from the BEEF are left unset. A Reader is consumed to its end.
+        """
+        from .transaction.beef import new_beef_from_bytes
+
         if isinstance(stream, Reader):
-            reader = stream
+            data = stream.read() or b""
         else:
             data = stream if isinstance(stream, bytes) else bytes.fromhex(stream)
-            reader = Reader(data)
-        version = reader.read_uint32_le()
-        if version != 4022206465:
-            raise ValueError(f"Invalid BEEF version. Expected 4022206465, received {version}.")
-
-        number_of_bumps = reader.read_var_int_num()
-        bumps = []
-        for _ in range(number_of_bumps):
-            bumps.append(MerklePath.from_reader(reader))
-
-        transactions, last_txid = cls._read_beef_transactions(reader)
-        cls._link_beef_transaction(transactions[last_txid], transactions, bumps)
-        return transactions[last_txid]["tx"]
+        beef = new_beef_from_bytes(data)
+        if not beef.txs:
+            raise ValueError("beef must include at least one transaction.")
+        target = txid or beef.atomic_txid or next(reversed(beef.txs))
+        tx = beef.find_atomic_transaction(target)
+        if tx is None:
+            raise ValueError(f"Transaction with TXID {target} not found in BEEF data.")
+        return tx
 
     @classmethod
-    def _read_beef_transactions(cls, reader: Reader) -> tuple[dict, Optional[str]]:
-        """Read the transaction section of a BEEF stream, returning (transactions, last_txid)."""
-        number_of_transactions = reader.read_var_int_num()
-        transactions = {}
-        last_txid = None
-        for i in range(number_of_transactions):
-            tx = cls.from_reader(reader)
-            obj = {"tx": tx}
-            txid = tx.txid()
-            if i + 1 == number_of_transactions:
-                last_txid = txid
-            has_bump = bool(reader.read_uint8())
-            if has_bump:
-                obj["pathIndex"] = reader.read_var_int_num()
-            transactions[txid] = obj
-        return transactions, last_txid
+    def from_atomic_beef(cls, data: str | bytes) -> "Transaction":
+        """Parse Atomic BEEF (BRC-95) and return its subject transaction (TS Transaction.fromAtomicBEEF)."""
+        from .transaction.beef import new_beef_from_bytes
 
-    @classmethod
-    def _link_beef_transaction(cls, item: dict, transactions: dict, bumps: list) -> None:
-        """Recursively attach merkle paths or source transactions to a parsed BEEF entry."""
-        if "pathIndex" in item:
-            path = bumps[item["pathIndex"]]
-            if not isinstance(path, MerklePath):
-                raise ValueError("Invalid merkle path index found in BEEF!")
-            item["tx"].merkle_path = path
-        else:
-            for tx_input in item["tx"].inputs:
-                source_obj = transactions[tx_input.source_txid]
-                if not isinstance(source_obj, dict):
-                    raise ValueError(f"Reference to unknown TXID in BUMP: {tx_input.source_txid}")
-                tx_input.source_transaction = source_obj["tx"]
-                cls._link_beef_transaction(source_obj, transactions, bumps)
+        beef = new_beef_from_bytes(data if isinstance(data, bytes) else bytes.fromhex(data))
+        if beef.atomic_txid is None:
+            raise ValueError("beef must conform to BRC-95 and must contain the subject txid.")
+        tx = beef.find_atomic_transaction(beef.atomic_txid)
+        if tx is None:
+            raise ValueError(f"Transaction with TXID {beef.atomic_txid} not found in BEEF data.")
+        return tx
 
     def to_ef(self) -> bytes:
         writer = Writer()
@@ -663,29 +646,39 @@ class Transaction:
                     return i
         return None
 
-    def _collect_beef_entries(self, bumps: list, txs: list) -> None:
-        """Recursively collect this transaction and its ancestors into BEEF bump/tx lists."""
+    def _collect_beef_entries(self, bumps: list, txs: list, seen: set, allow_partial: bool) -> None:
+        """Append this transaction after its ancestors, each txid once (TS writeSerializedBEEF)."""
+        txid = self.txid()
+        if txid in seen:
+            return
         obj = {"tx": self}
-        has_proof = isinstance(self.merkle_path, MerklePath)
-        if has_proof:
+        if isinstance(self.merkle_path, MerklePath):
             index = Transaction._find_or_combine_bump(bumps, self.merkle_path)
             if index is None:
                 index = len(bumps)
                 bumps.append(self.merkle_path)
             obj["path_index"] = index
-        txs.insert(0, obj)
-        if not has_proof:
-            for tx_input in self.inputs:
-                if not isinstance(tx_input.source_transaction, Transaction):
+        else:
+            for tx_input in reversed(self.inputs):
+                if isinstance(tx_input.source_transaction, Transaction):
+                    tx_input.source_transaction._collect_beef_entries(bumps, txs, seen, allow_partial)
+                elif not allow_partial:
                     raise ValueError("A required source transaction is missing!")
-                tx_input.source_transaction._collect_beef_entries(bumps, txs)
+        seen.add(txid)
+        txs.append(obj)
 
-    def to_beef(self) -> bytes:
+    def to_beef(self, allow_partial: bool = False) -> bytes:
+        """
+        Serialize this transaction with its ancestors and their merkle paths as BEEF V1 (BRC-62).
+
+        Args:
+            allow_partial: leave out missing source transactions instead of raising ValueError.
+        """
         writer = Writer()
         writer.write_uint32_le(4022206465)
         bumps = []
         txs = []
-        self._collect_beef_entries(bumps, txs)
+        self._collect_beef_entries(bumps, txs, set(), allow_partial)
 
         writer.write_var_int_num(len(bumps))
         for b in bumps:
@@ -699,6 +692,10 @@ class Transaction:
             else:
                 writer.write_uint8(0)
         return writer.to_bytes()
+
+    def to_atomic_beef(self, allow_partial: bool = False) -> bytes:
+        """Serialize as Atomic BEEF (BRC-95): 0x01010101, this txid, then to_beef()."""
+        return b"\x01\x01\x01\x01" + self.hash() + self.to_beef(allow_partial)
 
     @classmethod
     def from_reader(cls, reader: Reader) -> "Transaction":

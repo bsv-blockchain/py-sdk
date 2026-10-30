@@ -636,47 +636,22 @@ class LocalKVStore(KVStoreInterface):
             return False
 
     def _extract_locking_script_from_output(self, beef_bytes: bytes, output: dict) -> bytes:
+        """Read the output's locking script from the transaction its outpoint names (TS getLockingScript)."""
         locking_script = output.get("lockingScript") or b""
         if not beef_bytes:
             return locking_script
+        txid, _, vout = str(output.get("outpoint", "")).partition(".")
+        txid = txid or output.get("txid")
+        vout = int(vout or output.get("outputIndex", 0))
         try:
-            from bsv.transaction import parse_beef_ex
+            from bsv.transaction import parse_beef
 
-            beef, subject, last_tx = parse_beef_ex(beef_bytes)
-            txid_hint = output.get("txid")
-            match_tx = self._find_tx_by_subject(beef, subject)
-            if match_tx is not None:
-                vout = int(output.get("outputIndex", 0))
-                if 0 <= vout < len(match_tx.outputs):
-                    return match_tx.outputs[vout].locking_script.to_bytes()  # Scriptオブジェクトからbytesを取得
-            match_tx = self._find_tx_by_txid_hint(beef, txid_hint)
-            if match_tx is not None:
-                vout = int(output.get("outputIndex", 0))
-                if 0 <= vout < len(match_tx.outputs):
-                    return match_tx.outputs[vout].locking_script.to_bytes()  # Scriptオブジェクトからbytesを取得
-            if last_tx is not None:
-                vout = int(output.get("outputIndex", 0))
-                if 0 <= vout < len(last_tx.outputs):
-                    return last_tx.outputs[vout].locking_script.to_bytes()  # Scriptオブジェクトからbytesを取得
+            btx = parse_beef(beef_bytes).find_transaction(txid) if txid else None
+            if btx is not None and btx.tx_obj is not None and 0 <= vout < len(btx.tx_obj.outputs):
+                return btx.tx_obj.outputs[vout].locking_script.to_bytes()
         except Exception:
             pass
         return locking_script
-
-    def _find_tx_by_subject(self, beef, subject):
-        if not subject:
-            return None
-        btxs = beef.find_transaction(subject)
-        if btxs and getattr(btxs, "tx_obj", None):
-            return btxs.tx_obj
-        return None
-
-    def _find_tx_by_txid_hint(self, beef, txid_hint):
-        if not (txid_hint and isinstance(txid_hint, str)):
-            return None
-        btx = beef.find_transaction(txid_hint)
-        if btx and getattr(btx, "tx_obj", None):
-            return btx.tx_obj
-        return None
 
     def set(self, ctx: Any, key: str, value: str, ca_args: dict = None) -> str:
         if not key:

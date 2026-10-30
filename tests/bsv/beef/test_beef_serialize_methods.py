@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_to_binary_writes_header_and_zero_counts():
     from bsv.transaction.beef import BEEF_V2, Beef
 
@@ -10,10 +13,18 @@ def test_to_binary_writes_header_and_zero_counts():
 
 
 def test_to_binary_atomic_prefix_and_subject():
+    from bsv.script.script import Script
+    from bsv.transaction import Transaction, TransactionOutput
     from bsv.transaction.beef import ATOMIC_BEEF, BEEF_V2, Beef
 
     beef = Beef(version=BEEF_V2)
-    subject = "aa" * 32
+    with pytest.raises(ValueError, match="does not exist in this Beef"):
+        beef.to_binary_atomic("aa" * 32)
+
+    tx = Transaction()
+    tx.outputs = [TransactionOutput(Script(b"\x51"), 1)]
+    beef.merge_transaction(tx)
+    subject = tx.txid()
     atomic = beef.to_binary_atomic(subject)
     assert atomic[:4] == int(ATOMIC_BEEF).to_bytes(4, "little")
     assert atomic[4:36] == bytes.fromhex(subject)[::-1]

@@ -16,18 +16,17 @@ def build_beef_v2_from_raw_hexes(tx_hex_list: list[str]) -> bytes:
     """
     if not tx_hex_list:
         return b""
+    raw_txs = []
+    for h in tx_hex_list:
+        try:
+            raw_txs.append(bytes.fromhex(h))
+        except (TypeError, ValueError):
+            continue  # skip entries that are not hex, before the count is written
     w = Writer()
     w.write_uint32_le(int(BEEF_V2))
     w.write_var_int_num(0)  # bump count
-    w.write_var_int_num(len(tx_hex_list))  # transaction count
-    for h in tx_hex_list:
-        if not isinstance(h, str):
-            continue
-        if len(h) % 2 != 0:
-            continue
-        try:
-            w.write_uint8(0)  # data_format: 0 indicates RawTx
-            w.write(bytes.fromhex(h))
-        except Exception:
-            continue
+    w.write_var_int_num(len(raw_txs))  # transaction count
+    for raw in raw_txs:
+        w.write_uint8(0)  # data_format: 0 indicates RawTx
+        w.write(raw)
     return w.to_bytes()

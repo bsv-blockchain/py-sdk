@@ -17,9 +17,7 @@ def mock_wallet():
     wallet.get_public_key = Mock(return_value={"publicKey": "02" + "00" * 32})
     wallet.create_signature = Mock(return_value={"signature": b"mock_signature"})
     wallet.verify_signature = Mock(return_value={"valid": True})
-    wallet.create_action = Mock(
-        return_value={"signableTransaction": {"tx": b"mock_tx", "reference": b"mock_ref"}, "txid": "mock_txid"}
-    )
+    wallet.create_action = Mock(return_value={"tx": b"mock_tx", "txid": "mock_txid"})
     return wallet
 
 
