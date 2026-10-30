@@ -51,7 +51,7 @@ def _classify_entries(
         else:
             inputs = {i.source_txid for i in btx.tx_obj.inputs if getattr(i, "source_txid", None)}
             if inputs - beef.txs.keys():
-                missing |= inputs - beef.txs.keys()
+                missing.update(inputs - beef.txs.keys())
                 result.with_missing_inputs.append(txid)
             else:
                 queue.append((txid, inputs))
