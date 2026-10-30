@@ -100,7 +100,7 @@ jobs:
           CIBW_SKIP: "*-musllinux_* *-win32 *-manylinux_i686 cp3??t-*"
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_ENVIRONMENT: "BSV_REQUIRE_NATIVE=1"
-          CIBW_TEST_REQUIRES: "pytest pytest-asyncio pytest-benchmark pycryptodomex hypothesis"
+          CIBW_TEST_REQUIRES: "pytest<9.2 pytest-asyncio pytest-benchmark pycryptodomex hypothesis"
           CIBW_TEST_COMMAND: >-
             python -c "import _bsv_native; print(_bsv_native.BACKEND, _bsv_native.__version__)" &&
             pytest {project}/tests/bsv/native/ -x -q -W error::DeprecationWarning
