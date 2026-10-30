@@ -138,3 +138,17 @@ def test_allow_txid_only_assumes_txid_valid():
 
     assert beef.is_valid() is False
     assert beef.is_valid(allow_txid_only=True) is True
+
+
+@pytest.mark.parametrize("version", [BEEF_V1, BEEF_V2], ids=["v1", "v2"])
+def test_bump_index_to_unflagged_leaf_consults_chain_tracker(version):
+    """A bump index proves its tx only through a root that the ChainTracker confirms, flagged leaf or not."""
+    parent, _ = _pair(txid_flag=False)
+    entry = parent.serialize() + b"\x01\x00" if version == BEEF_V1 else b"\x01\x00" + parent.serialize()
+    data = version.to_bytes(4, "little") + b"\x01" + parent.merkle_path.to_binary() + b"\x01" + entry
+    root = parent.merkle_path.compute_root(parent.txid())
+
+    ok, tracker = _verify(new_beef_from_bytes(data), False)
+    assert ok is False
+    assert tracker.calls == [(HEIGHT, root)]
+    assert _verify(new_beef_from_bytes(data), True)[0] is True

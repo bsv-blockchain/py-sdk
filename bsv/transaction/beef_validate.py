@@ -77,7 +77,8 @@ def verify_valid(beef: Beef, allow_txid_only: bool = False) -> tuple[bool, dict[
             if leaf.get("txid") and leaf.get("hash_str") and not _confirm_computed_root(bump, leaf["hash_str"], roots):
                 return False, {}
 
-    # Every bump index must point at a leaf for its txid (TS verifyBumpIndexLeaves).
+    # Every bump index must point at a leaf for its txid (TS verifyBumpIndexLeaves), and that leaf's
+    # root must go to the ChainTracker even when the leaf has no txid flag.
     for txid, btx in beef.txs.items():
         if btx.bump_index is None:
             continue
@@ -85,6 +86,8 @@ def verify_valid(beef: Beef, allow_txid_only: bool = False) -> tuple[bool, dict[
             return False, {}
         bump = bumps[btx.bump_index]
         if not any(leaf.get("hash_str") == txid for leaf in bump.path[0]):
+            return False, {}
+        if not _confirm_computed_root(bump, txid, roots):
             return False, {}
 
     return True, roots
