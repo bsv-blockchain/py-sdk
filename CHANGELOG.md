@@ -41,6 +41,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`MerklePath(..., legal_offsets_only=True)`** — BEEF readers pass `False`, so BUMPs extended by `add_computed_leaves()` can be read, as in the TS SDK.
+
 ### Changed
 
 - **Arcade broadcaster renamed to `BsvBroadcaster`** (`bsv/broadcasters/bsv_broadcaster.py`) — follows the service's rename to BSV Broadcaster ([bsv-blockchain/broadcaster](https://github.com/bsv-blockchain/broadcaster)). `BsvBroadcasterConfig`, `BSV_BROADCASTER_*_TX_STATUSES` and `bsv_broadcaster_post_data_indicates_failure` replace the `Arcade*` names. Behaviour, the `ARCADE_TX_STATUS` failure code and the `arcade_json` result key are unchanged. The guide moved to `docs/bsv_broadcaster.md`.
@@ -53,6 +57,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - **`Beef.to_binary()` honours the version** — `Beef(BEEF_V1)` now serializes in the V1 layout instead of writing a V2 body under a V1 header, so a BEEF can be converted between V1 and V2 by parsing it, changing `version`, and calling `to_binary()`. Serializing TxIDOnly entries as V1, or an unknown version, raises `ValueError`.
+- **`MerklePath.compute_root()`** handles a block with a single transaction and compound paths that hold every txid at level 0 (TS SDK).
 
 ### Security
 
