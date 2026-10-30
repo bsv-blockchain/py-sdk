@@ -32,7 +32,7 @@ Homepage = "https://github.com/bitcoin-sv/py-sdk"
 
 [project.optional-dependencies]
 test = [
-    "pytest>=9.0.3",
+    "pytest>=9.0.3,<9.2",  # pytest 9.2 removed Node._nodeid, which pytest-benchmark 5.3.0 reads
     "pytest-asyncio>=1.3.0",
     "pytest-benchmark>=5.1.0",
     "pytest-cov>=7.1.0",
