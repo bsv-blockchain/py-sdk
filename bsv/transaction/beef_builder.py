@@ -13,16 +13,6 @@ def remove_existing_txid(beef: Beef, txid: str) -> None:
     beef.txs.pop(txid, None)
 
 
-def _leaf_exists_in_bump(bump: MerklePath, txid: str) -> bool:  # NOSONAR - Complexity (23), requires refactoring
-    try:
-        for leaf in bump.path[0]:
-            if leaf.get("hash_str") == txid:
-                return True
-    except Exception:
-        pass
-    return False
-
-
 def _find_identical_bump(beef: Beef, bump: MerklePath) -> int | None:
     """Check if identical bump instance already exists."""
     for i, existing in enumerate(getattr(beef, "bumps", []) or []):
@@ -45,56 +35,45 @@ def _find_combinable_bump(beef: Beef, bump: MerklePath) -> int | None:
 
 
 def _attach_bump_to_transactions(beef: Beef, bump: MerklePath, bump_index: int) -> None:
-    """Attach bump to transactions that it proves."""
+    """Record bump_index on every unproven transaction (TxIDOnly included) that bump proves."""
     for btx in beef.txs.values():
-        if btx.tx_obj is not None and btx.bump_index is None:
-            try:
-                if _leaf_exists_in_bump(bump, btx.txid):
-                    btx.bump_index = bump_index
-                    btx.tx_obj.merkle_path = bump
-            except Exception:
-                pass
+        if btx.bump_index is None:
+            _mark_proven(btx, bump, bump_index)
+
+
+def _mark_proven(btx: BeefTx, bump: MerklePath, bump_index: int) -> bool:
+    """Set btx.bump_index and flag its leaf as a txid when bump holds btx.txid at level 0 (TS)."""
+    for leaf in bump.path[0]:
+        if leaf.get("hash_str") == btx.txid:
+            btx.bump_index = bump_index
+            leaf["txid"] = True
+            if btx.tx_obj is not None:
+                btx.tx_obj.merkle_path = bump
+            return True
+    return False
 
 
 def merge_bump(beef: Beef, bump: MerklePath) -> int:
     """
     Merge a MerklePath that is assumed to be fully valid into the beef and return its index.
-    Tries to combine proofs that share the same block height and root.
+    Tries to combine proofs that share the same block height and root, then records the index
+    on the transactions the merged bump proves (TS Beef.mergeBump).
     """
-    # Check for identical instance
     idx = _find_identical_bump(beef, bump)
-    if idx is not None:
-        return idx
-
-    # Try to combine with existing bump
-    idx = _find_combinable_bump(beef, bump)
-    if idx is not None:
-        return idx
-
-    # Append new bump
-    beef.bumps.append(bump)
-    new_index = len(beef.bumps) - 1
-
-    # Attach to transactions
-    _attach_bump_to_transactions(beef, bump, new_index)
-
-    return new_index
+    if idx is None:
+        idx = _find_combinable_bump(beef, bump)
+    if idx is None:
+        beef.bumps.append(bump)
+        idx = len(beef.bumps) - 1
+    _attach_bump_to_transactions(beef, beef.bumps[idx], idx)
+    return idx
 
 
 def _try_validate_bump_index(beef: Beef, btx: BeefTx) -> None:
     if btx.bump_index is not None:
         return
     for i, bump in enumerate(beef.bumps):
-        if _leaf_exists_in_bump(bump, btx.txid):
-            btx.bump_index = i
-            try:
-                # mark the leaf if present
-                for leaf in bump.path[0]:
-                    if leaf.get("hash_str") == btx.txid:
-                        leaf["txid"] = True
-                        break
-            except Exception:
-                pass
+        if _mark_proven(btx, bump, i):
             return
 
 
@@ -155,6 +134,7 @@ def merge_txid_only(beef: Beef, txid: str) -> BeefTx:
     if btx is None:
         btx = BeefTx(txid=txid, tx_bytes=b"", tx_obj=None, data_format=2, bump_index=None)
         beef.txs[txid] = btx
+        _try_validate_bump_index(beef, btx)
     return btx
 
 
@@ -174,13 +154,17 @@ def make_txid_only(beef: Beef, txid: str) -> BeefTx | None:
 def merge_beef_tx(beef: Beef, other_btx: BeefTx) -> BeefTx:
     """
     Merge a BeefTx-like entry: supports txid-only or full transaction.
+    As in TS, an existing entry is replaced only when it is TxIDOnly.
     """
+    existing = beef.txs.get(other_btx.txid)
+    if existing is not None and not (existing.data_format == 2 and existing.tx_obj is None):
+        return existing
     if other_btx.data_format == 2 and other_btx.tx_obj is None and not other_btx.tx_bytes:
-        return merge_txid_only(beef, other_btx.txid)
+        return existing or merge_txid_only(beef, other_btx.txid)
     if other_btx.tx_obj is not None:
         return merge_transaction(beef, other_btx.tx_obj)
     if other_btx.tx_bytes:
-        return merge_raw_tx(beef, other_btx.tx_bytes, other_btx.bump_index)
+        return merge_raw_tx(beef, other_btx.tx_bytes)
     raise ValueError("invalid BeefTx: missing data")
 
 

@@ -8,6 +8,7 @@ from bsv.wallet.serializer.status import (
 )
 from bsv.wallet.serializer.status import (
     read_txid_slice_with_status,
+    txid_wire_bytes,
     write_txid_slice_with_status,
 )
 from bsv.wallet.substrates.serializer import Reader, Writer
@@ -15,17 +16,15 @@ from bsv.wallet.substrates.serializer import Reader, Writer
 
 def serialize_sign_action_result(result: dict[str, Any]) -> bytes:
     w = Writer()
-    # optional txid (with presence flag and fixed 32 bytes)
-    txid: bytes = result.get("txid", b"")
+    # optional txid (with presence flag and fixed 32 bytes); wallets return it as a hex string
+    txid = result.get("txid", b"")
     if txid:
-        if len(txid) != 32:
-            raise ValueError("txid must be 32 bytes")
         w.write_byte(1)
-        w.write_bytes(txid)
+        w.write_bytes(txid_wire_bytes(txid))
     else:
         w.write_byte(0)
-    # optional tx (with presence flag and length prefix)
-    tx: bytes = result.get("tx", b"")
+    # optional tx (with presence flag and length prefix); wallets may return it as list[int]
+    tx = bytes(result.get("tx") or b"")
     if tx:
         w.write_byte(1)
         w.write_varint(len(tx))

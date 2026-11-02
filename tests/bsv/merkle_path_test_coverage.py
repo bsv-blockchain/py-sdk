@@ -88,8 +88,26 @@ def test_merkle_path_verify():
             return 100
 
     mp = MerklePath(block_height=100, path=_two_leaf_path())
-    is_valid = asyncio.run(mp.verify("00" * 32, MockChainTracker()))
+    is_valid = asyncio.run(mp.verify("11" * 32, MockChainTracker()))
     assert is_valid is True
+
+
+@pytest.mark.parametrize("current_height, expected", [(199, False), (200, True)])
+def test_merkle_path_verify_coinbase_needs_100_blocks(current_height, expected):
+    """The txid at offset 0 is the coinbase, valid only 100 blocks deep (TS MerklePath.verify)."""
+    import asyncio
+
+    from bsv.chaintracker import ChainTracker
+
+    class MockChainTracker(ChainTracker):
+        async def is_valid_root_for_height(self, _root: str, _height: int) -> bool:
+            return True
+
+        async def current_height(self) -> int:
+            return current_height
+
+    mp = MerklePath(block_height=100, path=_two_leaf_path())
+    assert asyncio.run(mp.verify("00" * 32, MockChainTracker())) is expected
 
 
 # ========================================================================
