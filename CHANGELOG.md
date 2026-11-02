@@ -44,10 +44,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **Arcade broadcaster renamed to `BsvBroadcaster`** (`bsv/broadcasters/bsv_broadcaster.py`) — follows the service's rename to BSV Broadcaster ([bsv-blockchain/broadcaster](https://github.com/bsv-blockchain/broadcaster)). `BsvBroadcasterConfig`, `BSV_BROADCASTER_*_TX_STATUSES` and `bsv_broadcaster_post_data_indicates_failure` replace the `Arcade*` names. Behaviour, the `ARCADE_TX_STATUS` failure code and the `arcade_json` result key are unchanged. The guide moved to `docs/bsv_broadcaster.md`.
+- **`allow_txid_only` follows the TS SDK** — with `allow_txid_only=True`, TxIDOnly entries are treated as known-valid parents whether or not a BUMP proves them, and `get_valid_txids()` includes them.
 
 ### Deprecated
 
 - **`Arcade`, `ArcadeConfig` and `bsv.broadcasters.arcade`** — still work as aliases of the new names, and emit `DeprecationWarning` when constructed. Use `BsvBroadcaster` / `BsvBroadcasterConfig`.
+
+### Fixed
+
+- **`Beef.to_binary()` honours the version** — `Beef(BEEF_V1)` now serializes in the V1 layout instead of writing a V2 body under a V1 header, so a BEEF can be converted between V1 and V2 by parsing it, changing `version`, and calling `to_binary()`. Serializing TxIDOnly entries as V1, or an unknown version, raises `ValueError`.
+
+### Security
+
+- **V1 BEEF verification** — `new_beef_from_bytes()` and `parse_beef()` now keep every transaction and BUMP of a V1 (BRC-62) BEEF, including V1 wrapped in Atomic BEEF. Previously only the subject transaction was kept, so `Beef.verify()` and `Beef.is_valid()` returned `True` without consulting the `ChainTracker`. Entries without transaction data are now reported as not valid instead of being skipped.
+- **BEEF proofs go through the bump index** — as in the TS SDK, a transaction counts as proven only through its bump index. A raw transaction whose txid merely appears among the level-0 hashes of a BUMP is no longer treated as proven without its root being checked. Every bump index now also contributes the computed root of its leaf, so a bump index that points at a leaf without the txid flag still goes to the `ChainTracker`.
 
 ---
 

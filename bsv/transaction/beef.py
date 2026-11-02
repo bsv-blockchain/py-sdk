@@ -260,14 +260,12 @@ def new_beef_from_bytes(data: bytes) -> Beef:
     if version == ATOMIC_BEEF:
         beef, _ = new_beef_from_atomic_bytes(data)
         return beef
-    if version == BEEF_V2:
-        return _parse_beef_v2(mv, version)
-    if version == BEEF_V1:
-        return _parse_beef_v1(data, version)
+    if version in (BEEF_V1, BEEF_V2):
+        return _parse_beef_body(mv, version)
     raise ValueError("unsupported BEEF version")
 
 
-def _parse_beef_v2(mv: memoryview, version: int) -> Beef:
+def _parse_beef_body(mv: memoryview, version: int) -> Beef:
     from bsv.merkle_path import MerklePath
     from bsv.utils import Reader
 
@@ -279,7 +277,8 @@ def _parse_beef_v2(mv: memoryview, version: int) -> Beef:
     tx_cnt = reader.read_var_int_num()
     beef = Beef(version=version)
     beef.bumps = bumps
-    _parse_beef_v2_txs(reader, tx_cnt, beef, bumps)
+    for _ in range(tx_cnt):
+        _parse_single_beef_tx(reader, beef, bumps, version)
     _link_inputs_and_bumps(beef)
     _fill_txidonly_placeholders(beef)
     try:
@@ -289,30 +288,29 @@ def _parse_beef_v2(mv: memoryview, version: int) -> Beef:
     return beef
 
 
-def _parse_beef_v2_txs(reader, tx_cnt, beef, bumps):
+def _parse_single_beef_tx(reader, beef, bumps, version):
+    """Parse one transaction entry.
+
+    V2 (BRC-96): [format][bump index if format 1][raw tx, or txid if format 2]
+    V1 (BRC-62): [raw tx][has bump][bump index if has bump]
+    """
     from bsv.transaction import Transaction
 
-    for _ in range(tx_cnt):
-        _parse_single_beef_tx(reader, beef, bumps)
-
-
-def _parse_single_beef_tx(reader, beef, bumps):
-    """Parse a single transaction from BEEF v2 format."""
-    from bsv.transaction import Transaction
-
-    data_format = reader.read_uint8()
-    if data_format not in (0, 1, 2):
-        raise ValueError("unsupported tx data format")
-
-    bump_index = _read_bump_index(reader, data_format)
-
-    # Handle txid-only format
-    if data_format == 2:
-        _handle_txid_only_format(reader, beef)
-        return
-
-    # Parse full transaction
-    tx = Transaction.from_reader(reader)
+    if version == BEEF_V1:
+        tx = Transaction.from_reader(reader)
+        data_format = reader.read_uint8()
+        if data_format not in (0, 1):
+            raise ValueError("unsupported tx data format")
+        bump_index = _read_bump_index(reader, data_format)
+    else:
+        data_format = reader.read_uint8()
+        if data_format not in (0, 1, 2):
+            raise ValueError("unsupported tx data format")
+        bump_index = _read_bump_index(reader, data_format)
+        if data_format == 2:
+            _handle_txid_only_format(reader, beef)
+            return
+        tx = Transaction.from_reader(reader)
     txid = tx.txid()
 
     if bump_index is not None:
@@ -405,20 +403,6 @@ def _fill_txidonly_placeholders(beef: Beef):
             if tx is not None:
                 entry.tx_obj = tx
                 entry.tx_bytes = tx.serialize()
-
-
-def _parse_beef_v1(data: bytes, version: int) -> Beef:
-    from bsv.transaction import Transaction as _Tx
-
-    try:
-        tx = _Tx.from_beef(data)
-        raw = tx.serialize()
-        txid = tx.txid()
-        beef = Beef(version=version)
-        beef.txs[txid] = BeefTx(txid=txid, tx_bytes=raw)
-        return beef
-    except Exception as e:
-        raise ValueError(f"failed to parse BEEF v1: {e}")
 
 
 def new_beef_from_atomic_bytes(data: bytes) -> tuple[Beef, str | None]:

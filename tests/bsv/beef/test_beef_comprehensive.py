@@ -263,8 +263,8 @@ def test_beef_get_valid_txids():
     # txid1 should be valid (present in bump)
     assert txid1 in valid_txids
 
-    # txid2 might not be valid if not in bump and has no inputs
-    assert txid2 not in valid_txids
+    # TxIDOnly entries are valid txids whether or not a bump proves them (TS getValidTxids)
+    assert txid2 in valid_txids
 
 
 def test_beef_find_transaction_for_signing():
@@ -407,10 +407,9 @@ def test_beef_edge_cases_txid_only():
     result = validate_transactions(beef)
     assert txid in result.txid_only
 
-    # Test that the transaction is not returned by GetValidTxids (unless in bump)
+    # TxIDOnly entries are returned by get_valid_txids (TS getValidTxids)
     valid_txids = beef.get_valid_txids()
-    # If txid is not in any bump, it might not be in valid_txids
-    assert txid not in valid_txids
+    assert txid in valid_txids
 
 
 def test_beef_merge_beef_bytes():
