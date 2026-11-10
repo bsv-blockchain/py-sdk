@@ -60,15 +60,15 @@ jobs:
           - os: ubuntu-latest
             arch: aarch64
             cibw_archs: aarch64
-          # macOS x86_64 — cross-compiled on Apple Silicon (macos-14).
+          # macOS x86_64 — cross-compiled on Apple Silicon (macos-15; macos-14 was retired).
           # GitHub-hosted Intel (macos-13) runners are capacity-starved /
           # deprecated and jobs sit queued for hours; arm64 runners allocate
           # instantly and Apple clang cross-builds x86_64 natively.
-          - os: macos-14
+          - os: macos-15
             arch: x86_64
             cibw_archs: x86_64
           # macOS arm64
-          - os: macos-14
+          - os: macos-15
             arch: arm64
             cibw_archs: arm64
           # Windows x86_64
