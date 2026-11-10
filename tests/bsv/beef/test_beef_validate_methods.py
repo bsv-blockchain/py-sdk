@@ -7,7 +7,7 @@ def test_is_valid_allows_txid_only_when_bump_has_txid():
             self.block_height = height
             self.path = [[{"offset": 0, "hash_str": txid, "txid": True}]]
 
-        def compute_root(self):
+        def compute_root(self, txid=None):
             return "root"
 
         def combine(self, other):
@@ -38,7 +38,7 @@ def test_get_valid_txids_includes_txidonly_with_proof_and_chained_raw():
             self.block_height = height
             self.path = [[{"offset": 0, "hash_str": txid, "txid": True}]]
 
-        def compute_root(self):
+        def compute_root(self, txid=None):
             return "root"
 
         def combine(self, other):

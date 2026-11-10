@@ -15,7 +15,7 @@ from bsv.registry.types import (
     ProtocolDefinitionData,
     TokenData,
 )
-from bsv.transaction import Transaction
+from bsv.transaction import Beef, Transaction
 from bsv.transaction.pushdrop import (
     SignOutputsMode,
     build_lock_before_pushdrop,
@@ -214,16 +214,19 @@ class RegistryClient:
             return results
 
         try:
-            tx = Transaction.from_beef(beef)
+            beef_obj = Beef.from_binary(beef)
         except Exception:
             return results
 
         for out in outputs:
             if not out.get("spendable", False):
                 continue
-            idx = int(out.get("outputIndex", 0))
+            # The BEEF holds every listed transaction; pick each output's own (TS fromBEEF(BEEF, txid)).
+            txid, _, vout = str(out.get("outpoint", "")).partition(".")
+            txid = txid or out.get("txid", "")
+            idx = int(vout or out.get("outputIndex", 0))
             try:
-                ls_hex = tx.outputs[idx].locking_script.hex()
+                ls_hex = beef_obj.find_transaction(txid).tx_obj.outputs[idx].locking_script.hex()
             except Exception:
                 continue
             try:
@@ -234,7 +237,7 @@ class RegistryClient:
             results.append(
                 {
                     **asdict(record),
-                    "txid": out.get("txid", ""),
+                    "txid": txid,
                     "outputIndex": idx,
                     "satoshis": int(out.get("satoshis", 0)),
                     "lockingScript": ls_hex,

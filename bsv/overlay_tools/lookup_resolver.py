@@ -235,8 +235,8 @@ class HTTPSOverlayLookupFacilitator:
                            | varint(contextLength) | context (contextLength bytes)
             trailing:      one combined BEEF holding every referenced transaction
 
-        Each output's BEEF is reconstructed from the trailing combined BEEF,
-        selecting the subject transaction by txid.
+        Each output gets the Atomic BEEF of its transaction, cut from the trailing
+        combined BEEF.
         """
         from bsv.transaction.beef import parse_beef
         from bsv.utils import Reader
@@ -255,33 +255,21 @@ class HTTPSOverlayLookupFacilitator:
         trailing = bytes(reader.read() or b"")  # one combined BEEF for every referenced tx
         beef_set = parse_beef(trailing) if trailing else None
 
-        outputs = [
-            LookupOutput(
-                beef=self._beef_for_txid(beef_set, txid),
-                output_index=output_index,
-                context=context,
-            )
-            for txid, output_index, context in outpoints
-        ]
+        beef_by_txid: dict[str, bytes] = {}
+        outputs = []
+        for txid, output_index, context in outpoints:
+            if txid not in beef_by_txid:
+                beef_by_txid[txid] = self._beef_for_txid(beef_set, txid)
+            outputs.append(LookupOutput(beef=beef_by_txid[txid], output_index=output_index, context=context))
 
         return LookupAnswer(type="output-list", outputs=outputs)
 
     @staticmethod
     def _beef_for_txid(beef_set, txid: str) -> bytes:
-        """Rebuild the standalone BEEF for one txid from a combined BEEF set."""
-        from bsv.transaction import Transaction
-
-        if beef_set is None:
+        """Atomic BEEF for one txid from the combined BEEF set (TS extractAtomicOutputs)."""
+        if beef_set is None or beef_set.find_transaction(txid) is None:
             return b""
-        btx = beef_set.find_transaction(txid)
-        if btx is None:
-            return b""
-        # parse_beef populates tx_obj for V2 and tx_bytes for V1;
-        # fall back to the raw bytes when the object is absent.
-        tx = btx.tx_obj or (Transaction.from_hex(btx.tx_bytes.hex()) if btx.tx_bytes else None)
-        if tx is None:
-            return b""
-        return tx.to_beef()
+        return beef_set.to_binary_atomic(txid)
 
 
 class LookupResolver:
