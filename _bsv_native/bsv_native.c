@@ -1115,6 +1115,11 @@ static PyObject* pyfn_serialize_script_chunks(PyObject *self, PyObject *args) {
             return NULL;
         }
         long op = PyLong_AsLong(PyTuple_GET_ITEM(chunk, 0));
+        if (op < 0 || op > 255) {
+            if (!PyErr_Occurred())
+                PyErr_Format(PyExc_ValueError, "opcode %ld out of range 0..255", op);
+            return NULL;
+        }
         PyObject *data = PyTuple_GET_ITEM(chunk, 1);
 
         total++; /* opcode byte */
@@ -1284,7 +1289,8 @@ static PyObject* pyfn_merkle_compute_root(PyObject *self, PyObject *args) {
 
     /* Walk up the tree */
     for (Py_ssize_t height = 0; height < path_len; height++) {
-        long offset = (index >> height) ^ 1;
+        long offset = (height < (Py_ssize_t)(sizeof(long) * CHAR_BIT)
+                       ? index >> height : 0) ^ 1;
 
         PyObject *level = PyList_GET_ITEM(path_list, height);
         if (!PyList_Check(level)) {
@@ -1298,7 +1304,10 @@ static PyObject* pyfn_merkle_compute_root(PyObject *self, PyObject *args) {
         for (Py_ssize_t li = 0; li < lev_len; li++) {
             PyObject *candidate = PyList_GET_ITEM(level, li);
             PyObject *off_obj = PyDict_GetItemString(candidate, "offset");
-            if (off_obj && PyLong_AsLong(off_obj) == offset) {
+            if (!off_obj) continue;
+            long cand_off = PyLong_AsLong(off_obj);
+            if (cand_off == -1 && PyErr_Occurred()) return NULL;
+            if (cand_off == offset) {
                 leaf = candidate;
                 break;
             }
@@ -1564,8 +1573,9 @@ static PyObject* pyfn_tx_from_bytes(PyObject *self, PyObject *args) {
 
         /* script length + script */
         int64_t script_len = read_varint(data, len, &pos);
-        if (script_len < 0 || pos + script_len > len) goto parse_err;
+        if (script_len < 0 || script_len > len - pos) goto parse_err;
         PyObject *script = PyBytes_FromStringAndSize((const char *)(data + pos), script_len);
+        if (!script) goto parse_err;
         pos += script_len;
 
         /* sequence (4 bytes LE) */
@@ -1603,8 +1613,9 @@ static PyObject* pyfn_tx_from_bytes(PyObject *self, PyObject *args) {
 
         /* script length + script */
         int64_t script_len = read_varint(data, len, &pos);
-        if (script_len < 0 || pos + script_len > len) { Py_DECREF(outputs); goto parse_err; }
+        if (script_len < 0 || script_len > len - pos) { Py_DECREF(outputs); goto parse_err; }
         PyObject *script = PyBytes_FromStringAndSize((const char *)(data + pos), script_len);
+        if (!script) { Py_DECREF(outputs); goto parse_err; }
         pos += script_len;
 
         PyObject *outp = PyDict_New();
@@ -2705,11 +2716,20 @@ static const char *vm_opname(int op) {
 
 static int parse_chunk(PyObject *t, int *op, const unsigned char **data,
                        Py_ssize_t *dlen) {
+    if (!PyTuple_Check(t) || PyTuple_GET_SIZE(t) != 2) {
+        PyErr_SetString(PyExc_TypeError, "each chunk must be a (int, bytes|None) tuple");
+        return -1;
+    }
     *op = (int)PyLong_AsLong(PyTuple_GET_ITEM(t, 0));
     if (*op == -1 && PyErr_Occurred()) return -1;
     PyObject *d = PyTuple_GET_ITEM(t, 1);
     if (d == Py_None) { *data = NULL; *dlen = 0; }
-    else { *data = (const unsigned char *)PyBytes_AS_STRING(d); *dlen = PyBytes_GET_SIZE(d); }
+    else if (PyBytes_Check(d)) {
+        *data = (const unsigned char *)PyBytes_AS_STRING(d); *dlen = PyBytes_GET_SIZE(d);
+    } else {
+        PyErr_SetString(PyExc_TypeError, "chunk data must be bytes or None");
+        return -1;
+    }
     return 0;
 }
 
@@ -4471,8 +4491,9 @@ static int vm_run(VMState *st) {
     if (!(st->tx_version > 1)) {
         Py_ssize_t n = PyList_GET_SIZE(st->unlock_chunks);
         for (Py_ssize_t i = 0; i < n; i++) {
-            int uop = (int)PyLong_AsLong(
-                PyTuple_GET_ITEM(PyList_GET_ITEM(st->unlock_chunks, i), 0));
+            int uop; const unsigned char *udata; Py_ssize_t udlen;
+            if (parse_chunk(PyList_GET_ITEM(st->unlock_chunks, i),
+                            &uop, &udata, &udlen) < 0) return -1;
             if (uop > 0x60) {
                 vm_error(st, "Unlocking scripts can only contain push operations, "
                          "and no other opcodes.");
