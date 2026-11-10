@@ -4,6 +4,7 @@ BEEF / AtomicBEEF parsing utilities.
 
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -21,8 +22,6 @@ BEEF_V1 = 4022206465
 BEEF_V2 = 4022206466
 ATOMIC_BEEF = 0x01010101
 
-BUFFER_EXHAUSTED_MSG = "buffer exhausted"
-
 
 @dataclass
 class BeefTx:
@@ -37,11 +36,29 @@ class BeefTx:
 
 @dataclass
 class Beef:
-    """Container for BUMP paths and transactions."""
+    """Container for BUMP paths and transactions.
 
-    version: int
+    atomic_txid is the subject txid when the Beef was parsed from Atomic BEEF (BRC-95).
+    """
+
+    version: int = BEEF_V2
     txs: dict[str, BeefTx] = field(default_factory=dict)
     bumps: list[object] = field(default_factory=list)
+    atomic_txid: str | None = None
+
+    @classmethod
+    def from_binary(cls, data: bytes) -> Beef:
+        """Parse BEEF V1, V2 or Atomic BEEF bytes."""
+        return new_beef_from_bytes(data)
+
+    @classmethod
+    def from_string(cls, s: str, enc: str = "hex") -> Beef:
+        """Parse BEEF from a hex or base64 string."""
+        if enc == "hex":
+            return cls.from_binary(bytes.fromhex(s))
+        if enc == "base64":
+            return cls.from_binary(base64.b64decode(s))
+        raise ValueError(f"unsupported encoding: {enc}")
 
     # --- helpers ---
     def find_transaction(self, txid: str) -> BeefTx | None:
@@ -108,9 +125,12 @@ class Beef:
 
         return _merge_beef_tx(self, btx)
 
-    def merge_beef(self, other: Beef) -> None:
+    def merge_beef(self, other: Beef | bytes) -> None:
+        """Merge another Beef, or its serialized bytes."""
         from .beef_builder import merge_beef as _merge_beef
 
+        if not isinstance(other, Beef):
+            other = new_beef_from_bytes(bytes(other))
         _merge_beef(self, other)
 
     # --- validation APIs ---
@@ -128,6 +148,12 @@ class Beef:
         from .beef_validate import get_valid_txids as _get_valid_txids
 
         return _get_valid_txids(self)
+
+    def sort_txs(self):
+        """Reorder txs by dependency like TS Beef.sortTxs and return the ValidationResult."""
+        from .beef_validate import sort_txs as _sort_txs
+
+        return _sort_txs(self)
 
     # --- serialization APIs ---
     def to_binary(self) -> bytes:
@@ -214,66 +240,40 @@ class Beef:
 
 
 # ---------------------------------------------------------------------------
-# VarInt helpers (Bitcoin style – little-endian compact)
-# ---------------------------------------------------------------------------
-
-
-def _read_varint(buf: memoryview, offset: int) -> tuple[int, int]:
-    """Return (value, new_offset). Raises ValueError on overflow."""
-    if offset >= len(buf):
-        raise ValueError(BUFFER_EXHAUSTED_MSG)
-    first = buf[offset]
-    offset += 1
-    if first < 0xFD:
-        return first, offset
-    if first == 0xFD:
-        if offset + 2 > len(buf):
-            raise ValueError(BUFFER_EXHAUSTED_MSG)
-        val = int.from_bytes(buf[offset : offset + 2], "little")
-        offset += 2
-        return val, offset
-    if first == 0xFE:
-        if offset + 4 > len(buf):
-            raise ValueError(BUFFER_EXHAUSTED_MSG)
-        val = int.from_bytes(buf[offset : offset + 4], "little")
-        offset += 4
-        return val, offset
-    # 0xFF
-    if offset + 8 > len(buf):
-        raise ValueError(BUFFER_EXHAUSTED_MSG)
-    val = int.from_bytes(buf[offset : offset + 8], "little")
-    offset += 8
-    return val, offset
-
-
-# ---------------------------------------------------------------------------
-# Factory helpers – minimal but robust enough for tests and KVStore flows
+# Factory helpers
 # ---------------------------------------------------------------------------
 
 
 def new_beef_from_bytes(data: bytes) -> Beef:
-    """Parse BEEF bytes."""
-    mv = memoryview(data)
-    if len(mv) < 4:
-        raise ValueError("beef bytes too short")
-    version = int.from_bytes(mv[:4], "little")
-    if version == ATOMIC_BEEF:
-        beef, _ = new_beef_from_atomic_bytes(data)
-        return beef
-    if version in (BEEF_V1, BEEF_V2):
-        return _parse_beef_body(mv, version)
-    raise ValueError("unsupported BEEF version")
-
-
-def _parse_beef_body(mv: memoryview, version: int) -> Beef:
-    from bsv.merkle_path import MerklePath
+    """Parse BEEF V1, V2 or Atomic BEEF bytes. Atomic BEEF sets atomic_txid; nesting it is rejected."""
     from bsv.utils import Reader
 
-    reader = Reader(bytes(mv[4:]))
+    data = bytes(data)
+    if len(data) < 4:
+        raise ValueError("beef bytes too short")
+    reader = Reader(data)
+    version = reader.read_uint32_le()
+    atomic_txid = None
+    if version == ATOMIC_BEEF:
+        if len(data) < 40:
+            raise ValueError("atomic beef too short")
+        atomic_txid = reader.read(32)[::-1].hex()
+        version = reader.read_uint32_le()
+    if version not in (BEEF_V1, BEEF_V2):
+        raise ValueError(f"unsupported BEEF version: {version}")
+    beef = _parse_beef_body(reader, version)
+    beef.atomic_txid = atomic_txid
+    return beef
+
+
+def _parse_beef_body(reader, version: int) -> Beef:
+    from bsv.merkle_path import MerklePath
+
     bump_cnt = reader.read_var_int_num()
     bumps: list[MerklePath | None] = []
     for _ in range(bump_cnt):
-        bumps.append(MerklePath.from_reader(reader))
+        # add_computed_leaves() adds leaves that are not legal offsets (TS reads BUMPs the same way).
+        bumps.append(MerklePath.from_reader(reader, legal_offsets_only=False))
     tx_cnt = reader.read_var_int_num()
     beef = Beef(version=version)
     beef.bumps = bumps
@@ -410,69 +410,31 @@ def new_beef_from_atomic_bytes(data: bytes) -> tuple[Beef, str | None]:
         raise ValueError("atomic beef too short")
     if int.from_bytes(data[:4], "little") != ATOMIC_BEEF:
         raise ValueError("not atomic beef")
-    subject = data[4:36][::-1].hex()  # txid big-endian to hex string
-    inner = data[36:]
-    beef = new_beef_from_bytes(inner)
-    return beef, subject
+    beef = new_beef_from_bytes(data)
+    return beef, beef.atomic_txid
 
 
-def parse_beef(data: bytes) -> Beef:  # NOSONAR - Complexity (19), requires refactoring
+def parse_beef(data: bytes) -> Beef:
     if len(data) < 4:
         raise ValueError("invalid beef bytes")
-    version = int.from_bytes(data[:4], "little")
-    if version == ATOMIC_BEEF:
-        beef, _ = new_beef_from_atomic_bytes(data)
-        return beef
     return new_beef_from_bytes(data)
 
 
-def _find_subject_transaction(beef: Beef, subject: str, data: bytes) -> Transaction | None:
-    """Find the subject transaction in the BEEF, checking nested BEEFs if needed."""
-    btx = beef.find_transaction(subject)
-    last_tx = getattr(btx, "tx_obj", None) if btx else None
-
-    # If not found, try recursively in nested AtomicBEEF
-    if last_tx is None:
-        try:
-            _, _, nested_last_tx = parse_beef_ex(data[36:])
-            if nested_last_tx is not None:
-                last_tx = nested_last_tx
-        except Exception:
-            pass
-
-    return last_tx
-
-
-def _parse_atomic_beef(data: bytes) -> tuple[Beef, str | None, Transaction | None]:
-    """Parse an Atomic BEEF and find the subject transaction."""
-    beef, subject = new_beef_from_atomic_bytes(data)
-    last_tx = None
-    if subject:
-        last_tx = _find_subject_transaction(beef, subject, data)
-    return beef, subject, last_tx
-
-
-def _parse_v1_beef(data: bytes) -> tuple[Beef, str | None, Transaction | None]:
-    """Parse a V1 BEEF format."""
-    from bsv.transaction import Transaction as _Tx
-
-    tx = _Tx.from_beef(data)
-    beef = new_beef_from_bytes(data)
-    return beef, None, tx
-
-
 def parse_beef_ex(data: bytes) -> tuple[Beef, str | None, Transaction | None]:
-    """Extended parser returning (beef, subject_txid_for_atomic, last_tx_for_v1 or subject)."""
-    if len(data) < 4:
-        raise ValueError("invalid beef bytes")
+    """Extended parser returning (beef, subject_txid_for_atomic, subject tx or last V1 tx).
 
-    version = int.from_bytes(data[:4], "little")
-
-    if version == ATOMIC_BEEF:
-        return _parse_atomic_beef(data)
-    if version == BEEF_V1:
-        return _parse_v1_beef(data)
-    return new_beef_from_bytes(data), None, None
+    Atomic BEEF must contain its subject transaction (TS Transaction.fromAtomicBEEF).
+    """
+    beef = parse_beef(data)
+    if beef.atomic_txid is not None:
+        btx = beef.find_transaction(beef.atomic_txid)
+        if btx is None or btx.tx_obj is None:
+            raise ValueError(f"atomic BEEF does not contain its subject transaction {beef.atomic_txid}")
+        return beef, beef.atomic_txid, btx.tx_obj
+    if beef.version == BEEF_V1:
+        last = next(reversed(beef.txs.values()), None)
+        return beef, None, last.tx_obj if last else None
+    return beef, None, None
 
 
 def normalize_bumps(beef: Beef) -> None:

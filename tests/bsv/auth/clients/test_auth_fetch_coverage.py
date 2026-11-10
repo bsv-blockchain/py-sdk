@@ -79,3 +79,20 @@ def test_fetch_with_local_server(auth_fetch):
     # The response should be a requests-like object
     assert hasattr(response, "status_code")
     assert response.status_code == 200
+
+
+def test_create_payment_transaction_encodes_list_tx(auth_fetch, mock_wallet):
+    """A wallet returning tx as list[int] still yields base64 AtomicBEEF."""
+    mock_wallet.create_action.return_value = {"tx": [1, 2, 3]}
+    info = {"satoshis_required": 1000, "server_identity_key": "server_key", "derivation_prefix": "prefix"}
+    assert auth_fetch._create_payment_transaction("https://test.com", info, "suffix", b"\x51") == "AQID"
+
+
+def test_create_payment_transaction_rejects_unsigned(auth_fetch, mock_wallet):
+    """An unsigned signableTransaction is not sent as payment."""
+    import pytest
+
+    mock_wallet.create_action.return_value = {"signableTransaction": {"tx": b"unsigned", "reference": "AQ=="}}
+    info = {"satoshis_required": 1000, "server_identity_key": "server_key", "derivation_prefix": "prefix"}
+    with pytest.raises(RuntimeError, match="signed transaction"):
+        auth_fetch._create_payment_transaction("https://test.com", info, "suffix", b"\x51")
