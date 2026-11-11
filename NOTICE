@@ -1,0 +1,5 @@
+py-sdk
+Copyright 2024-2026 BSV Association
+
+This product includes software from these projects, under their own licenses:
+- libsecp256k1 (_bsv_native/secp256k1): Copyright (c) 2013 Pieter Wuille (MIT)
