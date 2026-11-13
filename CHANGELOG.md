@@ -52,7 +52,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **C extension input checks** — `Spend.validate()` raises `TypeError` for script chunk data that is not `bytes` instead of reading past the end of a `bytearray`. `serialize_chunks()` raises `ValueError` for an opcode outside 0–255 instead of truncating it, and `TypeError` instead of `SystemError` for a non-integer opcode, as the pure-Python path does. `MerklePath.compute_root()` no longer shifts by 64 bits or more (undefined behaviour in C) for paths taller than 64 levels.
+- **C extension input checks** — `Spend.validate()` with the C extension accepts `bytearray` chunk data as the Python VM does, instead of reading past its end; the C VM raises `TypeError` for other chunk data and `ValueError` for an opcode outside 0–255 (`2**32 + 0x51` was narrowed to `OP_1`) or a `sourceTXID` that is not 64 hex characters (it read past the end of a short one). The OTDA preimage with `SIGHASH_SINGLE` budgets its 9-byte null outputs, so serialized outputs shorter than that no longer overflow the buffer. `serialize_chunks()` raises `ValueError` for an opcode outside 0–255 instead of truncating it, and `TypeError` instead of `SystemError` for a non-integer opcode, as the pure-Python path does. `MerklePath.compute_root()` no longer shifts by 64 bits or more (undefined behaviour in C) for paths taller than 64 levels.
 - **`Beef.to_binary()` honours the version** — `Beef(BEEF_V1)` now serializes in the V1 layout instead of writing a V2 body under a V1 header, so a BEEF can be converted between V1 and V2 by parsing it, changing `version`, and calling `to_binary()`. Serializing TxIDOnly entries as V1, or an unknown version, raises `ValueError`.
 
 ### Security

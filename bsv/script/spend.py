@@ -861,8 +861,15 @@ class Spend:
         return self._validate_python()
 
     def _validate_native(self) -> bool:
-        unlock_chunks = [(int.from_bytes(c.op, "big"), c.data) for c in self.unlocking_script.chunks]
-        lock_chunks = [(int.from_bytes(c.op, "big"), c.data) for c in self.locking_script.chunks]
+        # The C VM takes chunk data as bytes only; the Python VM also accepts bytearray.
+        def to_native(chunks):
+            return [
+                (int.from_bytes(c.op, "big"), bytes(c.data) if isinstance(c.data, bytearray) else c.data)
+                for c in chunks
+            ]
+
+        unlock_chunks = to_native(self.unlocking_script.chunks)
+        lock_chunks = to_native(self.locking_script.chunks)
 
         other_inputs_tuples = [
             (

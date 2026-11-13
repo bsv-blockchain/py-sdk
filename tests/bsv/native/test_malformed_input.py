@@ -42,7 +42,7 @@ def test_spend_validate_rejects_malformed_chunks(unlock):
         _bsv_native.spend_validate(unlock, [(0x51, None)], *_SPEND_ARGS)
 
 
-@pytest.mark.parametrize("op, exc", [(300, ValueError), (-1, ValueError), ("x", TypeError)])
+@pytest.mark.parametrize("op, exc", [(300, ValueError), (-1, ValueError), (2**100, ValueError), ("x", TypeError)])
 def test_serialize_script_chunks_rejects_bad_opcode(op, exc):
     with pytest.raises(exc):
         _bsv_native.serialize_script_chunks([(op, None)])
@@ -69,3 +69,48 @@ def test_merkle_compute_root_rejects_non_int_offset():
     ]
     with pytest.raises(TypeError):
         _bsv_native.merkle_compute_root(txid, path)
+
+
+@pytest.mark.parametrize("op", [2**32 + 0x51, 2**100, 256, -1])
+def test_spend_validate_rejects_out_of_range_opcode(op):
+    # Narrowing to int turned 2**32 + 0x51 into OP_1, so this script validated.
+    with pytest.raises(ValueError):
+        _bsv_native.spend_validate([(op, None)], [(0x51, None)], *_SPEND_ARGS)
+
+
+def test_spend_validate_rejects_short_source_txid():
+    # The hex decoder read characters 62 and 63 of a 2-character string.
+    with pytest.raises(ValueError):
+        _bsv_native.spend_validate([], [(0x51, None)], 1, "00", 0, 0, 0, 0xFFFFFFFF, 0, [], [])
+
+
+def test_otda_single_budgets_null_outputs():
+    # SIGHASH_SINGLE writes a 9-byte null output for every earlier input. With
+    # outputs shorter than that, the buffer overflowed by 75 bytes here (seen
+    # under ASan; without it the write is silent).
+    inp = ("00" * 32, 0, b"", 0, 0xFFFFFFFF, 0x03)
+    assert len(_bsv_native.tx_preimage_otda(99, 1, 0, [inp] * 100, [b""] * 100)) == 5005
+
+
+@pytest.mark.parametrize("use_native", [True, False])
+def test_spend_accepts_bytearray_chunk_data_on_both_backends(monkeypatch, use_native):
+    from bsv.script import spend as spend_mod
+    from bsv.script.script import Script, ScriptChunk
+
+    monkeypatch.setattr(spend_mod, "_USE_NATIVE_VM", use_native)
+    spend = spend_mod.Spend(
+        {
+            "unlockingScript": Script.from_chunks([ScriptChunk(b"\x02", bytearray(b"\x01\x01"))]),
+            "lockingScript": Script("7551"),  # OP_DROP OP_1
+            "transactionVersion": 1,
+            "sourceTXID": "00" * 32,
+            "sourceOutputIndex": 0,
+            "lockTime": 0,
+            "inputIndex": 0,
+            "inputSequence": 0xFFFFFFFF,
+            "sourceSatoshis": 0,
+            "otherInputs": [],
+            "outputs": [],
+        }
+    )
+    assert spend.validate() is True

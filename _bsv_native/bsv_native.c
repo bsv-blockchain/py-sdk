@@ -1089,6 +1089,20 @@ static PyObject* pyfn_parse_script_chunks(PyObject *self, PyObject *args) {
     return list;
 }
 
+/* Opcode from a Python int. ValueError outside 0..255, also for an int that
+ * does not fit a C long (32 bits on Windows), as bytearray.append() does. */
+static int read_opcode(PyObject *o, int *op) {
+    int overflow;
+    long v = PyLong_AsLongAndOverflow(o, &overflow);
+    if (v == -1 && PyErr_Occurred()) return -1;
+    if (overflow || v < 0 || v > 255) {
+        PyErr_SetString(PyExc_ValueError, "opcode out of range 0..255");
+        return -1;
+    }
+    *op = (int)v;
+    return 0;
+}
+
 /*
  * serialize_script_chunks(chunks) -> bytes
  *
@@ -1114,12 +1128,8 @@ static PyObject* pyfn_serialize_script_chunks(PyObject *self, PyObject *args) {
             PyErr_SetString(PyExc_TypeError, "each chunk must be a (int, bytes|None) tuple");
             return NULL;
         }
-        long op = PyLong_AsLong(PyTuple_GET_ITEM(chunk, 0));
-        if (op < 0 || op > 255) {
-            if (!PyErr_Occurred())
-                PyErr_Format(PyExc_ValueError, "opcode %ld out of range 0..255", op);
-            return NULL;
-        }
+        int op;
+        if (read_opcode(PyTuple_GET_ITEM(chunk, 0), &op) < 0) return NULL;
         PyObject *data = PyTuple_GET_ITEM(chunk, 1);
 
         total++; /* opcode byte */
@@ -2196,6 +2206,7 @@ static PyObject* pyfn_tx_preimage_otda(PyObject *self, PyObject *args) {
         else
             est += 34;
     }
+    est += 9 * (size_t)input_index; /* SIGHASH_SINGLE: a 9-byte null output per earlier input */
     est += 4 + 4; /* locktime + sighash */
 
     unsigned char *buf = (unsigned char *)malloc(est);
@@ -2720,8 +2731,8 @@ static int parse_chunk(PyObject *t, int *op, const unsigned char **data,
         PyErr_SetString(PyExc_TypeError, "each chunk must be a (int, bytes|None) tuple");
         return -1;
     }
-    *op = (int)PyLong_AsLong(PyTuple_GET_ITEM(t, 0));
-    if (*op == -1 && PyErr_Occurred()) return -1;
+    /* Range-checked before narrowing: 2**32 + 0x51 used to become OP_1. */
+    if (read_opcode(PyTuple_GET_ITEM(t, 0), op) < 0) return -1;
     PyObject *d = PyTuple_GET_ITEM(t, 1);
     if (d == Py_None) { *data = NULL; *dlen = 0; }
     else if (PyBytes_Check(d)) {
@@ -2997,6 +3008,7 @@ static int c_build_otda_preimage(PreimageCtx *pctx,
         PyObject *ob = PyList_GET_ITEM(pctx->outputs_list, i);
         est += PyBytes_GET_SIZE(ob);
     }
+    est += 9 * (size_t)pctx->input_index; /* SIGHASH_SINGLE null outputs */
     est += 4 + 4 + 100;
 
     unsigned char *buf = (unsigned char *)malloc(est);
@@ -4552,7 +4564,8 @@ static int pctx_init(PreimageCtx *pctx, uint32_t version, uint32_t locktime,
     pctx->outputs_list = outputs_py;
     pctx->n_outputs = PyList_GET_SIZE(outputs_py);
 
-    if (hex_to_bytes_reversed(source_txid, pctx->cur_txid_le, 32) < 0) {
+    if (strlen(source_txid) != 64 ||
+        hex_to_bytes_reversed(source_txid, pctx->cur_txid_le, 32) < 0) {
         PyErr_SetString(PyExc_ValueError, "invalid source_txid hex");
         return -1;
     }
