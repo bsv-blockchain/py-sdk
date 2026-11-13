@@ -41,10 +41,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`Transaction` BEEF API matches the TS SDK** — `Transaction.from_beef()` reads BEEF V1, V2 and Atomic BEEF and takes an optional `txid`; it returns that transaction, else the Atomic subject, else the last one. `Transaction.from_atomic_beef()` and `Transaction.to_atomic_beef()` are new, and `to_beef()` / `to_atomic_beef()` take `allow_partial`.
+- **`Beef` API** — `Beef.from_binary()`, `Beef.from_string()` (hex or base64), `Beef.sort_txs()`, and `Beef.atomic_txid` (set when parsed from Atomic BEEF). `Beef.merge_beef()` also accepts serialized bytes, which fixes `BeefParty.merge_beef_from_party()` for bytes.
+- **`MerklePath(..., legal_offsets_only=True)`** — BEEF readers pass `False`, so BUMPs extended by `add_computed_leaves()` can be read, as in the TS SDK.
+
 ### Changed
 
 - **Arcade broadcaster renamed to `BsvBroadcaster`** (`bsv/broadcasters/bsv_broadcaster.py`) — follows the service's rename to BSV Broadcaster ([bsv-blockchain/broadcaster](https://github.com/bsv-blockchain/broadcaster)). `BsvBroadcasterConfig`, `BSV_BROADCASTER_*_TX_STATUSES` and `bsv_broadcaster_post_data_indicates_failure` replace the `Arcade*` names. Behaviour, the `ARCADE_TX_STATUS` failure code and the `arcade_json` result key are unchanged. The guide moved to `docs/bsv_broadcaster.md`.
-- **`allow_txid_only` follows the TS SDK** — with `allow_txid_only=True`, TxIDOnly entries are treated as known-valid parents whether or not a BUMP proves them, and `get_valid_txids()` includes them.
+- **`allow_txid_only` follows the TS SDK** — with `allow_txid_only=True`, TxIDOnly entries are treated as known-valid parents whether or not a BUMP proves them, and `get_valid_txids()` includes them. Without it, a Beef holding any TxIDOnly entry is not valid, even one a BUMP proves.
+- **`Beef()` defaults to `BEEF_V2`**, as in the TS SDK.
+- **`Beef.to_binary()` sorts transactions like TS `Beef.sortTxs`** before writing, so a Beef built or parsed in any order serializes to the same bytes as the TS SDK.
+- **`Beef.merge_beef_tx()` replaces only TxIDOnly entries** — an existing transaction is kept, as in the TS SDK. `Beef.merge_bump()` records the bump index (and sets the leaf's txid flag) on every transaction the merged BUMP proves, including when it is combined with an existing BUMP. `trim_known_txids()` also drops BUMPs no transaction references.
+- **Consumers read V2 and Atomic BEEF** — the registry client reads each listed output from its own transaction in the listOutputs BEEF, `LookupResolver` returns an Atomic BEEF per output (TS `extractAtomicOutputs`), `LocalKVStore` reads the transaction named by the output's outpoint, and `WalletImpl` recognises V2 and Atomic BEEF.
+- **Wallet wire** — the listOutputs result uses the BRC-100 key `BEEF` (was `beef`). The createAction result is serialized in the Go `SerializeCreateActionResult` layout (txid, tx, noSendChange, sendWithResults, signableTransaction). signAction and createAction results accept a hex txid string and a `list[int]` tx.
 
 ### Deprecated
 
@@ -54,12 +65,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **C extension input checks** — `Spend.validate()` with the C extension accepts `bytearray` chunk data as the Python VM does, instead of reading past its end; the C VM raises `TypeError` for other chunk data and `ValueError` for an opcode outside 0–255 (`2**32 + 0x51` was narrowed to `OP_1`) or a `sourceTXID` that is not 64 hex characters (it read past the end of a short one). The OTDA preimage with `SIGHASH_SINGLE` budgets its 9-byte null outputs, so serialized outputs shorter than that no longer overflow the buffer. `serialize_chunks()` raises `ValueError` for an opcode outside 0–255 instead of truncating it, and `TypeError` instead of `SystemError` for a non-integer opcode, as the pure-Python path does. `MerklePath.compute_root()` no longer shifts by 64 bits or more (undefined behaviour in C) for paths taller than 64 levels.
 - **`Beef.to_binary()` honours the version** — `Beef(BEEF_V1)` now serializes in the V1 layout instead of writing a V2 body under a V1 header, so a BEEF can be converted between V1 and V2 by parsing it, changing `version`, and calling `to_binary()`. Serializing TxIDOnly entries as V1, or an unknown version, raises `ValueError`.
+- **`Transaction.to_beef()` writes each ancestor once** — a transaction shared by several inputs was written once per path. A partial BEEF no longer raises `KeyError` in `from_beef()`; missing source transactions are left unset.
+- **`MerklePath.compute_root()`** handles a block with a single transaction and compound paths that hold every txid at level 0 (TS SDK).
+- **SHIP broadcasting** — `X-Topics` is sent as a JSON array, which overlay-express parses with `JSON.parse`, and sending off-chain values no longer raises `AttributeError`.
+- **AuthFetch payments** — the payment is the signed `tx` from `createAction`, also when the wallet returns it as `list[int]`. The unsigned `signableTransaction` is no longer sent as a payment.
+- **`build_beef_v2_from_raw_hexes()`** writes the transaction count after skipping entries that are not hex.
 
 ### Security
 
 - **Native transaction parser no longer crashes on an oversized script length** — with the C extension, `Transaction.from_hex()`, `Transaction.from_reader()`, `Transaction.from_beef()` and BEEF parsing crashed the process (segmentation fault) on a transaction whose input or output script length is close to 2^63: the bounds check overflowed and the failed allocation was not checked. Such input now fails to parse like any other truncated transaction. Affects 2.3.2 to 2.4.0.
 - **V1 BEEF verification** — `new_beef_from_bytes()` and `parse_beef()` now keep every transaction and BUMP of a V1 (BRC-62) BEEF, including V1 wrapped in Atomic BEEF. Previously only the subject transaction was kept, so `Beef.verify()` and `Beef.is_valid()` returned `True` without consulting the `ChainTracker`. Entries without transaction data are now reported as not valid instead of being skipped.
 - **BEEF proofs go through the bump index** — as in the TS SDK, a transaction counts as proven only through its bump index. A raw transaction whose txid merely appears among the level-0 hashes of a BUMP is no longer treated as proven without its root being checked. Every bump index now also contributes the computed root of its leaf, so a bump index that points at a leaf without the txid flag still goes to the `ChainTracker`.
+- **Atomic BEEF is checked like the TS SDK** — `parse_beef_ex()` raises `ValueError` when an Atomic BEEF does not contain its subject transaction, instead of returning another transaction or `None`, and Atomic BEEF nested inside Atomic BEEF is rejected. `Beef.to_binary_atomic()` raises for a txid that is not in the Beef and leaves out transactions sorted after the subject.
+- **Coinbase maturity** — `MerklePath.verify()` (and so `Transaction.verify()`) returns `False` for the transaction at offset 0 of a block until it is 100 blocks deep, as in the TS SDK. This calls `ChainTracker.current_height()`.
 
 ---
 

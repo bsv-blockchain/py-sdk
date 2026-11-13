@@ -5,6 +5,7 @@ Ported from TypeScript SDK.
 """
 
 import asyncio
+import json
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Protocol, Union
 
@@ -80,7 +81,8 @@ class HTTPSOverlayBroadcastFacilitator:
         if not url.startswith("https:") and not self.allow_http:
             raise ValueError('HTTPS facilitator requires URLs starting with "https:" (allow_http=False)')
 
-        headers = {"Content-Type": "application/octet-stream", "X-Topics": ",".join(tagged_beef.topics)}
+        # overlay-express parses X-Topics with JSON.parse (TS sends a JSON array)
+        headers = {"Content-Type": "application/octet-stream", "X-Topics": json.dumps(list(tagged_beef.topics))}
 
         body = tagged_beef.beef
         if tagged_beef.off_chain_values:
@@ -89,7 +91,7 @@ class HTTPSOverlayBroadcastFacilitator:
             from bsv.utils import Writer
 
             writer = Writer()
-            writer.write_varint(len(tagged_beef.beef))
+            writer.write_var_int_num(len(tagged_beef.beef))
             writer.write(tagged_beef.beef)
             writer.write(tagged_beef.off_chain_values)
             body = writer.to_bytes()

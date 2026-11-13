@@ -4,8 +4,8 @@ version = "2.4.0"
 description = "BSV BLOCKCHAIN | Software Development Kit for Python"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "LicenseRef-Open-BSV-4"
-license-files = ["LICENSE.txt"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [
     { name = "Aaron", email = "aaron@scrypt.io" },
 ]
@@ -32,7 +32,7 @@ Homepage = "https://github.com/bitcoin-sv/py-sdk"
 
 [project.optional-dependencies]
 test = [
-    "pytest>=9.0.3,<9.2",  # pytest 9.2 removed Node._nodeid, which pytest-benchmark 5.3.0 reads
+    "pytest>=9.0.3,<9.3",  # pytest 9.2 removed Node._nodeid, which pytest-benchmark 5.3.0 reads
     "pytest-asyncio>=1.3.0",
     "pytest-benchmark>=5.1.0",
     "pytest-cov>=7.1.0",
