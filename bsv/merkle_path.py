@@ -117,9 +117,29 @@ class MerklePath:
         if not self.path or not self.path[0]:
             return
 
+        if len(self.path[0]) == 1:
+            self.compute_root(self.path[0][0].get("hash_str"))
+            return
+
+        max_offset = max(leaf["offset"] for leaf in self.path[0])
+        tree_height = max(len(self.path), max_offset.bit_length())
+        # One index and memo for every leaf (TS computeRootCached). compute_root() per leaf,
+        # native or not, rescans level 0 and rebuilds sibling subtrees each time, so a
+        # level-0-only BUMP cost quadratic hashing plus cubic list scans, and a few thousand
+        # leaves from an untrusted BEEF hung the parser for minutes.
+        levels = self._offset_index()
+        memo: dict = {}
+
+        has_hash = any(leaf.get("hash_str") for leaf in self.path[0])
         root = None
         for leaf in self.path[0]:
-            leaf_root = self.compute_root(leaf.get("hash_str"))
+            txid = leaf.get("hash_str")
+            if not isinstance(txid, str):
+                # A duplicate marker carries no hash; its sibling's walk covers it.
+                if not has_hash:
+                    raise ValueError("No valid leaf found in the Merkle Path")
+                continue
+            leaf_root = self._compute_root_from(txid, leaf["offset"], levels, memo, max_offset, tree_height)
             if root is None:
                 root = leaf_root
             elif root != leaf_root:
@@ -253,24 +273,46 @@ class MerklePath:
         except StopIteration:
             raise ValueError(f"This proof does not contain the txid: {txid}")
 
-        # A block with a single transaction: its txid is the root.
+        # A block with a single transaction: its txid is the root, but only at offset 0.
+        # TS asserts the same (assertSingleTransactionOffset), with this wording. Without it a
+        # lone leaf at any offset passes a txid off as a block merkle root, and verify() skips
+        # the coinbase maturity check because that keys off offset 0.
         if len(self.path) == 1 and len(self.path[0]) == 1:
+            if index != 0:
+                raise ValueError(f"Missing hash for index {index} at height 0")
             return txid
 
         # A compound path may hold every txid at level 0, so the tree can be taller than the path.
         max_offset = max(leaf["offset"] for leaf in self.path[0])
         tree_height = max(len(self.path), max_offset.bit_length())
 
-        if _USE_NATIVE and len(self.path) > 1 and tree_height == len(self.path):
+        # The C walk keeps offsets in a C long (32 bits on Windows), so it only gets trees it
+        # can index; an oversized offset above level 0 fails with OverflowError or SystemError.
+        if _USE_NATIVE and 1 < len(self.path) == tree_height < 32:
             try:
                 return _bsv_native.merkle_compute_root(txid, self.path)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, OverflowError, SystemError):
                 pass
 
+        return self._compute_root_from(txid, index, self._offset_index(), {}, max_offset, tree_height)
+
+    def _offset_index(self) -> list[dict]:
+        """offset -> leaf per level, so lookups are not a linear scan of the level."""
+        return [{leaf["offset"]: leaf for leaf in level} for level in self.path]
+
+    def _compute_root_from(
+        self,
+        txid: str,
+        index: int,
+        levels: list[dict],
+        memo: dict,
+        max_offset: int,
+        tree_height: int,
+    ) -> str:
         working_hash = txid
         for height in range(tree_height):
             offset = (index >> height) ^ 1
-            leaf = self.find_or_compute_leaf(height, offset)
+            leaf = self._find_leaf(height, offset, levels, memo, max_offset)
             if not isinstance(leaf, dict):
                 # The last odd node of a level-0-only path has no sibling; Bitcoin duplicates it.
                 if len(self.path) == 1 and (index >> height) == (max_offset >> height):
@@ -288,27 +330,54 @@ class MerklePath:
         return working_hash
 
     def find_or_compute_leaf(self, height: int, offset: int) -> Optional[MerkleLeaf]:
-        leaf = None
-        if height < len(self.path):
-            leaf = next((e for e in self.path[height] if e["offset"] == offset), None)
-        if leaf:
-            return leaf
+        max_offset = max(leaf["offset"] for leaf in self.path[0]) if self.path and self.path[0] else 0
+        return self._find_leaf(height, offset, self._offset_index(), {}, max_offset)
+
+    def _find_leaf(
+        self,
+        height: int,
+        offset: int,
+        levels: list[dict],
+        memo: dict,
+        max_offset: int,
+    ) -> Optional[MerkleLeaf]:
+        """find_or_compute_leaf against a prebuilt offset index, memoizing computed nodes.
+
+        Without the memo each caller rebuilds the whole sibling subtree, so validating one
+        level-0-only BUMP cost quadratic hashing -- a few thousand leaves from an untrusted
+        BEEF hung the parser for minutes.
+        """
+        if height < len(levels):
+            leaf = levels[height].get(offset)
+            if leaf:
+                return leaf
 
         if height == 0:
             return None
+        if len(levels) == 1 and offset << height > max_offset:
+            # Nothing at level 0 lies under this node, so there is nothing to compute.
+            return None
+
+        key = (height, offset)
+        if key in memo:
+            return memo[key]
 
         h = height - 1
         e = offset << 1
 
-        leaf0 = self.find_or_compute_leaf(h, e)
+        leaf0 = self._find_leaf(h, e, levels, memo, max_offset)
         if not leaf0 or not leaf0.get("hash_str"):
+            memo[key] = None
             return None
 
-        leaf1 = self.find_or_compute_leaf(h, e + 1)
+        leaf1 = self._find_leaf(h, e + 1, levels, memo, max_offset)
         if not leaf1:
             # On a level-0-only path, leaf0 may be the last odd node at height h.
-            if len(self.path) == 1 and e == max(n["offset"] for n in self.path[0]) >> h:
-                return {"offset": offset, "hash_str": _hash_pair(leaf0["hash_str"], leaf0["hash_str"])}
+            if len(self.path) == 1 and e == max_offset >> h:
+                computed = {"offset": offset, "hash_str": _hash_pair(leaf0["hash_str"], leaf0["hash_str"])}
+                memo[key] = computed
+                return computed
+            memo[key] = None
             return None
 
         if leaf1.get("duplicate"):
@@ -316,7 +385,9 @@ class MerklePath:
         else:
             working_hash = _hash_pair(leaf1["hash_str"], leaf0["hash_str"])
 
-        return {"offset": offset, "hash_str": working_hash}
+        computed = {"offset": offset, "hash_str": working_hash}
+        memo[key] = computed
+        return computed
 
     async def verify(self, txid: str, chaintracker: ChainTracker) -> bool:
         """
