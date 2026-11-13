@@ -139,8 +139,9 @@ class TestDuplicateMarker:
         assert MerklePath(800000, path).compute_root(hashes[2]) == _reference_root(hashes)
 
     def test_empty_hash_is_not_treated_as_a_marker(self):
+        path = [[{"offset": 0, "hash_str": ""}, {"offset": 2, "hash_str": _h(2)}]]
         with pytest.raises(ValueError, match="Missing hash for index 0 at height 0"):
-            MerklePath(800000, [[{"offset": 0, "hash_str": ""}, {"offset": 2, "hash_str": _h(2)}]])
+            MerklePath(800000, path)
 
     def test_only_duplicate_markers_is_rejected(self):
         with pytest.raises(ValueError, match="No valid leaf found"):
