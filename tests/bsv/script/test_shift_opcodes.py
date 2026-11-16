@@ -143,3 +143,25 @@ def test_numeric_shift_below_ceiling_is_exact():
     # Counts under the ceiling are untouched: 1 << 1000 occupies 126 bytes.
     asm = f"OP_1 {_num_asm(1000)} OP_LSHIFTNUM OP_SIZE {_num_asm(126)} OP_NUMEQUAL"
     assert all(_run_both_paths(asm))
+
+
+def _verdicts(asm: str, tx_version: int = 2) -> list:
+    """Each VM path's verdict; a script error counts as a rejection."""
+    out = []
+    for native in [False, True] if _USE_NATIVE_VM else [False]:
+        spend = make_spend(asm, tx_version=tx_version)
+        try:
+            out.append(spend._validate_native() if native else spend._validate_python())
+        except RuntimeError:
+            out.append(False)
+    return out
+
+
+@pytest.mark.parametrize("shift, accepted", [(0x7FFFFFFF, True), (0x80000000, False), (0x0500000000, False)])
+def test_numeric_right_shift_count_is_at_most_int_max(shift, accepted):
+    # The node right-shifts by a C int: bsv::bint::operator>>= throws above
+    # INT_MAX whatever the value, so the script fails. OP_LSHIFTNUM already
+    # fails earlier, on the result size. Found by comparing with GoBDK.
+    asm = f"OP_1 {_num_asm(shift)} OP_RSHIFTNUM OP_0 OP_NUMEQUAL"
+    results = _verdicts(asm)
+    assert results == [accepted] * len(results)

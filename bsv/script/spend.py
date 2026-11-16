@@ -505,6 +505,11 @@ class Spend:
                         self.script_evaluation_error("script number overflow")
                     self.stack.append(encoded)
                 else:
+                    # The node shifts by a C int: bsv::bint::operator>>= fails
+                    # above INT_MAX whatever the value (OP_LSHIFTNUM fails
+                    # earlier, on the result size).
+                    if shift > 0x7FFFFFFF:
+                        self.script_evaluation_error(f"{_codename}: shift amount must not exceed 2^31 - 1.")
                     if value < 0:
                         result = -((-value) >> shift)
                     else:
@@ -811,7 +816,10 @@ class Spend:
                 size = self.read_script_number(self.stack.pop())
                 if size < 0 or size > 0x7FFFFFFF:
                     self.script_evaluation_error("OP_NUM2BIN: requested size out of range.")
-                n = self.read_script_number(self.stack.pop())
+                # The value is not a script number: the node normalises its bytes
+                # (MinimallyEncode), so it need not be minimal or within the
+                # script-number length. Only the size goes through CScriptNum.
+                n = self.bin2num_unchecked(self.stack.pop())
                 x = bytearray(self.minimally_encode(n))
 
                 # Try to see if we can fit that number in the number of byte requested.
