@@ -1,0 +1,62 @@
+name: script oracle
+
+# Compares both script VMs with GoBDK, the bitcoin-sv interpreter Teranode
+# validates with. See tools/script_oracle/compare.py.
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - "bsv/script/**"
+      - "bsv/transaction_preimage.py"
+      - "_bsv_native/**"
+      - "tools/script_oracle/**"
+      - ".github/workflows/script-oracle.yml"
+  push:
+    branches: [ master ]
+    paths:
+      - "bsv/script/**"
+      - "bsv/transaction_preimage.py"
+      - "_bsv_native/**"
+      - "tools/script_oracle/**"
+      - ".github/workflows/script-oracle.yml"
+  schedule:
+    - cron: "17 3 * * 1"  # weekly, adding a fresh fuzz seed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+      with:
+        python-version: "3.13"
+
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+      with:
+        go-version-file: tools/script_oracle/go.mod
+        cache-dependency-path: tools/script_oracle/go.sum
+
+    - name: Install py-sdk with the C extension
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        python -c "from bsv.native import NATIVE_AVAILABLE; assert NATIVE_AVAILABLE, 'C extension not built'"
+
+    - name: Build the GoBDK oracle
+      run: go build -C tools/script_oracle -o "$RUNNER_TEMP/script_oracle" .
+
+    - name: Fixed cases
+      run: python tools/script_oracle/compare.py "$RUNNER_TEMP/script_oracle"
+
+    - name: Random scripts, seeds 1-5
+      run: python tools/script_oracle/compare.py "$RUNNER_TEMP/script_oracle" --fuzz 20000 --seed 1 2 3 4 5
+
+    - name: Random scripts, fresh seed
+      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      run: python tools/script_oracle/compare.py "$RUNNER_TEMP/script_oracle" --fuzz 50000 --seed "$GITHUB_RUN_ID"
