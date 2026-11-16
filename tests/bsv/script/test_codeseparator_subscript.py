@@ -126,3 +126,73 @@ def test_without_separator_the_whole_script_is_signed(priv_key):
     locking = Script(pubkey_push + OpCode.OP_CHECKSIG)
     unlocking = _sign_over(priv_key, locking)
     assert all(_validates_on_both_paths(locking, unlocking))
+
+
+@pytest.mark.parametrize(
+    "head, tail, rewritten_head, rewritten_tail",
+    [
+        # OP_RETURN <state> after the checksig: the 0x6a became a push length.
+        ("", "6a0500000000000000", "", "080500000000000000"),
+        # Non-minimal pushes were shortened to their minimal form.
+        ("010575", "", "5575", ""),
+        ("4c03aabbcc75", "", "03aabbcc75", ""),
+    ],
+)
+def test_subscript_is_the_locking_script_bytes(priv_key, head, tail, rewritten_head, rewritten_tail):
+    # Regression (#247): the subscript was rebuilt from parsed chunks with
+    # minimal pushes, so it differed from the bytes the node signs. A correct
+    # signature was rejected and one over the rewritten bytes was accepted.
+    p2pk = encode_pushdata(priv_key.public_key().serialize()) + OpCode.OP_CHECKSIG
+    locking = Script(bytes.fromhex(head) + p2pk + bytes.fromhex(tail))
+    rewritten = Script(bytes.fromhex(rewritten_head) + p2pk + bytes.fromhex(rewritten_tail))
+
+    assert all(_validates_on_both_paths(locking, _sign_over(priv_key, locking)))
+    assert not any(_validates_on_both_paths(locking, _sign_over(priv_key, rewritten)))
+
+
+LEGACY_SIG = "300602010102010101"  # DER-shaped, sighash 0x01 (no FORKID)
+
+
+@pytest.mark.parametrize(
+    "push_hex, legacy_sig_hex, removed",
+    [
+        ("09" + LEGACY_SIG, LEGACY_SIG, True),
+        ("4c09" + LEGACY_SIG, LEGACY_SIG, False),
+        ("0105", "05", True),
+        ("55", "05", False),
+    ],
+)
+def test_checkmultisig_removes_only_the_literal_signature_push(priv_key, push_hex, legacy_sig_hex, removed):
+    # A signature without FORKID is removed from the subscript where the script
+    # holds it as the node's `CScript() << sig`: the shortest length prefix and
+    # the bytes, also for a 1-byte value (never OP_1..OP_16), and not a push
+    # encoded any other way. Both VMs must agree.
+    #
+    # `good` is a FORKID signature over the whole locking script. If the push is
+    # removed, `good` fails, CHECKMULTISIG stops before it reaches the legacy
+    # signature, and OP_NOT turns the failure into success. If the push stays,
+    # `good` verifies and the legacy signature's sighash flag is rejected.
+    other_key = PrivateKey()
+    locking = Script(
+        bytes.fromhex(push_hex)
+        + OpCode.OP_DROP
+        + OpCode.OP_2
+        + encode_pushdata(other_key.public_key().serialize())
+        + encode_pushdata(priv_key.public_key().serialize())
+        + OpCode.OP_2
+        + OpCode.OP_CHECKMULTISIG
+        + OpCode.OP_NOT
+    )
+    good = _sign_over(priv_key, Script(locking.serialize()))
+    unlocking = Script(OpCode.OP_0 + encode_pushdata(bytes.fromhex(legacy_sig_hex)) + good.serialize())
+    results = _validates_on_both_paths(locking, unlocking)
+    assert results == [removed] * len(results)
+
+
+def test_subscript_of_asm_built_locking_script(priv_key):
+    # An ASM-built script keeps its chunks; they must encode to its bytes (`0f`
+    # is OP_15), or the subscript differs from what the signer hashed.
+    pubkey = priv_key.public_key().serialize().hex()
+    locking = Script.from_asm(f"0f OP_DROP {pubkey} OP_CHECKSIG")
+    unlocking = _sign_over(priv_key, Script(locking.serialize()))
+    assert all(_validates_on_both_paths(locking, unlocking))

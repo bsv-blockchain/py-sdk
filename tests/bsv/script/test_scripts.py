@@ -7,7 +7,7 @@ import pytest
 from bsv.constants import SIGHASH, OpCode
 from bsv.curve import Point, curve, curve_multiply
 from bsv.keys import PrivateKey
-from bsv.script.script import Script
+from bsv.script.script import Script, ScriptChunk
 from bsv.script.spend import Spend
 from bsv.script.type import P2PK, P2PKH, BareMultisig, OpReturn, RPuzzle
 from bsv.transaction import Transaction, TransactionInput, TransactionOutput
@@ -441,6 +441,56 @@ def _asm_pushdata(byte_length: int):
     octets = b"\x00" * byte_length
     asm = "OP_RETURN " + octets.hex()
     assert Script.from_asm(asm).to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "script_hex",
+    [
+        "",
+        "006a0454657374",  # OP_FALSE OP_RETURN <data> (#135)
+        "ac6a0500000000000000",  # OP_CHECKSIG OP_RETURN <8 bytes> (#247)
+        "6a",
+        "6a4c",  # bytes after a top-level OP_RETURN need not be valid pushes
+        "636a680102",  # OP_RETURN inside OP_IF is an ordinary opcode
+        "0105",  # non-minimal push: OP_5 is the minimal form
+        "0181",  # non-minimal push: OP_1NEGATE is the minimal form
+        "4c00",
+        "4c03aabbcc",
+        "4d0300aabbcc",
+        "4e03000000aabbcc",
+    ],
+)
+def test_from_chunks_round_trips_parsed_script(script_hex):
+    # Spend signs from_chunks(...) as the scriptCode, so it must give back the
+    # original bytes, not a minimal re-encoding of them (#247).
+    assert Script.from_chunks(Script(script_hex).chunks).hex() == script_hex
+
+
+def test_serialize_of_chunks_only_script_writes_pushdata_length():
+    # Spend evaluates serialize(); a Script given only chunks must still write
+    # the OP_PUSHDATA1 length field (#247).
+    script = Script()
+    script.chunks = [ScriptChunk(OpCode.OP_PUSHDATA1, b"\xaa" * 3)]
+    assert script.serialize().hex() == "4c03aaaaaa"
+
+
+@pytest.mark.parametrize(
+    "asm, script_hex",
+    [
+        ("0f", "5f"),  # data with its own opcode is pushed as that opcode
+        ("10", "60"),
+        ("81", "4f"),
+        ("11", "0111"),
+        ("00", "0100"),
+        ("OP_AND 0f OP_EQUALVERIFY", "845f88"),
+        ("OP_RETURN f0f0", "6a02f0f0"),
+        ("aa" * 76, "4c4c" + "aa" * 76),
+    ],
+)
+def test_from_asm_pushes_data_minimally(asm, script_hex):
+    # from_asm builds its own bytes now that from_chunks keeps each chunk's
+    # encoding (#247); its output must not change.
+    assert Script.from_asm(asm).hex() == script_hex
 
 
 def test_find_and_delete():
