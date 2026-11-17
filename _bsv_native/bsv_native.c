@@ -3483,7 +3483,13 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least two items to be on the stack.", name);
             return -1;
         }
+        /* The count is a script number: minimal unless relaxed, and checked
+           while still on the stack, as in the node and the Python VM. */
         StackElem *ne = vms_top(&st->stack, -1);
+        if (!(st->tx_version > 1) && !c_is_minimal_num(ne->data, ne->len)) {
+            vm_error(st, "non-minimally encoded script number");
+            return -1;
+        }
         PyObject *nobj = c_bin2num(ne->data, ne->len);
         if (!nobj) return -1;
         long long n = PyLong_AsLongLong(nobj);
@@ -3607,10 +3613,8 @@ static int vm_step(VMState *st) {
             vm_errorf(st, "%s requires at least two items to be on the stack.", name);
             return -1;
         }
-        StackElem ne = {0};
-        vms_pop(&st->stack, &ne);
-        PyObject *nobj = c_bin2num(ne.data, ne.len);
-        se_free(&ne);
+        /* The count is a script number: minimal unless relaxed, as in Python. */
+        PyObject *nobj = vms_pop_num(st);
         if (!nobj) return -1;
         int is_neg = 0;
         {
@@ -3797,6 +3801,19 @@ static int vm_step(VMState *st) {
             if (overflows) {
                 Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz);
                 vm_error(st, "script number overflow");
+                return -1;
+            }
+        }
+        /* Right shift: the node shifts by a C int, and bsv::bint::operator>>=
+           fails above INT_MAX whatever the value. */
+        if (op == 0xB7) {
+            PyObject *int_max = PyLong_FromLong(0x7FFFFFFFL);
+            int too_far = int_max ? PyObject_RichCompareBool(shift, int_max, Py_GT) : -1;
+            Py_XDECREF(int_max);
+            if (too_far != 0) {
+                Py_DECREF(shift); Py_DECREF(value); Py_DECREF(pz);
+                if (too_far > 0)
+                    vm_errorf(st, "%s: shift amount must not exceed 2^31 - 1.", name);
                 return -1;
             }
         }
@@ -4403,7 +4420,13 @@ static int vm_step(VMState *st) {
             vm_error(st, "OP_NUM2BIN: requested size out of range.");
             return -1;
         }
-        PyObject *n = vms_pop_num(st);
+        /* The value is not a script number: the node normalises its bytes
+           (MinimallyEncode), so it need not be minimal or within the
+           script-number length. Only the size goes through CScriptNum. */
+        StackElem ve = {0};
+        if (vms_pop(&st->stack, &ve) < 0) return -1;
+        PyObject *n = c_bin2num_unchecked(ve.data, ve.len);
+        se_free(&ve);
         if (!n) return -1;
         unsigned char *me; Py_ssize_t me_len;
         if (c_min_encode(n, &me, &me_len) < 0) { Py_DECREF(n); return -1; }
