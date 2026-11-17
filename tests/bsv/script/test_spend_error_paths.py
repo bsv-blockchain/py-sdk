@@ -148,7 +148,7 @@ def test_spend_large_script_element():
 
     # Create chunk with data larger than MAX_SCRIPT_ELEMENT_SIZE
     large_data = b"x" * (1024 * 1024 * 1024 + 1)  # Larger than 1GB limit
-    spend.unlocking_script = Script.from_chunks([ScriptChunk(b"\x4c", large_data)])  # OP_PUSHDATA1
+    spend.unlocking_script = Script.from_chunks([ScriptChunk(b"\x4e", large_data)])  # OP_PUSHDATA4
 
     with pytest.raises(Exception, match="larger than"):
         spend.step()

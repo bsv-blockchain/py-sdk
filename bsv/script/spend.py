@@ -9,7 +9,7 @@ from ..native import NATIVE_AVAILABLE as _USE_NATIVE_VM
 from ..native import NATIVE_MODULE as _bsv_native
 from ..transaction_input import TransactionInput
 from ..transaction_preimage import tx_preimage
-from ..utils import deserialize_ecdsa_der, serialize_ecdsa_der, unsigned_to_bytes
+from ..utils import deserialize_ecdsa_der, encode_pushdata, serialize_ecdsa_der, unsigned_to_bytes
 from .script import Script, ScriptChunk
 
 
@@ -26,6 +26,13 @@ REQUIRE_MINIMAL_PUSH = True
 REQUIRE_PUSH_ONLY_UNLOCKING_SCRIPTS = True
 REQUIRE_LOW_S_SIGNATURES = True
 REQUIRE_CLEAN_STACK = True
+
+
+def _signature_push(sig: bytes) -> Script:
+    """The push the node's FindAndDelete removes for a signature: `CScript() <<
+    sig`, the shortest length prefix then the bytes, also for a 1-byte value
+    (never OP_1..OP_16, unlike `Script.write_bin`). Same rule as the C VM."""
+    return Script(encode_pushdata(sig, minimal_push=False))
 
 
 class Spend:
@@ -63,12 +70,16 @@ class Spend:
         self.source_txid = params["sourceTXID"]
         self.source_output_index = params["sourceOutputIndex"]
         self.source_satoshis = params["sourceSatoshis"]
-        self.locking_script: Script = params["lockingScript"]
+        # Evaluate the scripts' bytes, as the node does. The chunks a Script was
+        # built from need not encode back to its bytes (from_asm pushes `0f` as
+        # OP_15 but keeps a `0f` data chunk), and the subscript is signed from
+        # the chunks (#247).
+        self.locking_script: Script = Script(params["lockingScript"].serialize())
         self.transaction_version = params["transactionVersion"]
         self.other_inputs = params["otherInputs"]
         self.outputs = params["outputs"]
         self.input_index = params["inputIndex"]
-        self.unlocking_script: Script = params["unlockingScript"]
+        self.unlocking_script: Script = Script(params["unlockingScript"].serialize())
         self.input_sequence = params["inputSequence"]
         self.lock_time = params["lockTime"]
 
@@ -505,6 +516,11 @@ class Spend:
                         self.script_evaluation_error("script number overflow")
                     self.stack.append(encoded)
                 else:
+                    # The node shifts by a C int: bsv::bint::operator>>= fails
+                    # above INT_MAX whatever the value (OP_LSHIFTNUM fails
+                    # earlier, on the result size).
+                    if shift > 0x7FFFFFFF:
+                        self.script_evaluation_error(f"{_codename}: shift amount must not exceed 2^31 - 1.")
                     if value < 0:
                         result = -((-value) >> shift)
                     else:
@@ -631,7 +647,7 @@ class Spend:
                 sub_script = self.subscript_after_code_separator()
 
                 if len(sig) > 0 and not (sig[-1] & SIGHASH.FORKID):
-                    sub_script = Script.find_and_delete(sub_script, Script.write_bin(sig))
+                    sub_script = Script.find_and_delete(sub_script, _signature_push(sig))
 
                 f = self.verify_signature(sig, pub_key, sub_script)
 
@@ -689,7 +705,7 @@ class Spend:
                 for j in range(sigs_count):
                     buf = self.stacktop(-i_sig - j)
                     if len(buf) > 0 and not (buf[-1] & SIGHASH.FORKID):
-                        sub_script = Script.find_and_delete(sub_script, Script.write_bin(buf))
+                        sub_script = Script.find_and_delete(sub_script, _signature_push(buf))
 
                 f = True
                 while f and sigs_count > 0:
@@ -811,7 +827,10 @@ class Spend:
                 size = self.read_script_number(self.stack.pop())
                 if size < 0 or size > 0x7FFFFFFF:
                     self.script_evaluation_error("OP_NUM2BIN: requested size out of range.")
-                n = self.read_script_number(self.stack.pop())
+                # The value is not a script number: the node normalises its bytes
+                # (MinimallyEncode), so it need not be minimal or within the
+                # script-number length. Only the size goes through CScriptNum.
+                n = self.bin2num_unchecked(self.stack.pop())
                 x = bytearray(self.minimally_encode(n))
 
                 # Try to see if we can fit that number in the number of byte requested.
