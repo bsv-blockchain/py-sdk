@@ -1,11 +1,11 @@
 [project]
 name = "bsv-sdk"
-version = "2.4.0"
+version = "2.5.0"
 description = "BSV BLOCKCHAIN | Software Development Kit for Python"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
-license-files = ["LICENSE", "NOTICE"]
+license-files = ["LICENSE", "NOTICE", "PATENTS"]
 authors = [
     { name = "Aaron", email = "aaron@scrypt.io" },
 ]

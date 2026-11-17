@@ -1,6 +1,6 @@
 include setup.py
 include pyproject.toml
-include LICENSE NOTICE
+include LICENSE NOTICE PATENTS
 include README.md
 
 # C extension source
