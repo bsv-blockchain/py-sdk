@@ -28,6 +28,26 @@ OPCODE_NAME_VALUE_DICT.update(OPCODE_ALIASES)
 # Maximum data size for OP_PUSHDATA4 (2^32 - 1 bytes)
 MAX_PUSH_DATA_SIZE = 2**32 - 1
 
+# Size of the little-endian length field that follows each OP_PUSHDATA opcode
+_PUSHDATA_LENGTH_SIZE = {b"\x4c": 1, b"\x4d": 2, b"\x4e": 4}  # OP_PUSHDATA1/2/4
+
+
+def _chunks_to_bytes(chunks: list["ScriptChunk"]) -> bytes:
+    """Write each chunk as it was encoded: its opcode, the length field of
+    OP_PUSHDATA1/2/4, then its data (a top-level OP_RETURN's data is the raw rest
+    of the script), as the TS SDK does. Re-encoding pushes minimally changed the
+    bytes Spend signs as the scriptCode (#247).
+    """
+    script = bytearray()
+    for chunk in chunks:
+        script += chunk.op
+        if chunk.data is not None:
+            length_size = _PUSHDATA_LENGTH_SIZE.get(bytes(chunk.op))
+            if length_size:
+                script += len(chunk.data).to_bytes(length_size, "little")
+            script += chunk.data
+    return bytes(script)
+
 
 class ScriptChunk:
     """
@@ -140,12 +160,7 @@ class Script:
         if self._bytes:
             return self._bytes
         # Serialize from chunks if script bytes not set
-        result = bytearray()
-        for chunk in self.chunks:
-            result.extend(chunk.op)
-            if chunk.data is not None:
-                result.extend(chunk.data)
-        return bytes(result)
+        return _chunks_to_bytes(self.chunks)
 
     def hex(self) -> str:
         return self._bytes.hex()
@@ -180,10 +195,7 @@ class Script:
 
     @classmethod
     def from_chunks(cls, chunks: list[ScriptChunk]) -> "Script":
-        script = b""
-        for chunk in chunks:
-            script += encode_pushdata(chunk.data) if chunk.data is not None else chunk.op
-        s = Script(script)
+        s = Script(_chunks_to_bytes(chunks))
         s.chunks = chunks
         return s
 
@@ -261,7 +273,11 @@ class Script:
                 chunks.append(ScriptChunk(opcode_value, hex_bytes))
                 i += 1
 
-        return Script.from_chunks(chunks)
+        # ASM data is pushed minimally (`0f` becomes OP_15), unlike from_chunks,
+        # which keeps each chunk's own encoding. The chunks keep the ASM tokens.
+        s = Script(b"".join(encode_pushdata(c.data) if c.data is not None else c.op for c in chunks))
+        s.chunks = chunks
+        return s
 
     @classmethod
     def _parse_hex_token(cls, token: str) -> ScriptChunk:

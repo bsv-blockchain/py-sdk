@@ -7,7 +7,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Table of Contents
 
 - [Unreleased](#unreleased)
-- [2.5.0 - 2026-11-16](#250---2026-11-16)
+- [2.5.0 - 2026-11-17](#250---2026-11-17)
 - [2.4.0 - 2026-08-28](#240---2026-08-28)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
 - [2.3.1 - 2026-07-22](#231---2026-07-22)
@@ -44,14 +44,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [2.5.0] - 2026-11-16
+## [2.5.0] - 2026-11-17
 
 ### Added
 
 - **`Transaction` BEEF API matches the TS SDK** (#238) — `Transaction.from_beef()` reads BEEF V1, V2 and Atomic BEEF and takes an optional `txid`; it returns that transaction, else the Atomic subject, else the last one. `Transaction.from_atomic_beef()` and `Transaction.to_atomic_beef()` are new, and `to_beef()` / `to_atomic_beef()` take `allow_partial`.
 - **`Beef` API** (#238) — `Beef.from_binary()`, `Beef.from_string()` (hex or base64), `Beef.sort_txs()`, and `Beef.atomic_txid` (set when parsed from Atomic BEEF). `Beef.merge_beef()` also accepts serialized bytes, which fixes `BeefParty.merge_beef_from_party()` for bytes.
 - **`MerklePath(..., legal_offsets_only=True)`** (#238) — BEEF readers pass `False`, so BUMPs extended by `add_computed_leaves()` can be read, as in the TS SDK.
-- **`PATENTS` file** (#244) — added at the repository root. It states that the license covers copyright only and that the BSV Association holds no patent rights and will not assert patent rights against users of this software.
+- **`PATENTS` file** (#244) — added at the repository root and shipped in the sdist and wheel alongside `LICENSE` and `NOTICE`. It states that the license covers copyright only and that the BSV Association holds no patent rights and will not assert patent rights against users of this software.
 
 ### Changed
 
@@ -71,6 +71,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`Spend` verifies signatures against the locking script's own bytes** (#248) — `Spend.validate()`, and so `Transaction.verify()`, rebuilt the signed scriptCode from parsed chunks with minimal pushes. For a locking script with a top-level `OP_RETURN <data>` the `0x6a` became a push length, and non-minimal pushes such as `01 05` or `4c 03 …` were shortened, so the sighash differed from the node's: a correct signature was rejected and a signature over the rewritten bytes was accepted, with and without the C extension. `Script.from_chunks()` now writes each chunk with its own opcode and length field, as the TS SDK does, and the C VM does the same. `Spend` also evaluates each script's own bytes instead of the chunks it was built from, so a script from `Script.from_asm()` with a small value such as `0f` (pushed as `OP_15`) is checked as the node sees it. Removing a signature without FORKID from the scriptCode now matches only the node's push of it (`CScript() << sig`) in both VMs: the C VM removed any push holding the same bytes and the Python VM looked for a 1-byte value as `OP_1`–`OP_16`, so with CHECKMULTISIG the two could disagree. `Script.from_asm()` output is unchanged. Affects 2.1.0 to 2.4.0.
+- **Script VM agrees with the node on numeric operands** (#249) — found by comparing both VMs with GoBDK, the bitcoin-sv interpreter Teranode validates with. `OP_RSHIFTNUM` with a shift count above 2^31 − 1 now fails, as in the node, which shifts by a C `int`; both VMs returned 0, so a script the node rejects in a block passed `Spend.validate()`. With the C extension, the counts of `OP_PICK`, `OP_ROLL`, `OP_LSHIFT` and `OP_RSHIFT` must be minimally encoded in a version 1 transaction, as in the node and the Python VM; the C VM read them unchecked. The value of `OP_NUM2BIN` is no longer read as a script number in either VM: the node only normalises its bytes, so a non-minimal value such as `0100` was rejected in a version 1 transaction that the node accepts.
 - **C extension input checks** (#241) — `Spend.validate()` with the C extension accepts `bytearray` chunk data as the Python VM does, instead of reading past its end; the C VM raises `TypeError` for other chunk data and `ValueError` for an opcode outside 0–255 (`2**32 + 0x51` was narrowed to `OP_1`) or a `sourceTXID` that is not 64 hex characters (it read past the end of a short one). The OTDA preimage with `SIGHASH_SINGLE` budgets its 9-byte null outputs, so serialized outputs shorter than that no longer overflow the buffer. `serialize_chunks()` raises `ValueError` for an opcode outside 0–255 instead of truncating it, and `TypeError` instead of `SystemError` for a non-integer opcode, as the pure-Python path does.
 - **C extension memory and bounds** (#233) — with the C extension, `Spend.validate()` raises `IndexError` when `inputIndex` is negative or greater than the number of `otherInputs`, instead of reading past the end of `otherInputs`. `Transaction.verify()` always passes a valid index and is not affected. Stack buffers are no longer leaked when growing the script stack fails, and the secp256k1 context is destroyed when the extension module is freed.
 - **`Beef.to_binary()` honours the version** (#232) — `Beef(BEEF_V1)` now serializes in the V1 layout instead of writing a V2 body under a V1 header, so a BEEF can be converted between V1 and V2 by parsing it, changing `version`, and calling `to_binary()`. Serializing TxIDOnly entries as V1, or an unknown version, raises `ValueError`.
