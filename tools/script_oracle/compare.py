@@ -1,14 +1,14 @@
 """Compare py-sdk's script VMs with GoBDK, the bitcoin-sv node interpreter that
 Teranode validates transactions with.
 
-    go build -C tools/script_oracle -o /tmp/script_oracle .
-    python tools/script_oracle/compare.py /tmp/script_oracle
+    python tools/script_oracle/compare.py
 
-Each case is a transaction spending one output. Its script is checked by the
-Python VM, the C VM (when the extension is built) and GoBDK under consensus and
-policy rules at a post-Chronicle height.
+builds the GoBDK oracle from this directory (Go is required) and checks the
+fixed cases. Each case is a transaction spending one output. Its script is
+checked by the Python VM, the C VM (when the extension is built) and GoBDK
+under consensus and policy rules at a post-Chronicle height.
 
-    python tools/script_oracle/compare.py /tmp/script_oracle --fuzz 20000 --seed 1 2 3
+    python tools/script_oracle/compare.py --fuzz 20000 --seed 1 2 3
 
 runs seeded random scripts instead of the fixed cases.
 
@@ -24,7 +24,9 @@ import json
 import random
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from bsv.constants import SIGHASH, OpCode
 from bsv.keys import PrivateKey
@@ -204,7 +206,7 @@ def run_py(c: Case) -> None:
             c.verdicts[backend] = (False, str(e).splitlines()[0])
 
 
-def run_oracle(oracle: str, all_cases: list[Case]) -> None:
+def run_oracle(all_cases: list[Case]) -> None:
     requests = "".join(
         json.dumps(
             {"id": str(i), "ef": c.tx.to_ef().hex(), "utxo_heights": [UTXO_HEIGHT], "block_height": BLOCK_HEIGHT}
@@ -212,7 +214,10 @@ def run_oracle(oracle: str, all_cases: list[Case]) -> None:
         + "\n"
         for i, c in enumerate(all_cases)
     )
-    lines = subprocess.run([oracle], input=requests, capture_output=True, text=True, check=True).stdout.splitlines()
+    with tempfile.TemporaryDirectory() as tmp:
+        oracle = str(Path(tmp) / "script_oracle")
+        subprocess.run(["go", "build", "-C", str(Path(__file__).parent), "-o", oracle, "."], check=True)
+        lines = subprocess.run([oracle], input=requests, capture_output=True, text=True, check=True).stdout.splitlines()
     for line in lines:
         r = json.loads(line)
         if r.get("error"):
@@ -301,12 +306,16 @@ def report_table(all_cases: list[Case], backends: list[str]) -> dict:
         cells = ["ok" if c.verdicts[h][0] else "REJECT" for h in header[1:]]
         print("\t".join([f"{k or '':10s}{c.name}", *cells]))
         if k:
-            if c.known:
-                print(f"\t\tknown: {c.known}")
-            for h in header[1:]:
-                if c.verdicts[h][1]:
-                    print(f"\t\t{h}: {c.verdicts[h][1][:160]}")
+            _print_details(c, header[1:])
     return counts
+
+
+def _print_details(c: Case, columns: list[str]) -> None:
+    if c.known:
+        print(f"\t\tknown: {c.known}")
+    for h in columns:
+        if c.verdicts[h][1]:
+            print(f"\t\t{h}: {c.verdicts[h][1][:160]}")
 
 
 def report_groups(all_cases: list[Case], backends: list[str]) -> dict:
@@ -337,7 +346,6 @@ def _shorten(err: str) -> str:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("oracle", help="the script_oracle binary built from this directory")
     parser.add_argument(
         "--fuzz", type=int, metavar="N", help="run N random scripts per seed instead of the fixed cases"
     )
@@ -347,7 +355,7 @@ def main(argv: list[str]) -> int:
     all_cases = [c for s in args.seed for c in fuzz_cases(args.fuzz, s)] if args.fuzz else cases()
     for c in all_cases:
         run_py(c)
-    run_oracle(args.oracle, all_cases)
+    run_oracle(all_cases)
 
     backends = ["python", "native"] if _USE_NATIVE_VM else ["python"]
     counts = (report_groups if args.fuzz else report_table)(all_cases, backends)

@@ -48,15 +48,12 @@ jobs:
         pip install -e .
         python -c "from bsv.native import NATIVE_AVAILABLE; assert NATIVE_AVAILABLE, 'C extension not built'"
 
-    - name: Build the GoBDK oracle
-      run: go build -C tools/script_oracle -o "$RUNNER_TEMP/script_oracle" .
-
     - name: Fixed cases
-      run: python tools/script_oracle/compare.py "$RUNNER_TEMP/script_oracle"
+      run: python tools/script_oracle/compare.py
 
     - name: Random scripts, seeds 1-5
-      run: python tools/script_oracle/compare.py "$RUNNER_TEMP/script_oracle" --fuzz 20000 --seed 1 2 3 4 5
+      run: python tools/script_oracle/compare.py --fuzz 20000 --seed 1 2 3 4 5
 
     - name: Random scripts, fresh seed
       if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-      run: python tools/script_oracle/compare.py "$RUNNER_TEMP/script_oracle" --fuzz 50000 --seed "$GITHUB_RUN_ID"
+      run: python tools/script_oracle/compare.py --fuzz 50000 --seed "$GITHUB_RUN_ID"
