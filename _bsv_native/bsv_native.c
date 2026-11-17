@@ -2792,45 +2792,30 @@ static int c_sighash_use_otda(uint8_t sh) {
     return (sh & 0x20) != 0;
 }
 
-static size_t c_encode_pushdata(const unsigned char *data, Py_ssize_t dlen,
-                                unsigned char *out) {
-    if (data == NULL || dlen == 0) {
-        out[0] = 0x00;
-        return 1;
-    }
-    if (dlen == 1 && data[0] >= 1 && data[0] <= 16) {
-        out[0] = 0x51 + data[0] - 1;
-        return 1;
-    }
-    if (dlen == 1 && data[0] == 0x81) {
-        out[0] = 0x4F;
-        return 1;
-    }
-    if (dlen <= 75) {
-        out[0] = (unsigned char)dlen;
-        memcpy(out + 1, data, dlen);
-        return 1 + (size_t)dlen;
-    }
-    if (dlen <= 255) {
-        out[0] = 0x4C;
-        out[1] = (unsigned char)dlen;
-        memcpy(out + 2, data, dlen);
-        return 2 + (size_t)dlen;
-    }
-    if (dlen <= 65535) {
-        out[0] = 0x4D;
-        out[1] = dlen & 0xFF;
-        out[2] = (dlen >> 8) & 0xFF;
-        memcpy(out + 3, data, dlen);
-        return 3 + (size_t)dlen;
-    }
-    out[0] = 0x4E;
-    out[1] = dlen & 0xFF;
-    out[2] = (dlen >> 8) & 0xFF;
-    out[3] = (dlen >> 16) & 0xFF;
-    out[4] = (dlen >> 24) & 0xFF;
-    memcpy(out + 5, data, dlen);
-    return 5 + (size_t)dlen;
+/* Write a chunk as it was encoded: its opcode, the length field of
+   OP_PUSHDATA1/2/4, then its data (a top-level OP_RETURN's data is the raw rest
+   of the script). Re-encoding pushes minimally changed the scriptCode bytes
+   (#247). Mirrors Script.from_chunks. `out` needs room for dlen + 5 bytes. */
+static size_t c_write_chunk(int op, const unsigned char *data, Py_ssize_t dlen,
+                            unsigned char *out) {
+    size_t p = 0;
+    out[p++] = (unsigned char)op;
+    if (data == NULL) return p;
+    int len_size = op == 0x4C ? 1 : op == 0x4D ? 2 : op == 0x4E ? 4 : 0;
+    for (int k = 0; k < len_size; k++)
+        out[p++] = (unsigned char)(((size_t)dlen >> (8 * k)) & 0xFF);
+    memcpy(out + p, data, dlen);
+    return p + (size_t)dlen;
+}
+
+/* True when a chunk is the push the node's FindAndDelete removes for `sig`:
+   `CScript() << sig`, the shortest length prefix then the bytes, also for a
+   1-byte value (never OP_1..OP_16). Same rule as the Python VM. */
+static int c_is_signature_push(int op, const unsigned char *data, Py_ssize_t dlen,
+                               const unsigned char *sig, Py_ssize_t slen) {
+    int push_op = slen < 0x4C ? (int)slen : slen <= 0xFF ? 0x4C : slen <= 0xFFFF ? 0x4D : 0x4E;
+    return data != NULL && op == push_op && dlen == slen &&
+           memcmp(data, sig, (size_t)slen) == 0;
 }
 
 static int c_build_subscript(VMState *st,
@@ -2857,14 +2842,8 @@ static int c_build_subscript(VMState *st,
         }
 
         int skip = 0;
-        if (data != NULL) {
-            for (Py_ssize_t s = 0; s < n_sigs; s++) {
-                if (dlen == sig_lens[s] && (dlen == 0 ||
-                        memcmp(data, sigs[s], dlen) == 0)) {
-                    skip = 1; break;
-                }
-            }
-        }
+        for (Py_ssize_t s = 0; s < n_sigs && !skip; s++)
+            skip = c_is_signature_push(op, data, dlen, sigs[s], sig_lens[s]);
         if (skip) continue;
 
         size_t need = (data != NULL) ? (size_t)dlen + 6 : 1;
@@ -2875,11 +2854,7 @@ static int c_build_subscript(VMState *st,
             buf = nb;
         }
 
-        if (data != NULL) {
-            pos += c_encode_pushdata(data, dlen, buf + pos);
-        } else {
-            buf[pos++] = (unsigned char)op;
-        }
+        pos += c_write_chunk(op, data, dlen, buf + pos);
     }
 
     /* Chronicle CHECKSIG: when executing inside the unlocking script,
@@ -2894,14 +2869,8 @@ static int c_build_subscript(VMState *st,
                 free(buf); return -1;
             }
             int skip = 0;
-            if (ldata != NULL) {
-                for (Py_ssize_t s = 0; s < n_sigs; s++) {
-                    if (ldlen == sig_lens[s] && (ldlen == 0 ||
-                            memcmp(ldata, sigs[s], ldlen) == 0)) {
-                        skip = 1; break;
-                    }
-                }
-            }
+            for (Py_ssize_t s = 0; s < n_sigs && !skip; s++)
+                skip = c_is_signature_push(lop, ldata, ldlen, sigs[s], sig_lens[s]);
             if (skip) continue;
             size_t need = (ldata != NULL) ? (size_t)ldlen + 6 : 1;
             while (pos + need > cap) {
@@ -2910,11 +2879,7 @@ static int c_build_subscript(VMState *st,
                 if (!nb) { free(buf); PyErr_NoMemory(); return -1; }
                 buf = nb;
             }
-            if (ldata != NULL) {
-                pos += c_encode_pushdata(ldata, ldlen, buf + pos);
-            } else {
-                buf[pos++] = (unsigned char)lop;
-            }
+            pos += c_write_chunk(lop, ldata, ldlen, buf + pos);
         }
     }
 
