@@ -389,8 +389,8 @@ class LocalKVStore(KVStoreInterface):
                 beef_bytes = build_beef_v2_from_raw_hexes(unique_tx_hexes)
                 return matched_outputs, beef_bytes
 
-        except Exception as e_fallback2:
-            print(f"[KV WOC] fallback-2 scan failed: {e_fallback2}")
+        except Exception:
+            pass
 
         return [], b""
 
@@ -492,8 +492,8 @@ class LocalKVStore(KVStoreInterface):
                     continue
 
                 self._process_transaction_for_pushdrop(txid, rawtx, pub_hex, addr, matched_outputs, matched_tx_hexes)
-        except Exception as e_addr_loop:
-            print(f"[KV WOC] address loop error for {addr}: {e_addr_loop}")
+        except Exception:
+            pass
 
     def _fetch_address_history(self, addr: str, headers: dict, timeout: int):
         """Fetch transaction history for an address from WOC."""
@@ -507,7 +507,6 @@ class LocalKVStore(KVStoreInterface):
 
         for hist_url in hist_endpoints:
             try:
-                print(f"[KV WOC] try history endpoint: {hist_url}")
                 r = requests.get(hist_url, headers=headers, timeout=timeout)
                 if r.status_code == 404:
                     continue
@@ -537,12 +536,10 @@ class LocalKVStore(KVStoreInterface):
 
         utxo_url = f"{base_url}/unspent"
         try:
-            print(f"[KV WOC] fallback to UTXO endpoint: {utxo_url}")
             r = requests.get(utxo_url, headers=headers, timeout=timeout)
             r.raise_for_status()
             return r.json() or []
-        except Exception as e:
-            print(f"[KV WOC] UTXO fetch failed: {e}")
+        except Exception:
             return None
 
     def _extract_txids_from_history(self, txs: list) -> list:
@@ -567,7 +564,6 @@ class LocalKVStore(KVStoreInterface):
 
         for raw_url in raw_candidates:
             try:
-                print(f"[KV WOC] try tx endpoint: {raw_url}")
                 rr = requests.get(raw_url, headers=headers, timeout=timeout)
                 if rr.status_code == 404:
                     continue
@@ -585,7 +581,6 @@ class LocalKVStore(KVStoreInterface):
             except Exception:
                 continue
 
-        print(f"[KV WOC] raw fetch failed for {txid}")
         return None
 
     def _process_transaction_for_pushdrop(
@@ -597,8 +592,7 @@ class LocalKVStore(KVStoreInterface):
 
         try:
             tx = Transaction.from_reader(Reader(bytes.fromhex(rawtx)))
-        except Exception as e:
-            print(f"[KV WOC] tx parse failed for {txid}: {e}")
+        except Exception:
             return
 
         for vout_idx, out in enumerate(tx.outputs):
@@ -620,8 +614,8 @@ class LocalKVStore(KVStoreInterface):
                     )
                     matched_tx_hexes.append(rawtx)
                     break
-            except Exception as e:
-                print(f"[KV WOC] vout scan error in {txid}@{vout_idx}: {e}")
+            except Exception:
+                pass
 
     def _looks_like_address(self, addr: str) -> bool:
         """Best-effort check if a string is a Base58Check address (no network assert)."""
@@ -668,13 +662,11 @@ class LocalKVStore(KVStoreInterface):
     def _execute_set_operation(self, ctx: Any, key: str, value: str, ca_args: dict) -> str:
         """Execute the set operation with all required steps."""
         ca_args = self._merge_default_ca(ca_args)
-        print(f"[TRACE] [set] ca_args: {ca_args}")
 
         # Prepare transaction components
         outs, input_beef = self._lookup_outputs_for_set(ctx, key, ca_args)
         locking_script = self._build_locking_script(ctx, key, value, ca_args)
         inputs_meta = self._prepare_inputs_meta(key, outs, ca_args)
-        print(f"[TRACE] [set] inputs_meta after _prepare_inputs_meta: {inputs_meta}")
 
         # Create and sign transaction
         create_args = self._build_create_action_args_set(key, value, locking_script, inputs_meta, input_beef, ca_args)
@@ -731,8 +723,8 @@ class LocalKVStore(KVStoreInterface):
                     }
                 ]
                 self._recent_beef_by_key[key] = (recent_outs, beef_now)
-        except Exception as e_beef:
-            print(f"[KV set] build immediate BEEF failed: {e_beef}")
+        except Exception:
+            pass
 
     def _parse_or_create_transaction(self, tx_bytes: bytes, locking_script: bytes):
         """Parse transaction from bytes or create a minimal transaction."""
@@ -1173,9 +1165,6 @@ class LocalKVStore(KVStoreInterface):
         ca_args = self._merge_default_ca(ca_args)
         protocol, key_id, counterparty = self._extract_protocol_params(ca_args)
 
-        print(f"[TRACE] [_prepare_inputs_meta] ca_args: {ca_args}")
-        print(f"[TRACE] [_prepare_inputs_meta] protocol: {protocol}, key_id: {key_id}, counterparty: {counterparty}")
-
         pd = PushDrop(self._wallet, self._originator)
         unlock_protocol = protocol if protocol is not None else self._get_protocol(key)
         unlocker = pd.unlock(unlock_protocol, key, None, sign_outputs="all")  # None = SELF counterparty
@@ -1183,7 +1172,6 @@ class LocalKVStore(KVStoreInterface):
         inputs_meta = []
         for o in outs:
             meta = self._create_input_meta(o, unlocker, protocol, key_id, counterparty)
-            print(f"[TRACE] [_prepare_inputs_meta] meta: {meta}")
             inputs_meta.append(meta)
         return inputs_meta
 

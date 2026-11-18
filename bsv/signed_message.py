@@ -72,5 +72,4 @@ class SignedMessage:
         signature_der = reader.read(len(sig) - reader.tell())
         invoice_number = f"2-message signing-{key_id}"
         signing_key = signer.derive_child(recipient, invoice_number)
-        print(signing_key.serialize().hex())
         return signing_key.verify(signature_der, message)
