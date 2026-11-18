@@ -226,10 +226,8 @@ def _convert_chunks_to_bytes(chunks: list[bytes]) -> list[bytes]:  # NOSONAR - C
                 if hasattr(chunk, "__bytes__"):
                     byte_chunks.append(bytes(chunk))
                 else:
-                    print(f"[ERROR] Cannot convert to bytes: {type(chunk)}, value: {chunk}")
                     byte_chunks.append(b"\x51")  # Fallback to OP_TRUE
-            except Exception as e:
-                print(f"[ERROR] Failed to convert {type(chunk)} to bytes: {e}")
+            except Exception:
                 byte_chunks.append(b"\x51")  # Fallback to OP_TRUE
 
     return byte_chunks
@@ -241,10 +239,8 @@ def decode_lock_before_pushdrop(script: bytes | str, *, lock_position: str = "be
     Returns dict with pubkey and fields (list of bytes).
     """
     chunks = read_script_chunks(script)
-    print("[decode] chunks:", [(c.op, c.data.hex() if c.data else None) for c in chunks])
 
     if len(chunks) < 2:
-        print("[decode] not enough chunks")
         return None
 
     if lock_position == "before":
@@ -263,14 +259,12 @@ def _opcode_to_int(op) -> int:
 def _decode_lock_before(chunks) -> Optional[dict[str, object]]:
     """Decode lock-before pattern: <pubkey> OP_CHECKSIG <fields...> DROP..."""
     first, second = chunks[0], chunks[1]
-    print(f"[decode] first.op={first.op}, first.data={first.data.hex() if first.data else None}, second.op={second.op}")
 
     # Validate header
     sop = _opcode_to_int(second.op)
     opcs = _opcode_to_int(OpCode.OP_CHECKSIG)
 
     if sop != opcs or first.data is None or len(first.data) not in (33, 65):
-        print("[decode] header mismatch")
         return None
 
     pubkey = first.data
@@ -285,16 +279,11 @@ def _decode_lock_after(chunks) -> Optional[dict[str, object]]:
     opcs = _opcode_to_int(OpCode.OP_CHECKSIG)
 
     if last_op != opcs:
-        print("[decode] lock-after: no OP_CHECKSIG at end")
         return None
 
     pubkey_chunk = chunks[-2]
-    print(
-        f"[decode] lock-after: pubkey_chunk.op={pubkey_chunk.op}, pubkey_chunk.data={pubkey_chunk.data.hex() if pubkey_chunk.data else None}"
-    )
 
     if pubkey_chunk.data is None or len(pubkey_chunk.data) not in (33, 65):
-        print("[decode] lock-after: pubkey length mismatch")
         return None
 
     pubkey = pubkey_chunk.data
@@ -742,7 +731,6 @@ class PushDropUnlocker:
             decoded = PushDrop.decode(self.prev_locking_script)
             locking_pubkey = decoded.get("lockingPublicKey")
             if not locking_pubkey:
-                print("[WARN] PushDropUnlocker.sign: Could not extract public key from PushDrop script")
                 return None
             # Use protocol_id/key_id/counterparty to derive the key (same as fallback)
             # The derived key should match the locking public key if the protocol/key_id match
@@ -759,8 +747,7 @@ class PushDropUnlocker:
             sig = res.get("signature", b"")
             sig = bytes(sig) + bytes([sighash_flag])
             return encode_pushdata(sig)
-        except Exception as e:
-            print(f"[WARN] PushDropUnlocker.sign: Error decoding PushDrop script: {e}")
+        except Exception:
             return None
 
     def _create_fallback_signature(self, hash_to_sign: bytes, sighash_flag: int, used_preimage: bool) -> bytes:

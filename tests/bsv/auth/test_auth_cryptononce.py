@@ -141,3 +141,16 @@ def test_serial_number_use_case():
         "",
     )
     assert verify_result["valid"]
+
+
+def test_hmac_verification_writes_nothing_to_stdout(capsys):
+    """2.5.0 printed the received and the expected HMAC on every verify_nonce call."""
+    wallet = ProtoWallet(PrivateKey())
+    nonce = create_nonce(wallet)
+    capsys.readouterr()
+
+    assert verify_nonce(nonce, wallet)
+    assert not verify_nonce(base64.b64encode(b"\x01" * 48).decode(), wallet)
+    assert not verify_nonce("AAAA", wallet)
+
+    assert capsys.readouterr() == ("", "")
