@@ -42,6 +42,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`RPuzzle.unlock()` no longer creates a private key at import** (#252) — `private_key` defaults to `None`, and a fresh `PrivateKey` is created only when `unlock()` is called without one. Separate calls no longer share one function-default key.
+
 ---
 
 ## [2.5.0] - 2026-11-17

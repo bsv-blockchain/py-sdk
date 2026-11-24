@@ -231,7 +231,7 @@ class RPuzzle(ScriptTemplate):
     def unlock(
         self,
         k: int,
-        private_key: Optional[PrivateKey] = PrivateKey(),
+        private_key: Optional[PrivateKey] = None,
         sign_outputs: str = "all",
         anyone_can_pay: bool = False,
     ):
@@ -240,10 +240,14 @@ class RPuzzle(ScriptTemplate):
 
         :param k: The K-value used to unlock the R-puzzle.
         :param private_key: The private key used for signing the transaction.
+            When omitted, a new key is generated for this unlocking template.
         :param sign_outputs: The signature scope for outputs ('all', 'none', 'single').
         :param anyone_can_pay: Flag indicating if the signature allows for other inputs to be added later.
         :returns: An object containing the `sign` and `estimate_length` functions.
         """
+        # A default of PrivateKey() would run at import and be reused by every caller.
+        if private_key is None:
+            private_key = PrivateKey()
 
         def sign(tx, input_index) -> Script:
             sighash = SIGHASH.FORKID

@@ -4,6 +4,11 @@ Tests for RPuzzle script template implementation.
 Translated from TS SDK RPuzzle template tests.
 """
 
+import subprocess
+import sys
+import textwrap
+from pathlib import Path
+
 import pytest
 
 from bsv.hash import hash160, hash256, sha1, sha256
@@ -87,3 +92,70 @@ class TestRPuzzleTemplate:
         assert length > 0
         # RPuzzle unlocking script should be ~108 bytes
         assert length >= 100
+
+    def test_omitted_unlock_key_is_fresh_and_import_creates_none(self):
+        """Two unlock() calls without a key do not share one, and import builds none."""
+        repo_root = Path(__file__).resolve().parents[3]
+        probe = textwrap.dedent("""\
+            import sys
+            import types
+            from pathlib import Path
+
+            root = Path(sys.argv[1]).resolve()
+            package = types.ModuleType("bsv")
+            package.__path__ = [str(root / "bsv")]
+            package.__package__ = "bsv"
+            sys.modules["bsv"] = package
+
+            import bsv.keys as keys
+
+            created = []
+            original_init = keys.PrivateKey.__init__
+
+            def counting_init(self, *args, **kwargs):
+                created.append(1)
+                return original_init(self, *args, **kwargs)
+
+            keys.PrivateKey.__init__ = counting_init
+
+            import bsv.script.type as type_mod
+
+            default = type_mod.RPuzzle.unlock.__defaults__[0]
+            if default is not None:
+                raise SystemExit(
+                    f"import stored a {type(default).__name__} on RPuzzle.unlock"
+                )
+            if created:
+                raise SystemExit(
+                    f"importing bsv.script.type constructed PrivateKey {len(created)} time(s)"
+                )
+            print("import-ok")
+            """)
+        completed = subprocess.run(
+            [sys.executable, "-c", probe, str(repo_root)],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert completed.returncode == 0, f"{completed.stdout}\n{completed.stderr}"
+        assert "import-ok" in completed.stdout
+
+        assert RPuzzle.unlock.__defaults__[0] is None
+
+        first = _signing_private_key(RPuzzle().unlock(1))
+        second = _signing_private_key(RPuzzle().unlock(1))
+        assert isinstance(first, PrivateKey)
+        assert isinstance(second, PrivateKey)
+        assert first is not second
+        assert first.serialize() != second.serialize()
+
+        explicit = PrivateKey()
+        assert _signing_private_key(RPuzzle().unlock(1, explicit)) is explicit
+
+
+def _signing_private_key(template):
+    """Return the PrivateKey closed over by an unlocking template's sign function."""
+    sign = template.__dict__["sign"]
+    closed = {name: cell.cell_contents for name, cell in zip(sign.__code__.co_freevars, sign.__closure__, strict=True)}
+    return closed["private_key"]
