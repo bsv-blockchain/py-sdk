@@ -8,58 +8,33 @@ def verify_nonce(nonce: str, wallet: Any, counterparty: Any = None) -> bool:
     Verifies that a nonce was derived from the given wallet.
     Ported from Go/TypeScript verifyNonce.
     """
-    print(f"[verify_nonce] Starting verification, nonce length: {len(nonce) if nonce else 0}")
-    print(f"[verify_nonce] Counterparty: {counterparty}")
     try:
         nonce_bytes = base64.b64decode(nonce)
-        print(f"[verify_nonce] Decoded nonce bytes length: {len(nonce_bytes)}")
-    except Exception as e:
-        print(f"[verify_nonce] ERROR: Failed to decode nonce: {e}")
+    except Exception:
         return False
     if len(nonce_bytes) <= 16:
-        print(f"[verify_nonce] ERROR: Nonce too short: {len(nonce_bytes)} bytes (need > 16)")
         return False
     data = nonce_bytes[:16]
     hmac = nonce_bytes[16:]
-    print(f"[verify_nonce] Data (first 16 bytes): {data.hex()}")
-    print(f"[verify_nonce] HMAC (remaining bytes, length {len(hmac)}): {hmac.hex()}")
 
     # Default counterparty to 'self' if not provided (matches TypeScript)
     if counterparty is None:
         counterparty = "self"
 
     # FLAT structure like TypeScript, no encryption_args wrapper!
-    key_id = data.decode("latin1")
     args = {
         "protocolID": [2, "server hmac"],  # TypeScript uses [2, 'server hmac']
-        "keyID": key_id,
+        "keyID": data.decode("latin1"),
         "counterparty": counterparty,
         "data": data,
         "hmac": hmac,
     }
-    print("[verify_nonce] Calling wallet.verify_hmac with:")
-    print("  - protocolID: [2, 'server hmac']")
-    print(f"  - keyID: {key_id} (length: {len(key_id)})")
-    print(f"  - counterparty: {counterparty}")
-    print(f"  - data length: {len(data)}")
-    print(f"  - hmac length: {len(hmac)}")
     try:
         result = wallet.verify_hmac(args, "")
-        print(f"[verify_nonce] wallet.verify_hmac result: {result}")
-        print(f"[verify_nonce] result type: {type(result)}")
         if isinstance(result, dict):
-            valid = bool(result.get("valid", False))
-            print(f"[verify_nonce] Valid (from dict): {valid}")
-            return valid
-        else:
-            valid = bool(getattr(result, "valid", False))
-            print(f"[verify_nonce] Valid (from attr): {valid}")
-            return valid
-    except Exception as e:
-        print(f"[verify_nonce] ERROR: Exception during verify_hmac: {e}")
-        import traceback
-
-        print(f"[verify_nonce] Traceback: {traceback.format_exc()}")
+            return bool(result.get("valid", False))
+        return bool(getattr(result, "valid", False))
+    except Exception:
         return False
 
 

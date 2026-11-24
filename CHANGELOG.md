@@ -7,6 +7,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Table of Contents
 
 - [Unreleased](#unreleased)
+- [2.5.1 - 2026-11-18](#251---2026-11-18)
 - [2.5.0 - 2026-11-17](#250---2026-11-17)
 - [2.4.0 - 2026-08-28](#240---2026-08-28)
 - [2.3.3 - 2026-07-23](#233---2026-07-23)
@@ -45,6 +46,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - **`RPuzzle.unlock()` no longer creates a private key at import** (#252) — `private_key` defaults to `None`, and a fresh `PrivateKey` is created only when `unlock()` is called without one. Separate calls no longer share one function-default key.
+
+---
+
+## [2.5.1] - 2026-11-18
+
+### Security
+
+- **HMAC verification no longer prints the expected HMAC** (#251) — `bsv.auth.utils.verify_nonce()` and `ProtoWallet.verify_hmac()` (and its alias `WalletImpl`) wrote the HMAC they received and the HMAC computed with the wallet's key ("Expected HMAC") to standard output on every call. `Peer` calls `verify_nonce()` in every mutual authentication handshake, so anyone who could read the process output learned a valid HMAC for that nonce's data and could build a nonce that passes `verify_nonce()`. The private key itself was not printed. Affects 2.1.1 to 2.5.0.
+
+### Fixed
+
+- **No more debug output on standard output** (#251) — the SDK no longer prints trace output from `ProtoWallet` (`create_action()`, signing funding inputs, including the address of each signing key, ARC and WhatsOnChain broadcasting, including the raw transaction hex, and `list_outputs()`), `SignedMessage.verify()` (the derived signing public key), PushDrop decoding and `PushDropUnlocker`, or `LocalKVStore`. `ProtoWallet` no longer calls `logging.basicConfig(level=logging.DEBUG)` when it builds a transaction, which switched the application's root logger to DEBUG. Why an ARC broadcast fell back to WhatsOnChain is now logged at DEBUG level on the `bsv.wallet.wallet_impl` logger. Output that is switched on explicitly is unchanged: `BSV_DEBUG=1` for `ProtoWallet` and the `debug` option of `Historian`.
 
 ---
 

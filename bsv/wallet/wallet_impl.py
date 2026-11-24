@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import logging
 import os
 import time
 import warnings
@@ -25,6 +26,8 @@ from .wallet_interface import (
     VerifyHmacArgs,
     VerifySignatureArgs,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _hmac_key(symmetric_key: bytes) -> bytes:
@@ -539,64 +542,22 @@ class ProtoWallet:
         return encryption_args, protocol_id, key_id, counterparty, data, hmac_value
 
     def verify_hmac(self, args: VerifyHmacArgs = None, originator: str = None) -> dict:
-        print("[ProtoWallet.verify_hmac] Starting verification")
-        print(f"[ProtoWallet.verify_hmac] Args: {args}")
         try:
-            # Extract parameters
             _encryption_args, protocol_id, key_id, counterparty, data, hmac_value = self._extract_hmac_params(args)
 
-            print("[ProtoWallet.verify_hmac] Extracted params:")
-            print(f"  - protocol_id: {protocol_id}")
-            print(
-                f"  - key_id: {key_id} (type: {type(key_id)}, length: {len(key_id) if isinstance(key_id, str) else 'N/A'})"
-            )
-            print(f"  - counterparty: {counterparty} (type: {type(counterparty)})")
-            print(
-                f"  - data: {data.hex() if isinstance(data, bytes) else data} (length: {len(data) if isinstance(data, bytes) else 'N/A'})"
-            )
-            print(
-                f"  - hmac_value: {hmac_value.hex() if isinstance(hmac_value, bytes) else hmac_value} (length: {len(hmac_value) if isinstance(hmac_value, bytes) else 'N/A'})"
-            )
-
-            # Validate required fields
             if protocol_id is None or key_id is None:
-                error_msg = "verify_hmac: protocol_id and key_id are required"
-                print(f"[ProtoWallet.verify_hmac] ERROR: {error_msg}")
-                return {"error": error_msg}
+                return {"error": "verify_hmac: protocol_id and key_id are required"}
             if hmac_value is None:
-                error_msg = "verify_hmac: hmac is required"
-                print(f"[ProtoWallet.verify_hmac] ERROR: {error_msg}")
-                return {"error": error_msg}
+                return {"error": "verify_hmac: hmac is required"}
 
-            # Normalize protocol and counterparty
             protocol = self._normalize_protocol(protocol_id)
             cp = self._normalize_counterparty(counterparty)
 
-            print("[ProtoWallet.verify_hmac] Normalized:")
-            print(f"  - protocol: {protocol}")
-            print(f"  - counterparty normalized: {cp}")
-
-            # Derive shared secret and verify HMAC
-            print("[ProtoWallet.verify_hmac] Deriving symmetric key...")
             shared_secret = self.key_deriver.derive_symmetric_key(protocol, key_id, cp)
-            print(f"[ProtoWallet.verify_hmac] Shared secret length: {len(shared_secret)}")
-            print("[ProtoWallet.verify_hmac] Computing expected HMAC...")
             expected = hmac.new(_hmac_key(shared_secret), data, hashlib.sha256).digest()
-            print(f"[ProtoWallet.verify_hmac] Expected HMAC: {expected.hex()}")
-            print(
-                f"[ProtoWallet.verify_hmac] Received HMAC: {hmac_value.hex() if isinstance(hmac_value, bytes) else hmac_value}"
-            )
-            valid = hmac.compare_digest(expected, hmac_value)
-            print(f"[ProtoWallet.verify_hmac] HMAC comparison result: {valid}")
-
-            return {"valid": valid}
+            return {"valid": hmac.compare_digest(expected, hmac_value)}
         except Exception as e:
-            error_msg = f"verify_hmac: {e}"
-            print(f"[ProtoWallet.verify_hmac] EXCEPTION: {error_msg}")
-            import traceback
-
-            print(f"[ProtoWallet.verify_hmac] Traceback: {traceback.format_exc()}")
-            return {"error": error_msg}
+            return {"error": f"verify_hmac: {e}"}
 
     def abort_action(self, *_args, **_kwargs):
         warnings.warn(
@@ -729,16 +690,13 @@ class ProtoWallet:
         if not change_output:
             return
 
-        change_sats, fee = self._calculate_change_amount(inputs_meta, outputs, fee_rate, fee_model)
-        print(f"[TRACE] [create_action] Change calculation: change_sats={change_sats}, fee={fee}")
+        change_sats, _fee = self._calculate_change_amount(inputs_meta, outputs, fee_rate, fee_model)
 
         if change_sats is not None and change_sats > 0:
             change_output["satoshis"] = change_sats
             outputs.append(change_output)
-            print(f"[TRACE] [create_action] Added change output: {change_sats} satoshis")
         elif int(change_output.get("satoshis", 0)) > 0:
             outputs.append(change_output)
-            print(f"[TRACE] [create_action] Added change output: {change_output.get('satoshis')} satoshis")
 
     def _normalize_action_txid(self, action: dict) -> None:
         """Ensure txid is bytes for wallet serialization."""
@@ -788,25 +746,15 @@ class ProtoWallet:
         )
         import binascii
 
-        print(
-            f"[TRACE] [create_action] called with labels={args.get('labels')} outputs_count={len(args.get('outputs') or [])}"
-        )
-
         labels = args.get("labels") or []
         description = args.get("description", "")
         outputs = list(args.get("outputs") or [])
         inputs_meta = list(args.get("inputs") or [])
 
-        print("[TRACE] [create_action] initial inputs_meta:", inputs_meta)
-        print("[TRACE] [create_action] initial outputs:", outputs)
-
         # Process PushDrop extension if provided
         pushdrop_args = args.get("pushdrop")
         if pushdrop_args:
-            print("[TRACE] [create_action] found pushdrop_args")
             self._process_pushdrop_args(pushdrop_args, originator, outputs)
-
-        print("[TRACE] [create_action] after pushdrop outputs:", outputs)
 
         # Setup fee model and existing unlock lengths
         fee_rate = int(args.get("feeRate") or 500)
@@ -819,21 +767,12 @@ class ProtoWallet:
             args, originator, outputs, inputs_meta, existing_unlock_lens, fee_model
         )
 
-        if funding_ctx:
-            print(f"[TRACE] [create_action] funding_ctx returned: {len(funding_ctx)} UTXOs")
-
-        # Trace fee estimation if needed
-        if pushdrop_args and funding_ctx:
-            fee = self._calculate_fee(fee_rate, fee_model, len(outputs), len(inputs_meta))
-            print(f"[TRACE] [create_action] Calculated fee: {fee} satoshis")
-
         # Add change output if generated
         self._add_change_output_if_needed(change_output, inputs_meta, outputs, fee_rate, fee_model)
 
         total_out = self._sum_outputs(outputs)
         self._normalize_outputs_to_hex(outputs)
 
-        print("[TRACE] [create_action] before _build_action_dict inputs_meta:", inputs_meta)
         action = self._build_action_dict(args, total_out, description, labels, inputs_meta, outputs)
 
         self._normalize_action_txid(action)
@@ -934,8 +873,7 @@ class ProtoWallet:
         from bsv.transaction_input import TransactionInput
 
         funding_indices: list[int] = []
-        for i, meta in enumerate(inputs_meta):
-            print(f"[TRACE] [_build_signable_transaction] input_meta[{i}]:", meta)
+        for meta in inputs_meta:
             outpoint = meta.get("outpoint") or meta.get("Outpoint")
             if outpoint and isinstance(outpoint, dict):
                 txid = outpoint.get("txid")
@@ -1002,22 +940,8 @@ class ProtoWallet:
         for idx in funding_indices:
             meta = inputs_meta[idx] if idx < len(inputs_meta) else {}
             priv = self._derive_private_key_for_input(meta)
-            print(f"[TRACE] [_build_signable_transaction] priv address: {priv.address()}")
-
-            try:
-                prevout_script_bytes = t.inputs[idx].locking_script.serialize()
-                self._check_prevout_pubkey(priv, prevout_script_bytes)
-            except Exception as _dbg_e:
-                print(f"[TRACE] [sign_check] prevout/pubkey hash check skipped: {_dbg_e}")
-
             unlock_tpl = P2PKH().unlock(priv)
             t.inputs[idx].unlocking_script = unlock_tpl.sign(t, idx)
-
-            try:
-                us_b = t.inputs[idx].unlocking_script.serialize()
-                self._check_unlocking_sig(us_b, priv)
-            except Exception as _dbg_e2:
-                print(f"[TRACE] [sign_check] scriptSig structure check skipped: {_dbg_e2}")
 
     def _build_signable_transaction(
         self,
@@ -1032,43 +956,29 @@ class ProtoWallet:
         Ensure TransactionInput receives source_txid as hex string (str), not bytes.
         Ensure TransactionOutput receives int(satoshis) and Script in correct order.
         """
+        from bsv.transaction import Transaction
+
         self._normalize_lockingscripts_to_hex(outputs)
-        print("[TRACE] [_build_signable_transaction] inputs_meta at entry:", inputs_meta)
-        print("[TRACE] [_build_signable_transaction] outputs at entry:", outputs)
+        logger.debug(f"Building transaction with outputs: {outputs}")
+        logger.debug(f"Building transaction with inputs_meta: {inputs_meta}")
 
-        try:
-            import logging
+        t = Transaction()
+        self._normalize_lockingscripts_to_hex(outputs)
+        self._add_outputs_to_transaction(t, outputs, logger)
+        funding_indices = self._add_inputs_to_transaction(t, inputs_meta)
 
-            from bsv.transaction import Transaction
+        if prefill_funding and funding_indices:
+            try:
+                if funding_start_index is not None and funding_context:
+                    self._set_funding_context_on_inputs(t, funding_start_index, funding_context)
+                else:
+                    self._set_generic_funding_scripts(t, funding_indices)
 
-            logging.basicConfig(level=logging.DEBUG)
-            logger = logging.getLogger(__name__)
+                self._sign_funding_inputs(t, funding_indices, inputs_meta)
+            except Exception:
+                pass
 
-            logger.debug(f"Building transaction with outputs: {outputs}")
-            logger.debug(f"Building transaction with inputs_meta: {inputs_meta}")
-
-            t = Transaction()
-            self._normalize_lockingscripts_to_hex(outputs)
-            self._add_outputs_to_transaction(t, outputs, logger)
-            funding_indices = self._add_inputs_to_transaction(t, inputs_meta)
-
-            print("[TRACE] [_build_signable_transaction] funding_indices:", funding_indices)
-
-            if prefill_funding and funding_indices:
-                try:
-                    if funding_start_index is not None and funding_context:
-                        self._set_funding_context_on_inputs(t, funding_start_index, funding_context)
-                    else:
-                        self._set_generic_funding_scripts(t, funding_indices)
-
-                    self._sign_funding_inputs(t, funding_indices, inputs_meta)
-                except Exception:
-                    pass
-
-            return t
-        except Exception as e:
-            print(f"[ERROR] Exception in _build_signable_transaction: {e}")
-            raise
+        return t
 
     def discover_by_attributes(self, args: dict = None, originator: str = None) -> dict:
         warnings.warn(
@@ -1248,8 +1158,6 @@ class ProtoWallet:
         arc_config = ARCConfig(api_key=arc_api_key, headers=headers) if arc_api_key else ARCConfig(headers=headers)
         bc = ARC(arc_url, arc_config)
 
-        print(f"[INFO] Broadcasting to ARC (default). URL: {arc_url}, tx_hex: {tx_hex}")
-
         try:
             from bsv.transaction import Transaction
             from bsv.utils import Reader
@@ -1267,14 +1175,14 @@ class ProtoWallet:
                 }
             else:
                 error_msg = getattr(arc_result, "description", "ARC broadcast failed")
-                print(f"[WARN] ARC broadcast failed: {error_msg}, falling back to WOC if enabled")
+                logger.debug(f"ARC broadcast failed: {error_msg}, falling back to WOC if enabled")
 
                 if use_woc_fallback:
                     return self._broadcast_with_woc(tx_hex, args, is_fallback=True)
                 return {"accepted": False, "error": error_msg, "tx_hex": tx_hex, "broadcaster": "ARC"}
 
         except Exception as arc_error:
-            print(f"[WARN] ARC broadcast error: {arc_error}, falling back to WOC if enabled")
+            logger.debug(f"ARC broadcast error: {arc_error}, falling back to WOC if enabled")
 
             if use_woc_fallback:
                 return self._broadcast_with_woc(tx_hex, args, is_fallback=True)
@@ -1291,9 +1199,6 @@ class ProtoWallet:
         network = self._get_network_for_broadcast()
 
         bc = WhatsOnChainBroadcasterSync(network=network, api_key=api_key)
-        label = "Fallback broadcasting" if is_fallback else "Broadcasting"
-        print(f"[INFO] {label} to WhatsOnChain. tx_hex: {tx_hex}")
-
         res = bc.broadcast(tx_hex, api_key=api_key, timeout=timeout)
         broadcaster_label = "WOC (fallback)" if is_fallback else "WOC"
         return {**res, "tx_hex": tx_hex, "broadcaster": broadcaster_label}
@@ -1429,13 +1334,6 @@ class ProtoWallet:
         include = (args.get("include") or "").lower()
         use_woc = self._should_use_woc(args, include)
 
-        try:
-            print(
-                f"[TRACE] [list_outputs] include='{include}' use_woc={use_woc} basket={args.get('basket')} tags={args.get('tags')}"
-            )
-        except Exception:
-            pass
-
         if use_woc:
             return self._get_outputs_from_woc(args)
 
@@ -1524,13 +1422,6 @@ class ProtoWallet:
         basket = args.get("basket", "")
         outputs_desc = self._find_outputs_for_basket(basket, args)
 
-        try:
-            print(
-                f"[TRACE] [list_outputs] outputs_desc_len={len(outputs_desc)} sample={outputs_desc[0] if outputs_desc else None}"
-            )
-        except Exception:
-            pass
-
         # Filter expired outputs if requested
         if args.get("excludeExpired"):
             now_epoch = int(args.get("nowEpoch", time.time()))
@@ -1547,10 +1438,6 @@ class ProtoWallet:
 
         if "entire" in include or "transaction" in include:
             res["BEEF"] = beef_bytes
-            try:
-                print(f"[TRACE] [list_outputs] BEEF len={len(beef_bytes)}")
-            except Exception:
-                pass
         return res
 
     # ---- Helpers to reduce cognitive complexity in list_outputs ----
@@ -1585,29 +1472,12 @@ class ProtoWallet:
             from bsv.transaction_output import TransactionOutput
 
             tx = Transaction()
-            try:
-                print(f"[TRACE] [_build_beef_for_outputs] building for {len(outputs_desc)} outputs")
-            except Exception:
-                pass
             for o in outputs_desc:
                 ls_hex = o.get("lockingScript")
-                try:
-                    ls_hex_str = ls_hex
-                    if not isinstance(ls_hex, str):
-                        if isinstance(ls_hex, (bytes, bytearray)):
-                            ls_hex_str = ls_hex.hex()
-                    print(f"[TRACE] [_build_beef_for_outputs] out sat={o.get('satoshis')} ls_hex={ls_hex_str}")
-                except Exception:
-                    pass
                 ls_script = Script(ls_hex) if isinstance(ls_hex, str) else Script(ls_hex or b"\x51")
                 to = TransactionOutput(ls_script, int(o.get("satoshis", 0)))
                 tx.add_output(to)
-            beef = tx.to_beef()
-            try:
-                print(f"[TRACE] [_build_beef_for_outputs] produced BEEF len={len(beef)}")
-            except Exception:
-                pass
-            return beef
+            return tx.to_beef()
         except Exception:
             return b""
 
@@ -2321,81 +2191,6 @@ class ProtoWallet:
         except Exception:
             return False
 
-    def _check_prevout_pubkey(self, private_key: PrivateKey, prevout_script_bytes: bytes) -> None:
-        """Debug-print whether hash160(pubkey) matches the prevout P2PKH hash."""
-        try:
-            utxo_hash_hex = self._extract_pubkey_hash_from_locking_script(prevout_script_bytes.hex())
-            from bsv.hash import hash160 as _h160
-
-            pubkey_hex = private_key.public_key().hex()
-            pubkey_hash_hex = _h160(bytes.fromhex(pubkey_hex)).hex()
-            print(
-                f"[TRACE] [sign_check] utxo_hash={utxo_hash_hex} pubkey_hash={pubkey_hash_hex} match={utxo_hash_hex == pubkey_hash_hex}"
-            )
-        except Exception as _dbg_e:
-            print(f"[TRACE] [sign_check] prevout/pubkey hash check skipped: {_dbg_e}")
-
-    def _read_push_from_script(self, buf: bytes, pos: int) -> tuple[bytes, int]:
-        """Read a single push operation from script bytes."""
-        if pos >= len(buf):
-            raise ValueError("out of bounds")
-
-        op = buf[pos]
-        if op <= 75:
-            ln = op
-            pos += 1
-        elif op == 76:  # OP_PUSHDATA1
-            ln = buf[pos + 1]
-            pos += 2
-        elif op == 77:  # OP_PUSHDATA2
-            ln = int.from_bytes(buf[pos + 1 : pos + 3], "little")
-            pos += 3
-        elif op == 78:  # OP_PUSHDATA4
-            ln = int.from_bytes(buf[pos + 1 : pos + 5], "little")
-            pos += 5
-        else:
-            raise ValueError("unexpected push opcode")
-
-        data = buf[pos : pos + ln]
-        if len(data) != ln:
-            raise ValueError("incomplete push data")
-        return data, pos + ln
-
-    def _validate_unlocking_script_components(self, sig: bytes, pub: bytes, private_key: PrivateKey) -> dict:
-        """Validate components of unlocking script."""
-        sighash_flag = sig[-1] if len(sig) > 0 else -1
-        is_flag_ok = sighash_flag == 0x41
-        is_pub_len_ok = len(pub) == 33
-        pub_equals = pub.hex() == private_key.public_key().hex()
-
-        return {
-            "sighash_flag": sighash_flag,
-            "is_flag_ok": is_flag_ok,
-            "is_pub_len_ok": is_pub_len_ok,
-            "pub_equals": pub_equals,
-        }
-
-    def _check_unlocking_sig(self, unlocking_script_bytes: bytes, private_key: PrivateKey) -> None:
-        """Debug-print validation of unlocking script structure and SIGHASH flag.
-
-        Expects two pushes: <DER+flag 0x41> <33-byte pubkey>.
-        """
-        try:
-            # Read two pushes: signature and public key
-            sig, pos = self._read_push_from_script(unlocking_script_bytes, 0)
-            pub, pos = self._read_push_from_script(unlocking_script_bytes, pos)
-
-            # Validate components
-            validation = self._validate_unlocking_script_components(sig, pub, private_key)
-
-            print(
-                f"[TRACE] [sign_check] pushes_ok={validation['is_pub_len_ok']} "
-                f"sighash=0x{validation['sighash_flag']:02x} ok={validation['is_flag_ok']} "
-                f"pub_matches_priv={validation['pub_equals']}"
-            )
-        except Exception as _dbg_e2:
-            print(f"[TRACE] [sign_check] scriptSig structure check skipped: {_dbg_e2}")
-
     def _build_change_output_dict(self, basket_addr: str, satoshis: int) -> dict[str, Any]:
         ls = P2PKH().lock(basket_addr)  # Script object
         return {
@@ -2415,7 +2210,6 @@ class ProtoWallet:
             addr = self._self_address()
             if addr:
                 try:
-                    print(f"[TRACE] [estimate_with_optional_change] addr: {addr}")
                     ch_ls = P2PKH().lock(addr)
                     base_outs = [*base_outs, {"satoshis": 1, "lockingScript": ch_ls.hex()}]
                 except Exception:
